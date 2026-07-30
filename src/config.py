@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "AI20K Agent"
+    app_name: str = "AI20K-Agent"
     app_env: Literal["development", "production", "test"] = "development"
     app_port: int = Field(default=8000, ge=1, le=65535)
     app_host: str = "0.0.0.0"
@@ -21,9 +21,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # LLM
-    openai_api_key: str = ""
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     model_name: str = "gpt-4o-mini"
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    openai_max_tokens: int = Field(default=2048, ge=1, le=8192)
 
     # Database
     database_url: str = "sqlite:///./data/app.db"
