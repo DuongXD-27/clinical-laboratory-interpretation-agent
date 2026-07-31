@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-IndicatorStatus = Literal["normal", "low", "high", "critical_low", "critical_high"]
+IndicatorStatus = Literal["unknown", "normal", "low", "high", "critical_low", "critical_high"]
 
 
 class IndicatorInputSchema(BaseModel):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-IndicatorStatus = Literal["normal", "low", "high", "critical_low", "critical_high"]
+IndicatorStatus = Literal["unknown", "normal", "low", "high", "critical_low", "critical_high"]
 
 
 class IndicatorInput(TypedDict, total=False):
