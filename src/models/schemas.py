@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -23,7 +24,7 @@ class AnalyzeRequest(BaseModel):
     patient_gender: Literal["male", "female", "other"] = Field(
         ..., description="Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
     )
-    test_date: str = Field(..., description="Ngày xét nghiệm, định dạng YYYY-MM-DD")
+    test_date: date = Field(..., description="Ngày xét nghiệm (YYYY-MM-DD)")
     language: str = Field(default="vi", description="Ngôn ngữ giải thích mong muốn")
     indicators: list[IndicatorInputSchema] = Field(
         ..., min_length=1, description="Danh sách chỉ số xét nghiệm cần giải thích"

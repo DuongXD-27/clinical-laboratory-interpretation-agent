@@ -23,7 +23,7 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     initial_state = {
         "patient_age": request.patient_age,
         "patient_gender": request.patient_gender,
-        "test_date": request.test_date,
+        "test_date": request.test_date.isoformat(),
         "language": request.language,
         "raw_indicators": [i.model_dump() for i in request.indicators],
     }

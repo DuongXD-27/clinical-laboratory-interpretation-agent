@@ -38,3 +38,15 @@ async def test_analyze_requires_at_least_one_indicator(client):
     }
     response = await client.post("/api/v1/analyze", json=payload)
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_analyze_rejects_invalid_date_format(client):
+    payload = {
+        "patient_age": 35,
+        "patient_gender": "male",
+        "test_date": "30/07/2026",
+        "indicators": [{"name": "WBC", "value": 7.2, "unit": "10^3/uL"}],
+    }
+    response = await client.post("/api/v1/analyze", json=payload)
+    assert response.status_code == 422
