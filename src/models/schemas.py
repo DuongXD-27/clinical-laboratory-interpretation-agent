@@ -68,3 +68,10 @@ class AnalyzeResponse(BaseModel):
     guardrail_passed: bool = True
     out_of_scope_indicators: list[str] = Field(default_factory=list)
     error: str = ""
+    is_placeholder: bool = Field(
+        default=False,
+        description=(
+            "True nếu response chưa qua logic phân tích thật (reference-range/RAG/"
+            "critical-value chưa cắm vào graph) — không được dùng để đánh giá lâm sàng."
+        ),
+    )

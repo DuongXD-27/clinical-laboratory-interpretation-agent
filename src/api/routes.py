@@ -28,6 +28,9 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         "raw_indicators": [i.model_dump() for i in request.indicators],
     }
 
+    # Chưa có reference-range checker / critical-value detector thật (skeleton),
+    # nên KHÔNG được coi status="normal" dưới đây là kết quả đã đối chiếu —
+    # is_placeholder=True báo rõ cho client biết chưa qua phân tích thật.
     indicators = [
         IndicatorResultSchema(
             name=i["name"],
@@ -40,4 +43,4 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         for i in initial_state["raw_indicators"]
     ]
 
-    return AnalyzeResponse(indicators=indicators)
+    return AnalyzeResponse(indicators=indicators, is_placeholder=True)

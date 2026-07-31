@@ -42,7 +42,7 @@ class IndicatorExplanation(TypedDict, total=False):
     status: IndicatorStatus
     is_abnormal: bool
     is_critical: bool
-    explanation_text: str
+    explanation: str
     sources: list[str]
 
 
