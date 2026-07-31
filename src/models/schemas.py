@@ -16,6 +16,9 @@ class IndicatorInputSchema(BaseModel):
 class AnalyzeRequest(BaseModel):
     """Request phân tích một phiếu xét nghiệm mô phỏng (JSON)."""
 
+    # ge=0 để cho phép trẻ sơ sinh (0 tuổi) — logic tra khoảng tham chiếu theo
+    # tuổi/giới tính (reference-range checker) phải xử lý đúng trường hợp này,
+    # không dùng age làm mẫu số.
     patient_age: int = Field(..., ge=0, le=120, description="Tuổi bệnh nhân")
     patient_gender: Literal["male", "female", "other"] = Field(
         ..., description="Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
