@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
+    embedding_device: Literal["cpu", "cuda", "mps"] = "cpu"
 
 
 @lru_cache
