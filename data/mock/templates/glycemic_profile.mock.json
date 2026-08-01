@@ -1,0 +1,20 @@
+{
+  "report_id": "GLY-20260729-0001",
+  "report_type": "glycemic_profile",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "Fasting Blood Glucose",
+      "value": 5.1,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "HbA1c",
+      "value": 5.4,
+      "unit": "%"
+    }
+  ]
+}

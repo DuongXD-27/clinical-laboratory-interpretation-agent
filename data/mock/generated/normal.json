@@ -1,0 +1,242 @@
+[
+  {
+    "report_id": "NORMAL-CBC-0001",
+    "report_type": "cbc_with_differential",
+    "patient_age": 29,
+    "patient_gender": "female",
+    "test_date": "2026-07-21",
+    "status": "final",
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 6.8,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "RBC",
+        "value": 4.72,
+        "unit": "10^12/L"
+      },
+      {
+        "name": "HGB",
+        "value": 139,
+        "unit": "g/L"
+      },
+      {
+        "name": "HCT",
+        "value": 0.41,
+        "unit": "L/L"
+      },
+      {
+        "name": "PLT",
+        "value": 252,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "NEU/NEUT (absolute)",
+        "value": 4.0,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "NEU/NEUT (percentage)",
+        "value": 58.8,
+        "unit": "%"
+      },
+      {
+        "name": "LYM (absolute)",
+        "value": 2.0,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "LYM (percentage)",
+        "value": 29.4,
+        "unit": "%"
+      },
+      {
+        "name": "MONO (absolute)",
+        "value": 0.48,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "MONO (percentage)",
+        "value": 7.1,
+        "unit": "%"
+      },
+      {
+        "name": "EOS (absolute)",
+        "value": 0.22,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "EOS (percentage)",
+        "value": 3.2,
+        "unit": "%"
+      },
+      {
+        "name": "BASO (absolute)",
+        "value": 0.05,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "BASO (percentage)",
+        "value": 0.7,
+        "unit": "%"
+      },
+      {
+        "name": "MCV",
+        "value": 87.9,
+        "unit": "fL"
+      },
+      {
+        "name": "MCH",
+        "value": 29.4,
+        "unit": "pg"
+      },
+      {
+        "name": "MCHC",
+        "value": 334,
+        "unit": "g/L"
+      },
+      {
+        "name": "RDW",
+        "value": 12.9,
+        "unit": "%CV"
+      },
+      {
+        "name": "MPV",
+        "value": 9.6,
+        "unit": "fL"
+      }
+    ]
+  },
+  {
+    "report_id": "NORMAL-GLY-0002",
+    "report_type": "glycemic_profile",
+    "patient_age": 44,
+    "patient_gender": "male",
+    "test_date": "2026-07-22",
+    "status": "final",
+    "indicators": [
+      {
+        "name": "Fasting Blood Glucose",
+        "value": 5.0,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "HbA1c",
+        "value": 5.3,
+        "unit": "%"
+      }
+    ]
+  },
+  {
+    "report_id": "NORMAL-LIPID-0003",
+    "report_type": "lipid_profile",
+    "patient_age": 52,
+    "patient_gender": "female",
+    "test_date": "2026-07-23",
+    "status": "draft",
+    "indicators": [
+      {
+        "name": "Total Cholesterol",
+        "value": 176,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "Triglycerides",
+        "value": 112,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "HDL-Cholesterol",
+        "value": 55,
+        "unit": "mg/dL"
+      }
+    ]
+  },
+  {
+    "report_id": "NORMAL-LIVER-0004",
+    "report_type": "liver_function_basic",
+    "patient_age": 37,
+    "patient_gender": "female",
+    "test_date": "2026-07-24",
+    "status": "final",
+    "indicators": [
+      {
+        "name": "AST (GOT)",
+        "value": 22,
+        "unit": "U/L"
+      },
+      {
+        "name": "ALT (GPT)",
+        "value": 26,
+        "unit": "U/L"
+      },
+      {
+        "name": "GGT",
+        "value": 29,
+        "unit": "U/L"
+      },
+      {
+        "name": "Total Protein",
+        "value": 72,
+        "unit": "g/L"
+      },
+      {
+        "name": "Albumin",
+        "value": 43,
+        "unit": "g/L"
+      }
+    ]
+  },
+  {
+    "report_id": "NORMAL-RENAL-0005",
+    "report_type": "renal_function_blood",
+    "patient_age": 61,
+    "patient_gender": "male",
+    "test_date": "2026-07-25",
+    "status": "final",
+    "indicators": [
+      {
+        "name": "Urea",
+        "value": 5.4,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Creatinine",
+        "value": 86,
+        "unit": "µmol/L"
+      },
+      {
+        "name": "Uric Acid",
+        "value": 342,
+        "unit": "µmol/L"
+      },
+      {
+        "name": "eGFR",
+        "value": 98,
+        "unit": "mL/min/1.73 m^2"
+      },
+      {
+        "name": "Sodium (Na)",
+        "value": 139,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Potassium (K+)",
+        "value": 4.1,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Chloride (Cl-)",
+        "value": 102,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Albumin",
+        "value": 45,
+        "unit": "g/L"
+      }
+    ]
+  }
+]

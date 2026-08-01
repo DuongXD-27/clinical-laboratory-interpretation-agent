@@ -29,7 +29,6 @@ env/
 Thumbs.db
 
 # Data (never commit large data)
-data/
 *.db
 *.sqlite3
 

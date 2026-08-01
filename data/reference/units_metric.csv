@@ -1,0 +1,39 @@
+﻿test_name,standardized_unit
+WBC,10^9/L
+RBC,10^12/L
+HGB,g/L
+HCT,L/L
+PLT,10^9/L
+NEU/NEUT (absolute),10^9/L
+NEU/NEUT (percentage),%
+LYM (absolute),10^9/L
+LYM (percentage),%
+MONO (absolute),10^9/L
+MONO (percentage),%
+EOS (absolute),10^9/L
+EOS (percentage),%
+BASO (absolute),10^9/L
+BASO (percentage),%
+MCV,fL
+MCH,pg
+MCHC,g/L
+RDW,%CV
+MPV,fL
+Fasting Blood Glucose,mmol/L
+HbA1c,%
+Total Cholesterol,mg/dL
+Triglycerides,mg/dL
+HDL-Cholesterol,mg/dL
+LDL-Cholesterol,mg/dL
+AST (GOT),U/L
+ALT (GPT),U/L
+GGT,U/L
+Urea,mmol/L
+Creatinine,µmol/L
+Uric Acid,µmol/L
+eGFR,mL/min/1.73 m^2
+Sodium (Na),mmol/L
+Potassium (K+),mmol/L
+Chloride (Cl-),mmol/L
+Total Protein,g/L
+Albumin,g/L

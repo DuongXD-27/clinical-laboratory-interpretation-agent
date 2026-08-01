@@ -1,0 +1,30 @@
+{
+  "report_id": "LIPID-20260729-0001",
+  "report_type": "lipid_profile",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "Total Cholesterol",
+      "value": 182,
+      "unit": "mg/dL"
+    },
+    {
+      "name": "Triglycerides",
+      "value": 118,
+      "unit": "mg/dL"
+    },
+    {
+      "name": "HDL-Cholesterol",
+      "value": 52,
+      "unit": "mg/dL"
+    },
+    {
+      "name": "LDL-Cholesterol",
+      "value": 106,
+      "unit": "mg/dL"
+    }
+  ]
+}

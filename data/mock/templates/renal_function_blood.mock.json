@@ -1,0 +1,50 @@
+{
+  "report_id": "RENAL-20260729-0001",
+  "report_type": "renal_function_blood",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "Urea",
+      "value": 5.2,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Creatinine",
+      "value": 82,
+      "unit": "µmol/L"
+    },
+    {
+      "name": "Uric Acid",
+      "value": 330,
+      "unit": "µmol/L"
+    },
+    {
+      "name": "eGFR",
+      "value": 102,
+      "unit": "mL/min/1.73 m^2"
+    },
+    {
+      "name": "Sodium (Na)",
+      "value": 140,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Potassium (K+)",
+      "value": 4.2,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Chloride (Cl-)",
+      "value": 103,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Albumin",
+      "value": 44,
+      "unit": "g/L"
+    }
+  ]
+}

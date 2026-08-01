@@ -1,0 +1,25 @@
+{
+  "report_id": "ELEC-20260729-0001",
+  "report_type": "electrolytes_basic",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "Sodium (Na)",
+      "value": 140,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Potassium (K+)",
+      "value": 4.2,
+      "unit": "mmol/L"
+    },
+    {
+      "name": "Chloride (Cl-)",
+      "value": 103,
+      "unit": "mmol/L"
+    }
+  ]
+}
