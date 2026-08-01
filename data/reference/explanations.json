@@ -1,0 +1,436 @@
+[
+    {
+        "id": "wbc",
+        "indicator": "WBC",
+        "display_name": "White Blood Cell Count",
+        "vietnamese_name": "Số lượng bạch cầu",
+        "simple_explanation": "Bạch cầu là các tế bào máu giúp cơ thể chống lại nhiễm trùng và viêm.",
+        "reference_ranges": [
+            {
+                "group": "adult",
+                "gender": "A",
+                "unit": "10^9/L",
+                "low": 4.0,
+                "high": 10.0,
+                "note": "Tương đương 4.000 - 10.000 /mm3. Một số nguồn quốc tế (Mayo Clinic, MedlinePlus) dùng khoảng 4.5 - 11.0 x10^9/L. Khoảng 4.0-10.0 được chọn vì phổ biến hơn trên phiếu xét nghiệm tại Việt Nam."
+            }
+        ],
+        "high_meaning": "Thường gặp khi cơ thể đang phản ứng với nhiễm trùng, viêm, stress, hoặc sau khi vận động mạnh. Cũng có thể do một số thuốc (ví dụ corticosteroid) hoặc tình trạng khác.",
+        "low_meaning": "Có thể liên quan đến nhiễm virus, một số bệnh lý tủy xương, tác dụng phụ của thuốc, hoặc hệ miễn dịch suy giảm.",
+        "sources": [
+            "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+            "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500"
+        ]
+    },
+    {
+        "id": "rbc",
+        "indicator": "RBC",
+        "display_name": "Red Blood Cell Count",
+        "vietnamese_name": "Số lượng hồng cầu",
+        "simple_explanation": "Hồng cầu mang oxy từ phổi đến các cơ quan trong cơ thể.",
+        "reference_ranges": [
+            {
+                "group": "adult",
+                "gender": "M",
+                "unit": "10^12/L",
+                "low": 4.2,
+                "high": 5.9,
+                "note": "Tương đương 4.2 - 5.9 triệu tế bào/µL. Khoảng quốc tế (Mayo Clinic) thường hẹp hơn (~4.7-6.1)."
+            },
+            {
+                "group": "adult",
+                "gender": "F",
+                "unit": "10^12/L",
+                "low": 4.0,
+                "high": 5.4,
+                "note": "Tương đương 4.0 - 5.4 triệu tế bào/µL. Khoảng quốc tế (Mayo Clinic) thường hẹp hơn (~4.2-5.4)."
+            }
+        ],
+        "high_meaning": "Có thể do mất nước, sống ở vùng cao, hút thuốc lá, hoặc một số bệnh lý về máu/tim phổi.",
+        "low_meaning": "Thường liên quan đến thiếu máu - có thể do thiếu sắt, thiếu vitamin, mất máu, hoặc bệnh mạn tính.",
+        "sources": [
+            "https://medlineplus.gov/lab-tests/red-blood-cell-rbc-count/",
+            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+            "https://www.vinmec.com/vie/bai-viet/so-luong-hong-cau-trong-co-la-bao-nhieu-vi",
+            "https://benhvienthucuc.vn/song-khoe/xet-nghiem/rbc-la-gi-chi-so-rbc-tang-hay-giam-co-anh-huong-den-suc-khoe"
+        ]
+    },
+    {
+        "id": "hgb",
+        "indicator": "HGB",
+        "display_name": "Hemoglobin",
+        "vietnamese_name": "Huyết sắc tố",
+        "simple_explanation": "Hemoglobin là protein trong hồng cầu giúp vận chuyển oxy. Chỉ số này thường đi kèm với RBC để đánh giá tình trạng thiếu máu.",
+        "reference_ranges": [
+            {
+                "group": "adult",
+                "gender": "M",
+                "unit": "g/dL",
+                "low": 13.5,
+                "high": 17.5
+            },
+            {
+                "group": "adult",
+                "gender": "F",
+                "unit": "g/dL",
+                "low": 12.0,
+                "high": 15.5
+            },
+            {
+                "group": "child",
+                "gender": "A",
+                "unit": "g/dL",
+                "low": 11.0,
+                "high": 16.0,
+                "note": "Tùy độ tuổi. Ngoài phạm vi persona chính (25-55 tuổi), giữ lại để tham khảo nếu mở rộng."
+            },
+            {
+                "group": "pregnant",
+                "gender": "F",
+                "unit": "g/dL",
+                "low": 11.0,
+                "high": 12.0,
+                "note": "Phụ nữ mang thai và người cao tuổi thường có giới hạn dưới sinh lý thấp hơn (khoảng > 11.0 g/dL vẫn có thể là bình thường với nhóm này)."
+            }
+        ],
+        "high_meaning": "Có thể do mất nước, sống/làm việc ở vùng thiếu oxy, hút thuốc lá, hoặc một số bệnh lý.",
+        "low_meaning": "Dấu hiệu thường gặp của thiếu máu - có thể gây mệt mỏi, chóng mặt, da xanh xao.",
+        "sources": [
+            "https://medlineplus.gov/lab-tests/hemoglobin-test/",
+            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+            "https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html",
+            "https://www.vinmec.com/vie/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-gi-vi"
+        ]
+    },
+    {
+        "id": "glucose",
+        "indicator": "Glucose",
+        "display_name": "Glucose (Fasting Blood Glucose)",
+        "vietnamese_name": "Đường huyết",
+        "simple_explanation": "Glucose là nồng độ đường trong máu, nguồn năng lượng chính để nuôi cơ thể.",
+        "reference_ranges": [
+            {
+                "group": "fasting_normal",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 3.9,
+                "high": 5.5,
+                "note": "Đường huyết đói - nhịn ăn ít nhất 8 tiếng, người trưởng thành khỏe mạnh, không mang thai. Tương đương 70 - 99 mg/dL."
+            },
+            {
+                "group": "fasting_prediabetes",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 5.6,
+                "high": 6.9,
+                "note": "Tiền đái tháo đường. Tương đương 100 - 125 mg/dL."
+            },
+            {
+                "group": "fasting_diabetes",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 7.0,
+                "high": null,
+                "note": "Đái tháo đường (>= 126 mg/dL). Chẩn đoán xác định khi có ở 2 lần xét nghiệm vào 2 ngày riêng biệt."
+            },
+            {
+                "group": "postprandial_2h",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": null,
+                "high": 7.8,
+                "note": "Đường huyết sau ăn 2 giờ bình thường < 7.8 mmol/L (< 140 mg/dL)."
+            },
+            {
+                "group": "random_with_symptoms",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 11.1,
+                "high": null,
+                "note": "Đường huyết bất kỳ kèm triệu chứng sụt cân, uống nhiều, tiểu nhiều: >= 11.1 mmol/L gợi ý đái tháo đường."
+            }
+        ],
+        "critical_low": 2.2,
+        "critical_high": 22.2,
+        "critical_note": "Ngưỡng nguy kịch tham khảo: < 2.2 mmol/L (< 40 mg/dL) hoặc > 22.2 mmol/L (> 400 mg/dL) cần cấp cứu ngay.",
+        "high_meaning": "Có thể liên quan đến tiền đái tháo đường hoặc đái tháo đường (nếu đo lúc đói và lặp lại), cũng có thể tăng tạm thời do ăn trước khi lấy máu, stress, hoặc một số thuốc. Bác sĩ thường kết hợp thêm chỉ số HbA1c để đánh giá chính xác hơn.",
+        "low_meaning": "Hạ đường huyết (< 3.9 mmol/L): cơ thể thiếu năng lượng, có thể gây đói cồn cào, tay chân bủn rủn, vã mồ hôi lạnh, tim đập nhanh - cần xử trí sớm nếu có triệu chứng.",
+        "sources": [
+            "https://diabetes.org/about-diabetes/a1c",
+            "https://www.cdc.gov/diabetes/diagnosis/index.html",
+            "https://www.vinmec.com/vie/bai-viet/duong-huyet-luc-doi-binh-thuong-vi",
+            "https://www.vinmec.com/vie/bai-viet/chi-so-glucose-trong-mau-o-muc-bao-nhieu-la-mac-benh-tieu-duong-vi",
+            "https://nhathuoclongchau.com.vn/bai-viet/glucose-trong-mau-binh-thuong-la-bao-nhieu-bao-nhieu-la-tieu-duong.html",
+            "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
+        ]
+    },
+    {
+        "id": "hba1c",
+        "indicator": "HbA1c",
+        "display_name": "Hemoglobin A1c",
+        "vietnamese_name": "Đường huyết trung bình 2-3 tháng",
+        "simple_explanation": "HbA1c phản ánh mức đường huyết trung bình trong khoảng 2-3 tháng gần nhất, không bị ảnh hưởng bởi bữa ăn hay vận động ngay trước khi lấy máu như glucose đo tức thời - vì vậy không cần nhịn ăn khi xét nghiệm.",
+        "reference_ranges": [
+            {
+                "group": "normal",
+                "gender": "A",
+                "unit": "%",
+                "low": null,
+                "high": 5.7,
+                "note": "Bình thường, người trưởng thành khỏe mạnh, không mang thai."
+            },
+            {
+                "group": "prediabetes",
+                "gender": "A",
+                "unit": "%",
+                "low": 5.7,
+                "high": 6.4,
+                "note": "Tiền đái tháo đường - nguy cơ cao tiến triển thành đái tháo đường."
+            },
+            {
+                "group": "diabetes",
+                "gender": "A",
+                "unit": "%",
+                "low": 6.5,
+                "high": null,
+                "note": "Đái tháo đường - chẩn đoán xác định khi dương tính lần 2 hoặc kèm triệu chứng lâm sàng rõ."
+            }
+        ],
+        "high_meaning": "Gợi ý đường huyết đã tăng cao trong thời gian dài, liên quan đến nguy cơ tiền đái tháo đường/đái tháo đường. Với người đã điều trị, chỉ số này giúp đánh giá việc kiểm soát bệnh có đang hiệu quả hay chưa.",
+        "low_meaning": "Hiếm gặp hơn, có thể liên quan đến một số bệnh lý về máu ảnh hưởng đến kết quả xét nghiệm.",
+        "sources": [
+            "https://diabetes.org/about-diabetes/a1c",
+            "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
+            "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
+        ]
+    },
+    {
+        "id": "ldl_cholesterol",
+        "indicator": "LDL-Cholesterol",
+        "display_name": "LDL Cholesterol",
+        "vietnamese_name": "Cholesterol xấu (LDL)",
+        "simple_explanation": "LDL là loại cholesterol có thể bám vào thành mạch máu, hình thành mảng xơ vữa, thường được gọi là \"cholesterol xấu\".",
+        "reference_ranges": [
+            {
+                "group": "optimal",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": null,
+                "high": 100,
+                "note": "Tối ưu. Tương đương < 2.6 mmol/L. Người trưởng thành khỏe mạnh, không bệnh nền."
+            },
+            {
+                "group": "acceptable",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": 100,
+                "high": 129,
+                "note": "Chấp nhận được. Tương đương 2.6 - 3.3 mmol/L."
+            },
+            {
+                "group": "borderline_high",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": 130,
+                "high": 159,
+                "note": "Giới hạn cao. Tương đương 3.4 - 4.1 mmol/L."
+            },
+            {
+                "group": "high",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": 160,
+                "high": 189,
+                "note": "Cao. Tương đương 4.1 - 4.9 mmol/L."
+            },
+            {
+                "group": "very_high",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": 190,
+                "high": null,
+                "note": "Rất cao. Tương đương >= 4.9 mmol/L."
+            }
+        ],
+        "high_meaning": "Liên quan đến tăng nguy cơ bệnh tim mạch (nhồi máu cơ tim, đột quỵ) theo thời gian, đặc biệt nếu kết hợp với các yếu tố nguy cơ khác. Một số yếu tố góp phần làm LDL tăng: chế độ ăn nhiều chất béo bão hòa/chất béo chuyển hóa (thịt mỡ, đồ chiên rán, thức ăn nhanh), ít vận động, thừa cân, hút thuốc lá, uống nhiều rượu bia, hoặc yếu tố di truyền.",
+        "low_meaning": "Thường không phải vấn đề đáng lo, mức thấp thường được xem là có lợi.",
+        "sources": [
+            "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+            "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+            "https://www.cdc.gov/cholesterol/about/index.html",
+            "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
+            "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
+            "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
+        ]
+    },
+    {
+        "id": "hdl_cholesterol",
+        "indicator": "HDL-Cholesterol",
+        "display_name": "HDL Cholesterol",
+        "vietnamese_name": "Cholesterol tốt (HDL)",
+        "simple_explanation": "HDL giúp vận chuyển cholesterol dư thừa ra khỏi mạch máu về gan để xử lý, nên thường gọi là \"cholesterol tốt\". Khác với LDL, chỉ số này càng cao thường càng có lợi cho tim mạch.",
+        "reference_ranges": [
+            {
+                "group": "optimal",
+                "gender": "A",
+                "unit": "mg/dL",
+                "low": 60,
+                "high": null,
+                "note": "Tối ưu - bảo vệ tim mạch tốt nhất. Tương đương >= 1.5 mmol/L."
+            },
+            {
+                "group": "average",
+                "gender": "M",
+                "unit": "mg/dL",
+                "low": 40,
+                "high": 59,
+                "note": "Trung bình (bình thường) nam. Tương đương 1.0 - 1.5 mmol/L."
+            },
+            {
+                "group": "average",
+                "gender": "F",
+                "unit": "mg/dL",
+                "low": 50,
+                "high": 59,
+                "note": "Trung bình (bình thường) nữ. Tương đương 1.3 - 1.5 mmol/L."
+            },
+            {
+                "group": "low",
+                "gender": "M",
+                "unit": "mg/dL",
+                "low": null,
+                "high": 40,
+                "note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.0 mmol/L."
+            },
+            {
+                "group": "low",
+                "gender": "F",
+                "unit": "mg/dL",
+                "low": null,
+                "high": 50,
+                "note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.3 mmol/L."
+            }
+        ],
+        "high_meaning": "Thường được xem là có lợi, tuy nhiên mức rất cao bất thường đôi khi cần bác sĩ đánh giá thêm.",
+        "low_meaning": "Có thể liên quan đến tăng nguy cơ bệnh tim mạch. Một số yếu tố góp phần làm HDL giảm: ít vận động, hút thuốc lá, chế độ ăn nhiều tinh bột tinh chế/đường/chất béo chuyển hóa, thừa cân hoặc hội chứng chuyển hóa, hoặc tác dụng phụ của một số thuốc.",
+        "lifestyle_note": "Các yếu tố lối sống thường được nhắc đến để hỗ trợ cải thiện HDL (thông tin tham khảo chung, không phải khuyến nghị điều trị cá nhân hoá): vận động thể chất đều đặn, ăn nhiều chất béo có lợi (dầu ô liu, các loại hạt, cá béo), hạn chế tinh bột tinh chế và chất béo chuyển hóa, không hút thuốc lá, và duy trì cân nặng hợp lý.",
+        "sources": [
+            "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+            "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+            "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+            "https://tamanhhospital.vn"
+        ]
+    },
+    {
+        "id": "creatinine",
+        "indicator": "Creatinine",
+        "display_name": "Creatinine",
+        "vietnamese_name": "Creatinin - đánh giá chức năng thận",
+        "simple_explanation": "Creatinine là sản phẩm thải từ quá trình phân hủy mô cơ, được thận lọc khỏi máu và đào thải qua nước tiểu. Đây là chỉ số quan trọng để đánh giá chức năng lọc của thận.",
+        "reference_ranges": [
+            {
+                "group": "adult",
+                "gender": "M",
+                "unit": "mg/dL",
+                "low": 0.6,
+                "high": 1.2,
+                "note": "Tương đương 53 - 106 µmol/L. Tùy khối lượng cơ theo giới."
+            },
+            {
+                "group": "adult",
+                "gender": "F",
+                "unit": "mg/dL",
+                "low": 0.5,
+                "high": 1.1,
+                "note": "Tương đương 44 - 97 µmol/L. Tùy khối lượng cơ theo giới."
+            }
+        ],
+        "high_meaning": "Có thể gợi ý thận đang lọc kém hiệu quả hơn bình thường (thường gặp trong tổn thương thận cấp hoặc bệnh thận mạn). Tuy nhiên chỉ số cũng có thể tăng tạm thời do mất nước, ăn nhiều thịt đỏ, hoặc vận động/tập luyện cường độ cao trước khi xét nghiệm.",
+        "low_meaning": "Ít khi có ý nghĩa bệnh lý, thường gặp ở người có khối lượng cơ thấp (suy dinh dưỡng, teo cơ, người cao tuổi suy kiệt, hoặc phụ nữ mang thai).",
+        "related_indicator_note": "Chỉ số liên quan thường đi kèm - eGFR (độ lọc cầu thận ước tính): Bác sĩ thường không chỉ nhìn riêng Creatinine mà dùng nó để tính ra eGFR (dựa trên tuổi, giới tính) nhằm đánh giá chức năng thận chính xác hơn. Mức tham khảo chung: eGFR >= 90 mL/min/1.73m2 là bình thường; < 60 mL/min/1.73m2 kéo dài trên 3 tháng gợi ý bệnh thận mạn. (Việc tính toán/diễn giải eGFR cụ thể cần bác sĩ thực hiện, nằm ngoài phạm vi giải thích chung của hệ thống.)",
+        "sources": [
+            "https://medlineplus.gov/lab-tests/creatinine-test/",
+            "https://www.kidney.org/kidney-topics/creatinine",
+            "https://tamanhhospital.vn"
+        ]
+    },
+    {
+        "id": "kali",
+        "indicator": "Kali",
+        "display_name": "Potassium",
+        "vietnamese_name": "Kali huyết thanh",
+        "simple_explanation": "Kali là một chất điện giải quan trọng, liên quan đến hoạt động điện của tim, cơ bắp, và cân bằng dịch trong/ngoài tế bào.",
+        "reference_ranges": [
+            {
+                "group": "normal",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 3.5,
+                "high": 5.0,
+                "note": "Một số nguồn tiếng Việt khác ghi nhận khoảng hơi rộng hơn (3.6-5.2 hoặc 3.5-5.5 mEq/L), do khác biệt giữa các phòng xét nghiệm/thiết bị."
+            },
+            {
+                "group": "mild_hyperkalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 5.1,
+                "high": 6.0,
+                "note": "Tăng kali máu nhẹ."
+            },
+            {
+                "group": "moderate_hyperkalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 6.1,
+                "high": 7.0,
+                "note": "Tăng kali máu trung bình."
+            },
+            {
+                "group": "severe_hyperkalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 7.0,
+                "high": null,
+                "note": "Tăng kali máu nặng - nguy kịch. VUNA khuyến nghị mức >= 6.5 mmol/L cần đánh giá khẩn tại cơ sở y tế."
+            },
+            {
+                "group": "mild_hypokalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 3.0,
+                "high": 3.4,
+                "note": "Hạ kali máu nhẹ."
+            },
+            {
+                "group": "moderate_hypokalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": 2.5,
+                "high": 3.0,
+                "note": "Hạ kali máu trung bình."
+            },
+            {
+                "group": "severe_hypokalemia",
+                "gender": "A",
+                "unit": "mmol/L",
+                "low": null,
+                "high": 2.5,
+                "note": "Hạ kali máu nặng."
+            }
+        ],
+        "critical_low": 2.5,
+        "critical_high": 7.0,
+        "critical_note": "Ngưỡng nguy kịch tham khảo theo nguồn Việt Nam: hạ kali máu nặng < 2.5 mmol/L; tăng kali máu nặng > 7.0 mmol/L.",
+        "high_meaning": "Nguyên nhân phổ biến nhất là suy thận - khi thận hoạt động không bình thường, cơ thể không thể loại bỏ kali dư thừa. Mẫu máu bị tán huyết khi lấy mẫu có thể gây giá trị cao giả. Một số thuốc cũng có thể ảnh hưởng: kháng sinh chứa kali, NSAID, heparin, insulin, glucose, corticosteroid, thuốc lợi tiểu, thuốc điều trị huyết áp cao.",
+        "low_meaning": "Thường liên quan đến mất kali quá mức qua đường tiêu hoá hoặc qua thận - hay gặp ở người dùng thuốc lợi tiểu (đặc biệt furosemide), nôn ói/tiêu chảy kéo dài, lạm dụng thuốc nhuận tràng, hoặc chế độ ăn thiếu kali.",
+        "sources": [
+            "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+            "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
+            "https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce",
+            "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
+            "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
+            "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
+        ]
+    }
+]

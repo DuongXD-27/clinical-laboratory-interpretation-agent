@@ -58,3 +58,7 @@ out/
 .ai-log/*.jsonl
 .ai-log/archive/
 scripts/log_opencode.py
+
+*.bin
+chroma.sqlite3
+data/chroma/
