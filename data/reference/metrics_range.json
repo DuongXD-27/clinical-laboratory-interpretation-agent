@@ -5,7 +5,11 @@
     "gender": "A",
     "lower_range": 4.72,
     "upper_range": 11.3,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3, combined adults"
   },
   {
     "test_name": "RBC",
@@ -13,7 +17,11 @@
     "gender": "M",
     "lower_range": 4.45,
     "upper_range": 6.19,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "RBC",
@@ -21,7 +29,11 @@
     "gender": "F",
     "lower_range": 4.01,
     "upper_range": 5.48,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "HGB",
@@ -29,7 +41,11 @@
     "gender": "M",
     "lower_range": 128,
     "upper_range": 183,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "HGB",
@@ -37,7 +53,11 @@
     "gender": "F",
     "lower_range": 110,
     "upper_range": 150,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "HCT",
@@ -45,7 +65,11 @@
     "gender": "M",
     "lower_range": 0.37,
     "upper_range": 0.5,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "HCT",
@@ -53,151 +77,11 @@
     "gender": "F",
     "lower_range": 0.32,
     "upper_range": 0.44,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "PLT",
-    "standardized_unit": "10^9/L",
-    "gender": "M",
-    "lower_range": 172,
-    "upper_range": 375,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "PLT",
-    "standardized_unit": "10^9/L",
-    "gender": "F",
-    "lower_range": 178,
-    "upper_range": 366,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "NEU/NEUT (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "A",
-    "lower_range": 2.21,
-    "upper_range": 7.55,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "NEU/NEUT (percentage)",
-    "standardized_unit": "%",
-    "gender": "M",
-    "lower_range": 40.4,
-    "upper_range": 79.53,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "NEU/NEUT (percentage)",
-    "standardized_unit": "%",
-    "gender": "F",
-    "lower_range": 39.83,
-    "upper_range": 80.3,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "LYM (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "M",
-    "lower_range": 0.92,
-    "upper_range": 3.8,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "LYM (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "F",
-    "lower_range": 0.94,
-    "upper_range": 3.75,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "LYM (percentage)",
-    "standardized_unit": "%",
-    "gender": "A",
-    "lower_range": 12,
-    "upper_range": 48.6,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "MONO (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "M",
-    "lower_range": 0.22,
-    "upper_range": 0.79,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "MONO (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "F",
-    "lower_range": 0.2,
-    "upper_range": 0.72,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "MONO (percentage)",
-    "standardized_unit": "%",
-    "gender": "M",
-    "lower_range": 3.3,
-    "upper_range": 9.39,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "MONO (percentage)",
-    "standardized_unit": "%",
-    "gender": "F",
-    "lower_range": 3.1,
-    "upper_range": 8.9,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "EOS (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "M",
-    "lower_range": 0.034,
-    "upper_range": 0.561,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "EOS (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "F",
-    "lower_range": 0.026,
-    "upper_range": 0.476,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "EOS (percentage)",
-    "standardized_unit": "%",
-    "gender": "M",
-    "lower_range": 0.4,
-    "upper_range": 7.6,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "EOS (percentage)",
-    "standardized_unit": "%",
-    "gender": "F",
-    "lower_range": 0.3,
-    "upper_range": 6.8,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "BASO (absolute)",
-    "standardized_unit": "10^9/L",
-    "gender": "A",
-    "lower_range": 0.006,
-    "upper_range": 0.036,
-    "special_note": "Normal Range"
-  },
-  {
-    "test_name": "BASO (percentage)",
-    "standardized_unit": "%",
-    "gender": "A",
-    "lower_range": 0.1,
-    "upper_range": 0.4,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "MCV",
@@ -205,7 +89,11 @@
     "gender": "M",
     "lower_range": 73.8,
     "upper_range": 93.1,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "MCV",
@@ -213,7 +101,11 @@
     "gender": "F",
     "lower_range": 71.6,
     "upper_range": 91.5,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "MCH",
@@ -221,7 +113,11 @@
     "gender": "M",
     "lower_range": 26.3,
     "upper_range": 32.2,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "MCH",
@@ -229,7 +125,11 @@
     "gender": "F",
     "lower_range": 25.1,
     "upper_range": 31.4,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "MCHC",
@@ -237,7 +137,11 @@
     "gender": "M",
     "lower_range": 323,
     "upper_range": 371,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "MCHC",
@@ -245,7 +149,11 @@
     "gender": "F",
     "lower_range": 322,
     "upper_range": 366,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
   },
   {
     "test_name": "RDW",
@@ -253,7 +161,11 @@
     "gender": "M",
     "lower_range": 13.2,
     "upper_range": 15.1,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 male"
   },
   {
     "test_name": "RDW",
@@ -261,7 +173,35 @@
     "gender": "F",
     "lower_range": 13.1,
     "upper_range": 15.62,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.2 female"
+  },
+  {
+    "test_name": "PLT",
+    "standardized_unit": "10^9/L",
+    "gender": "M",
+    "lower_range": 172,
+    "upper_range": 375,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.4 male"
+  },
+  {
+    "test_name": "PLT",
+    "standardized_unit": "10^9/L",
+    "gender": "F",
+    "lower_range": 178,
+    "upper_range": 366,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.4 female"
   },
   {
     "test_name": "MPV",
@@ -269,7 +209,11 @@
     "gender": "M",
     "lower_range": 7.4,
     "upper_range": 10.6,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.4 male"
   },
   {
     "test_name": "MPV",
@@ -277,6 +221,742 @@
     "gender": "F",
     "lower_range": 7.1,
     "upper_range": 10.2,
-    "special_note": "Normal Range"
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.4 female"
+  },
+  {
+    "test_name": "NEU/NEUT (percentage)",
+    "standardized_unit": "%",
+    "gender": "M",
+    "lower_range": 40.4,
+    "upper_range": 79.53,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "NEU/NEUT (percentage)",
+    "standardized_unit": "%",
+    "gender": "F",
+    "lower_range": 39.83,
+    "upper_range": 80.3,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "NEU/NEUT (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "A",
+    "lower_range": 2.21,
+    "upper_range": 7.55,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 combined"
+  },
+  {
+    "test_name": "LYM (percentage)",
+    "standardized_unit": "%",
+    "gender": "A",
+    "lower_range": 12,
+    "upper_range": 48.6,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 combined"
+  },
+  {
+    "test_name": "LYM (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "M",
+    "lower_range": 0.92,
+    "upper_range": 3.8,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "LYM (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "F",
+    "lower_range": 0.94,
+    "upper_range": 3.75,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "MONO (percentage)",
+    "standardized_unit": "%",
+    "gender": "M",
+    "lower_range": 3.3,
+    "upper_range": 9.39,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "MONO (percentage)",
+    "standardized_unit": "%",
+    "gender": "F",
+    "lower_range": 3.1,
+    "upper_range": 8.9,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "MONO (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "M",
+    "lower_range": 0.22,
+    "upper_range": 0.79,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "MONO (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "F",
+    "lower_range": 0.2,
+    "upper_range": 0.72,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "EOS (percentage)",
+    "standardized_unit": "%",
+    "gender": "M",
+    "lower_range": 0.4,
+    "upper_range": 7.6,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "EOS (percentage)",
+    "standardized_unit": "%",
+    "gender": "F",
+    "lower_range": 0.3,
+    "upper_range": 6.8,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "EOS (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "M",
+    "lower_range": 0.034,
+    "upper_range": 0.561,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 male"
+  },
+  {
+    "test_name": "EOS (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "F",
+    "lower_range": 0.026,
+    "upper_range": 0.476,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 female"
+  },
+  {
+    "test_name": "BASO (percentage)",
+    "standardized_unit": "%",
+    "gender": "A",
+    "lower_range": 0.1,
+    "upper_range": 0.4,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 combined"
+  },
+  {
+    "test_name": "BASO (absolute)",
+    "standardized_unit": "10^9/L",
+    "gender": "A",
+    "lower_range": 0.006,
+    "upper_range": 0.036,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_RI",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+    "evidence_location": "Table 3.3 combined"
+  },
+  {
+    "test_name": "Sodium (Na)",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 133,
+    "upper_range": 146,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/sodium-na/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Potassium (K+)",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 3.5,
+    "upper_range": 5.3,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Chloride (Cl-)",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 95,
+    "upper_range": 108,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Fasting Blood Glucose",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 4.1,
+    "upper_range": 6.1,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_verification",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
+    "evidence_location": "Abstract and conclusion: glucose 74–109 mg/dL validated on two analyzers"
+  },
+  {
+    "test_name": "Urea",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 2.5,
+    "upper_range": 7.8,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/urea/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Creatinine",
+    "standardized_unit": "µmol/L",
+    "gender": "M",
+    "lower_range": 59,
+    "upper_range": 104,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
+    "evidence_location": "Adult male reference ranges"
+  },
+  {
+    "test_name": "Creatinine",
+    "standardized_unit": "µmol/L",
+    "gender": "F",
+    "lower_range": 45,
+    "upper_range": 84,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
+    "evidence_location": "Adult female reference ranges"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 90,
+    "upper_range": null,
+    "special_note": "G1 normal/high if no kidney damage markers",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults",
+    "evidence_location": "2021 CKD-EPI equation and units"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 60,
+    "upper_range": 89,
+    "special_note": "G2 mildly decreased",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.kidney.org/how-to-classify-ckd",
+    "evidence_location": "GFR categories section"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 45,
+    "upper_range": 59,
+    "special_note": "G3a",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.kidney.org/how-to-classify-ckd",
+    "evidence_location": "GFR categories section"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 30,
+    "upper_range": 44,
+    "special_note": "G3b",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.kidney.org/how-to-classify-ckd",
+    "evidence_location": "GFR categories section"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 15,
+    "upper_range": 29,
+    "special_note": "G4",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.kidney.org/how-to-classify-ckd",
+    "evidence_location": "GFR categories section"
+  },
+  {
+    "test_name": "eGFR",
+    "standardized_unit": "mL/min/1.73 m^2",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 15,
+    "special_note": "G5; clinically “<15”",
+    "source_priority_tier": "T2",
+    "source_type": "Kidney_guideline_equation",
+    "source_url": "https://www.kidney.org/how-to-classify-ckd",
+    "evidence_location": "GFR categories section"
+  },
+  {
+    "test_name": "Uric Acid",
+    "standardized_unit": "µmol/L",
+    "gender": "M",
+    "lower_range": 210,
+    "upper_range": 420,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T3",
+    "source_type": "VN_accredited_lab_article",
+    "source_url": "https://medlatec.vn/tin-tuc/chi-so-acid-uric-la-gi-thong-tin-can-biet-khi-lam-xet-nghiem-acid-uric",
+    "evidence_location": "Section “Acid uric bao nhiêu được xem là bình thường?”"
+  },
+  {
+    "test_name": "Uric Acid",
+    "standardized_unit": "µmol/L",
+    "gender": "F",
+    "lower_range": 150,
+    "upper_range": 350,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T3",
+    "source_type": "VN_accredited_lab_article",
+    "source_url": "https://medlatec.vn/tin-tuc/chi-so-acid-uric-la-gi-thong-tin-can-biet-khi-lam-xet-nghiem-acid-uric",
+    "evidence_location": "Section “Acid uric bao nhiêu được xem là bình thường?”"
+  },
+  {
+    "test_name": "Total Protein",
+    "standardized_unit": "g/L",
+    "gender": "A",
+    "lower_range": 60,
+    "upper_range": 80,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Albumin",
+    "standardized_unit": "g/L",
+    "gender": "A",
+    "lower_range": 35,
+    "upper_range": 50,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Total Bilirubin",
+    "standardized_unit": "µmol/L",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 21,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/bilirubin-total-sbr/",
+    "evidence_location": "Adult total bilirubin reference range"
+  },
+  {
+    "test_name": "Direct Bilirubin",
+    "standardized_unit": "µmol/L",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 5,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://pathology.uhsussex.nhs.uk/pug/biochemistry-immunology/biochemistry-tests/206-bilirubin-conjugated",
+    "evidence_location": "Reference range line"
+  },
+  {
+    "test_name": "AST (GOT)",
+    "standardized_unit": "U/L",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 40,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_verification",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
+    "evidence_location": "Abstract/conclusion: SGOT <40 U/L validated on two analyzers"
+  },
+  {
+    "test_name": "ALT (GPT)",
+    "standardized_unit": "U/L",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 41,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T1",
+    "source_type": "VN_peer_reviewed_lab_verification",
+    "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
+    "evidence_location": "Abstract/conclusion: SGPT <41 U/L validated on two analyzers"
+  },
+  {
+    "test_name": "GGT",
+    "standardized_unit": "U/L",
+    "gender": "M",
+    "lower_range": 0,
+    "upper_range": 61,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "GGT",
+    "standardized_unit": "U/L",
+    "gender": "F",
+    "lower_range": 0,
+    "upper_range": 36,
+    "special_note": "Normal Range",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_hospital_lab",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
+    "evidence_location": "Reference ranges section"
+  },
+  {
+    "test_name": "Fasting Blood Glucose",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 5.6,
+    "upper_range": 6.9,
+    "special_note": "Prediabetes 100–125 mg/dL = 5.6–6.9 mmol/L",
+    "source_priority_tier": "T2",
+    "source_type": "US_public_health_guideline",
+    "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
+    "evidence_location": "Fasting blood sugar test diagnostic ranges"
+  },
+  {
+    "test_name": "Fasting Blood Glucose",
+    "standardized_unit": "mmol/L",
+    "gender": "A",
+    "lower_range": 7,
+    "upper_range": null,
+    "special_note": "Diabetes diagnostic threshold ≥126 mg/dL = ≥7.0 mmol/L",
+    "source_priority_tier": "T2",
+    "source_type": "US_public_health_guideline",
+    "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
+    "evidence_location": "Fasting blood sugar test diagnostic ranges"
+  },
+  {
+    "test_name": "HbA1c",
+    "standardized_unit": "%",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 5.6,
+    "special_note": "Normal <5.7%; approx IFCC <39 mmol/mol",
+    "source_priority_tier": "T2",
+    "source_type": "US_public_health_guideline",
+    "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
+    "evidence_location": "“A1C results” section"
+  },
+  {
+    "test_name": "HbA1c",
+    "standardized_unit": "%",
+    "gender": "A",
+    "lower_range": 5.7,
+    "upper_range": 6.4,
+    "special_note": "Prediabetes; approx 39–47 mmol/mol",
+    "source_priority_tier": "T2",
+    "source_type": "US_public_health_guideline",
+    "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
+    "evidence_location": "“A1C results” section"
+  },
+  {
+    "test_name": "HbA1c",
+    "standardized_unit": "%",
+    "gender": "A",
+    "lower_range": 6.5,
+    "upper_range": null,
+    "special_note": "Diabetes threshold; approx ≥48 mmol/mol",
+    "source_priority_tier": "T2",
+    "source_type": "US_public_health_guideline",
+    "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
+    "evidence_location": "“A1C results” section"
+  },
+  {
+    "test_name": "Total Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 200,
+    "special_note": "Desirable",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Total cholesterol guidelines"
+  },
+  {
+    "test_name": "Total Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 200,
+    "upper_range": 238.61,
+    "special_note": "Borderline high",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Total cholesterol guidelines"
+  },
+  {
+    "test_name": "Total Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 239,
+    "upper_range": null,
+    "special_note": "High ≥240 mg/dL",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Total cholesterol guidelines"
+  },
+  {
+    "test_name": "Triglycerides",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 149.56,
+    "special_note": "Normal/desirable",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Triglyceride guidelines"
+  },
+  {
+    "test_name": "Triglycerides",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 150.44,
+    "upper_range": 198.23,
+    "special_note": "Borderline high",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Triglyceride guidelines"
+  },
+  {
+    "test_name": "Triglycerides",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 200,
+    "upper_range": 498.23,
+    "special_note": "High",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Triglyceride guidelines"
+  },
+  {
+    "test_name": "Triglycerides",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 500,
+    "upper_range": null,
+    "special_note": "Very high ≥500 mg/dL",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+    "evidence_location": "Triglyceride guidelines"
+  },
+  {
+    "test_name": "HDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "M",
+    "lower_range": 0,
+    "upper_range": 38.22,
+    "special_note": "Poor/low in men",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
+    "evidence_location": "HDL results table"
+  },
+  {
+    "test_name": "HDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "F",
+    "lower_range": 0,
+    "upper_range": 49.81,
+    "special_note": "Poor/low in women",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
+    "evidence_location": "HDL results table"
+  },
+  {
+    "test_name": "HDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "M",
+    "lower_range": 38.61,
+    "upper_range": 57.53,
+    "special_note": "Better/intermediate in men",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
+    "evidence_location": "HDL results table"
+  },
+  {
+    "test_name": "HDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "F",
+    "lower_range": 50.19,
+    "upper_range": 57.53,
+    "special_note": "Better/intermediate in women",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
+    "evidence_location": "HDL results table"
+  },
+  {
+    "test_name": "HDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 57.92,
+    "upper_range": null,
+    "special_note": "Best/protective category",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
+    "evidence_location": "HDL results table"
+  },
+  {
+    "test_name": "LDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 0,
+    "upper_range": 100,
+    "special_note": "Desirable/optimal",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://isj.testcatalog.org/show/LDLFP",
+    "evidence_location": "Mayo calculated LDL reference values and method"
+  },
+  {
+    "test_name": "LDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 100.39,
+    "upper_range": 128.57,
+    "special_note": "Above desirable/near optimal",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://isj.testcatalog.org/show/LDLFP",
+    "evidence_location": "Mayo calculated LDL reference values and method"
+  },
+  {
+    "test_name": "LDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 129.73,
+    "upper_range": 158.69,
+    "special_note": "Borderline high",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://isj.testcatalog.org/show/LDLFP",
+    "evidence_location": "Mayo calculated LDL reference values and method"
+  },
+  {
+    "test_name": "LDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 159.85,
+    "upper_range": 188.8,
+    "special_note": "High",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://isj.testcatalog.org/show/LDLFP",
+    "evidence_location": "Mayo calculated LDL reference values and method"
+  },
+  {
+    "test_name": "LDL-Cholesterol",
+    "standardized_unit": "mg/dL",
+    "gender": "A",
+    "lower_range": 189.58,
+    "upper_range": null,
+    "special_note": "Very high ≥190 mg/dL",
+    "source_priority_tier": "T2",
+    "source_type": "Intl_official_lab_guideline",
+    "source_url": "https://isj.testcatalog.org/show/LDLFP",
+    "evidence_location": "Mayo calculated LDL reference values and method"
   }
 ]
