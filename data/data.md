@@ -30,9 +30,9 @@ data/
 
 ## 2. Purpose of Each Data Group
 
-`reference/` contains reference data used to standardize metric names, units, and
-normal value ranges. This is the foundation for comparing laboratory results
-before generating explanations.
+`reference/` contains reference data used to standardize metric names, units,
+normal value ranges, decision limits, and source provenance. This is the
+foundation for comparing laboratory results before generating explanations.
 
 `mock/templates/` contains JSON templates for each laboratory report type. Each
 file is a complete sample report with a representative list of indicators, useful
@@ -47,8 +47,10 @@ other than `final`.
 
 ### 3.1. `metrics_range.json`
 
-This JSON file contains an array of objects. Each object describes the reference
-range for one laboratory metric.
+This JSON file contains an array of objects. Each object describes one reference
+range or clinical decision interval for a laboratory metric. The file is derived
+from `adult_outpatient_laboratory_reference_map.csv` and keeps source metadata
+for traceability.
 
 ```json
 {
@@ -57,7 +59,11 @@ range for one laboratory metric.
   "gender": "A",
   "lower_range": 4.72,
   "upper_range": 11.3,
-  "special_note": "Normal Range"
+  "special_note": "Normal Range",
+  "source_priority_tier": "T1",
+  "source_type": "VN_peer_reviewed_lab_RI",
+  "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
+  "evidence_location": "Table 3.3, combined adults"
 }
 ```
 
@@ -69,14 +75,32 @@ Fields:
 | `standardized_unit` | string | Standard unit for the metric. |
 | `gender` | string | Gender that the reference range applies to: `M` for male, `F` for female, `A` for all genders. |
 | `lower_range` | number | Lower bound of the normal range. |
-| `upper_range` | number | Upper bound of the normal range. |
-| `special_note` | string | Note about the reference range. Currently this is mainly `Normal Range`. |
+| `upper_range` | number or null | Upper bound of the range. This may be `null` for one-sided thresholds such as `>= 7.0 mmol/L` glucose or high lipid categories. |
+| `special_note` | string | Short interpretation note for the interval, for example `Normal Range`, `Borderline high`, `High`, `Prediabetes`, or a decision-limit note. |
+| `source_priority_tier` | string | Source quality tier copied from the source map. `T1` is the highest-priority source group used here, followed by `T2` and `T3`. |
+| `source_type` | string | Source category, such as Vietnamese peer-reviewed laboratory reference interval, official hospital laboratory reference, public health guideline, or accredited laboratory article. |
+| `source_url` | string | URL of the source used for the metric range or decision limit. |
+| `evidence_location` | string | Location inside the source where the evidence appears, such as a table name, section title, abstract note, or guideline table. |
 
-The current file focuses on CBC metrics. It contains 35 range rows for 20 CBC
-indicators. Some indicators have gender-specific ranges, such as `RBC`, `HGB`,
-`HCT`, `PLT`, `MCV`, `MCH`, `MCHC`, `RDW`, and `MPV`. Some indicators use a
-shared range with `gender = A`, such as `WBC`, `NEU/NEUT (absolute)`, `LYM
-(percentage)`, and `BASO (absolute)`.
+The current file contains 80 rows covering CBC, glycemic profile, lipid profile,
+liver function, renal function, electrolytes, proteins, and bilirubin metrics.
+It includes both reference intervals (`RI`) and clinical decision limits (`CDL`)
+from the source map. Some indicators have gender-specific ranges, such as `RBC`,
+`HGB`, `HCT`, `PLT`, `Creatinine`, `Uric Acid`, `GGT`, and `HDL-Cholesterol`.
+Some indicators use a shared range with `gender = A`, such as `WBC`, `Fasting
+Blood Glucose`, `HbA1c`, `Total Cholesterol`, and `Sodium (Na)`.
+
+Lipid rows in the source map are stored in `mmol/L`, but the project mock data
+and `units_metric.csv` use `mg/dL` for lipid metrics. The generated
+`metrics_range.*` files therefore convert lipid intervals back to `mg/dL` using
+the source conversion formulas:
+
+| Metric | Source formula | Applied reverse conversion |
+| --- | --- | --- |
+| `Total Cholesterol` | `mg/dL × 0.0259` | `mg/dL = mmol/L / 0.0259` |
+| `HDL-Cholesterol` | `mg/dL × 0.0259` | `mg/dL = mmol/L / 0.0259` |
+| `LDL-Cholesterol` | `mg/dL × 0.0259` | `mg/dL = mmol/L / 0.0259` |
+| `Triglycerides` | `mg/dL × 0.0113` | `mg/dL = mmol/L / 0.0113` |
 
 ### 3.2. `metrics_range.csv`
 
@@ -86,7 +110,7 @@ tabular format for quick inspection or import into data processing tools.
 Header:
 
 ```csv
-test_name,standardized_unit,gender,lower_range,upper_range,special_note
+test_name,standardized_unit,gender,lower_range,upper_range,special_note,source_priority_tier,source_type,source_url,evidence_location
 ```
 
 Use `metrics_range.json` as the convenient format for Python/JavaScript code, and
@@ -106,11 +130,9 @@ test_name,standardized_unit
 
 The file contains 38 metrics covering CBC, glycemic profile, lipid profile, liver
 function, renal function, electrolytes, and proteins. Note that this file only
-contains units; it does not include `lower_range` or `upper_range`. Therefore,
-for non-CBC metrics such as `HbA1c`, `Creatinine`, `AST (GOT)`, and `Sodium
-(Na)`, the Agent can standardize units from the current reference data, but it
-cannot reliably classify values as high or low unless additional reference
-ranges are added.
+contains units; it does not include `lower_range`, `upper_range`, or source
+metadata. Use `metrics_range.csv` or `metrics_range.json` when the Agent needs
+both ranges and source provenance.
 
 ## 4. Mock Report Schema
 
@@ -192,7 +214,7 @@ Contains 5 generated reports with several abnormal-looking values:
 | Report | `report_type` | Gender | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `ABNORMAL-CBC-0001` | `cbc_with_differential` | `male` | `final` | Contains CBC values outside the available reference ranges, such as high WBC, low HGB, low MCHC, and high RDW. |
-| `ABNORMAL-GLY-0002` | `glycemic_profile` | `female` | `final` | Glucose and HbA1c are clinically high-looking, but the current reference ranges do not include these metrics. |
+| `ABNORMAL-GLY-0002` | `glycemic_profile` | `female` | `final` | Glucose and HbA1c are high by the decision-limit rows now available in `metrics_range.*`. |
 | `ABNORMAL-LIPID-0003` | `lipid_profile` | `male` | `draft` | Cholesterol and triglycerides are high-looking, and `LDL-Cholesterol` is missing compared with the template. |
 | `ABNORMAL-LIVER-0004` | `liver_function_basic` | `unknown` | `final` | AST, ALT, and GGT are high-looking; patient gender is unknown. |
 | `ABNORMAL-RENAL-0005` | `renal_function_blood` | `female` | `final` | Urea, Creatinine, and Uric Acid are high-looking, while eGFR is low-looking by common clinical interpretation. |
@@ -223,7 +245,9 @@ When the Agent processes a report, the recommended flow is:
    - `unknown` -> use `gender = A` if available; otherwise do not classify by range.
 4. Compare `value` with `lower_range` and `upper_range` to assign `low`,
    `normal`, or `high`.
-5. Generate a natural-language explanation for the patient. If no reference
+5. Use the source fields when the Agent needs to explain where a range came from
+   or audit why a threshold was selected.
+6. Generate a natural-language explanation for the patient. If no reference
    range is available, say that the current dataset does not include a reference
    range instead of over-interpreting the result.
 
@@ -238,9 +262,12 @@ When the Agent processes a report, the recommended flow is:
   reports missing `LDL-Cholesterol`.
 - Some values include many decimal places. The Agent may round values when
   explaining them to patients, but should not modify the raw source value.
-- The current reference ranges are sufficient only for CBC evaluation. Glucose,
-  lipid, liver, renal, electrolyte, and protein metrics currently only have
-  standardized units in `units_metric.csv`.
+- `upper_range` may be empty in CSV and `null` in JSON for one-sided thresholds.
+- Some rows represent clinical decision limits rather than healthy-population
+  reference intervals. Check `special_note` and the source fields before
+  presenting the result.
+- Lipid ranges in `metrics_range.*` are stored as `mg/dL` to match mock data,
+  even though the upstream source map stores lipid ranges as `mmol/L`.
 - The unit `µmol/L` contains the micro sign. Make sure the data pipeline reads
   files as UTF-8.
 
@@ -250,8 +277,12 @@ This dataset is suitable for:
 
 - Testing JSON report schema parsing.
 - Standardizing metric names and units.
-- Comparing CBC results against gender-specific reference ranges.
-- Detecting high, low, or normal values when reference ranges are available.
+- Comparing results against gender-specific reference ranges and decision-limit
+  intervals.
+- Detecting high, low, normal, borderline, or category-based values when ranges
+  are available.
+- Showing or auditing source provenance through `source_priority_tier`,
+  `source_type`, `source_url`, and `evidence_location`.
 - Generating concise explanations without diagnostic language.
 - Testing missing data, draft reports, cancelled reports, and unknown gender
   handling.
