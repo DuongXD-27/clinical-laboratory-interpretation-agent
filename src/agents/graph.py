@@ -1,27 +1,20 @@
 from langgraph.graph import END, StateGraph
 
-from src.agents.nodes.example_node import analyze_node, respond_node
+from src.agents.nodes.critical_detector_node import detect_critical_values_node
+from src.agents.nodes.guardrail_node import guardrail_node
 from src.agents.state import AgentState
-
-
-def should_continue(state: AgentState) -> str:
-    """Route based on whether an error occurred during analysis."""
-    if state.get("error"):
-        return END
-    return "respond"
-
 
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
-    # Add nodes
-    graph.add_node("analyze", analyze_node)
-    graph.add_node("respond", respond_node)
+    # Đăng ký các node hiện có
+    graph.add_node("critical_detector", detect_critical_values_node)
+    graph.add_node("guardrail", guardrail_node)
 
-    # Add edges
-    graph.set_entry_point("analyze")
-    graph.add_conditional_edges("analyze", should_continue)
-    graph.add_edge("respond", END)
+    # Cấu hình luồng chạy (Tạm thời V0.1)
+    graph.set_entry_point("critical_detector")
+    graph.add_edge("critical_detector", "guardrail")
+    graph.add_edge("guardrail", END)
 
     return graph.compile()
 
