@@ -1,25 +1,46 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from src.agents.graph import agent
-from src.models.schemas import ChatRequest, ChatResponse
+from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 
 router = APIRouter()
 
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
-    """Chat với AI agent."""
-    try:
-        result = await agent.ainvoke({"query": request.message})
-        return ChatResponse(
-            response=result.get("response", ""),
-            analysis=result.get("analysis", ""),
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+    """Nhận phiếu xét nghiệm (JSON mô phỏng), trả kết quả giải thích.
+
+    Khung API — chuyển request thành AgentState và trả response theo đúng
+    schema đã chốt. Logic đối chiếu tham chiếu / RAG / guardrail / câu hỏi cho
+    bác sĩ sẽ được cắm vào agent graph (src/agents/graph.py) bởi các node
+    tương ứng; hiện tại các field đó trả về giá trị mặc định/rỗng.
+
+    Không bắt Exception ở đây: lỗi ngoài dự kiến (bug, crash) nên để FastAPI
+    trả 500 mặc định thay vì lộ chi tiết nội bộ (str(e)) ra client.
+    """
+    # TODO: thay bằng agent.ainvoke(initial_state) khi graph.py có đủ node
+    # (parse -> reference check -> critical detect -> RAG -> personalize
+    # -> guardrail -> generate_questions -> summary).
+    initial_state = {
+        "patient_age": request.patient_age,
+        "patient_gender": request.patient_gender,
+        "test_date": request.test_date.isoformat(),
+        "language": request.language,
+        "raw_indicators": [i.model_dump() for i in request.indicators],
+    }
+
+    # Chưa có reference-range checker / critical-value detector thật (skeleton):
+    # status="unknown" — KHÔNG dùng "normal" ở đây, vì client đọc thẳng status
+    # (bỏ qua is_placeholder) có thể hiểu nhầm giá trị nguy kịch là bình thường.
+    indicators = [
+        IndicatorResultSchema(
+            name=i["name"],
+            value=i["value"],
+            unit=i["unit"],
+            status="unknown",
+            is_abnormal=False,
+            is_critical=False,
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        for i in initial_state["raw_indicators"]
+    ]
 
-
-@router.get("/status")
-async def agent_status():
-    """Kiểm tra trạng thái agent."""
-    return {"status": "ready", "agent": "LangGraph Agent v1.0"}
+    return AnalyzeResponse(indicators=indicators, is_placeholder=True)
