@@ -1,0 +1,7 @@
+{
+  "Potassium": {"low": 2.5, "high": 6.5, "unit": "mmol/L"},
+  "Kali": {"low": 2.5, "high": 6.5, "unit": "mmol/L"},
+  "Glucose": {"low": 3.0, "high": 27.8, "unit": "mmol/L"},
+  "Fasting plasma glucose": {"low": 3.0, "high": 27.8, "unit": "mmol/L"},
+  "LDL-C": {"low": -1.0, "high": 4.91, "unit": "mmol/L"}
+}
