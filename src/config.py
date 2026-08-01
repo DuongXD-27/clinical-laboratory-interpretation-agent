@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     chroma_persist_dir: str = "./data/chroma"
     embedding_device: Literal["cpu", "cuda", "mps"] = "cpu"
 
+    # Agent Rules / Reference
+    critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
+
 
 @lru_cache
 def get_settings() -> Settings:
