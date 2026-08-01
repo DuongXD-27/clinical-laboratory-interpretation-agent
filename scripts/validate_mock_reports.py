@@ -7,11 +7,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED = ROOT / "data" / "mock" / "generated"
+TEMPLATES = ROOT / "data" / "mock" / "templates"
 UNITS_FILE = ROOT / "data" / "reference" / "units_metric.csv"
 FILES = {
     "normal.json": GENERATED / "normal.json",
     "abnormal.json": GENERATED / "abnormal.json",
     "edge_case.json": GENERATED / "edge_case.json",
+}
+TEMPLATE_FILES = {
+    "cbc_with_differential": TEMPLATES / "cbc_with_differential.mock.json",
+    "glycemic_profile": TEMPLATES / "glycemic_profile.mock.json",
+    "lipid_profile": TEMPLATES / "lipid_profile.mock.json",
+    "liver_function_basic": TEMPLATES / "liver_function_basic.mock.json",
+    "renal_function_blood": TEMPLATES / "renal_function_blood.mock.json",
+    "electrolytes_basic": TEMPLATES / "electrolytes.mock.json",
+    "general_health_check": TEMPLATES / "general_health_check.mock.json",
 }
 REPORT_FIELDS = {
     "report_id",
@@ -34,6 +44,13 @@ REPORT_TYPES = {
 }
 STATUSES = {"draft", "final", "cancelled"}
 GENDERS = {"male", "female", "other", "unknown"}
+STRICT_FINAL_REPORT_TYPES = REPORT_TYPES - {"general_health_check"}
+GENERAL_HEALTH_COMPLETE_GROUP_TYPES = {
+    "cbc_with_differential",
+    "glycemic_profile",
+    "lipid_profile",
+    "renal_function_blood",
+}
 
 
 def fail(message):
@@ -46,6 +63,24 @@ def load_units():
             (row["test_name"], row["standardized_unit"])
             for row in csv.DictReader(file)
         }
+
+
+def indicator_names(report):
+    return [indicator["name"] for indicator in report["indicators"]]
+
+
+def load_template_indicator_names():
+    template_names = {}
+    for report_type, path in TEMPLATE_FILES.items():
+        with path.open(encoding="utf-8") as file:
+            template = json.load(file)
+        if template.get("report_type") != report_type:
+            fail(
+                f"{path.relative_to(ROOT)}: expected report_type "
+                f"{report_type!r}, got {template.get('report_type')!r}"
+            )
+        template_names[report_type] = indicator_names(template)
+    return template_names
 
 
 def load_reports():
@@ -61,6 +96,47 @@ def load_reports():
     return reports_by_file
 
 
+def validate_exact_indicator_names(actual, expected, context):
+    actual_names = set(actual)
+    expected_names = set(expected)
+    missing = sorted(expected_names - actual_names)
+    extra = sorted(actual_names - expected_names)
+    if missing or extra:
+        detail = []
+        if missing:
+            detail.append(f"missing={missing}")
+        if extra:
+            detail.append(f"extra={extra}")
+        fail(f"{context}: final indicator names mismatch: {', '.join(detail)}")
+
+
+def validate_general_health_check_indicator_names(report, context, template_names):
+    actual = set(indicator_names(report))
+    allowed = set(template_names["general_health_check"])
+    extra = sorted(actual - allowed)
+    if extra:
+        fail(f"{context}: general_health_check has indicator names outside template: {extra}")
+
+    complete_groups = []
+    incomplete_groups = []
+    for report_type in sorted(GENERAL_HEALTH_COMPLETE_GROUP_TYPES):
+        group_names = set(template_names[report_type])
+        present = actual & group_names
+        if present == group_names:
+            complete_groups.append(report_type)
+        elif present:
+            missing = sorted(group_names - present)
+            incomplete_groups.append(f"{report_type} missing={missing}")
+
+    if incomplete_groups:
+        fail(f"{context}: incomplete general_health_check groups: {incomplete_groups}")
+    if not complete_groups:
+        fail(
+            f"{context}: general_health_check final report must include at least "
+            "one complete test group"
+        )
+
+
 def validate_date(value, context):
     if not isinstance(value, str):
         fail(f"{context}: test_date must be a string")
@@ -72,7 +148,7 @@ def validate_date(value, context):
         fail(f"{context}: invalid canonical date {value!r}")
 
 
-def validate_report(report, filename, index, units):
+def validate_report(report, filename, index, units, template_names):
     context = f"{filename}[{index}]"
     if not isinstance(report, dict):
         fail(f"{context}: report must be an object")
@@ -118,9 +194,20 @@ def validate_report(report, filename, index, units):
             fail(f"{indicator_context}: duplicate indicator name {indicator['name']!r}")
         names.add(indicator["name"])
 
+    report_type = report["report_type"]
+    if report["status"] == "final" and report_type in STRICT_FINAL_REPORT_TYPES:
+        validate_exact_indicator_names(
+            names,
+            template_names[report_type],
+            context,
+        )
+    if report["status"] == "final" and report_type == "general_health_check":
+        validate_general_health_check_indicator_names(report, context, template_names)
+
 
 def validate():
     units = load_units()
+    template_names = load_template_indicator_names()
     reports_by_file = load_reports()
     report_ids = []
     all_report_types = set()
@@ -142,7 +229,7 @@ def validate():
                 fail(f"{filename}: must contain draft, final, and cancelled")
 
         for index, report in enumerate(reports):
-            validate_report(report, filename, index, units)
+            validate_report(report, filename, index, units, template_names)
             report_ids.append(report["report_id"])
             all_report_types.add(report["report_type"])
             all_statuses.add(report["status"])

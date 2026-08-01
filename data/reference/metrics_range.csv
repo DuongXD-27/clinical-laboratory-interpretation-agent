@@ -1,0 +1,36 @@
+﻿test_name,standardized_unit,gender,lower_range,upper_range,special_note
+WBC,10^9/L,A,4.72,11.3,Normal Range
+RBC,10^12/L,M,4.45,6.19,Normal Range
+RBC,10^12/L,F,4.01,5.48,Normal Range
+HGB,g/L,M,128,183,Normal Range
+HGB,g/L,F,110,150,Normal Range
+HCT,L/L,M,0.37,0.5,Normal Range
+HCT,L/L,F,0.32,0.44,Normal Range
+PLT,10^9/L,M,172,375,Normal Range
+PLT,10^9/L,F,178,366,Normal Range
+NEU/NEUT (absolute),10^9/L,A,2.21,7.55,Normal Range
+NEU/NEUT (percentage),%,M,40.4,79.53,Normal Range
+NEU/NEUT (percentage),%,F,39.83,80.3,Normal Range
+LYM (absolute),10^9/L,M,0.92,3.8,Normal Range
+LYM (absolute),10^9/L,F,0.94,3.75,Normal Range
+LYM (percentage),%,A,12,48.6,Normal Range
+MONO (absolute),10^9/L,M,0.22,0.79,Normal Range
+MONO (absolute),10^9/L,F,0.2,0.72,Normal Range
+MONO (percentage),%,M,3.3,9.39,Normal Range
+MONO (percentage),%,F,3.1,8.9,Normal Range
+EOS (absolute),10^9/L,M,0.034,0.561,Normal Range
+EOS (absolute),10^9/L,F,0.026,0.476,Normal Range
+EOS (percentage),%,M,0.4,7.6,Normal Range
+EOS (percentage),%,F,0.3,6.8,Normal Range
+BASO (absolute),10^9/L,A,0.006,0.036,Normal Range
+BASO (percentage),%,A,0.1,0.4,Normal Range
+MCV,fL,M,73.8,93.1,Normal Range
+MCV,fL,F,71.6,91.5,Normal Range
+MCH,pg,M,26.3,32.2,Normal Range
+MCH,pg,F,25.1,31.4,Normal Range
+MCHC,g/L,M,323,371,Normal Range
+MCHC,g/L,F,322,366,Normal Range
+RDW,%CV,M,13.2,15.1,Normal Range
+RDW,%CV,F,13.1,15.62,Normal Range
+MPV,fL,M,7.4,10.6,Normal Range
+MPV,fL,F,7.1,10.2,Normal Range

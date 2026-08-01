@@ -1,0 +1,35 @@
+{
+  "report_id": "LIVER-20260729-0001",
+  "report_type": "liver_function_basic",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "AST (GOT)",
+      "value": 24,
+      "unit": "U/L"
+    },
+    {
+      "name": "ALT (GPT)",
+      "value": 28,
+      "unit": "U/L"
+    },
+    {
+      "name": "GGT",
+      "value": 31,
+      "unit": "U/L"
+    },
+    {
+      "name": "Total Protein",
+      "value": 73,
+      "unit": "g/L"
+    },
+    {
+      "name": "Albumin",
+      "value": 44,
+      "unit": "g/L"
+    }
+  ]
+}

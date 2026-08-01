@@ -1,0 +1,185 @@
+[
+  {
+    "report_id": "EDGE-ELECTROLYTES-0001",
+    "report_type": "electrolytes_basic",
+    "patient_age": 18,
+    "patient_gender": "male",
+    "test_date": "2026-07-26",
+    "status": "draft",
+    "indicators": []
+  },
+  {
+    "report_id": "EDGE-GLY-0002",
+    "report_type": "glycemic_profile",
+    "patient_age": 90,
+    "patient_gender": "unknown",
+    "test_date": "2026-07-27",
+    "status": "draft",
+    "indicators": [
+      {
+        "name": "Fasting Blood Glucose",
+        "value": 5.899,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  {
+    "report_id": "EDGE-CANCELLED-0003",
+    "report_type": "liver_function_basic",
+    "patient_age": 63,
+    "patient_gender": "female",
+    "test_date": "2026-07-28",
+    "status": "cancelled",
+    "indicators": []
+  },
+  {
+    "report_id": "EDGE-GENERAL-0004",
+    "report_type": "general_health_check",
+    "patient_age": 41,
+    "patient_gender": "male",
+    "test_date": "2026-07-29",
+    "status": "final",
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 7.05,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "RBC",
+        "value": 4.901,
+        "unit": "10^12/L"
+      },
+      {
+        "name": "HGB",
+        "value": 146.2,
+        "unit": "g/L"
+      },
+      {
+        "name": "HCT",
+        "value": 0.429,
+        "unit": "L/L"
+      },
+      {
+        "name": "PLT",
+        "value": 268.5,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "NEU/NEUT (absolute)",
+        "value": 4.28,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "LYM (absolute)",
+        "value": 2.08,
+        "unit": "10^9/L"
+      },
+      {
+        "name": "Fasting Blood Glucose",
+        "value": 5.61,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "HbA1c",
+        "value": 5.71,
+        "unit": "%"
+      },
+      {
+        "name": "Total Cholesterol",
+        "value": 199.99,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "Triglycerides",
+        "value": 149.75,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "HDL-Cholesterol",
+        "value": 49.95,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "LDL-Cholesterol",
+        "value": 129.49,
+        "unit": "mg/dL"
+      },
+      {
+        "name": "AST (GOT)",
+        "value": 39.8,
+        "unit": "U/L"
+      },
+      {
+        "name": "ALT (GPT)",
+        "value": 40.2,
+        "unit": "U/L"
+      },
+      {
+        "name": "GGT",
+        "value": 49.9,
+        "unit": "U/L"
+      },
+      {
+        "name": "Urea",
+        "value": 7.49,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Creatinine",
+        "value": 97.999,
+        "unit": "µmol/L"
+      },
+      {
+        "name": "Uric Acid",
+        "value": 419.5,
+        "unit": "µmol/L"
+      },
+      {
+        "name": "eGFR",
+        "value": 89.5,
+        "unit": "mL/min/1.73 m^2"
+      },
+      {
+        "name": "Sodium (Na)",
+        "value": 134.9,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Potassium (K+)",
+        "value": 5.05,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Chloride (Cl-)",
+        "value": 107.8,
+        "unit": "mmol/L"
+      },
+      {
+        "name": "Total Protein",
+        "value": 72.5,
+        "unit": "g/L"
+      },
+      {
+        "name": "Albumin",
+        "value": 43.6,
+        "unit": "g/L"
+      }
+    ]
+  },
+  {
+    "report_id": "EDGE-RENAL-0005",
+    "report_type": "renal_function_blood",
+    "patient_age": 76,
+    "patient_gender": "female",
+    "test_date": "2026-07-30",
+    "status": "draft",
+    "indicators": [
+      {
+        "name": "Creatinine",
+        "value": 82.12345,
+        "unit": "µmol/L"
+      }
+    ]
+  }
+]

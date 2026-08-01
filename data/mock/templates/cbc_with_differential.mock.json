@@ -1,0 +1,110 @@
+{
+  "report_id": "CBC-20260729-0001",
+  "report_type": "cbc_with_differential",
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-07-29",
+  "status": "final",
+  "indicators": [
+    {
+      "name": "WBC",
+      "value": 7.2,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "RBC",
+      "value": 4.85,
+      "unit": "10^12/L"
+    },
+    {
+      "name": "HGB",
+      "value": 145,
+      "unit": "g/L"
+    },
+    {
+      "name": "HCT",
+      "value": 0.43,
+      "unit": "L/L"
+    },
+    {
+      "name": "PLT",
+      "value": 265,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "NEU/NEUT (absolute)",
+      "value": 4.3,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "NEU/NEUT (percentage)",
+      "value": 59.7,
+      "unit": "%"
+    },
+    {
+      "name": "LYM (absolute)",
+      "value": 2.1,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "LYM (percentage)",
+      "value": 29.2,
+      "unit": "%"
+    },
+    {
+      "name": "MONO (absolute)",
+      "value": 0.5,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "MONO (percentage)",
+      "value": 6.9,
+      "unit": "%"
+    },
+    {
+      "name": "EOS (absolute)",
+      "value": 0.25,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "EOS (percentage)",
+      "value": 3.5,
+      "unit": "%"
+    },
+    {
+      "name": "BASO (absolute)",
+      "value": 0.05,
+      "unit": "10^9/L"
+    },
+    {
+      "name": "BASO (percentage)",
+      "value": 0.7,
+      "unit": "%"
+    },
+    {
+      "name": "MCV",
+      "value": 88.7,
+      "unit": "fL"
+    },
+    {
+      "name": "MCH",
+      "value": 29.9,
+      "unit": "pg"
+    },
+    {
+      "name": "MCHC",
+      "value": 337,
+      "unit": "g/L"
+    },
+    {
+      "name": "RDW",
+      "value": 13.1,
+      "unit": "%CV"
+    },
+    {
+      "name": "MPV",
+      "value": 9.8,
+      "unit": "fL"
+    }
+  ]
+}
