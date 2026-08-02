@@ -6,7 +6,7 @@ from src.config import get_settings
 
 
 def load_explanations() -> dict:
-    settings = get_settings()
+    get_settings()
     config_path = Path("data/reference/explanations.json")
     if config_path.exists():
         with open(config_path, encoding="utf-8") as f:
