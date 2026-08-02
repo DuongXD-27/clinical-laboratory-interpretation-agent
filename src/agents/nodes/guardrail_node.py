@@ -13,7 +13,11 @@ RESTRICTED_KEYWORDS = [
     r"liều lượng",
     r"điều trị bằng",
     r"bạn đang bị",
-    r"chữa khỏi"
+    r"chữa khỏi",
+    r"có thể do",
+    r"nguyên nhân do",
+    r"thường liên quan đến",
+    r"do ảnh hưởng của"
 ]
 
 DEFAULT_DISCLAIMER = (
@@ -21,35 +25,54 @@ DEFAULT_DISCLAIMER = (
     "Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn."
 )
 
+SAFE_FALLBACK_TEXT = "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác."
+
 async def guardrail_node(state: AgentState) -> dict:
     """Kiểm tra nội dung sinh ra để chặn chẩn đoán y khoa và đảm bảo có disclaimer."""
     
     explanations = state.get("explanations", [])
+    indicators = state.get("indicators", [])
     summary = state.get("summary", "")
     disclaimer = state.get("disclaimer", "")
     
     flags = []
     
-    # 1. Quét nội dung summary và explanations
-    text_to_scan = [summary]
-    for exp in explanations:
-        text_to_scan.append(exp.get("explanation", ""))
+    # Hàm kiểm tra vi phạm
+    def check_violation(text: str) -> bool:
+        if not text: return False
+        text_lower = text.lower()
+        for pattern in RESTRICTED_KEYWORDS:
+            if re.search(pattern, text_lower):
+                flags.append(f"Phát hiện cụm từ vi phạm: '{pattern}'")
+                return True
+        return False
+
+    # 1. Quét nội dung summary
+    if check_violation(summary):
+        summary = SAFE_FALLBACK_TEXT
         
-    full_text = " ".join(text_to_scan).lower()
-    
-    for pattern in RESTRICTED_KEYWORDS:
-        if re.search(pattern, full_text):
-            flags.append(f"Phát hiện cụm từ vi phạm: '{pattern}'")
+    # 2. Quét từng explanation và indicator
+    for exp in explanations:
+        if check_violation(exp.get("explanation", "")) or check_violation(exp.get("indicator_name", "")):
+            # Fallback chỉ đè lên explanation
+            exp["explanation"] = SAFE_FALLBACK_TEXT
             
-    # 2. Đánh giá guardrail_passed
+    for ind in indicators:
+        if check_violation(ind.get("explanation", "")):
+            ind["explanation"] = SAFE_FALLBACK_TEXT
+            
+    # 3. Đánh giá guardrail_passed
     guardrail_passed = len(flags) == 0
     
-    # 3. Đảm bảo có disclaimer chuẩn
+    # 4. Đảm bảo có disclaimer chuẩn
     if not disclaimer or len(disclaimer.strip()) < 20:
         disclaimer = DEFAULT_DISCLAIMER
         
     return {
         "guardrail_passed": guardrail_passed,
-        "guardrail_flags": flags,
-        "disclaimer": disclaimer
+        "guardrail_flags": list(set(flags)),
+        "disclaimer": disclaimer,
+        "summary": summary,
+        "explanations": explanations,
+        "indicators": indicators
     }
