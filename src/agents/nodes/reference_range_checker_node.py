@@ -58,7 +58,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             matched_group = "unknown"
             reference_low = None
             reference_high = None
-            
+
             # 1. Tìm khoảng "chuẩn" (normal/optimal/adult...) phù hợp với giới tính
             for r in ranges:
                 r_gender = r.get("gender", "A")
@@ -78,13 +78,13 @@ async def reference_range_checker_node(state: AgentState) -> dict:
                 low = r.get("low")
                 high = r.get("high")
                 group = r.get("group", "unknown")
-                
+
                 if (low is None or val >= low) and (high is None or val <= high):
                     matched_group = group
                     if group in ["normal", "optimal", "average", "acceptable", "adult", "child", "pregnant", "fasting_normal"]:
                         matched_group = "normal"
                     break
-            
+
             # 3. Nếu không thuộc bất kỳ khoảng nào, suy luận high/low từ reference bounds
             if matched_group == "unknown":
                 if reference_low is not None and val < reference_low:
@@ -95,7 +95,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             assessment["reference_low"] = reference_low
             assessment["reference_high"] = reference_high
             assessment["status"] = matched_group
-            
+
             if matched_group not in ["normal", "unknown"]:
                 assessment["is_abnormal"] = True
 
