@@ -5,12 +5,12 @@ from src.agents.graph import agent
 
 @pytest.mark.asyncio
 async def test_agent_basic_flow():
-    result = await agent.ainvoke({"query": "Hello"})
-    assert "response" in result
+    result = await agent.ainvoke({"patient_age": 30, "patient_gender": "male", "raw_indicators": []})
+    assert "indicators" in result
 
 
 @pytest.mark.asyncio
 async def test_agent_state_structure():
-    result = await agent.ainvoke({"query": "Test query"})
+    result = await agent.ainvoke({"patient_age": 30, "patient_gender": "male", "raw_indicators": []})
     assert isinstance(result, dict)
-    assert "query" in result
+    assert "guardrail_passed" in result
