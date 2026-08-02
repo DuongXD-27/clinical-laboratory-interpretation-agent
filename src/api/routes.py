@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 from src.agents.graph import build_graph
+from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 
 router = APIRouter()
 agent = build_graph()

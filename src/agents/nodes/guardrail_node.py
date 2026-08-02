@@ -1,4 +1,5 @@
 import re
+
 from src.agents.state import AgentState
 
 # Danh sách các từ khóa cấm liên quan đến chẩn đoán xác định và kê đơn điều trị
@@ -29,17 +30,18 @@ SAFE_FALLBACK_TEXT = "Phát hiện nội dung có thể chứa yếu tố suy đ
 
 async def guardrail_node(state: AgentState) -> dict:
     """Kiểm tra nội dung sinh ra để chặn chẩn đoán y khoa và đảm bảo có disclaimer."""
-    
+
     explanations = state.get("explanations", [])
     indicators = state.get("indicators", [])
     summary = state.get("summary", "")
     disclaimer = state.get("disclaimer", "")
-    
+
     flags = []
-    
+
     # Hàm kiểm tra vi phạm
     def check_violation(text: str) -> bool:
-        if not text: return False
+        if not text:
+            return False
         text_lower = text.lower()
         for pattern in RESTRICTED_KEYWORDS:
             if re.search(pattern, text_lower):
@@ -50,24 +52,24 @@ async def guardrail_node(state: AgentState) -> dict:
     # 1. Quét nội dung summary
     if check_violation(summary):
         summary = SAFE_FALLBACK_TEXT
-        
+
     # 2. Quét từng explanation và indicator
     for exp in explanations:
         if check_violation(exp.get("explanation", "")) or check_violation(exp.get("indicator_name", "")):
             # Fallback chỉ đè lên explanation
             exp["explanation"] = SAFE_FALLBACK_TEXT
-            
+
     for ind in indicators:
         if check_violation(ind.get("explanation", "")):
             ind["explanation"] = SAFE_FALLBACK_TEXT
-            
+
     # 3. Đánh giá guardrail_passed
     guardrail_passed = len(flags) == 0
-    
+
     # 4. Đảm bảo có disclaimer chuẩn
     if not disclaimer or len(disclaimer.strip()) < 20:
         disclaimer = DEFAULT_DISCLAIMER
-        
+
     return {
         "guardrail_passed": guardrail_passed,
         "guardrail_flags": list(set(flags)),
