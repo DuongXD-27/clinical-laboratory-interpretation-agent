@@ -1,10 +1,11 @@
 from langgraph.graph import END, StateGraph
 
-from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
-from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.analyzer_node import analyzer_node
+from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.guardrail_node import guardrail_node
+from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.agents.state import AgentState
+
 
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)

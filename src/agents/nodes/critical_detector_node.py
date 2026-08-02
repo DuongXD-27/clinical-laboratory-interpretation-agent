@@ -1,13 +1,15 @@
 import json
 from pathlib import Path
+
 from src.agents.state import AgentState, CriticalAlert, IndicatorAssessment
 from src.config import get_settings
+
 
 def load_critical_thresholds() -> dict:
     settings = get_settings()
     config_path = Path(settings.critical_thresholds_path)
     if config_path.exists():
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             data = json.load(f)
             # Chuyển tất cả keys sang lowercase để fix lỗi Case-Sensitivity
             return {k.lower(): v for k, v in data.items()}
@@ -18,7 +20,7 @@ CRITICAL_THRESHOLDS = load_critical_thresholds()
 async def detect_critical_values_node(state: AgentState) -> dict:
     """Phát hiện các chỉ số ở mức nguy kịch (critical) bằng rule-based đơn giản."""
     raw_indicators = state.get("raw_indicators", [])
-    
+
     # Nếu node reference_range_checker chưa chạy, ta khởi tạo từ raw_indicators.
     indicators: list[IndicatorAssessment] = state.get("indicators", [])
     if not indicators and raw_indicators:
@@ -35,28 +37,28 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             }
             for ind in raw_indicators
         ]
-        
+
     # Tạo bản sao list mới thay vì dùng reference để tránh lỗi Duplicate Alerts
     critical_alerts: list[CriticalAlert] = list(state.get("critical_alerts", []))
     has_critical = state.get("has_critical_values", False)
-    
+
     updated_indicators = []
-    
+
     for ind in indicators:
         # Copy dictionary để không ảnh hưởng trực tiếp đến state reference
         new_ind = dict(ind)
         name = new_ind.get("name", "")
         val = new_ind.get("value")
-        
+
         # So sánh chữ thường (case-insensitive)
         name_lower = name.lower() if name else ""
-        
+
         if name_lower in CRITICAL_THRESHOLDS and val is not None:
             thresholds = CRITICAL_THRESHOLDS[name_lower]
             low_val = thresholds.get("low")
             high_val = thresholds.get("high")
             unit_str = new_ind.get("unit") or thresholds.get("unit", "")
-            
+
             if low_val is not None and val <= low_val:
                 new_ind["status"] = "critical_low"
                 new_ind["is_abnormal"] = True
@@ -83,10 +85,10 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                         "unit": unit_str,
                         "message": f"CẢNH BÁO: {name} tăng tới ngưỡng nguy kịch ({val} >= {high_val} {unit_str}). Yêu cầu can thiệp y tế."
                     })
-        
+
         # Dòng này phải NẰM NGOÀI khối if để giữ lại tất cả indicators
         updated_indicators.append(new_ind)
-        
+
     return {
         "indicators": updated_indicators,
         "critical_alerts": critical_alerts,

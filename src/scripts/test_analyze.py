@@ -1,5 +1,5 @@
-import json
 import asyncio
+import json
 import os
 import sys
 
@@ -8,12 +8,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from src.agents.graph import build_graph
 
+
 async def main():
     agent = build_graph()
-    
-    with open("data/mock/generated/normal.json", "r", encoding="utf-8") as f:
+
+    with open("data/mock/generated/normal.json", encoding="utf-8") as f:
         request_data = json.load(f)
-        
+
     # If the JSON is a list of reports, pick the first one
     if isinstance(request_data, list):
         report = request_data[0]
@@ -29,10 +30,10 @@ async def main():
         "language": "vi",
         "raw_indicators": indicators
     }
-    
+
     print("Invoking graph...")
     final_state = await agent.ainvoke(initial_state)
-    
+
     print("\n--- Final State Indicators (with LLM Explanations) ---")
     for ind in final_state.get("indicators", []):
         print(f"\nChỉ số: {ind.get('name')}")
@@ -40,11 +41,11 @@ async def main():
         print(f"Trạng thái: {ind.get('status')}")
         print(f"Giải thích: {ind.get('explanation')}")
         print(f"Nguồn: {ind.get('sources')}")
-        
+
     print("\n--- Guardrail & Critical ---")
     print(f"Has critical values: {final_state.get('has_critical_values')}")
     print(f"Critical alerts: {final_state.get('critical_alerts')}")
     print(f"Guardrail passed: {final_state.get('guardrail_passed')}")
-    
+
 if __name__ == "__main__":
     asyncio.run(main())

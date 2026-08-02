@@ -1,6 +1,8 @@
 import pytest
-from src.agents.state import AgentState
+
 from src.agents.nodes.critical_detector_node import detect_critical_values_node
+from src.agents.state import AgentState
+
 
 @pytest.mark.asyncio
 async def test_detect_critical_values_node():
@@ -17,7 +19,7 @@ async def test_detect_critical_values_node():
     result_state = await detect_critical_values_node(mock_state)
 
     indicators = result_state.get("indicators", [])
-    
+
     # Kiểm tra số lượng indicator
     assert len(indicators) == 4
 
