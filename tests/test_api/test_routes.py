@@ -27,7 +27,7 @@ async def test_analyze_valid_report(client):
     assert data["indicators"][0]["name"] == "WBC"
     assert data["indicators"][0]["status"] == "normal"
     assert "disclaimer" in data and data["disclaimer"]
-    assert data["is_placeholder"] is True
+    assert data["is_placeholder"] is False
 
 
 @pytest.mark.asyncio
