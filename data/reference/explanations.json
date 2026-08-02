@@ -215,42 +215,42 @@
             {
                 "group": "optimal",
                 "gender": "A",
-                "unit": "mg/dL",
+                "unit": "mmol/L",
                 "low": null,
-                "high": 100,
-                "note": "Tối ưu. Tương đương < 2.6 mmol/L. Người trưởng thành khỏe mạnh, không bệnh nền."
+                "high": 2.58,
+                "note": "Tối ưu. < 2.59 mmol/L."
             },
             {
                 "group": "acceptable",
                 "gender": "A",
-                "unit": "mg/dL",
-                "low": 100,
-                "high": 129,
-                "note": "Chấp nhận được. Tương đương 2.6 - 3.3 mmol/L."
+                "unit": "mmol/L",
+                "low": 2.59,
+                "high": 3.35,
+                "note": "Chấp nhận được (Gần tối ưu). 2.59 - 3.35 mmol/L."
             },
             {
                 "group": "borderline_high",
                 "gender": "A",
-                "unit": "mg/dL",
-                "low": 130,
-                "high": 159,
-                "note": "Giới hạn cao. Tương đương 3.4 - 4.1 mmol/L."
+                "unit": "mmol/L",
+                "low": 3.36,
+                "high": 4.13,
+                "note": "Giới hạn cao. 3.36 - 4.13 mmol/L."
             },
             {
                 "group": "high",
                 "gender": "A",
-                "unit": "mg/dL",
-                "low": 160,
-                "high": 189,
-                "note": "Cao. Tương đương 4.1 - 4.9 mmol/L."
+                "unit": "mmol/L",
+                "low": 4.14,
+                "high": 4.90,
+                "note": "Cao. 4.14 - 4.90 mmol/L."
             },
             {
                 "group": "very_high",
                 "gender": "A",
-                "unit": "mg/dL",
-                "low": 190,
+                "unit": "mmol/L",
+                "low": 4.91,
                 "high": null,
-                "note": "Rất cao. Tương đương >= 4.9 mmol/L."
+                "note": "Rất cao. >= 4.91 mmol/L."
             }
         ],
         "high_meaning": "Liên quan đến tăng nguy cơ bệnh tim mạch (nhồi máu cơ tim, đột quỵ) theo thời gian, đặc biệt nếu kết hợp với các yếu tố nguy cơ khác. Một số yếu tố góp phần làm LDL tăng: chế độ ăn nhiều chất béo bão hòa/chất béo chuyển hóa (thịt mỡ, đồ chiên rán, thức ăn nhanh), ít vận động, thừa cân, hút thuốc lá, uống nhiều rượu bia, hoặc yếu tố di truyền.",
