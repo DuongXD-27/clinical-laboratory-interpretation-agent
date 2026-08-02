@@ -40,7 +40,8 @@ async def guardrail_node(state: AgentState) -> dict:
 
     # Hàm kiểm tra vi phạm
     def check_violation(text: str) -> bool:
-        if not text: return False
+        if not text:
+            return False
         text_lower = text.lower()
         for pattern in RESTRICTED_KEYWORDS:
             if re.search(pattern, text_lower):
