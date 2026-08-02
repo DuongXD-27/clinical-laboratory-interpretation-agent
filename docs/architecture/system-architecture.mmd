@@ -1,0 +1,105 @@
+graph TD
+    %% ==========================================
+    %% TẦNG FRONTEND
+    %% ==========================================
+    subgraph Frontend ["Frontend (Next.js / React)"]
+        UI_Upload["Upload Phiếu Kết Quả (JSON)"]
+        UI_Review["Giao diện Xác nhận Chỉ số (Phase 2)"]
+        UI_Results["Màn hình Kết quả<br/>(Giải thích, Cảnh báo, Câu hỏi, Disclaimer)<br/>+ Widget thu thập Metrics"]
+    end
+
+    %% ==========================================
+    %% TẦNG DATA INGESTION
+    %% ==========================================
+    subgraph Ingestion ["Data Ingestion Layer (FastAPI)"]
+        Router{"Loại File Input?"}
+        Adapter_JSON["JSON Adapter<br/>Parse & Validate"]
+        Adapter_Vision["Vision LLM Adapter (Phase 2)"]
+        Schema[["Standard Internal Schema<br/>(Contract: Patient Metadata [Age/Gender] + List of Indicators)"]]
+        De_ID["Khử định danh (De-identification)<br/>Xóa Tên/ID, GIỮ Tuổi/Giới tính cho RuleCheck"]
+    end
+
+    %% ==========================================
+    %% TẦNG AI AGENT (LANGGRAPH) - State Machine
+    %% ==========================================
+    subgraph Agent ["AI Agent Engine (LangGraph)"]
+        RuleCheck["Reference & Critical Checker<br/>(Gắn cờ Normal/Abnormal/Critical)"]
+        
+        RAG["RAG Explanation Engine<br/>(Sinh giải thích - Per Indicator)"]
+        QuestionGen["Question Generator<br/>(Sinh danh sách câu hỏi)"]
+        
+        Guard["Medical Guardrails<br/>(Kiểm duyệt Độc lập: Từng giải thích & Câu hỏi)"]
+        
+        TemplateFallback["Template Fallback Node<br/>(Lấy giải thích tĩnh)"]
+        QuestionFallback["Default Question Node<br/>(Lấy câu hỏi an toàn)"]
+        Out["Output Formatter<br/>(Merge State -> Đóng gói JSON)"]
+    end
+
+    %% ==========================================
+    %% TẦNG DATA & KNOWLEDGE
+    %% ==========================================
+    subgraph DataLayer ["Data & Storage"]
+        RefConfig[("Reference Range Config<br/>(Lookup cứng theo Tuổi/Giới tính)")]
+        VectorDB[("Vector DB<br/>(Tri thức Y khoa - Semantic search)")]
+        TemplateLib[("Template Library<br/>(Mẫu giải thích & Mẫu câu hỏi duyệt sẵn)")]
+        MetricsDB[("Metrics Logging DB")]
+        GuardLogDB[("Guardrail Logs DB<br/>(Lưu vết reject để Eval)")]
+    end
+
+    %% ==========================================
+    %% LUỒNG MVP (Nét liền)
+    %% ==========================================
+    UI_Upload -->|"File JSON"| Router
+    Router --> Adapter_JSON
+    Adapter_JSON --> Schema
+    Schema -->|"Auto-forward"| De_ID
+    De_ID --> RuleCheck
+    RefConfig -->|"Ngưỡng tham chiếu chính xác"| RuleCheck
+    
+    %% Fan-out 3 nhánh
+    RuleCheck -->|"Subset: Chỉ số Abnormal/Critical"| RAG
+    RuleCheck -->|"Subset: Chỉ số Abnormal/Critical"| QuestionGen
+    RuleCheck -->|"Pass-through: Full Data (Base Fact)"| Out
+    
+    RAG <-->|"Semantic Search Context"| VectorDB
+    
+    %% Fan-in Text vào Guardrail
+    RAG -->|"Draft Explanations"| Guard
+    QuestionGen -->|"Draft Questions"| Guard
+    
+    %% ==========================================
+    %% LUỒNG FALLBACK ĐỘC LẬP TẠI GUARDRAIL
+    %% ==========================================
+    %% 1. Phân luồng cho Giải thích (RAG)
+    Guard -->|"RAG Rejected (Lần 1)"| RAG
+    Guard -->|"RAG Rejected (Fail) -> Dùng mẫu tĩnh"| TemplateFallback
+    TemplateFallback <-->|"Đọc mẫu giải thích"| TemplateLib
+    TemplateFallback -->|"Safe Explanation"| Out
+    
+    %% 2. Phân luồng cho Câu hỏi (QuestionGen)
+    Guard -->|"Question Rejected (Lần 1)"| QuestionGen
+    Guard -->|"Question Rejected (Fail) -> Dùng câu hỏi mặc định"| QuestionFallback
+    QuestionFallback <-->|"Đọc câu hỏi an toàn"| TemplateLib
+    QuestionFallback -->|"Safe Questions"| Out
+
+    %% Luồng Pass an toàn tuyệt đối
+    Guard -->|"Approved (Safe)"| Out
+    
+    %% Logging (Đã đổi thành nét liền)
+    Guard -->|"Log nội dung & lý do chặn"| GuardLogDB
+    
+    %% Output
+    Out -->|"REST JSON Response"| UI_Results
+    UI_Results -->|"Log: Lựa chọn trắc nghiệm & Hành vi"| MetricsDB
+
+    %% ==========================================
+    %% LUỒNG PHASE 2 (Nét đứt)
+    %% ==========================================
+    UI_Upload -.-> Router
+    Router -.-> Adapter_Vision
+    Adapter_Vision -.-> UI_Review
+    UI_Review -.->|"Xác nhận thủ công"| De_ID
+
+    %% Styling
+    classDef future stroke-dasharray: 5 5, fill:#f9f9f9, color:#666, stroke:#666;
+    class Adapter_Vision,UI_Review future;
