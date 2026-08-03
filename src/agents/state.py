@@ -22,6 +22,12 @@ class IndicatorAssessment(TypedDict, total=False):
     reference_low: float | None
     reference_high: float | None
     status: IndicatorStatus
+    # Nhãn phân loại chi tiết, riêng theo từng chỉ số — vd "borderline_high",
+    # "fasting_prediabetes", "critical_high". `status` ở trên chỉ là cờ THÔ
+    # (dùng để tô màu badge / kích hoạt Gate 3), `category` mới là nhãn hiển
+    # thị thật cho người dùng — không giới hạn Literal vì mỗi chỉ số có bộ
+    # mức phân loại khác nhau (LDL có 5 mức, Glucose có mức tiền tiểu đường...).
+    category: str
     is_abnormal: bool
     is_critical: bool
 
@@ -40,6 +46,7 @@ class IndicatorExplanation(TypedDict, total=False):
 
     indicator_name: str
     status: IndicatorStatus
+    category: str  # đồng bộ với IndicatorAssessment.category, hiển thị lên UI
     is_abnormal: bool
     is_critical: bool
     explanation: str
@@ -60,8 +67,14 @@ class AgentState(TypedDict, total=False):
 
     Luồng node dự kiến:
         parse_report -> check_reference_range -> detect_critical_values
-        -> retrieve_explanation -> personalize_explanation -> guardrail_check
-        -> generate_questions -> build_summary
+        -> retrieve_explanation -> personalize_explanation -> generate_questions
+        -> guardrail_check -> build_summary
+
+    guardrail_check được đặt SAU generate_questions (không phải trước) vì
+    guardrail bắt buộc phải kiểm duyệt CẢ giải thích lẫn câu hỏi gợi ý cho
+    bác sĩ trước khi trả về người dùng — đúng ADR-004 (guardrail luôn là
+    lớp cuối cùng của luồng, không có ngoại lệ cho bất kỳ nội dung nào do
+    LLM sinh ra).
 
     total=False: mỗi node chỉ đọc/ghi các field liên quan đến bước của mình.
     """
@@ -85,15 +98,24 @@ class AgentState(TypedDict, total=False):
     # --- Cá nhân hóa lời giải thích (LLM, grounded trên retrieved_contexts) ---
     explanations: list[IndicatorExplanation]
 
-    # --- Guardrail: chống chẩn đoán / kê đơn / kết luận nguyên nhân ---
+    # --- Câu hỏi gợi ý cho bác sĩ (LLM) — SINH RA TRƯỚC guardrail_check,
+    # để guardrail có thể kiểm duyệt cả nội dung này trước khi trả ra ngoài ---
+    questions_for_doctor: list[str]
+
+    # --- Guardrail: chống chẩn đoán / kê đơn / kết luận nguyên nhân.
+    # Chạy SAU CÙNG, kiểm duyệt cả `explanations` lẫn `questions_for_doctor` ---
     guardrail_passed: bool
     guardrail_flags: list[str]
 
-    # --- Câu hỏi gợi ý cho bác sĩ + tóm tắt thân thiện ---
-    questions_for_doctor: list[str]
+    # --- Tóm tắt thân thiện, trả về sau khi guardrail đã duyệt ---
     summary: str
     disclaimer: str
 
     # --- Vận hành ---
+    # error: chỉ dùng nội bộ để debug/log. TUYỆT ĐỐI KHÔNG trả nguyên văn
+    # field này ra API/UI cho người dùng cuối (đã từng xảy ra: thông báo
+    # "Do thiếu API Key..." bị lộ thẳng ra giao diện bệnh nhân). Trước khi
+    # response ra ngoài, luôn thay bằng câu an toàn dạng "Hệ thống đang
+    # bận, vui lòng thử lại".
     error: str
     metadata: dict
