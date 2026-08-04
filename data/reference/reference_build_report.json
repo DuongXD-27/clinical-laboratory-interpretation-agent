@@ -1,0 +1,87 @@
+{
+  "builder_version": "v2",
+  "input_file": "adult_outpatient_laboratory_reference_map.csv",
+  "input_sha256": "721A07EA6EC8BC202DAD4F23808ECA34853A146E41E3EC3AE04EC66EABDA7D6B",
+  "input_sha256_after": "721A07EA6EC8BC202DAD4F23808ECA34853A146E41E3EC3AE04EC66EABDA7D6B",
+  "input_size_bytes": 41735,
+  "input_rows": 80,
+  "strict_quality_eligible_rows": 58,
+  "strict_quality_rejected_rows": 22,
+  "runtime_accepted_rows": 58,
+  "quarantined_rows": 22,
+  "multiple_reason_rows": 2,
+  "rejection_reason_counts": {
+    "range_flag_not_ok": 22,
+    "confidence_not_high": 2,
+    "unsupported_source_tier": 2
+  },
+  "accepted_analytes": [
+    "ALT",
+    "AST",
+    "Albumin",
+    "Chloride",
+    "Creatinine",
+    "Eosinophils %",
+    "Eosinophils abs",
+    "Fasting plasma glucose",
+    "GGT",
+    "HCT",
+    "HDL-C",
+    "HGB",
+    "Lymphocytes %",
+    "Lymphocytes abs",
+    "MCH",
+    "MCHC",
+    "MCV",
+    "Monocytes %",
+    "Monocytes abs",
+    "Neutrophils %",
+    "Neutrophils abs",
+    "PLT",
+    "RBC",
+    "RDW-CV",
+    "Sodium",
+    "Total bilirubin",
+    "Total cholesterol",
+    "Total protein",
+    "Triglyceride",
+    "Urea",
+    "WBC"
+  ],
+  "quarantined_analytes": [
+    "Basophils %",
+    "Basophils abs",
+    "Direct bilirubin",
+    "HbA1c",
+    "LDL-C",
+    "MPV",
+    "Potassium",
+    "Uric acid",
+    "eGFR"
+  ],
+  "md_analytes": [
+    "Basophils %",
+    "Basophils abs",
+    "Direct bilirubin",
+    "HbA1c",
+    "LDL-C",
+    "MPV",
+    "Potassium"
+  ],
+  "output_files": {
+    "reference_ranges_v2_csv": {
+      "path": "data/reference/reference_ranges_v2.csv",
+      "sha256": "528A31F3F08BBB489EBEF9B2EACC6CE61173FE009BC41EF43CC305B242EA14CF"
+    },
+    "reference_ranges_v2_json": {
+      "path": "data/reference/reference_ranges_v2.json",
+      "sha256": "9E135578844EE3DE29AAD554B16DEBA2A6FAE13A739B20113A8F0F4A27AA0610"
+    },
+    "quarantine_v2_csv": {
+      "path": "data/reference/quarantine_v2.csv",
+      "sha256": "F6F91C4F9B459BE3E7CA2C0D0551B7B95735A2D8D3AAC7AB941BBD283EB7C92B"
+    }
+  },
+  "generated_at": "2026-08-04T14:41:47Z",
+  "source_integrity_verified": true
+}
