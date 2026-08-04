@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
 
+    # Auth (JWT)
+    jwt_secret: str = Field(default="dev-only-insecure-secret-change-me", alias="JWT_SECRET")
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = Field(default=60 * 12, ge=1)
+
 
 @lru_cache
 def get_settings() -> Settings:
