@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { mockScenarios } from "@/lib/mockData";
+import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 
 export default function PatientPage() {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [username, setUsername] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
+
+  useEffect(() => {
+    if (!getToken() || getRole() !== "patient") {
+      router.replace("/");
+      return;
+    }
+    setUsername(getUsername());
+    setCheckingAuth(false);
+  }, [router]);
+
+  function handleLogout() {
+    clearSession();
+    router.replace("/");
+  }
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -20,11 +39,16 @@ export default function PatientPage() {
     if (!scenario) return;
 
     try {
-      const response = await fetch("http://localhost:8000/api/v1/analyze", {
+      const response = await authFetch("/api/v1/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scenario.data),
       });
+
+      if (response.status === 401) {
+        clearSession();
+        router.replace("/");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Lỗi kết nối đến server");
@@ -38,6 +62,8 @@ export default function PatientPage() {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) return null;
 
   const hasCritical = result?.critical_alerts?.length > 0;
   const showCriticalBanner = hasCritical && !gate3Acknowledged;
@@ -53,7 +79,14 @@ export default function PatientPage() {
               Phân Tích Sức Khỏe AI
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Trải nghiệm người bệnh (Patient View)
+              Trải nghiệm người bệnh (Patient View) — {username}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="ml-3 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Đăng xuất
+              </button>
             </p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
