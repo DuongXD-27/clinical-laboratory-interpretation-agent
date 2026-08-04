@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import re
 import time
 
 from openai import OpenAI
@@ -103,7 +104,18 @@ class VisionAdapter:
             },
         ]
 
+        # Ngân sách thời gian tổng cho toàn bộ vòng retry (network lỗi + rỗng
+        # cộng dồn), tránh việc hai loại retry nối tiếp nhau vượt timeout kỳ
+        # vọng của caller.
+        deadline = time.monotonic() + self.max_retries * (
+            self._client.timeout if isinstance(self._client.timeout, (int, float)) else 30
+        ) + self.max_retries * self.retry_backoff_seconds
+
         for attempt in range(self.max_retries):
+            if time.monotonic() > deadline:
+                raise VisionAdapterError(
+                    f"Vision LLM ({self.model}) vượt quá thời gian chờ tổng sau {attempt} lần thử."
+                )
             try:
                 resp = self._client.chat.completions.create(
                     model=self.model,
@@ -173,29 +185,48 @@ class VisionAdapter:
         return drafts
 
 
+# Khớp mọi markdown code fence (```json ... ``` hoặc ``` ... ```), kể cả khi
+# VLM trả về nhiều khối hoặc kèm chữ thừa trước/sau.
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
 def _extract_json(content: str):
-    """Trích khối JSON từ content (bỏ markdown fence nếu có)."""
+    """Trích khối JSON hợp lệ đầu tiên từ content của VLM.
+
+    Chiến lược, theo thứ tự ưu tiên:
+    1. Parse trực tiếp toàn bộ text.
+    2. Parse nội dung bên trong từng fence ``` ... ``` (có thể nhiều khối).
+    3. Dùng JSONDecoder.raw_decode quét từ mỗi vị trí '{' để tìm khối JSON
+       hợp lệ đầu tiên (bền hơn find/rfind vì không giả định JSON là khối
+       liên tục cuối cùng trong text).
+    """
     text = (content or "").strip()
-    if text.startswith("```"):
-        # Bỏ fence ```json ... ```
-        lines = text.splitlines()
-        if lines:
-            lines = lines[1:]
-        if lines and lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
+    if not text:
+        raise _NotParsableError(text[:200])
+
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-            # Tìm mò khối JSON hợp lệ đầu tiên bên trong.
-            start = text.find("{")
-            end = text.rfind("}")
-            if start != -1 and end != -1 and end > start:
-                try:
-                    return json.loads(text[start : end + 1])
-                except json.JSONDecodeError:
-                    pass
-            raise _NotParsableError(text[:200])
+        pass
+
+    for block in _FENCE_RE.findall(text):
+        block = block.strip()
+        if not block:
+            continue
+        try:
+            return json.loads(block)
+        except json.JSONDecodeError:
+            continue
+
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"[{\[]", text):
+        try:
+            payload, _ = decoder.raw_decode(text, match.start())
+            return payload
+        except json.JSONDecodeError:
+            continue
+
+    raise _NotParsableError(text[:200])
 
 
 class _NotParsableError(Exception):

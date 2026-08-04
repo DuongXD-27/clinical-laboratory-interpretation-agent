@@ -11,6 +11,8 @@ import io
 import logging
 from dataclasses import dataclass
 
+import cv2
+import numpy as np
 from PIL import Image, ImageOps
 
 from src.config import get_settings
@@ -112,9 +114,6 @@ class ImageProcessor:
         width, height = img.size
         if min(width, height) < MIN_EDGE_FOR_DESKEW:
             return img
-
-        import cv2
-        import numpy as np
 
         gray = np.array(img.convert("L"))
         # Nghịch đảo để chữ/đường kẻ (tối) thành vùng trắng — dễ phát hiện cạnh.
