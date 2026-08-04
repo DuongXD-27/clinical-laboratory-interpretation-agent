@@ -13,6 +13,7 @@ RUNTIME_PATH = Path("data/reference/reference_ranges_v2.json")
 QUARANTINE_PATH = Path("data/reference/quarantine_v2.csv")
 EXPLANATIONS_PATH = Path("data/reference/explanations.json")
 CRITICAL_PATH = Path("data/reference/critical_thresholds.json")
+RAGAS_DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
 
 INTENDED_ORDER = [
     "WBC",
@@ -31,6 +32,14 @@ PENDING = {"HGB", "HDL-C", "HbA1c", "LDL-C", "Potassium"}
 
 def load_manifest() -> list[dict]:
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+
+
+def load_ragas_cases() -> list[dict]:
+    return [
+        json.loads(line)
+        for line in RAGAS_DATASET_PATH.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def by_analyte() -> dict[str, dict]:
@@ -132,8 +141,11 @@ def test_m07_potassium_separation():
     assert potassium["critical_rule_available"] == critical_flags()["Potassium"]
 
 
-def test_m08_no_false_ragas_coverage():
-    assert all(record["ragas_case_available"] is False for record in load_manifest())
+def test_m08_ragas_coverage_limited_to_approved_analytes():
+    manifest = by_analyte()
+
+    assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == APPROVED
+    assert all(manifest[analyte]["ragas_case_available"] is False for analyte in PENDING)
 
 
 def test_m09_source_and_explanation_evidence():
@@ -160,3 +172,21 @@ def test_manifest_matches_effective_repository_policy():
     assert {
         analyte for analyte, record in manifest.items() if record["unit_validated"] and record["approval_status"] == "approved"
     } == repository.approved_analytes
+
+
+def test_manifest_ragas_flags_agree_with_jsonl_dataset():
+    manifest = by_analyte()
+    dataset_analytes = {case["analyte"] for case in load_ragas_cases()}
+
+    assert dataset_analytes == APPROVED
+    assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == dataset_analytes
+
+
+def test_every_dataset_analyte_maps_to_approved_manifest_entry():
+    manifest = by_analyte()
+
+    for case in load_ragas_cases():
+        record = manifest[case["analyte"]]
+        assert record["approval_status"] == "approved"
+        assert record["normal_reference_supported"] is True
+        assert record["ragas_case_available"] is True

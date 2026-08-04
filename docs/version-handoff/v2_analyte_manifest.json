@@ -11,7 +11,7 @@
     "source_available": true,
     "approval_status": "approved",
     "blockers": [],
-    "ragas_case_available": false,
+    "ragas_case_available": true,
     "notes": "Approved RI rule; WBC legacy 10^3/uL aliases canonicalize to 10^9/L without numeric conversion."
   },
   {
@@ -26,7 +26,7 @@
     "source_available": true,
     "approval_status": "approved",
     "blockers": [],
-    "ragas_case_available": false,
+    "ragas_case_available": true,
     "notes": "Approved RI rules are sex-specific for M and F."
   },
   {
@@ -58,7 +58,7 @@
     "source_available": true,
     "approval_status": "approved",
     "blockers": [],
-    "ragas_case_available": false,
+    "ragas_case_available": true,
     "notes": "Approved normal checker uses RI only; CDL rows are ignored for normal classification."
   },
   {
@@ -126,7 +126,7 @@
     "source_available": true,
     "approval_status": "approved",
     "blockers": [],
-    "ragas_case_available": false,
+    "ragas_case_available": true,
     "notes": "Approved Adult RI rules are sex-specific for M and F."
   },
   {
