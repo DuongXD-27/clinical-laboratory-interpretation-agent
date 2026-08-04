@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     openai_max_tokens: int = Field(default=2048, ge=1, le=8192)
 
+    # Vision LLM Adapter (OCR — ADR-006)
+    openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
+    vision_model: str = "google/gemma-4-26b-a4b-it:free"
+    vision_base_url: str = "https://openrouter.ai/api/v1"
+    vision_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    vision_max_image_mb: int = Field(default=10, ge=1, le=25)
+    vision_timeout_seconds: float = Field(default=90.0, ge=1.0, le=300.0)
+
     # Database
     database_url: str = "sqlite:///./data/app.db"
 
