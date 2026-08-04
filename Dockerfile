@@ -29,6 +29,8 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", 8000)}/health')" || exit 1
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form (không dùng JSON array) để đọc được biến $PORT — Render tự
+# inject PORT lúc runtime; local/docker-compose không set thì fallback 8000.
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}

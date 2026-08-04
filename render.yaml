@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: vmec-05-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        value: sqlite:///./data/app.db
+      - key: CHROMA_PERSIST_DIR
+        value: ./data/chroma
+      - key: CRITICAL_THRESHOLDS_PATH
+        value: ./data/reference/critical_thresholds.json
+      - key: JWT_SECRET
+        generateValue: true
+      # Secret / domain-specific — không lưu trong blueprint, nhập tay
+      # trong Render Dashboard sau khi tạo service:
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
