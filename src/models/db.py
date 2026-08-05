@@ -9,6 +9,7 @@ trên Render bị reset (free tier không có persistent disk).
 from __future__ import annotations
 
 from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from src.config import get_settings
@@ -52,7 +53,13 @@ def init_db() -> None:
                         role=u["role"],
                     )
                 )
-            db.commit()
+            try:
+                db.commit()
+            except IntegrityError:
+                # count()==0 không atomic giữa các process — nếu chạy nhiều
+                # worker, process khác có thể đã seed xong giữa lúc mình
+                # check và commit. Bỏ qua an toàn, không phải lỗi thật.
+                db.rollback()
 
 
 def get_db() -> Session:

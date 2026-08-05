@@ -30,9 +30,21 @@ app = FastAPI(
 )
 
 settings = get_settings()
+_cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+if "*" in _cors_origins:
+    # allow_credentials=True + "*" là cấu hình sai: trình duyệt từ chối wildcard
+    # origin khi có credentials, và một số middleware sẽ "chữa cháy" bằng cách
+    # echo lại Origin của request — tức là chấp nhận MỌI domain kèm cookie/JWT,
+    # lỏng hơn nhiều so với ý định ban đầu. Chặn ngay lúc khởi động thay vì để
+    # lỗi âm thầm lọt ra production.
+    raise ValueError(
+        "CORS_ORIGINS không được chứa '*' khi allow_credentials=True — "
+        "liệt kê rõ từng domain (vd. https://vmec-05.vercel.app)."
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
