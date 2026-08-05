@@ -1,8 +1,10 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_INSECURE_DEFAULT_JWT_SECRET = "dev-only-insecure-secret-change-me"
 
 
 class Settings(BaseSettings):
@@ -38,9 +40,22 @@ class Settings(BaseSettings):
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
 
     # Auth (JWT)
-    jwt_secret: str = Field(default="dev-only-insecure-secret-change-me", alias="JWT_SECRET")
+    jwt_secret: str = Field(default=_INSECURE_DEFAULT_JWT_SECRET, alias="JWT_SECRET")
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = Field(default=60 * 12, ge=1)
+
+    @model_validator(mode="after")
+    def _reject_insecure_jwt_secret_in_production(self) -> "Settings":
+        # Nếu quên set JWT_SECRET thật lúc deploy, app sẽ âm thầm dùng giá trị
+        # mặc định — giá trị này lộ công khai trong .env.example, ai cũng có
+        # thể tự ký JWT giả mạo. Fail fast lúc khởi động thay vì để lỗ hổng
+        # nằm im đến khi bị khai thác.
+        if self.app_env == "production" and self.jwt_secret == _INSECURE_DEFAULT_JWT_SECRET:
+            raise ValueError(
+                "JWT_SECRET đang dùng giá trị mặc định không an toàn trong môi trường "
+                "production — phải set biến môi trường JWT_SECRET thật trước khi deploy."
+            )
+        return self
 
 
 @lru_cache
