@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
+from src.models.ocr_schemas import OCRIndicatorDraft
+
 IndicatorStatus = Literal["unknown", "normal", "low", "high", "critical_low", "critical_high"]
+
 
 
 class IndicatorInput(TypedDict, total=False):
@@ -85,6 +88,15 @@ class AgentState(TypedDict, total=False):
     test_date: str
     language: str
     raw_indicators: list[IndicatorInput]
+
+    # --- OCR & Gate UI_Review: Bản nháp trích xuất từ ảnh & trạng thái kiểm duyệt ---
+    # ocr_drafts: Danh sách các bản nháp chỉ số trích xuất từ Vision LLM Adapter (Vũ).
+    # Có thể null (None) nếu đầu vào là JSON nhập trực tiếp hoặc rỗng khi OCR không bóc tách được.
+    ocr_drafts: list[OCRIndicatorDraft] | None
+
+    # is_ocr_reviewed: Cờ đánh dấu dữ liệu OCR đã được kiểm duyệt thủ công tại Gate UI_Review
+    # (bệnh nhân/bác sĩ xem lại và xác nhận) trước khi đưa vào pipeline chính. Mặc định là False.
+    is_ocr_reviewed: bool
 
     # --- Rule-based: reference range checker + critical value detector ---
     indicators: list[IndicatorAssessment]

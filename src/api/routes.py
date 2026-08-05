@@ -21,9 +21,10 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         "raw_indicators": [i.model_dump() for i in request.indicators],
     }
 
+    import uuid
     # Chạy qua luồng LangGraph
-    final_state = await agent.ainvoke(initial_state)
-
+    config = {"configurable": {"thread_id": uuid.uuid4().hex}}
+    final_state = await agent.ainvoke(initial_state, config=config)
     # Convert dữ liệu về Response Schema
     indicators = [
         IndicatorResultSchema(**ind)
