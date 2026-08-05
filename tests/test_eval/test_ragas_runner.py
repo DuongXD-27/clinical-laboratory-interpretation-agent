@@ -104,11 +104,12 @@ def test_r11_inspect_makes_no_network_call(monkeypatch, capsys):
 
 
 def test_r12_live_flag_rejected(capsys):
-    exit_code = main(["--dataset", str(DATASET_PATH), "--validate-only", "--live"])
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--dataset", str(DATASET_PATH), "--validate-only", "--live"])
     error = capsys.readouterr().err
 
-    assert exit_code == 3
-    assert "Live evaluation is prohibited" in error
+    assert exc_info.value.code == 2
+    assert "not allowed with argument" in error
 
 
 def test_r13_runner_does_not_read_api_key_environment_variables(monkeypatch):

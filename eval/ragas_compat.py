@@ -35,6 +35,7 @@ class RagasApi:
     SingleTurnSample: type
     Faithfulness: type
     ContextPrecision: type
+    llm_factory: object
     ragas_version: str
     compatibility_shim_applied: bool
 
@@ -70,6 +71,7 @@ def import_ragas_api() -> RagasApi:
 
     from ragas import EvaluationDataset
     from ragas.dataset_schema import SingleTurnSample
+    from ragas.llms import llm_factory
     from ragas.metrics.collections import ContextPrecision, Faithfulness
 
     return RagasApi(
@@ -77,6 +79,7 @@ def import_ragas_api() -> RagasApi:
         SingleTurnSample=SingleTurnSample,
         Faithfulness=Faithfulness,
         ContextPrecision=ContextPrecision,
+        llm_factory=llm_factory,
         ragas_version=ragas_version,
         compatibility_shim_applied=compatibility_shim_applied,
     )
