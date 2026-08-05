@@ -76,6 +76,7 @@ class FakeClient:
     def __init__(self, content: str = ""):
         self._content = content
         self.last_kwargs = None
+        self.timeout = 90.0
 
     @property
     def chat(self):

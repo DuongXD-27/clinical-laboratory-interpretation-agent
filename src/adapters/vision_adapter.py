@@ -66,11 +66,23 @@ class VisionAdapter:
         retry_backoff_seconds: float = 2.0,
     ) -> None:
         settings = get_settings()
-        self._client = client or OpenAI(
-            api_key=settings.openrouter_api_key,
-            base_url=settings.vision_base_url,
-            timeout=settings.vision_timeout_seconds,
-        )
+        if client is None:
+            self._client = OpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url=settings.vision_base_url,
+                timeout=settings.vision_timeout_seconds,
+            )
+            self.timeout_seconds = settings.vision_timeout_seconds
+        else:
+            # Client inject (test): không phụ thuộc thuộc tính lỏng lẻo của mock;
+            # lấy timeout hợp lệ hoặc rơi về cấu hình mặc định.
+            self._client = client
+            injected_timeout = getattr(client, "timeout", None)
+            self.timeout_seconds = (
+                injected_timeout
+                if isinstance(injected_timeout, (int, float))
+                else settings.vision_timeout_seconds
+            )
         self.model = model or settings.vision_model
         self.temperature = temperature if temperature is not None else settings.vision_temperature
         self.max_retries = max_retries
@@ -107,9 +119,9 @@ class VisionAdapter:
         # Ngân sách thời gian tổng cho toàn bộ vòng retry (network lỗi + rỗng
         # cộng dồn), tránh việc hai loại retry nối tiếp nhau vượt timeout kỳ
         # vọng của caller.
-        deadline = time.monotonic() + self.max_retries * (
-            self._client.timeout if isinstance(self._client.timeout, (int, float)) else 30
-        ) + self.max_retries * self.retry_backoff_seconds
+        deadline = time.monotonic() + self.max_retries * self.timeout_seconds + (
+            self.max_retries * self.retry_backoff_seconds
+        )
 
         for attempt in range(self.max_retries):
             if time.monotonic() > deadline:
