@@ -1,6 +1,7 @@
 import pytest
 
 from src.agents.nodes.critical_detector_node import detect_critical_values_node
+from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.agents.state import AgentState
 
 
@@ -51,3 +52,45 @@ async def test_detect_critical_values_node():
     assert len(alerts) == 2
     assert alerts[0]["indicator_name"] == "Kali"
     assert alerts[1]["indicator_name"] == "Glucose"
+
+
+@pytest.mark.asyncio
+async def test_potassium_unknown_from_reference_checker_can_still_be_critical():
+    """Normal checker keeps pending Kali unknown; critical detector remains independent."""
+    initial_state: AgentState = {
+        "patient_age": 35,
+        "patient_gender": "male",
+        "raw_indicators": [
+            {"name": "Kali", "value": 7.0, "unit": "mmol/L"},
+        ],
+    }
+
+    checked_state = await reference_range_checker_node(initial_state)
+    checked_kali = checked_state["indicators"][0]
+    assert checked_kali["status"] == "unknown"
+    assert checked_kali["is_critical"] is False
+
+    critical_state = await detect_critical_values_node({**initial_state, **checked_state})
+    critical_kali = critical_state["indicators"][0]
+    assert critical_kali["status"] == "critical_high"
+    assert critical_kali["is_critical"] is True
+    assert critical_state["has_critical_values"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [(2.5, "critical_low"), (6.5, "critical_high")],
+)
+async def test_potassium_exact_critical_boundaries_preserve_current_policy(value, expected_status):
+    state: AgentState = {
+        "raw_indicators": [
+            {"name": "Potassium", "value": value, "unit": "mmol/L"},
+        ],
+    }
+
+    result = await detect_critical_values_node(state)
+
+    potassium = result["indicators"][0]
+    assert potassium["status"] == expected_status
+    assert potassium["is_critical"] is True

@@ -17,6 +17,7 @@ langchain-google-genai>=2.0.0
 langchain-huggingface>=0.1.0
 sentence-transformers>=3.0.0
 langgraph>=0.2.0
+ragas==0.4.3
 
 # Vector Store
 chromadb>=0.5.0

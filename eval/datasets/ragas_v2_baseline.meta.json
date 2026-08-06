@@ -1,0 +1,31 @@
+{
+  "dataset_name": "P-056 RAGAS V2 Baseline",
+  "dataset_version": "v2-baseline-1",
+  "case_count": 12,
+  "language": "vi",
+  "scope": "approved normal-reference analytes only",
+  "approved_analytes": [
+    "WBC",
+    "RBC",
+    "Fasting plasma glucose",
+    "Creatinine"
+  ],
+  "excluded_analytes": {
+    "HGB": "unit_data_conflict",
+    "HDL-C": "cdl_only",
+    "HbA1c": "md_not_approved",
+    "LDL-C": "md_not_approved",
+    "Potassium": "normal_reference_not_approved"
+  },
+  "retrieved_context_origin": "curated evaluation fixtures; not captured from runtime graph",
+  "intended_metrics": [
+    "faithfulness",
+    "context_precision"
+  ],
+  "custom_metrics": [
+    "hallucination_proxy"
+  ],
+  "hallucination_proxy_definition": "1 - faithfulness",
+  "live_evaluation_status": "not_run",
+  "contains_real_patient_data": false
+}

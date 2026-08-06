@@ -1,0 +1,210 @@
+{
+  "run_id": "RAGAS-V2-BASELINE-001",
+  "run_type": "live_curated_fixture_baseline",
+  "generated_at": "2026-08-05T02:49:11.567920+00:00",
+  "git_commit": "01205af4aade3440b04f008762369d6d69873a77",
+  "dataset": {
+    "path": "eval/datasets/ragas_v2_baseline.jsonl",
+    "version": "v2-baseline-1",
+    "sha256": "3f1cb84cebde5a5a47fca5eafca0a0276ebe6c04665fd9bb0531fe92ea24da2f",
+    "total_cases": 12,
+    "eligible_cases": 11,
+    "evaluated_cases": 12
+  },
+  "evaluator": {
+    "provider": "google",
+    "model": "gemini-2.5-flash",
+    "transport_adapter": "google_openai_compatible",
+    "transport_library": "openai-python",
+    "api_endpoint_host": "generativelanguage.googleapis.com",
+    "ragas_version": "0.4.3",
+    "compatibility_shim_applied": true,
+    "credential_variable": "GOOGLE_API_KEY",
+    "openai_service_used": false,
+    "request_timeout_seconds": 120,
+    "concurrency": 1,
+    "automatic_retries": 0,
+    "provider_probe": {
+      "status": "REUSED",
+      "duration_ms": 0,
+      "reused_from_previous_attempt": true
+    }
+  },
+  "metrics": [
+    "faithfulness",
+    "context_precision",
+    "custom_hallucination_proxy"
+  ],
+  "cases": [
+    {
+      "case_id": "RAGAS-V2-001",
+      "analyte": "WBC",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 20287
+    },
+    {
+      "case_id": "RAGAS-V2-002",
+      "analyte": "WBC",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 31304
+    },
+    {
+      "case_id": "RAGAS-V2-003",
+      "analyte": "WBC",
+      "faithfulness": 0.5,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.5,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 30298
+    },
+    {
+      "case_id": "RAGAS-V2-004",
+      "analyte": "RBC",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 29904
+    },
+    {
+      "case_id": "RAGAS-V2-005",
+      "analyte": "RBC",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 17562
+    },
+    {
+      "case_id": "RAGAS-V2-006",
+      "analyte": "RBC",
+      "faithfulness": 1.0,
+      "context_precision": 0.99999999995,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 45919
+    },
+    {
+      "case_id": "RAGAS-V2-007",
+      "analyte": "Fasting plasma glucose",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 16913
+    },
+    {
+      "case_id": "RAGAS-V2-008",
+      "analyte": "Fasting plasma glucose",
+      "faithfulness": 0.5,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.5,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 35860
+    },
+    {
+      "case_id": "RAGAS-V2-009",
+      "analyte": "Fasting plasma glucose",
+      "faithfulness": 1.0,
+      "context_precision": 0.49999999995,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 31630
+    },
+    {
+      "case_id": "RAGAS-V2-010",
+      "analyte": "Creatinine",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 28580
+    },
+    {
+      "case_id": "RAGAS-V2-011",
+      "analyte": "Creatinine",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 21595
+    },
+    {
+      "case_id": "RAGAS-V2-012",
+      "analyte": "WBC",
+      "faithfulness": null,
+      "context_precision": null,
+      "custom_hallucination_proxy": null,
+      "metric_status": "not_applicable",
+      "reason": "missing_retrieved_context",
+      "errors": [],
+      "duration_ms": 0
+    }
+  ],
+  "summary": {
+    "faithfulness": {
+      "count": 11,
+      "mean": 0.9090909090909091,
+      "median": 1.0,
+      "minimum": 0.5,
+      "maximum": 1.0,
+      "standard_deviation": 0.19284730395996752,
+      "failed_count": 0,
+      "not_applicable_count": 1
+    },
+    "context_precision": {
+      "count": 11,
+      "mean": 0.9545454544545454,
+      "median": 0.9999999999,
+      "minimum": 0.49999999995,
+      "maximum": 0.99999999995,
+      "standard_deviation": 0.14373989363108064,
+      "failed_count": 0,
+      "not_applicable_count": 1
+    },
+    "custom_hallucination_proxy": {
+      "count": 11,
+      "mean": 0.09090909090909091,
+      "median": 0.0,
+      "minimum": 0.0,
+      "maximum": 0.5,
+      "standard_deviation": 0.19284730395996752,
+      "failed_count": 0,
+      "not_applicable_count": 1
+    },
+    "successful_cases": 11,
+    "partial_cases": 0,
+    "failed_cases": 0,
+    "not_applicable_cases": 1,
+    "total_duration_seconds": 332.32331279991195
+  },
+  "expected_pattern_checks": {
+    "unsupported_claim_contrast_pass": true,
+    "relevant_first_context_contrast_pass": true,
+    "warnings": [],
+    "dataset_or_prompt_tuning_performed": false
+  },
+  "limitations": [
+    "curated fixtures, not production graph retrieved contexts",
+    "approved normal-reference analytes only",
+    "not clinical validation",
+    "one live pass only; scores may vary"
+  ]
+}
