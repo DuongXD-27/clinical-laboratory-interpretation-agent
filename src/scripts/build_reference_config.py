@@ -12,14 +12,25 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from src.scripts.extract_explanation_reference_ranges import extract_supplemental_rules
+
 BUILDER_VERSION = "v2"
 DEFAULT_INPUT = "adult_outpatient_laboratory_reference_map.csv"
 DEFAULT_OUTPUT_DIR = "data/reference"
+DEFAULT_SUPPLEMENTAL = "data/reference/explanations.json"
 
 RUNTIME_CSV = "reference_ranges_v2.csv"
 RUNTIME_JSON = "reference_ranges_v2.json"
 QUARANTINE_CSV = "quarantine_v2.csv"
 BUILD_REPORT_JSON = "reference_build_report.json"
+
+SUPPLEMENTAL_FIELDS = [
+    "source_origin",
+    "source_entry_id",
+    "range_group",
+    "range_note",
+    "source_urls",
+]
 
 QUALITY_REASON_ORDER = [
     "range_flag_not_ok",
@@ -142,21 +153,20 @@ def normalize_unit(value: Any) -> str | None:
     if text is None:
         return None
 
+    # Case-sensitive lookup: unit symbols are not case-equivalent.
+    # G/L (hematology display shorthand) → 10^9/L  but  g/L (mass per volume) stays g/L.
     canonical_map = {
         "×10^9/L": "10^9/L",
         "10^9/L": "10^9/L",
         "×10^12/L": "10^12/L",
         "10^12/L": "10^12/L",
-        "µMOL/L": "umol/L",
-        "ΜMOL/L": "umol/L",
-        "UMOL/L": "umol/L",
+        "µmol/L": "umol/L",
+        "μmol/L": "umol/L",
+        "umol/L": "umol/L",
         "G/L": "10^9/L",
         "T/L": "10^12/L",
     }
-    upper_text = text.upper()
-    if upper_text in canonical_map:
-        return canonical_map[upper_text]
-    return text
+    return canonical_map.get(text, text)
 
 
 def parse_bound(value: Any) -> tuple[Decimal | None, str | None]:
@@ -291,19 +301,25 @@ def make_runtime_record(
     }
 
 
-def sort_runtime_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, int]:
+def sort_runtime_key(record: dict[str, Any]) -> tuple[str, str, str, str, str, int, str]:
+    src_num = record.get("source_row_number")
     return (
         str(record.get("analyte_canonical") or ""),
         str(record.get("sex") or ""),
         str(record.get("age_scope") or ""),
         str(record.get("unit_canonical") or ""),
         str(record.get("reference_type") or ""),
-        int(record["source_row_number"]),
+        int(src_num) if src_num is not None else 99999,
+        str(record.get("rule_id") or ""),
     )
 
 
 def csv_value(value: Any) -> Any:
-    return "" if value is None else value
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "|".join(str(v) for v in value)
+    return value
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
@@ -348,6 +364,7 @@ def build_reference_config(
     output_dir: str | Path = DEFAULT_OUTPUT_DIR,
     *,
     root: Path | None = None,
+    supplemental_path: str | Path | None = None,
 ) -> BuildResult:
     root = root or repo_root()
     input_file = resolve_repo_path(input_path, root)
@@ -422,8 +439,33 @@ def build_reference_config(
     quarantine_csv_path = output_path / QUARANTINE_CSV
     build_report_path = output_path / BUILD_REPORT_JSON
 
-    write_csv(runtime_csv_path, accepted_csv, RUNTIME_FIELDS)
-    write_json(runtime_json_path, accepted_json)
+    # --- Supplemental extraction ---
+    supplemental_json: list[dict[str, Any]] = []
+    supplemental_warnings: list[dict[str, Any]] = []
+    if supplemental_path is not None:
+        sup_file = resolve_repo_path(supplemental_path, root)
+        if not sup_file.exists():
+            raise BuildFailure(f"supplemental file not found: {sup_file}")
+        primary_analytes = {str(row["analyte_canonical"]) for row in accepted_json if row.get("analyte_canonical")}
+        supplemental_json, supplemental_warnings = extract_supplemental_rules(sup_file, primary_analytes)
+
+    # --- Write output files ---
+    if supplemental_json:
+        catalog_fields = RUNTIME_FIELDS + SUPPLEMENTAL_FIELDS
+        combined_json = sorted(accepted_json + supplemental_json, key=sort_runtime_key)
+        # Build CSV-compatible copies of supplemental records (lists → pipe strings)
+        supplemental_csv: list[dict[str, Any]] = []
+        for rec in supplemental_json:
+            csv_rec = dict(rec)
+            csv_rec["source_urls"] = "|".join(str(u) for u in (rec.get("source_urls") or []))
+            supplemental_csv.append(csv_rec)
+        combined_csv = sorted(accepted_csv + supplemental_csv, key=sort_runtime_key)
+        write_csv(runtime_csv_path, combined_csv, catalog_fields)
+        write_json(runtime_json_path, combined_json)
+    else:
+        write_csv(runtime_csv_path, accepted_csv, RUNTIME_FIELDS)
+        write_json(runtime_json_path, accepted_json)
+
     write_csv(
         quarantine_csv_path,
         quarantined,
@@ -440,7 +482,18 @@ def build_reference_config(
         {str(row.get("analyte_canonical")) for row in quarantined if row.get("analyte_canonical")}
     )
 
-    report = {
+    # Supplemental analytes grouped by analyte name for the report
+    sup_analytes: list[str] = []
+    if supplemental_json:
+        seen: set[str] = set()
+        for rec in supplemental_json:
+            a = str(rec.get("analyte_canonical") or "")
+            if a and a not in seen:
+                seen.add(a)
+                sup_analytes.append(a)
+        sup_analytes.sort()
+
+    report: dict[str, Any] = {
         "builder_version": BUILDER_VERSION,
         "input_file": relative_path(input_file, root),
         "input_sha256": input_hash_before,
@@ -474,6 +527,19 @@ def build_reference_config(
         "source_integrity_verified": True,
     }
 
+    if supplemental_path is not None:
+        report["explanation_supplement"] = {
+            "supplemental_file": relative_path(resolve_repo_path(supplemental_path, root), root),
+            "entries_scanned": 9,
+            "missing_analytes": len(sup_analytes),
+            "supplemental_analytes": sup_analytes,
+            "rules_added": len(supplemental_json),
+            "boundary_warnings": supplemental_warnings,
+        }
+        report["catalog"] = {
+            "total_rules": runtime_accepted_rows + len(supplemental_json),
+        }
+
     build_report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=False) + "\n",
         encoding="utf-8",
@@ -492,7 +558,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        result = build_reference_config(args.input, args.output_dir)
+        result = build_reference_config(
+            args.input,
+            args.output_dir,
+            supplemental_path=DEFAULT_SUPPLEMENTAL,
+        )
     except InvariantFailure as exc:
         print(f"Build failed: {exc}", file=sys.stderr)
         return 2

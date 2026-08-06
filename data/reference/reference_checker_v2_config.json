@@ -4,11 +4,11 @@
   "approved_analytes": [
     "WBC",
     "RBC",
-    "HGB",
     "Fasting plasma glucose",
     "Creatinine"
   ],
   "pending_analytes": [
+    "HGB",
     "HDL-C",
     "HbA1c",
     "LDL-C",

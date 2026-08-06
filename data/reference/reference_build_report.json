@@ -71,17 +71,63 @@
   "output_files": {
     "reference_ranges_v2_csv": {
       "path": "data/reference/reference_ranges_v2.csv",
-      "sha256": "528A31F3F08BBB489EBEF9B2EACC6CE61173FE009BC41EF43CC305B242EA14CF"
+      "sha256": "BC53BB146D3892D4918CE5174CC462B60C2C2B75CE99B12E33A6490A0EEC9C3F"
     },
     "reference_ranges_v2_json": {
       "path": "data/reference/reference_ranges_v2.json",
-      "sha256": "9E135578844EE3DE29AAD554B16DEBA2A6FAE13A739B20113A8F0F4A27AA0610"
+      "sha256": "B59F49B9B70CC831F3884057080C97AEA45BF6575F4FA0031DE9F1C0F0FEB815"
     },
     "quarantine_v2_csv": {
       "path": "data/reference/quarantine_v2.csv",
       "sha256": "F6F91C4F9B459BE3E7CA2C0D0551B7B95735A2D8D3AAC7AB941BBD283EB7C92B"
     }
   },
-  "generated_at": "2026-08-04T14:41:47Z",
-  "source_integrity_verified": true
+  "generated_at": "2026-08-06T05:59:59Z",
+  "source_integrity_verified": true,
+  "explanation_supplement": {
+    "supplemental_file": "data/reference/explanations.json",
+    "entries_scanned": 9,
+    "missing_analytes": 3,
+    "supplemental_analytes": [
+      "HbA1c",
+      "LDL-C",
+      "Potassium"
+    ],
+    "rules_added": 15,
+    "boundary_warnings": [
+      {
+        "analyte": "HbA1c",
+        "groups": [
+          "normal",
+          "prediabetes"
+        ],
+        "boundary_value": 5.7,
+        "unit": "%",
+        "note": "normal upper=5.7 equals prediabetes lower=5.7; inclusive overlap preserved verbatim"
+      },
+      {
+        "analyte": "Potassium",
+        "groups": [
+          "mild_hypokalemia",
+          "moderate_hypokalemia"
+        ],
+        "boundary_value": 3.0,
+        "unit": "mmol/L",
+        "note": "mild_hypokalemia lower=3.0 equals moderate_hypokalemia upper=3.0; preserved verbatim"
+      },
+      {
+        "analyte": "Potassium",
+        "groups": [
+          "moderate_hyperkalemia",
+          "severe_hyperkalemia"
+        ],
+        "boundary_value": 7.0,
+        "unit": "mmol/L",
+        "note": "moderate_hyperkalemia upper=7.0 equals severe_hyperkalemia lower=7.0; preserved verbatim"
+      }
+    ]
+  },
+  "catalog": {
+    "total_rules": 73
+  }
 }

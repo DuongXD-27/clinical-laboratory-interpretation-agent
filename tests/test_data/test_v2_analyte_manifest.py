@@ -117,7 +117,9 @@ def test_m03_pending_list():
 
 
 def test_m04_hgb_blocker():
-    assert "unit_data_conflict" in by_analyte()["HGB"]["blockers"]
+    # After BONUS-TIP-008: technical unit conflict resolved; HGB pending awaiting medical approval
+    assert "awaiting_medical_approval" in by_analyte()["HGB"]["blockers"]
+    assert "unit_data_conflict" not in by_analyte()["HGB"]["blockers"]
 
 
 def test_m05_hdl_c_blockers():
