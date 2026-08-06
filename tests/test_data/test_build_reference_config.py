@@ -211,6 +211,40 @@ def test_unit_aliases() -> None:
     assert normalize_unit("mg/dL") != normalize_unit("mmol/L")
 
 
+def test_unit_g_l_case_sensitive() -> None:
+    # lowercase g/L must never map to the count unit 10^9/L
+    assert normalize_unit("g/L") == "g/L"
+    assert normalize_unit("g/L") != "10^9/L"
+    # uppercase G/L retains its intended alias to count unit
+    assert normalize_unit("G/L") == "10^9/L"
+
+
+def test_unit_t_l_case_sensitive() -> None:
+    assert normalize_unit("T/L") == "10^12/L"
+
+
+def test_unit_source_analytes_regenerate_with_g_l_canonical(tmp_path: Path) -> None:
+    # After the fix, affected RI rules must store unit_canonical=g/L not 10^9/L
+    result = build_reference_config(SOURCE, tmp_path)
+    accepted = result.accepted
+    affected_ids = {"RRV2-0005", "RRV2-0006", "RRV2-0013", "RRV2-0014", "RRV2-0052", "RRV2-0053"}
+    found = {r["rule_id"]: r["unit_canonical"] for r in accepted if r.get("rule_id") in affected_ids}
+    assert set(found.keys()) == affected_ids, f"Missing rule IDs: {affected_ids - set(found.keys())}"
+    for rule_id, canon in found.items():
+        assert canon == "g/L", f"{rule_id}: expected unit_canonical=g/L, got {repr(canon)}"
+
+
+def test_unit_wbc_rbc_canonical_unaffected_by_fix(tmp_path: Path) -> None:
+    result = build_reference_config(SOURCE, tmp_path)
+    accepted = result.accepted
+    wbc = [r for r in accepted if r.get("analyte_canonical") == "WBC"]
+    rbc = [r for r in accepted if r.get("analyte_canonical") == "RBC"]
+    assert wbc, "WBC records missing"
+    assert rbc, "RBC records missing"
+    assert all(r["unit_canonical"] == "10^9/L" for r in wbc), "WBC canonical changed"
+    assert all(r["unit_canonical"] == "10^12/L" for r in rbc), "RBC canonical changed"
+
+
 def test_deterministic_output(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     write_source(

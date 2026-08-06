@@ -281,13 +281,37 @@ def test_u_wbc_08_units_metric_wbc_is_canonical():
     assert "WBC" not in repo.unit_conflict_analytes
 
 
-def test_u_wbc_09_actual_hgb_conflict_remains_pending():
+def test_u_wbc_09_hgb_remains_pending_after_unit_fix():
+    # After BONUS-TIP-008 the technical unit conflict is resolved:
+    # unit_canonical=g/L matches units_metric g/L → no unit_conflict.
+    # HGB must still be pending because medical/data approval has not been granted.
     repo = ReferenceRepository.from_default_files()
     result = repo.select_rule(analyte="HGB", unit="g/L", patient_gender="male", patient_age=35)
 
-    assert "HGB" in repo.unit_conflict_analytes
+    assert "HGB" not in repo.unit_conflict_analytes
     assert "HGB" not in repo.approved_analytes
-    assert result.reason == "unit_data_conflict"
+    assert "HGB" in repo.pending_analytes
+    assert result.reason == "analyte_not_approved"
+
+
+def test_unit_g_l_not_mapped_to_count_unit() -> None:
+    assert ReferenceRepository.normalize_unit("g/L") == "g/L"
+    assert ReferenceRepository.normalize_unit("g/L") != "10^9/L"
+
+
+def test_unit_G_L_uppercase_maps_to_count() -> None:
+    assert ReferenceRepository.normalize_unit("G/L") == "10^9/L"
+
+
+def test_unit_g_l_not_matched_as_wbc_unit() -> None:
+    # g/L must never match a 10^9/L WBC rule — they are different mass vs count units
+    repo = ReferenceRepository(
+        config=make_config(approved=["WBC"], pending=[]),
+        rules=[make_rule("WBC", unit="10^9/L")],
+        unit_rows=[{"test_name": "WBC", "standardized_unit": "10^9/L"}],
+    )
+    result = repo.select_rule(analyte="WBC", unit="g/L", patient_gender="male", patient_age=35)
+    assert result.reason == "unit_not_supported"
 
 
 @pytest.mark.parametrize("age", [18, 60])

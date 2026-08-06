@@ -1,7 +1,7 @@
 rule_id,source_row_number,analyte_canonical,specimen,fasting_required,sex,age_scope,unit_machine,unit_display_vn,unit_raw,unit_canonical,value_type,range_lower,range_upper,reference_type,source_priority_tier,source_url,confidence,range_flag
 RRV2-0057,57,ALT,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,0,41,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH,OK
 RRV2-0056,56,AST,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,0,40,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH,OK
-RRV2-0053,53,Albumin,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,10^9/L,concentration,35,50,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/,HIGH,OK
+RRV2-0053,53,Albumin,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,35,50,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/,HIGH,OK
 RRV2-0039,39,Chloride,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,95,108,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/,HIGH,OK
 RRV2-0043,43,Creatinine,Serum/plasma,NO,F,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,45,84,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH,OK
 RRV2-0042,42,Creatinine,Serum/plasma,NO,M,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,59,104,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH,OK
@@ -21,15 +21,15 @@ RRV2-0073,73,HDL-C,Serum/plasma,CONDITIONAL,F,Adult,mmol/L,mmol/L,mmol/L,mmol/L,
 RRV2-0075,75,HDL-C,Serum/plasma,CONDITIONAL,F,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.3,1.49,CDL,T2,https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601,HIGH,OK
 RRV2-0072,72,HDL-C,Serum/plasma,CONDITIONAL,M,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,0,0.99,CDL,T2,https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601,HIGH,OK
 RRV2-0074,74,HDL-C,Serum/plasma,CONDITIONAL,M,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1,1.49,CDL,T2,https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601,HIGH,OK
-RRV2-0006,6,HGB,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,10^9/L,absolute,110,150,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
-RRV2-0005,5,HGB,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,10^9/L,absolute,128,183,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
+RRV2-0006,6,HGB,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,absolute,110,150,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
+RRV2-0005,5,HGB,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,absolute,128,183,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0024,24,Lymphocytes %,Whole blood EDTA,NO,A,18–60,%,%,%,%,relative,12,48.6,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0026,26,Lymphocytes abs,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.94,3.75,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0025,25,Lymphocytes abs,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.92,3.8,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0012,12,MCH,Whole blood EDTA,NO,F,18–60,pg,pg,pg,pg,mass/cell,25.1,31.4,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0011,11,MCH,Whole blood EDTA,NO,M,18–60,pg,pg,pg,pg,mass/cell,26.3,32.2,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
-RRV2-0014,14,MCHC,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,10^9/L,concentration,322,366,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
-RRV2-0013,13,MCHC,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,10^9/L,concentration,323,371,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
+RRV2-0014,14,MCHC,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,concentration,322,366,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
+RRV2-0013,13,MCHC,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,concentration,323,371,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0010,10,MCV,Whole blood EDTA,NO,F,18–60,fL,fL,fL,fL,volume,71.6,91.5,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0009,9,MCV,Whole blood EDTA,NO,M,18–60,fL,fL,fL,fL,volume,73.8,93.1,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
 RRV2-0028,28,Monocytes %,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,3.1,8.9,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH,OK
@@ -50,7 +50,7 @@ RRV2-0054,54,Total bilirubin,Serum/plasma,NO,A,Adult,µmol/L,µmol/L,µmol/L,umo
 RRV2-0065,65,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,0,5.18,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK
 RRV2-0066,66,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.18,6.18,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK
 RRV2-0067,67,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,6.19,,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK
-RRV2-0052,52,Total protein,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,10^9/L,concentration,60,80,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/,HIGH,OK
+RRV2-0052,52,Total protein,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,60,80,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/,HIGH,OK
 RRV2-0068,68,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,0,1.69,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK
 RRV2-0069,69,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.7,2.24,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK
 RRV2-0070,70,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.26,5.63,CDL,T2,https://renal.testcatalog.org/show/LPSC1,HIGH,OK

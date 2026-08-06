@@ -142,21 +142,20 @@ def normalize_unit(value: Any) -> str | None:
     if text is None:
         return None
 
+    # Case-sensitive lookup: unit symbols are not case-equivalent.
+    # G/L (hematology display shorthand) → 10^9/L  but  g/L (mass per volume) stays g/L.
     canonical_map = {
         "×10^9/L": "10^9/L",
         "10^9/L": "10^9/L",
         "×10^12/L": "10^12/L",
         "10^12/L": "10^12/L",
-        "µMOL/L": "umol/L",
-        "ΜMOL/L": "umol/L",
-        "UMOL/L": "umol/L",
+        "µmol/L": "umol/L",
+        "μmol/L": "umol/L",
+        "umol/L": "umol/L",
         "G/L": "10^9/L",
         "T/L": "10^12/L",
     }
-    upper_text = text.upper()
-    if upper_text in canonical_map:
-        return canonical_map[upper_text]
-    return text
+    return canonical_map.get(text, text)
 
 
 def parse_bound(value: Any) -> tuple[Decimal | None, str | None]:

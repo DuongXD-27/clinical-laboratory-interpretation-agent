@@ -71,17 +71,17 @@
   "output_files": {
     "reference_ranges_v2_csv": {
       "path": "data/reference/reference_ranges_v2.csv",
-      "sha256": "528A31F3F08BBB489EBEF9B2EACC6CE61173FE009BC41EF43CC305B242EA14CF"
+      "sha256": "7140D93E084A788A06355F52BCED331FA34CC2EF0469A0DE6524D7D2865EEA2D"
     },
     "reference_ranges_v2_json": {
       "path": "data/reference/reference_ranges_v2.json",
-      "sha256": "9E135578844EE3DE29AAD554B16DEBA2A6FAE13A739B20113A8F0F4A27AA0610"
+      "sha256": "57C0DD269F9F31E60CAE56AFE51D1DA08311450F99C967EE48D791B57A9C40F1"
     },
     "quarantine_v2_csv": {
       "path": "data/reference/quarantine_v2.csv",
       "sha256": "F6F91C4F9B459BE3E7CA2C0D0551B7B95735A2D8D3AAC7AB941BBD283EB7C92B"
     }
   },
-  "generated_at": "2026-08-04T14:41:47Z",
+  "generated_at": "2026-08-06T03:45:28Z",
   "source_integrity_verified": true
 }
