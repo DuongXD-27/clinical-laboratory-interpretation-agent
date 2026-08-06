@@ -76,7 +76,8 @@
       "md_not_approved"
     ],
     "ragas_case_available": false,
-    "notes": "Source rows are MD and must not be promoted to normal RI runtime support."
+    "catalog_data_available": true,
+    "notes": "BONUS-TIP-009: 3 supplemental MD rules added to catalog (EXPV2-HBA1C-001/002/003) from explanations.json. Source rows are MD and must not be promoted to normal RI runtime support. Normal-reference approval remains pending — catalog presence does not imply runtime approval."
   },
   {
     "analyte": "LDL-C",
@@ -94,7 +95,8 @@
       "normal_reference_not_approved"
     ],
     "ragas_case_available": false,
-    "notes": "MD/CDL source rows remain quarantined; any critical threshold is independent of normal RI support."
+    "catalog_data_available": true,
+    "notes": "BONUS-TIP-009: 5 supplemental MD rules added to catalog (EXPV2-LDLC-001 through 005) from explanations.json. MD/CDL source rows remain quarantined; any critical threshold is independent of normal RI support. Normal-reference approval remains pending — catalog presence does not imply runtime approval."
   },
   {
     "analyte": "HDL-C",
@@ -145,6 +147,7 @@
       "normal_reference_not_approved"
     ],
     "ragas_case_available": false,
-    "notes": "Normal checker remains unknown; Critical Detector owns Potassium/Kali critical classification."
+    "catalog_data_available": true,
+    "notes": "BONUS-TIP-009: 7 supplemental rules added to catalog (EXPV2-POTASSIUM-001 through 007) from explanations.json — normal=RI candidate, 6 severity groups=MD. Normal-reference approval remains pending — catalog presence does not imply runtime approval. Critical Detector owns Potassium/Kali critical classification independently."
   }
 ]

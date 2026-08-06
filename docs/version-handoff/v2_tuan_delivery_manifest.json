@@ -25,6 +25,14 @@
     "runtime_accepted_rows": 58,
     "quarantined_rows": 22,
     "multiple_reason_rows": 2,
+    "explanation_supplement": {
+      "note": "BONUS-TIP-009 post-VERIFY synchronization",
+      "entries_scanned": 9,
+      "missing_analytes": 3,
+      "supplemental_analytes": ["HbA1c", "LDL-C", "Potassium"],
+      "rules_added": 15
+    },
+    "catalog_total_rules": 73,
     "rejection_reason_counts": {
       "range_flag_not_ok": 22,
       "confidence_not_high": 2,
@@ -178,6 +186,9 @@
     "post_live_failed": 0,
     "post_live_xfailed": 0,
     "post_live_xpassed": 0,
+    "post_bonus_tip_009_suite_passed": 252,
+    "post_bonus_tip_009_warnings": 2,
+    "post_bonus_tip_009_failed": 0,
     "compile_exit_code": 0,
     "pip_check": "No broken requirements found",
     "warnings_detail": [
@@ -207,7 +218,7 @@
     "transport_protocol": "OpenAI-compatible targeting Google endpoint"
   },
   "known_limitations": [
-    "HGB remains pending due to unit_data_conflict: runtime 10^9/L conflicts with unit map g/L",
+    "HGB remains pending awaiting medical/data owner approval (technical unit conflict resolved by BONUS-TIP-008)",
     "HDL-C remains pending: available rules are CDL-only and have unit_policy_conflict",
     "HbA1c remains pending: MD status, not approved as normal RI",
     "LDL-C remains pending: MD status, not approved as normal RI",
