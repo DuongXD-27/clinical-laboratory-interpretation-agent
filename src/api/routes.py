@@ -32,9 +32,14 @@ async def analyze(
         "raw_indicators": [i.model_dump() for i in request.indicators],
     }
 
+    import uuid
+
     # Chạy qua luồng LangGraph — ghi log độ trễ làm baseline cho giám sát (V2)
     started_at = time.perf_counter()
-    final_state = await agent.ainvoke(initial_state)
+    config = {"configurable": {"thread_id": uuid.uuid4().hex}}
+    
+    final_state = await agent.ainvoke(initial_state, config=config)
+    
     elapsed_ms = (time.perf_counter() - started_at) * 1000
     logger.info(
         "analyze completed user=%s indicators=%d elapsed_ms=%.1f",
@@ -42,7 +47,7 @@ async def analyze(
         len(request.indicators),
         elapsed_ms,
     )
-
+    
     # Convert dữ liệu về Response Schema
     indicators = [
         IndicatorResultSchema(**ind)

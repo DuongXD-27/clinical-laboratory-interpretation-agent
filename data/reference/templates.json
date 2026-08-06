@@ -1,0 +1,10 @@
+{
+  "fallback_explanation": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+  "fallback_summary": "Hệ thống phát hiện một số thông tin cần được bác sĩ đánh giá trực tiếp. Vui lòng mang kết quả này đến gặp bác sĩ chuyên khoa để được tư vấn.",
+  "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+  "doctor_questions_fallback": [
+    "Chỉ số này của tôi có ý nghĩa gì đối với sức khỏe tổng thể?",
+    "Tôi có cần thực hiện thêm xét nghiệm nào khác để kiểm tra rõ hơn không?",
+    "Với kết quả này, tôi có cần điều chỉnh chế độ ăn uống hoặc sinh hoạt hàng ngày không?"
+  ]
+}

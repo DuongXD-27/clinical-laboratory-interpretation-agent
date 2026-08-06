@@ -1,0 +1,7 @@
+feat(ai): triển khai OCR UI Review Gate và Guardrail V2
+
+- Thêm OCRIndicatorDraft schema và định tuyến UI_Review trong LangGraph.
+- Triển khai Vector Semantic Similarity (BGE-M3) kết hợp Regex cho Guardrail Node.
+- Áp dụng Concurrency Limiting (Semaphore) và Exponential Backoff (Tenacity) cho Analyzer Node.
+- Tách file cấu hình templates tĩnh (`data/reference/templates.json`).
+- Cập nhật luồng checkpoint (MemorySaver) truyền thread_id để hỗ trợ Pause/Resume.

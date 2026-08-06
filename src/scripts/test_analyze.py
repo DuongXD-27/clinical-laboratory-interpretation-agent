@@ -5,6 +5,8 @@ import sys
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 from src.agents.graph import build_graph
 
@@ -31,8 +33,10 @@ async def main():
         "raw_indicators": indicators
     }
 
+    import uuid
     print("Invoking graph...")
-    final_state = await agent.ainvoke(initial_state)
+    config = {"configurable": {"thread_id": uuid.uuid4().hex}}
+    final_state = await agent.ainvoke(initial_state, config=config)
 
     print("\n--- Final State Indicators (with LLM Explanations) ---")
     for ind in final_state.get("indicators", []):
