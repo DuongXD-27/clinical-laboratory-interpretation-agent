@@ -5,6 +5,11 @@ pydantic>=2.10.0
 pydantic-settings>=2.7.0
 python-dotenv>=1.0.0
 
+# Auth
+sqlalchemy>=2.0.0
+bcrypt>=4.0.0
+python-jose[cryptography]>=3.3.0
+
 # AI / LangChain
 langchain>=0.3.0
 langchain-openai>=0.3.0
@@ -12,9 +17,16 @@ langchain-google-genai>=2.0.0
 langchain-huggingface>=0.1.0
 sentence-transformers>=3.0.0
 langgraph>=0.2.0
+ragas==0.4.3
 
 # Vector Store
 chromadb>=0.5.0
+
+# OCR / Vision (ADR-006)
+Pillow>=10.0.0
+opencv-python-headless>=4.9.0
+openai>=1.0.0
+python-multipart>=0.0.9
 
 # Dev tools
 ruff>=0.8.0

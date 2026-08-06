@@ -6,6 +6,23 @@ from pydantic import BaseModel, Field
 IndicatorStatus = str
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: Literal["patient", "doctor"]
+    username: str
+
+
+class CurrentUserResponse(BaseModel):
+    username: str
+    role: Literal["patient", "doctor"]
+
+
 class IndicatorInputSchema(BaseModel):
     """Một chỉ số thô trong phiếu xét nghiệm gửi lên từ client."""
 
