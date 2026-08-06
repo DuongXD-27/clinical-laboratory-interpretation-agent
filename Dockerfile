@@ -11,24 +11,25 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
-
-# Security: run as non-root user
+# Security: run as non-root user — tạo TRƯỚC khi copy để chown đúng luôn,
+# copy vào /home/appuser/.local thay vì /root/.local (mặc định 700, user
+# khác không đọc được -> từng gây "uvicorn: Permission denied" lúc deploy).
 RUN useradd -m appuser
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 
-# Copy application code
-COPY . .
+# Copy application code (chown ngay lúc copy, không cần chown -R riêng)
+COPY --chown=appuser:appuser . .
 
-# Create data directory with correct ownership
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 USER appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", 8000)}/health')" || exit 1
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form (không dùng JSON array) để đọc được biến $PORT — Render tự
+# inject PORT lúc runtime; local/docker-compose không set thì fallback 8000.
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}

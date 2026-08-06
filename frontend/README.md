@@ -1,5 +1,17 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## VMEC-05 — Biến môi trường
+
+Tạo file `.env.local` trong thư mục `frontend/` (không commit, đã bị `.gitignore` chặn):
+
+```bash
+# Local dev — có thể bỏ qua, code tự fallback về http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Production (Vercel) — trỏ về đúng URL backend đã deploy trên Render
+# NEXT_PUBLIC_API_URL=https://vmec-05-api.onrender.com
+```
+
 ## Getting Started
 
 First, run the development server:
