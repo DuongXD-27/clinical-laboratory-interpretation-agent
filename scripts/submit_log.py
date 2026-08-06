@@ -121,8 +121,12 @@ def main():
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             print(f"[ai-log] Submitted {len(entries)} entries → {resp.status}", file=sys.stderr)
-    except urllib.error.URLError as e:
-        # Failure: restore the whole pending (including leftover) for next push.
+    except Exception as e:
+        # urllib.error.URLError không bọc mọi lỗi mạng — timeout đọc response
+        # (từng xảy ra thật) ném TimeoutError trần, không phải subclass của
+        # URLError kể từ Python 3.10. Bắt Exception rộng để pending luôn được
+        # restore, tránh log bị "mồ côi" (không submit được mà cũng không
+        # còn trong session.jsonl để lần push sau retry).
         _restore_pending(pending)
         print(f"[ai-log] Submit failed: {e} — logs kept locally.", file=sys.stderr)
         sys.exit(0)  # Don't block push on server error

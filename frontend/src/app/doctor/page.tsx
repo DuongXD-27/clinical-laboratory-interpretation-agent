@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { mockScenarios } from "@/lib/mockData";
+import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 
 export default function DoctorPage() {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [username, setUsername] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [doctorNotes, setDoctorNotes] = useState("");
+
+  useEffect(() => {
+    if (!getToken() || getRole() !== "doctor") {
+      router.replace("/");
+      return;
+    }
+    setUsername(getUsername());
+    setCheckingAuth(false);
+  }, [router]);
+
+  function handleLogout() {
+    clearSession();
+    router.replace("/");
+  }
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -20,11 +39,16 @@ export default function DoctorPage() {
     if (!scenario) return;
 
     try {
-      const response = await fetch("http://localhost:8000/api/v1/analyze", {
+      const response = await authFetch("/api/v1/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scenario.data),
       });
+
+      if (response.status === 401) {
+        clearSession();
+        router.replace("/");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Lỗi kết nối đến server");
@@ -39,6 +63,8 @@ export default function DoctorPage() {
     }
   };
 
+  if (checkingAuth) return null;
+
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 p-6 font-sans text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -50,7 +76,14 @@ export default function DoctorPage() {
               Phân Hệ Bác Sĩ (Doctor Portal)
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Phân tích lâm sàng hỗ trợ bởi AI
+              Phân tích lâm sàng hỗ trợ bởi AI — {username}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="ml-3 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+              >
+                Đăng xuất
+              </button>
             </p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
