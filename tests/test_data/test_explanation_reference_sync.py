@@ -34,8 +34,9 @@ RAGAS_RESULT = REPO_ROOT / "eval/results/ragas_v2_baseline.json"
 
 PRIMARY_ANALYTES_PRESENT = {"WBC", "RBC", "HGB", "Fasting plasma glucose", "HDL-C", "Creatinine"}
 SUPPLEMENTAL_ANALYTES = {"HbA1c", "LDL-C", "Potassium"}
-APPROVED = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine"}
-PENDING = {"HGB", "HDL-C", "HbA1c", "LDL-C", "Potassium"}
+SUPPLEMENTAL_REPLACEMENT_ANALYTES = {"HDL-C"}
+APPROVED = {"WBC", "RBC", "HGB", "Fasting plasma glucose", "HbA1c", "LDL-C", "HDL-C", "Creatinine", "Potassium"}
+PENDING: set[str] = set()
 
 
 def _load_explanations() -> list[dict]:
@@ -105,7 +106,8 @@ def test_sync_03_missing_analytes_detected():
     }
     explanation_resolved = {canonical_analyte(e["indicator"]) for e in entries}
     missing = explanation_resolved - primary_analytes
-    assert missing == SUPPLEMENTAL_ANALYTES, f"Expected missing={SUPPLEMENTAL_ANALYTES}, got {missing}"
+    expected_missing = SUPPLEMENTAL_ANALYTES | SUPPLEMENTAL_REPLACEMENT_ANALYTES
+    assert missing == expected_missing, f"Expected missing={expected_missing}, got {missing}"
 
 
 # ---------------------------------------------------------------------------
@@ -126,13 +128,13 @@ def test_sync_05_rule_count(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
-    primary_count = len(result.accepted)  # primary only
-    supplemental_count = len(catalog) - primary_count
-    assert primary_count == 58
-    assert supplemental_count == 15
+    # Primary pipeline: 58 accepted (includes HDL-C primary rules counted but not in catalog)
+    # Supplemental: 20 rules (HbA1c=3, LDL-C=5, Potassium=7, HDL-C replacement=5)
+    # Catalog: 53 primary (excl. 5 HDL-C primary) + 20 supplemental = 73
+    assert len(result.accepted) == 58
+    assert result.report["explanation_supplement"]["rules_added"] == 20
     assert len(catalog) == 73
     assert result.report["catalog"]["total_rules"] == 73
-    assert result.report["explanation_supplement"]["rules_added"] == 15
 
 
 # ---------------------------------------------------------------------------
@@ -152,9 +154,9 @@ def test_sync_06_stable_ids(tmp_path: Path):
     assert ids1 == ids2, "Rule IDs are not deterministic across builds"
     assert len(ids1) == len(set(ids1)), "Duplicate rule IDs found"
 
-    # Verify EXPV2 namespace
+    # Verify EXPV2 namespace (HbA1c=3, LDL-C=5, Potassium=7, HDL-C=5 = 20 total)
     exp_ids = [rid for rid in ids1 if rid.startswith("EXPV2-")]
-    assert len(exp_ids) == 15
+    assert len(exp_ids) == 20
 
     # Specific stable ID checks
     by_id = {r["rule_id"]: r for r in catalog1}
@@ -193,7 +195,11 @@ def test_sync_08_hba1c_mapping(tmp_path: Path):
     hba1c_rules = [r for r in catalog if r["analyte_canonical"] == "HbA1c"]
 
     assert len(hba1c_rules) == 3
-    assert all(r["reference_type"] == "MD" for r in hba1c_rules), "All HbA1c rules must be MD"
+    # After BONUS-TIP-010: normal group → RI; prediabetes and diabetes remain MD
+    by_group = {r["range_group"]: r for r in hba1c_rules}
+    assert by_group["normal"]["reference_type"] == "RI"
+    assert by_group["prediabetes"]["reference_type"] == "MD"
+    assert by_group["diabetes"]["reference_type"] == "MD"
     assert all(r["unit_canonical"] == "%" for r in hba1c_rules)
     assert all(r["sex"] == "A" for r in hba1c_rules)
     assert all(r["age_scope"] == "Adult" for r in hba1c_rules)
@@ -228,7 +234,11 @@ def test_sync_09_ldl_c_mapping(tmp_path: Path):
     ldlc_rules = [r for r in catalog if r["analyte_canonical"] == "LDL-C"]
 
     assert len(ldlc_rules) == 5
-    assert all(r["reference_type"] != "RI" for r in ldlc_rules), "LDL-C rules must not be RI"
+    # After BONUS-TIP-010: optimal group → RI; all others remain MD
+    by_group = {r["range_group"]: r for r in ldlc_rules}
+    assert by_group["optimal"]["reference_type"] == "RI"
+    for g in ("acceptable", "borderline_high", "high", "very_high"):
+        assert by_group[g]["reference_type"] == "MD", f"{g} should be MD"
     assert all(r["unit_canonical"] == "mmol/L" for r in ldlc_rules)
     assert all(r["sex"] == "A" for r in ldlc_rules)
 
@@ -308,9 +318,15 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
     catalog = json.loads((tmp_path / "combined" / RUNTIME_JSON).read_text(encoding="utf-8"))
     catalog_by_id = {r["rule_id"]: r for r in catalog}
 
-    # Every primary rule ID must be present and semantically unchanged
+    # Primary rules for SUPPLEMENTAL_REPLACEMENT_ANALYTES are intentionally excluded from the combined catalog
+    from src.scripts.build_reference_config import SUPPLEMENTAL_REPLACEMENT_ANALYTES
+    non_replacement_baseline = {
+        rule_id: rule for rule_id, rule in baseline_by_id.items()
+        if rule.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
+    }
+
     assert len(baseline.accepted) == 58
-    for rule_id, primary_rule in baseline_by_id.items():
+    for rule_id, primary_rule in non_replacement_baseline.items():
         assert rule_id in catalog_by_id, f"Primary rule {rule_id} missing from combined catalog"
         combined_rule = catalog_by_id[rule_id]
         for key in ("analyte_canonical", "unit_canonical", "range_lower", "range_upper", "reference_type", "source_url"):
@@ -352,18 +368,19 @@ def test_sync_14_catalog_total(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # SYNC-15: Pending runtime safety — supplemental analytes do not produce normal lookup results
 # ---------------------------------------------------------------------------
-def test_sync_15_pending_runtime_safety():
+def test_sync_15_approved_ri_rules_match():
+    # After BONUS-TIP-010: HbA1c, LDL-C, Potassium are approved; RI rules exist for normal groups
     repo = ReferenceRepository.from_default_files()
 
     for analyte, unit in [("HbA1c", "%"), ("LDL-C", "mmol/L"), ("Potassium", "mmol/L")]:
+        assert analyte in repo.approved_analytes, f"{analyte} should be approved"
         result = repo.select_rule(analyte=analyte, unit=unit, patient_gender="male", patient_age=35)
-        assert not result.matched, f"{analyte} should not match in normal checker"
-        assert result.reason == "analyte_not_approved", f"{analyte}: expected analyte_not_approved, got {result.reason}"
+        assert result.matched, f"{analyte} RI rule should match; got reason={result.reason}"
 
+    # Aliases resolve and match
     for alias, unit in [("LDL-Cholesterol", "mmol/L"), ("Kali", "mmol/L")]:
         result = repo.select_rule(analyte=alias, unit=unit, patient_gender="female", patient_age=40)
-        assert not result.matched
-        assert result.reason == "analyte_not_approved"
+        assert result.matched, f"Alias {alias!r} RI rule should match; got reason={result.reason}"
 
 
 # ---------------------------------------------------------------------------

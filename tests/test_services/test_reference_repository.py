@@ -85,7 +85,7 @@ def make_unit_rows(*, hgb_unit="g/L"):
         {"test_name": "HGB", "standardized_unit": hgb_unit},
         {"test_name": "Fasting Blood Glucose", "standardized_unit": "mmol/L"},
         {"test_name": "Creatinine", "standardized_unit": "µmol/L"},
-        {"test_name": "HDL-Cholesterol", "standardized_unit": "mg/dL"},
+        {"test_name": "HDL-Cholesterol", "standardized_unit": "mmol/L"},
     ]
 
 
@@ -281,17 +281,15 @@ def test_u_wbc_08_units_metric_wbc_is_canonical():
     assert "WBC" not in repo.unit_conflict_analytes
 
 
-def test_u_wbc_09_hgb_remains_pending_after_unit_fix():
-    # After BONUS-TIP-008 the technical unit conflict is resolved:
-    # unit_canonical=g/L matches units_metric g/L → no unit_conflict.
-    # HGB must still be pending because medical/data approval has not been granted.
+def test_u_wbc_09_hgb_approved_after_tip010():
+    # After BONUS-TIP-010: HGB is fully approved — no unit conflict, not pending, matches queries.
     repo = ReferenceRepository.from_default_files()
     result = repo.select_rule(analyte="HGB", unit="g/L", patient_gender="male", patient_age=35)
 
     assert "HGB" not in repo.unit_conflict_analytes
-    assert "HGB" not in repo.approved_analytes
-    assert "HGB" in repo.pending_analytes
-    assert result.reason == "analyte_not_approved"
+    assert "HGB" in repo.approved_analytes
+    assert "HGB" not in repo.pending_analytes
+    assert result.matched is True
 
 
 def test_unit_g_l_not_mapped_to_count_unit() -> None:

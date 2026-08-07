@@ -145,51 +145,67 @@ async def test_e2e_06_wrong_wbc_unit_remains_unknown():
 
 
 @pytest.mark.asyncio
-async def test_e2e_07_hgb_pending():
+async def test_e2e_07_hgb_approved():
+    # After BONUS-TIP-010: HGB is approved; 140 g/L is within male normal range (128–183)
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "HGB", "value": 140, "unit": "g/L"}],
         patient_age=30,
         patient_gender="male",
     )
 
-    assert_unknown(only_indicator(checker_result))
-    assert_unknown(only_indicator(critical_result))
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "normal"
+    assert checked["reference_low"] == 128
+    assert checked["reference_high"] == 183
+    assert only_indicator(critical_result)["is_critical"] is False
 
 
 @pytest.mark.asyncio
-async def test_e2e_08_hdl_c_pending():
+async def test_e2e_08_hdl_c_approved():
+    # After BONUS-TIP-010: HDL-C approved; 1.2 mmol/L is within male average RI (1.04–1.53)
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "HDL-Cholesterol", "value": 1.2, "unit": "mmol/L"}],
         patient_age=30,
         patient_gender="male",
     )
 
-    assert_unknown(only_indicator(checker_result))
-    assert_unknown(only_indicator(critical_result))
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "normal"
+    assert checked["reference_low"] == 1.04
+    assert checked["reference_high"] == 1.53
+    assert only_indicator(critical_result)["is_critical"] is False
 
 
 @pytest.mark.asyncio
-async def test_e2e_09_hba1c_pending():
+async def test_e2e_09_hba1c_approved():
+    # After BONUS-TIP-010: HbA1c approved; 5.5 % is within normal RI (None–5.7)
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "HbA1c", "value": 5.5, "unit": "%"}],
         patient_age=30,
         patient_gender="male",
     )
 
-    assert_unknown(only_indicator(checker_result))
-    assert_unknown(only_indicator(critical_result))
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "normal"
+    assert checked["reference_low"] is None
+    assert checked["reference_high"] == 5.7
+    assert only_indicator(critical_result)["is_critical"] is False
 
 
 @pytest.mark.asyncio
-async def test_e2e_10_ldl_c_pending_without_normal_ri_support():
+async def test_e2e_10_ldl_c_approved_high_value():
+    # After BONUS-TIP-010: LDL-C approved; 3.0 mmol/L exceeds optimal RI (None–2.58) → high
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "LDL-C", "value": 3.0, "unit": "mmol/L"}],
         patient_age=30,
         patient_gender="male",
     )
 
-    assert_unknown(only_indicator(checker_result))
-    assert_unknown(only_indicator(critical_result))
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "high"
+    assert checked["reference_low"] is None
+    assert checked["reference_high"] == 2.58
+    assert only_indicator(critical_result)["is_critical"] is False
 
 
 @pytest.mark.asyncio

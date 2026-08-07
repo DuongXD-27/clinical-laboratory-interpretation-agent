@@ -4,16 +4,15 @@
   "approved_analytes": [
     "WBC",
     "RBC",
-    "Fasting plasma glucose",
-    "Creatinine"
-  ],
-  "pending_analytes": [
     "HGB",
-    "HDL-C",
+    "Fasting plasma glucose",
     "HbA1c",
     "LDL-C",
+    "HDL-C",
+    "Creatinine",
     "Potassium"
   ],
+  "pending_analytes": [],
   "analyte_aliases": {
     "WBC": "WBC",
     "RBC": "RBC",
@@ -36,6 +35,9 @@
     }
   },
   "unit_map_aliases": {
-    "Fasting plasma glucose": "Fasting Blood Glucose"
+    "Fasting plasma glucose": "Fasting Blood Glucose",
+    "LDL-C": "LDL-Cholesterol",
+    "HDL-C": "HDL-Cholesterol",
+    "Potassium": "Potassium (K+)"
   }
 }

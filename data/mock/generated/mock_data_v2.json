@@ -1,0 +1,382 @@
+[
+  {
+    "report_id": "V2-MOCK-0001",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 45,
+    "patient_gender": "male",
+    "test_date": "2026-07-03",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 14.2, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.1, "unit": "10^12/L"},
+      {"name": "HGB", "value": 152, "unit": "g/L"},
+      {"name": "Glucose", "value": 7.8, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.3, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.3, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.15, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 82, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.2, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0002",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 32,
+    "patient_gender": "female",
+    "test_date": "2026-07-04",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 6.2, "unit": "10^9/L"},
+      {"name": "RBC", "value": 3.6, "unit": "10^12/L"},
+      {"name": "HGB", "value": 98, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.2, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 6.8, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.1, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.35, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 58, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.1, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0003",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 52,
+    "patient_gender": "male",
+    "test_date": "2026-07-05",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 3.8, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.9, "unit": "10^12/L"},
+      {"name": "HGB", "value": 148, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.1, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.0, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.20, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 125, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.4, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0004",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 58,
+    "patient_gender": "male",
+    "test_date": "2026-07-07",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.0, "unit": "10^12/L"},
+      {"name": "HGB", "value": 155, "unit": "g/L"},
+      {"name": "Glucose", "value": 8.3, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.5, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 3.8, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 0.92, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 88, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0005",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 42,
+    "patient_gender": "female",
+    "test_date": "2026-07-08",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.0, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.5, "unit": "10^12/L"},
+      {"name": "HGB", "value": 130, "unit": "g/L"},
+      {"name": "Glucose", "value": 9.1, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 7.4, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.4, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.38, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 62, "unit": "µmol/L"},
+      {"name": "Kali", "value": 3.1, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0006",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 38,
+    "patient_gender": "male",
+    "test_date": "2026-07-10",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 16.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 3.9, "unit": "10^12/L"},
+      {"name": "HGB", "value": 118, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.3, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.2, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 1.9, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.18, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 76, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.3, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0007",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 55,
+    "patient_gender": "female",
+    "test_date": "2026-07-11",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 6.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.3, "unit": "10^12/L"},
+      {"name": "HGB", "value": 128, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.6, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.4, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.10, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 95, "unit": "µmol/L"},
+      {"name": "Kali", "value": 5.5, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0008",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 47,
+    "patient_gender": "male",
+    "test_date": "2026-07-14",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 8.0, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.2, "unit": "10^12/L"},
+      {"name": "HGB", "value": 160, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.8, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 6.2, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 3.5, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.25, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 91, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.5, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0009",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 29,
+    "patient_gender": "female",
+    "test_date": "2026-07-15",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 3.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.4, "unit": "10^12/L"},
+      {"name": "HGB", "value": 125, "unit": "g/L"},
+      {"name": "Glucose", "value": 3.2, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.0, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 1.7, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.40, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 55, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.2, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0010",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-07-17",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.2, "unit": "10^9/L"},
+      {"name": "RBC", "value": 6.5, "unit": "10^12/L"},
+      {"name": "HGB", "value": 192, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.1, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.3, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.1, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.20, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 85, "unit": "µmol/L"},
+      {"name": "Kali", "value": 5.8, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0011",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 61,
+    "patient_gender": "male",
+    "test_date": "2026-07-18",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 6.8, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.8, "unit": "10^12/L"},
+      {"name": "HGB", "value": 145, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.5, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.6, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 4.1, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 0.98, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 118, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.8, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0012",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 48,
+    "patient_gender": "female",
+    "test_date": "2026-07-21",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.8, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.6, "unit": "10^12/L"},
+      {"name": "HGB", "value": 132, "unit": "g/L"},
+      {"name": "Glucose", "value": 8.9, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 7.8, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.3, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.35, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 65, "unit": "µmol/L"},
+      {"name": "Kali", "value": 2.9, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0013",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 33,
+    "patient_gender": "female",
+    "test_date": "2026-07-22",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 13.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.8, "unit": "10^12/L"},
+      {"name": "HGB", "value": 155, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.4, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.2, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 1.8, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.42, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 60, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0014",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 56,
+    "patient_gender": "male",
+    "test_date": "2026-07-24",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.0, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.1, "unit": "10^12/L"},
+      {"name": "HGB", "value": 135, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.3, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.5, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.15, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 132, "unit": "µmol/L"},
+      {"name": "Kali", "value": 5.6, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0015",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 50,
+    "patient_gender": "female",
+    "test_date": "2026-07-25",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 6.0, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.5, "unit": "10^12/L"},
+      {"name": "HGB", "value": 130, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.4, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 3.2, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.15, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 68, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.3, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0016",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 40,
+    "patient_gender": "male",
+    "test_date": "2026-07-28",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 4.0, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.0, "unit": "10^12/L"},
+      {"name": "HGB", "value": 150, "unit": "g/L"},
+      {"name": "Glucose", "value": 3.5, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.0, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 1.9, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.22, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 78, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.1, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0017",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 36,
+    "patient_gender": "female",
+    "test_date": "2026-07-30",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 6.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.2, "unit": "10^12/L"},
+      {"name": "HGB", "value": 105, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.6, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 8.2, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.1, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.38, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 57, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0018",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 62,
+    "patient_gender": "female",
+    "test_date": "2026-08-01",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.2, "unit": "10^9/L"},
+      {"name": "RBC", "value": 4.4, "unit": "10^12/L"},
+      {"name": "HGB", "value": 122, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.3, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.5, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 2.4, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.18, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 98, "unit": "µmol/L"},
+      {"name": "Kali", "value": 3.0, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0019",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 28,
+    "patient_gender": "female",
+    "test_date": "2026-08-04",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 7.5, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.7, "unit": "10^12/L"},
+      {"name": "HGB", "value": 145, "unit": "g/L"},
+      {"name": "Glucose", "value": 7.5, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.4, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 1.8, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.40, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 52, "unit": "µmol/L"},
+      {"name": "Kali", "value": 4.3, "unit": "mmol/L"}
+    ]
+  },
+  {
+    "report_id": "V2-MOCK-0020",
+    "report_type": "v2_nine_analyte",
+    "patient_age": 50,
+    "patient_gender": "male",
+    "test_date": "2026-08-06",
+    "status": "final",
+    "indicators": [
+      {"name": "WBC", "value": 15.2, "unit": "10^9/L"},
+      {"name": "RBC", "value": 5.1, "unit": "10^12/L"},
+      {"name": "HGB", "value": 155, "unit": "g/L"},
+      {"name": "Glucose", "value": 5.5, "unit": "mmol/L"},
+      {"name": "HbA1c", "value": 5.4, "unit": "%"},
+      {"name": "LDL-Cholesterol", "value": 3.6, "unit": "mmol/L"},
+      {"name": "HDL-Cholesterol", "value": 1.28, "unit": "mmol/L"},
+      {"name": "Creatinine", "value": 95, "unit": "µmol/L"},
+      {"name": "Kali", "value": 5.3, "unit": "mmol/L"}
+    ]
+  }
+]

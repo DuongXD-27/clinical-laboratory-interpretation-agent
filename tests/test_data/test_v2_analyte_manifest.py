@@ -26,8 +26,9 @@ INTENDED_ORDER = [
     "Creatinine",
     "Potassium",
 ]
-APPROVED = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine"}
-PENDING = {"HGB", "HDL-C", "HbA1c", "LDL-C", "Potassium"}
+APPROVED = {"WBC", "RBC", "HGB", "Fasting plasma glucose", "HbA1c", "LDL-C", "HDL-C", "Creatinine", "Potassium"}
+PENDING: set[str] = set()
+RAGAS_COVERED = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine"}
 
 
 def load_manifest() -> list[dict]:
@@ -116,38 +117,46 @@ def test_m03_pending_list():
     assert {analyte for analyte, record in manifest.items() if record["approval_status"] == "pending"} == PENDING
 
 
-def test_m04_hgb_blocker():
-    # After BONUS-TIP-008: technical unit conflict resolved; HGB pending awaiting medical approval
-    assert "awaiting_medical_approval" in by_analyte()["HGB"]["blockers"]
-    assert "unit_data_conflict" not in by_analyte()["HGB"]["blockers"]
+def test_m04_hgb_approved():
+    # After BONUS-TIP-010: HGB approved — no blockers
+    hgb = by_analyte()["HGB"]
+    assert hgb["approval_status"] == "approved"
+    assert hgb["normal_reference_supported"] is True
+    assert "awaiting_medical_approval" not in hgb["blockers"]
+    assert "unit_data_conflict" not in hgb["blockers"]
 
 
-def test_m05_hdl_c_blockers():
+def test_m05_hdl_c_approved():
+    # After BONUS-TIP-010: HDL-C replaced with mmol/L RI rules and approved
     hdl = by_analyte()["HDL-C"]
+    assert hdl["approval_status"] == "approved"
+    assert hdl["normal_reference_supported"] is True
+    assert "cdl_only" not in hdl["blockers"]
 
-    assert hdl["normal_reference_supported"] is False
-    assert "cdl_only" in hdl["blockers"]
 
-
-def test_m06_md_analytes():
+def test_m06_hba1c_ldlc_approved():
+    # After BONUS-TIP-010: normal (HbA1c) and optimal (LDL-C) groups promoted to RI
     manifest = by_analyte()
+    assert manifest["HbA1c"]["approval_status"] == "approved"
+    assert manifest["LDL-C"]["approval_status"] == "approved"
+    assert "md_not_approved" not in manifest["HbA1c"]["blockers"]
+    assert "md_not_approved" not in manifest["LDL-C"]["blockers"]
 
-    assert "md_not_approved" in manifest["HbA1c"]["blockers"]
-    assert "md_not_approved" in manifest["LDL-C"]["blockers"]
 
-
-def test_m07_potassium_separation():
+def test_m07_potassium_approved():
+    # After BONUS-TIP-010: Potassium approved with RI normal range 3.5–5.0 mmol/L
     potassium = by_analyte()["Potassium"]
-
-    assert potassium["normal_reference_supported"] is False
+    assert potassium["approval_status"] == "approved"
+    assert potassium["normal_reference_supported"] is True
     assert potassium["critical_rule_available"] == critical_flags()["Potassium"]
 
 
-def test_m08_ragas_coverage_limited_to_approved_analytes():
+def test_m08_ragas_coverage():
     manifest = by_analyte()
 
-    assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == APPROVED
-    assert all(manifest[analyte]["ragas_case_available"] is False for analyte in PENDING)
+    assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == RAGAS_COVERED
+    for analyte in APPROVED - RAGAS_COVERED:
+        assert manifest[analyte]["ragas_case_available"] is False
 
 
 def test_m09_source_and_explanation_evidence():
@@ -171,6 +180,7 @@ def test_manifest_matches_effective_repository_policy():
 
     assert repository.approved_analytes == APPROVED
     assert repository.pending_analytes == PENDING
+    assert repository.unit_conflict_analytes == set()
     assert {
         analyte for analyte, record in manifest.items() if record["unit_validated"] and record["approval_status"] == "approved"
     } == repository.approved_analytes
@@ -180,7 +190,7 @@ def test_manifest_ragas_flags_agree_with_jsonl_dataset():
     manifest = by_analyte()
     dataset_analytes = {case["analyte"] for case in load_ragas_cases()}
 
-    assert dataset_analytes == APPROVED
+    assert dataset_analytes == RAGAS_COVERED
     assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == dataset_analytes
 
 

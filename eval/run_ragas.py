@@ -33,8 +33,8 @@ METRIC_TRANSPORT_LIBRARY = "openai-python"
 RUN_ID = "RAGAS-V2-BASELINE-001"
 CONCURRENCY = 1
 CASE_ID_PATTERN = re.compile(r"^RAGAS-V2-\d{3}$")
-APPROVED_ANALYTES = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine"}
-PENDING_ANALYTES = {"HGB", "HDL-C", "HbA1c", "LDL-C", "Potassium"}
+APPROVED_ANALYTES = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine", "HGB", "HbA1c", "LDL-C", "HDL-C", "Potassium"}
+PENDING_ANALYTES: set[str] = set()
 REQUIRED_FIELDS = {
     "case_id",
     "dataset_version",
