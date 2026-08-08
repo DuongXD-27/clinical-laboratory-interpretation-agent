@@ -2,6 +2,7 @@ import pytest
 
 from src.agents.nodes import reference_range_checker_node as checker_module
 from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
+from src.services.analyte_catalog import AnalyteCatalog, AnalyteDefinition
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
@@ -84,18 +85,20 @@ def controlled_repository(monkeypatch):
     ]
     repository = ReferenceRepository(config=config, rules=rules)
     monkeypatch.setattr(checker_module, "get_reference_repository", lambda: repository)
-    monkeypatch.setattr(
-        checker_module,
-        "EXPLANATIONS_DB",
-        {
-            "synthetic-wbc": {
-                "indicator": "Synthetic-WBC",
-                "simple_explanation": "Synthetic WBC explanation",
-                "sources": ["https://example.test/explanation"],
-                "reference_ranges": [{"low": 0, "high": 999}],
-            }
-        },
+    catalog = AnalyteCatalog(
+        definitions=[
+            AnalyteDefinition(
+                analyte_id="synthetic-wbc",
+                indicator="Synthetic-WBC",
+                display_name="Synthetic WBC",
+                vietnamese_name="",
+                curated_explanation="Synthetic WBC explanation",
+                sources=("https://example.test/explanation",),
+            )
+        ],
+        aliases={"Synthetic-WBC": "Synthetic-WBC"},
     )
+    monkeypatch.setattr(checker_module, "get_analyte_catalog", lambda: catalog)
     return repository
 
 
