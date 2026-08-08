@@ -36,13 +36,21 @@ class Settings(BaseSettings):
     vision_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     vision_max_image_mb: int = Field(default=10, ge=1, le=25)
     vision_timeout_seconds: float = Field(default=90.0, ge=1.0, le=300.0)
+    ocr_low_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    ocr_review_token_expire_minutes: int = Field(default=15, ge=1, le=60)
 
     # Database
     database_url: str = "sqlite:///./data/app.db"
 
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
-    embedding_device: Literal["cpu", "cuda", "mps"] = "cpu"
+    rag_enabled: bool = False
+    rag_collection_name: str = "medical_kb_v1"
+    rag_corpus_version: str = "medical-kb-v1"
+    embedding_provider: Literal["disabled", "openai"] = "disabled"
+    embedding_model_name: str = "text-embedding-3-small"
+    embedding_dimension: int = Field(default=1536, ge=1)
+    embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
 
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"

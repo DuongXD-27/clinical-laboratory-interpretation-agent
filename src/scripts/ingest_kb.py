@@ -7,7 +7,9 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from src.services.vector_store import get_vector_store
+from src.config import get_settings
+from src.services.embedding_provider import get_embedding_provider
+from src.services.vector_store import VectorStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +45,7 @@ def ingest():
         # Metadata
         meta = {
             "indicator": item.get("indicator", ""),
-            "id": indicator_id
+            "analyte_id": indicator_id,
         }
         if "sources" in item:
             meta["sources"] = json.dumps(item["sources"], ensure_ascii=False)
@@ -53,7 +55,15 @@ def ingest():
         ids.append(indicator_id)
 
     logger.info(f"Ingesting {len(texts)} documents into ChromaDB...")
-    store = get_vector_store()
+    settings = get_settings()
+    if not settings.rag_enabled:
+        raise RuntimeError("RAG_ENABLED must be true for the ingestion job")
+    store = VectorStore(
+        persist_dir=settings.chroma_persist_dir,
+        collection_name=settings.rag_collection_name,
+        corpus_version=settings.rag_corpus_version,
+        embedding_provider=get_embedding_provider(),
+    )
 
     try:
         store.add_documents(texts=texts, metadatas=metadatas, ids=ids)

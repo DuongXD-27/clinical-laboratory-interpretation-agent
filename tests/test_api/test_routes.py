@@ -35,8 +35,10 @@ def graph_result(**overrides):
 async def post_analyze_with_graph_result(client, monkeypatch, final_state):
     mock_ainvoke = AsyncMock(return_value=final_state)
     monkeypatch.setattr(routes.agent, "ainvoke", mock_ainvoke)
+    headers = await _auth_headers(client)
     response = await client.post(
         "/api/v1/analyze",
+        headers=headers,
         json={
             "patient_age": 35,
             "patient_gender": "male",
