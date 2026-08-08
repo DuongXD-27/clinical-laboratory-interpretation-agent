@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from src.agents.graph import build_graph
 from src.api.deps import CurrentUser, get_current_user
+from src.models.ocr_schemas import OCRIndicatorDraft
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 
 logger = logging.getLogger(__name__)
@@ -13,17 +14,13 @@ router = APIRouter()
 agent = build_graph()
 
 
-@router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze(
+async def run_analysis(
     request: AnalyzeRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    *,
+    username: str,
+    ocr_drafts: list[OCRIndicatorDraft] | None = None,
 ) -> AnalyzeResponse:
-    """Nhận phiếu xét nghiệm (JSON mô phỏng), trả kết quả giải thích.
-
-    Khung API — chuyển request thành AgentState và chạy qua các node (Graph).
-    Yêu cầu JWT hợp lệ (patient/doctor). Không bắt Exception ở đây — để
-    handler chung trong main.py xử lý, tránh lộ chi tiết lỗi nội bộ ra client.
-    """
+    """Run the shared analysis pipeline for manual or reviewed OCR input."""
     initial_state = {
         "patient_age": request.patient_age,
         "patient_gender": request.patient_gender,
@@ -31,23 +28,27 @@ async def analyze(
         "language": request.language,
         "raw_indicators": [i.model_dump() for i in request.indicators],
     }
+    if ocr_drafts is not None:
+        # OCR input can only reach this branch through POST /ocr/confirm.
+        initial_state["ocr_drafts"] = ocr_drafts
+        initial_state["is_ocr_reviewed"] = True
 
     import uuid
 
     # Chạy qua luồng LangGraph — ghi log độ trễ làm baseline cho giám sát (V2)
     started_at = time.perf_counter()
     config = {"configurable": {"thread_id": uuid.uuid4().hex}}
-    
+
     final_state = await agent.ainvoke(initial_state, config=config)
-    
+
     elapsed_ms = (time.perf_counter() - started_at) * 1000
     logger.info(
         "analyze completed user=%s indicators=%d elapsed_ms=%.1f",
-        current_user.username,
+        username,
         len(request.indicators),
         elapsed_ms,
     )
-    
+
     # Convert dữ liệu về Response Schema
     indicators = [
         IndicatorResultSchema(**ind)
@@ -62,5 +63,19 @@ async def analyze(
         disclaimer=final_state.get("disclaimer", ""),
         questions_for_doctor=final_state.get("questions_for_doctor", []),
         out_of_scope_indicators=final_state.get("out_of_scope_indicators", []),
+        summary=final_state.get("summary", ""),
         is_placeholder=False,
     )
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze(
+    request: AnalyzeRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> AnalyzeResponse:
+    """Nhận dữ liệu nhập tay/mô phỏng và trả kết quả giải thích.
+
+    Dữ liệu có nguồn OCR phải dùng `/ocr/confirm`; endpoint này không nhận
+    review token và không được frontend OCR gọi trực tiếp.
+    """
+    return await run_analysis(request, username=current_user.username)
