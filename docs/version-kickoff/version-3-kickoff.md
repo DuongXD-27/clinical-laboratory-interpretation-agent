@@ -122,8 +122,10 @@ cốt lõi từ đề bài gốc (Glucose, LDL-C, Kali).
 
 ### Ưu tiên #2 — Deploy mượt mà, ổn định qua link công khai
 
-**4.5. Thay Embedding Model cho Guardrail** — BGE-M3 → `all-MiniLM-L6-v2`
-hoặc API ngoài, xử lý gốc rễ nguyên nhân crash Railway/Render free-tier.
+**4.5. Tách lookup chỉ số khỏi RAG và bỏ BGE-M3 khỏi API runtime** — khoảng
+tham chiếu/trạng thái/critical dùng lookup xác định; RAG chỉ làm giàu tài liệu y khoa
+phi cấu trúc qua embedding provider ngoài. Xem ADR-008. Thay đổi này xử lý gốc rễ
+nguyên nhân crash Railway/Render free-tier mà không loại bỏ bằng chứng PLO3.
 
 **4.6. Chốt URL production thật + CORS đúng domain** — cập nhật
 `.env.example`/`README.md`.
