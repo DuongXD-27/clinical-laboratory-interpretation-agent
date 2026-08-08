@@ -20,6 +20,7 @@ class IndicatorAssessment(TypedDict, total=False):
     """Kết quả sau khi đối chiếu khoảng tham chiếu (rule-based, không dùng LLM)."""
 
     name: str
+    analyte_id: str
     value: float
     unit: str
     reference_low: float | None
@@ -41,6 +42,7 @@ class RetrievedChunk(TypedDict, total=False):
     indicator_name: str
     text: str
     source: str
+    sources: list[str]
     score: float
 
 
