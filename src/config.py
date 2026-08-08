@@ -44,7 +44,13 @@ class Settings(BaseSettings):
 
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
-    embedding_device: Literal["cpu", "cuda", "mps"] = "cpu"
+    rag_enabled: bool = False
+    rag_collection_name: str = "medical_kb_v1"
+    rag_corpus_version: str = "medical-kb-v1"
+    embedding_provider: Literal["disabled", "openai"] = "disabled"
+    embedding_model_name: str = "text-embedding-3-small"
+    embedding_dimension: int = Field(default=1536, ge=1)
+    embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
 
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
