@@ -1,14 +1,23 @@
+"""Personalized explanation node with optional, independently-failing RAG."""
+
+from __future__ import annotations
+
 import asyncio
 import logging
 import textwrap
+from typing import Any
 
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.agents.state import AgentState, IndicatorExplanation
+from src.agents.state import AgentState, IndicatorExplanation, RetrievedChunk
 from src.services.llm import get_llm
-from src.services.vector_store import get_vector_store
+from src.services.medical_knowledge_retriever import (
+    MedicalKnowledgeRetriever,
+    get_medical_knowledge_retriever,
+)
+from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
 
@@ -16,186 +25,197 @@ logger = logging.getLogger(__name__)
 class ExplanationOutput(BaseModel):
     explanation: str = Field(
         ...,
-        description="Giải thích dễ hiểu, ngắn gọn về chỉ số (bằng tiếng Việt).",
+        description="Giải thích dễ hiểu, ngắn gọn về chỉ số bằng tiếng Việt.",
     )
     sources: list[str] = Field(
         default_factory=list,
-        description="Danh sách các nguồn tham khảo (URL) y khoa từ tài liệu.",
+        description="Nguồn được trích từ context; hệ thống vẫn kiểm tra lại trước khi trả ra.",
     )
 
 
 @retry(
     wait=wait_exponential(multiplier=2, min=2, max=10),
     stop=stop_after_attempt(3),
-    reraise=True
+    reraise=True,
 )
 async def call_llm_with_retry(structured_llm, prompt: str) -> ExplanationOutput:
-    """Gọi LLM kèm cơ chế thử lại (Exponential Backoff) nếu gặp lỗi 429 hoặc lỗi mạng."""
     return await structured_llm.ainvoke([HumanMessage(content=prompt)])
 
 
+def _deduplicate(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
+
+
+def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> list[str]:
+    sources = [str(source) for source in indicator.get("sources", []) if str(source)]
+    for chunk in chunks:
+        sources.extend(str(source) for source in chunk.get("sources", []) if str(source))
+        if chunk.get("source"):
+            sources.append(str(chunk["source"]))
+    return _deduplicate(sources)
+
+
+async def _retrieve_optional_context(
+    *,
+    retriever: MedicalKnowledgeRetriever | None,
+    rag_semaphore: asyncio.Semaphore,
+    analyte_id: str,
+    name: str,
+    status: str,
+) -> list[RetrievedChunk]:
+    if retriever is None or not analyte_id:
+        return []
+    query = f"Ý nghĩa xét nghiệm {name} khi kết quả ở mức {status}"
+    try:
+        async with rag_semaphore:
+            return await asyncio.to_thread(
+                retriever.retrieve,
+                query=query,
+                analyte_id=analyte_id,
+                limit=3,
+            )
+    except Exception as exc:
+        # RAG is enrichment only. Structured classification and curated fallback
+        # remain available even when the provider, network or vector index fails.
+        logger.error("Optional RAG unavailable for %s: %s", name, exc)
+        return []
+
+
 async def process_single_indicator(
-    ind: dict,
+    indicator: dict[str, Any],
     patient_age: str,
     gender_str: str,
     language: str,
     structured_llm,
-    vector_store,
-    semaphore: asyncio.Semaphore,
-) -> tuple[dict, dict]:
-    """Xử lý phân tích 1 chỉ số độc lập, bị kiểm soát bởi Semaphore."""
-    async with semaphore:
-        name = ind.get("name", "")
-        val = ind.get("value")
-        unit = ind.get("unit", "")
-        status = ind.get("status", "unknown")
+    retriever: MedicalKnowledgeRetriever | None,
+    rag_semaphore: asyncio.Semaphore,
+    llm_semaphore: asyncio.Semaphore,
+) -> tuple[dict[str, Any], IndicatorExplanation, list[RetrievedChunk]]:
+    name = str(indicator.get("name", ""))
+    analyte_id = str(indicator.get("analyte_id", ""))
+    value = indicator.get("value")
+    unit = str(indicator.get("unit", ""))
+    status = str(indicator.get("status", "unknown"))
+    curated_explanation = str(indicator.get("explanation", "")).strip()
+    fallback_explanation = curated_explanation or load_templates().fallback_explanation
 
-        # 1. Truy vấn RAG (Chạy trên thread riêng để không block Event Loop)
-        context = ""
-        extracted_sources = []
-        if vector_store:
-            try:
-                rag_results = await asyncio.to_thread(
-                    vector_store.search, query=name, k=1
-                )
-                if (
-                    rag_results
-                    and rag_results.get("documents")
-                    and len(rag_results["documents"]) > 0
-                    and len(rag_results["documents"][0]) > 0
-                ):
-                    docs = rag_results["documents"][0]
-                    metas = (
-                        rag_results["metadatas"][0]
-                        if rag_results.get("metadatas")
-                        else []
-                    )
+    chunks = await _retrieve_optional_context(
+        retriever=retriever,
+        rag_semaphore=rag_semaphore,
+        analyte_id=analyte_id,
+        name=name,
+        status=status,
+    )
+    known_sources = _known_sources(indicator, chunks)
+    rag_context = "\n\n".join(chunk.get("text", "") for chunk in chunks if chunk.get("text"))
+    context = rag_context or curated_explanation
 
-                    context = "\n".join(docs)
-                    for meta in metas:
-                        if meta and "sources" in meta:
-                            sources_meta = meta["sources"]
-                            if isinstance(sources_meta, str):
-                                context += f"\nNguồn: {sources_meta}"
-                            elif isinstance(sources_meta, list):
-                                context += f"\nNguồn: {', '.join(sources_meta)}"
-            except Exception as e:
-                logger.error(f"Lỗi truy vấn ChromaDB cho {name}: {e}")
-                context = "Không có thông tin tham khảo từ cơ sở dữ liệu."
+    prompt = textwrap.dedent(
+        f"""\
+        Bạn là trợ lý giải thích kết quả xét nghiệm cho mục đích giáo dục.
+        Bệnh nhân: {patient_age} tuổi, giới tính {gender_str}.
+        Ngôn ngữ hiển thị: {language}.
 
-        # 2. Xây dựng Prompt
-        prompt = textwrap.dedent(
-            f"""\
-            Bạn là một trợ lý y tế phân tích kết quả xét nghiệm.
-            Bệnh nhân: {patient_age} tuổi, giới tính {gender_str}.
-            Ngôn ngữ hiển thị: {language}.
+        Dữ liệu có cấu trúc đã được hệ thống xác định bằng lookup, KHÔNG được sửa:
+        - Chỉ số: {name}
+        - Giá trị: {value} {unit}
+        - Trạng thái: {status}
 
-            Chỉ số xét nghiệm: {name}
-            Giá trị đo được: {val} {unit}
-            Trạng thái: {status} (bình thường, thấp, cao, nguy kịch, ...)
+        Ngữ cảnh giáo dục bổ sung (có thể là RAG hoặc curated fallback):
+        <context>
+        {context}
+        </context>
 
-            Dưới đây là thông tin y khoa trích xuất từ cơ sở dữ liệu (RAG):
-            <context>
-            {context}
-            </context>
+        Nhiệm vụ:
+        1. Giải thích ngắn gọn chỉ số LÀ GÌ và Ý NGHĨA CHUNG của trạng thái đã cho.
+        2. Không thay đổi trạng thái, khoảng tham chiếu, đơn vị hoặc mức critical.
+        3. KHÔNG chẩn đoán, suy đoán nguyên nhân, kê đơn hay đề nghị điều trị.
+        4. Chỉ dùng thông tin có trong context. Nếu context không đủ, giữ lời giải thích tối thiểu.
+        """
+    )
 
-            Nhiệm vụ:
-            1. Viết một đoạn giải thích ngắn gọn, thân thiện, dễ hiểu cho bệnh nhân về ý nghĩa của kết quả chỉ số này dựa trên ngữ cảnh trên. Dùng ngôn ngữ: {language}.
-            2. KHÔNG đưa ra lời khuyên y tế, KHÔNG kê đơn thuốc, KHÔNG chẩn đoán bệnh.
-            3. TUYỆT ĐỐI KHÔNG suy đoán nguyên nhân gây ra kết quả bất thường (ví dụ: không dùng "có thể do", "nguyên nhân do", "thường liên quan đến"). Chỉ giải thích chỉ số đó LÀ GÌ và Ý NGHĨA CHUNG.
-            4. Trích xuất danh sách các nguồn từ ngữ cảnh (nếu có URL nguồn). Nếu không có, để mảng rỗng.
-            """
-        )
-
-        # 3. Gọi LLM
-        explanation_text = ""
-        if structured_llm:
-            try:
-                logger.info(f"Đang gọi LLM cho chỉ số: {name}")
+    explanation_text = fallback_explanation
+    if structured_llm is not None and context:
+        try:
+            async with llm_semaphore:
                 result = await call_llm_with_retry(structured_llm, prompt)
-                explanation_text = result.explanation
-                extracted_sources = result.sources
-                logger.info(f"Gọi LLM thành công cho chỉ số: {name}")
-            except Exception as e:
-                logger.error(f"Lỗi khi gọi LLM cho {name} (đã thử lại hết mức): {e}")
-                explanation_text = "Hệ thống đang bận, vui lòng thử lại."
-        else:
-            explanation_text = "Hệ thống đang bận, vui lòng thử lại."
+            if result.explanation.strip():
+                explanation_text = result.explanation.strip()
+        except Exception as exc:
+            logger.error("LLM explanation failed for %s; using curated fallback: %s", name, exc)
 
-        # 4. Trả về kết quả
-        exp_obj: IndicatorExplanation = {
-            "indicator_name": name,
-            "status": status,
-            "category": ind.get("category", "unknown"),
-            "is_abnormal": ind.get("is_abnormal", False),
-            "is_critical": ind.get("is_critical", False),
-            "explanation": explanation_text,
-            "sources": extracted_sources,
-        }
-
-        new_ind = dict(ind)
-        new_ind["explanation"] = explanation_text
-        new_ind["sources"] = extracted_sources
-        
-        return new_ind, exp_obj
+    explanation: IndicatorExplanation = {
+        "indicator_name": name,
+        "status": status,
+        "category": indicator.get("category", "unknown"),
+        "is_abnormal": indicator.get("is_abnormal", False),
+        "is_critical": indicator.get("is_critical", False),
+        "explanation": explanation_text,
+        # Never trust model-generated URLs. Only return sources supplied by the
+        # authoritative catalog or retrieved document metadata.
+        "sources": known_sources,
+    }
+    updated_indicator = dict(indicator)
+    updated_indicator["explanation"] = explanation_text
+    updated_indicator["sources"] = known_sources
+    return updated_indicator, explanation, chunks
 
 
 async def analyzer_node(state: AgentState) -> dict:
-    """Phân tích các chỉ số, truy vấn ChromaDB (RAG) và dùng LLM để tạo giải thích."""
-    indicators = state.get("indicators", [])
-    patient_age = state.get("patient_age")
-    patient_gender = state.get("patient_gender")
-    language = state.get("language", "vi")
+    """Enrich deterministic assessments while keeping RAG optional."""
 
+    indicators = state.get("indicators", [])
     if not indicators:
-        return {}
+        return {"retrieved_contexts": []}
 
     try:
-        llm = get_llm()
-        structured_llm = llm.with_structured_output(ExplanationOutput)
-    except Exception as e:
-        logger.error(f"Failed to load LLM: {e}")
+        structured_llm = get_llm().with_structured_output(ExplanationOutput)
+    except Exception as exc:
+        logger.error("LLM unavailable; using curated explanations: %s", exc)
         structured_llm = None
 
     try:
-        vector_store = get_vector_store()
-    except Exception as e:
-        logger.error(f"Failed to load VectorStore: {e}")
-        vector_store = None
+        retriever = get_medical_knowledge_retriever()
+    except Exception as exc:
+        logger.info("Optional RAG disabled or unavailable: %s", exc)
+        retriever = None
 
-    gender_str = (
-        "Nam"
-        if patient_gender == "male"
-        else "Nữ" if patient_gender == "female" else "Khác"
+    patient_age_value = state.get("patient_age")
+    patient_age = "Không rõ" if patient_age_value is None else str(patient_age_value)
+    patient_gender = state.get("patient_gender")
+    gender_str = "Nam" if patient_gender == "male" else "Nữ" if patient_gender == "female" else "Khác"
+    language = state.get("language", "vi")
+
+    # Local/remote embeddings and LLM calls have different resource profiles.
+    # Keep retrieval serialized; LLM generation may use bounded concurrency.
+    rag_semaphore = asyncio.Semaphore(1)
+    llm_semaphore = asyncio.Semaphore(3)
+    results = await asyncio.gather(
+        *[
+            process_single_indicator(
+                indicator,
+                patient_age,
+                gender_str,
+                language,
+                structured_llm,
+                retriever,
+                rag_semaphore,
+                llm_semaphore,
+            )
+            for indicator in indicators
+        ]
     )
 
-    # Giới hạn xử lý đồng thời (Concurrency Limiting) bằng Semaphore
-    # Mức 3 có nghĩa là tối đa 3 request gọi LLM cùng một lúc, tránh quá tải API
-    semaphore = asyncio.Semaphore(3)
+    updated_indicators: list[dict[str, Any]] = []
+    explanations: list[IndicatorExplanation] = []
+    retrieved_contexts: list[RetrievedChunk] = []
+    for updated_indicator, explanation, chunks in results:
+        updated_indicators.append(updated_indicator)
+        explanations.append(explanation)
+        retrieved_contexts.extend(chunks)
 
-    # Tạo danh sách các task chạy song song
-    tasks = [
-        process_single_indicator(
-            ind,
-            str(patient_age) if patient_age else "Không rõ",
-            gender_str,
-            language,
-            structured_llm,
-            vector_store,
-            semaphore,
-        )
-        for ind in indicators
-    ]
-
-    # Chạy song song và đợi toàn bộ task hoàn tất
-    results = await asyncio.gather(*tasks)
-
-    # Gộp kết quả
-    updated_indicators = []
-    explanations = []
-    
-    for new_ind, exp_obj in results:
-        updated_indicators.append(new_ind)
-        explanations.append(exp_obj)
-
-    return {"indicators": updated_indicators, "explanations": explanations}
+    return {
+        "indicators": updated_indicators,
+        "explanations": explanations,
+        "retrieved_contexts": retrieved_contexts,
+    }
