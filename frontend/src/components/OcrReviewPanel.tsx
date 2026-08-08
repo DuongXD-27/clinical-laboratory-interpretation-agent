@@ -1,9 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { authFetch } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { API_BASE, authFetch } from "@/lib/api";
 import { parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
 import type { AnalysisResult } from "@/types/analysis";
+
+type SampleItem = {
+  sample_id: string;
+  label: string;
+  description: string;
+};
+
+type UploadPolicy = {
+  mode: "internal_only" | "demo_only" | "open_with_consent";
+  upload_enabled: boolean;
+  consent_required: boolean;
+  custom_image_allowed: boolean;
+  consent_text: string;
+  samples: SampleItem[];
+};
 
 type ReviewRow = {
   draft_id: string;
@@ -30,6 +45,9 @@ export default function OcrReviewPanel({
   accent = "blue",
 }: Props) {
   const [file, setFile] = useState<File | null>(null);
+  const [fileLabel, setFileLabel] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [policy, setPolicy] = useState<UploadPolicy | null>(null);
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [reviewToken, setReviewToken] = useState("");
   const [threshold, setThreshold] = useState(0.7);
@@ -38,6 +56,46 @@ export default function OcrReviewPanel({
   const [error, setError] = useState<string | null>(null);
 
   const buttonClass = accent === "indigo" ? "bg-indigo-600 hover:bg-indigo-700" : "bg-blue-600 hover:bg-blue-700";
+
+  // Chính sách do backend quyết định — giao diện chỉ đọc rồi hiển thị cho khớp.
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_BASE}/api/v1/ocr/policy`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: UploadPolicy | null) => {
+        if (active && data) setPolicy(data);
+      })
+      .catch(() => {
+        /* không lấy được chính sách thì giữ giao diện ở trạng thái an toàn nhất */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const resetDraft = useCallback(() => {
+    setRows([]);
+    setReviewToken("");
+    setError(null);
+  }, []);
+
+  const pickSample = useCallback(async (sample: SampleItem) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/ocr/samples/${sample.sample_id}`);
+      if (!response.ok) throw new Error("Không tải được ảnh mẫu");
+      const blob = await response.blob();
+      setFile(new File([blob], `${sample.sample_id}.png`, { type: "image/png" }));
+      setFileLabel(sample.label);
+      setRows([]);
+      setReviewToken("");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Không tải được ảnh mẫu");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   const updateRow = (index: number, patch: Partial<ReviewRow>, resetReview = false) => {
     setRows((current) => current.map((row, rowIndex) => (
@@ -56,11 +114,16 @@ export default function OcrReviewPanel({
       setError("Vui lòng chọn ảnh phiếu xét nghiệm.");
       return;
     }
+    if (!consent) {
+      setError("Vui lòng xác nhận đây là dữ liệu mô phỏng trước khi tải lên.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("consent_acknowledged", "true");
       const response = await authFetch("/api/v1/ocr/upload", { method: "POST", body: form });
       if (response.status === 401) {
         onUnauthorized();
@@ -157,21 +220,84 @@ export default function OcrReviewPanel({
           Ảnh chỉ tạo bản nháp. Mọi dòng phải được đối chiếu; dòng dưới {Math.round(threshold * 100)}% cần xác nhận tăng cường.
         </p>
       </div>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
-            setRows([]);
-            setReviewToken("");
-          }}
-          className="file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 text-sm border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 w-full"
-        />
-        <button type="button" onClick={upload} disabled={busy} className={`px-6 py-2 ${buttonClass} text-white rounded-lg text-sm font-medium disabled:opacity-50`}>
-          {busy ? "Đang xử lý..." : "Nhận diện OCR"}
-        </button>
-      </div>
+      {policy && !policy.upload_enabled ? (
+        <div className="rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 p-4 text-sm text-zinc-600 dark:text-zinc-400">
+          Tính năng tải ảnh phiếu đang tạm tắt.
+        </div>
+      ) : (
+        <>
+          {/* Ảnh mẫu: cho thử ngay, để không ai phải chụp phiếu thật của mình */}
+          {policy && policy.samples.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Chọn một phiếu mẫu để thử</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {policy.samples.map((sample) => (
+                  <button
+                    key={sample.sample_id}
+                    type="button"
+                    onClick={() => pickSample(sample)}
+                    disabled={busy}
+                    title={sample.description}
+                    className={`rounded-xl border p-3 text-left text-xs transition-colors disabled:opacity-50 ${
+                      fileLabel === sample.label
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                        : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    <span className="block font-medium">{sample.label}</span>
+                    <span className="block text-zinc-500 mt-0.5">{sample.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {policy?.custom_image_allowed && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Hoặc tải ảnh của bạn lên</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const picked = event.target.files?.[0] ?? null;
+                  setFile(picked);
+                  setFileLabel(picked?.name ?? "");
+                  resetDraft();
+                }}
+                className="file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 text-sm border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 w-full"
+              />
+            </div>
+          )}
+
+          {/* Consent gate: chặn cứng nút tải lên. Backend cũng kiểm tra lại
+              cờ này, nên gọi thẳng API bỏ qua giao diện vẫn bị từ chối. */}
+          <label className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/20 p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            <span className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+              {policy?.consent_text ??
+                "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm thật của tôi hay của người khác."}
+            </span>
+          </label>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={upload}
+              disabled={busy || !consent || !file}
+              className={`px-6 py-2 ${buttonClass} text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {busy ? "Đang xử lý..." : "Nhận diện OCR"}
+            </button>
+            {fileLabel && <span className="text-xs text-zinc-500">Đã chọn: {fileLabel}</span>}
+            {!consent && <span className="text-xs text-amber-700 dark:text-amber-400">Cần tick xác nhận ở trên</span>}
+          </div>
+        </>
+      )}
 
       {rows.length > 0 && (
         <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-4">

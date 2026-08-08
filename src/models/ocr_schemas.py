@@ -75,6 +75,34 @@ class OCRReviewResponse(BaseModel):
     )
 
 
+class OCRSampleItem(BaseModel):
+    """Một ảnh phiếu mẫu mà giao diện có thể cho người dùng thử ngay."""
+
+    sample_id: str
+    label: str
+    description: str = ""
+    size_bytes: int = Field(..., ge=0)
+
+
+class OCRUploadPolicyResponse(BaseModel):
+    """Chính sách nhận ảnh hiện hành — giao diện đọc cái này để tự điều chỉnh.
+
+    Giao diện KHÔNG được tự đoán chính sách; backend là nơi quyết định và cũng
+    là nơi thực thi. Trả về đây chỉ để UI hiển thị đúng (ẩn nút chọn file khi
+    `demo_only`, báo tắt tính năng khi `internal_only`).
+    """
+
+    mode: Literal["internal_only", "demo_only", "open_with_consent"]
+    upload_enabled: bool = Field(..., description="False khi mode=internal_only")
+    consent_required: bool = Field(default=True)
+    custom_image_allowed: bool = Field(
+        ...,
+        description="False khi mode=demo_only — chỉ nhận đúng ảnh trong bộ mẫu",
+    )
+    consent_text: str
+    samples: list[OCRSampleItem] = Field(default_factory=list)
+
+
 class OCRReviewedIndicator(BaseModel):
     """Một dòng OCR cùng bằng chứng xác nhận thủ công của người dùng."""
 
