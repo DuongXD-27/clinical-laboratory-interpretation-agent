@@ -55,8 +55,8 @@ async def test_detect_critical_values_node():
 
 
 @pytest.mark.asyncio
-async def test_potassium_unknown_from_reference_checker_can_still_be_critical():
-    """Normal checker keeps pending Kali unknown; critical detector remains independent."""
+async def test_kali_approved_checker_high_critical_detector_escalates():
+    """After BONUS-TIP-010: Kali approved → checker returns high; critical detector escalates to critical_high independently."""
     initial_state: AgentState = {
         "patient_age": 35,
         "patient_gender": "male",
@@ -67,7 +67,7 @@ async def test_potassium_unknown_from_reference_checker_can_still_be_critical():
 
     checked_state = await reference_range_checker_node(initial_state)
     checked_kali = checked_state["indicators"][0]
-    assert checked_kali["status"] == "unknown"
+    assert checked_kali["status"] == "high"
     assert checked_kali["is_critical"] is False
 
     critical_state = await detect_critical_values_node({**initial_state, **checked_state})

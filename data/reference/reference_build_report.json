@@ -25,9 +25,11 @@
     "Eosinophils abs",
     "Fasting plasma glucose",
     "GGT",
+    "HbA1c",
     "HCT",
     "HDL-C",
     "HGB",
+    "LDL-C",
     "Lymphocytes %",
     "Lymphocytes abs",
     "MCH",
@@ -38,6 +40,7 @@
     "Neutrophils %",
     "Neutrophils abs",
     "PLT",
+    "Potassium",
     "RBC",
     "RDW-CV",
     "Sodium",
@@ -52,10 +55,7 @@
     "Basophils %",
     "Basophils abs",
     "Direct bilirubin",
-    "HbA1c",
-    "LDL-C",
     "MPV",
-    "Potassium",
     "Uric acid",
     "eGFR"
   ],
@@ -63,11 +63,28 @@
     "Basophils %",
     "Basophils abs",
     "Direct bilirubin",
-    "HbA1c",
-    "LDL-C",
-    "MPV",
-    "Potassium"
+    "MPV"
   ],
+  "runtime_approval": {
+    "note": "Analytes below were quarantined at build time but manually promoted to approved after medical-data review (BONUS-TIP-010). They are now active in reference_ranges_v2.json.",
+    "promoted_analytes": [
+      {
+        "name": "HbA1c",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-HBA1C-001 added"
+      },
+      {
+        "name": "LDL-C",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-LDLC-001 added"
+      },
+      {
+        "name": "Potassium",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-POTASSIUM-001 added; critical thresholds <2.5/>6.5 mmol/L active in critical_detector"
+      }
+    ]
+  },
   "output_files": {
     "reference_ranges_v2_csv": {
       "path": "data/reference/reference_ranges_v2.csv",
@@ -149,6 +166,10 @@
     ]
   },
   "catalog": {
-    "total_rules": 73
-  }
+    "total_rules": 73,
+    "accepted_analytes_count": 34,
+    "quarantined_analytes_count": 6,
+    "runtime_promoted_count": 3
+  },
+  "last_updated_at": "2026-08-09"
 }

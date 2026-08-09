@@ -210,6 +210,7 @@ async def test_e2e_10_ldl_c_approved_high_value():
 
 @pytest.mark.asyncio
 async def test_e2e_11_potassium_critical_high():
+    # After BONUS-TIP-010: Potassium approved; 6.5 mmol/L > RI upper 5.0 → high, then critical_high
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "Potassium", "value": 6.5, "unit": "mmol/L"}],
         patient_age=30,
@@ -217,7 +218,9 @@ async def test_e2e_11_potassium_critical_high():
     )
 
     checked = only_indicator(checker_result)
-    assert checked["status"] == "unknown"
+    assert checked["status"] == "high"
+    assert checked["reference_low"] == 3.5
+    assert checked["reference_high"] == 5.0
     assert checked["is_critical"] is False
 
     critical = only_indicator(critical_result)
@@ -228,13 +231,17 @@ async def test_e2e_11_potassium_critical_high():
 
 @pytest.mark.asyncio
 async def test_e2e_12_kali_critical_low_alias_boundary():
+    # After BONUS-TIP-010: Kali alias resolves to Potassium; 2.5 < RI lower 3.5 → low, then critical_low
     checker_result, critical_result = await run_reference_pipeline(
         [{"name": "Kali", "value": 2.5, "unit": "mmol/L"}],
         patient_age=30,
         patient_gender="male",
     )
 
-    assert only_indicator(checker_result)["status"] == "unknown"
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "low"
+    assert checked["reference_low"] == 3.5
+    assert checked["reference_high"] == 5.0
     critical = only_indicator(critical_result)
     assert critical["status"] == "critical_low"
     assert critical["is_critical"] is True
@@ -263,9 +270,10 @@ async def test_e2e_13_multiple_indicator_order():
         "Potassium",
         "Creatinine",
     ]
+    # After BONUS-TIP-010: HGB approved (140 g/L male → normal); Potassium approved (6.5 → critical_high)
     assert [indicator["status"] for indicator in critical_result["indicators"]] == [
         "normal",
-        "unknown",
+        "normal",
         "critical_high",
         "normal",
     ]
@@ -282,3 +290,177 @@ async def test_e2e_14_missing_value_safety():
 
     assert_unknown(only_indicator(checker_result))
     assert_unknown(only_indicator(critical_result))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (3.4, "low"),    # below lower bound
+        (3.5, "normal"), # = lower bound (inclusive)
+        (4.2, "normal"), # mid range
+        (5.0, "normal"), # = upper bound (inclusive)
+        (5.1, "high"),   # above upper bound
+    ],
+)
+async def test_e2e_15_potassium_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "Potassium", "value": value, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] == 3.5
+    assert checked["reference_high"] == 5.0
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (2.0,  "normal"), # within RI
+        (2.58, "normal"), # = upper bound (inclusive)
+        (2.59, "high"),   # just above upper bound
+        (3.8,  "high"),   # clearly high
+    ],
+)
+async def test_e2e_16_ldl_c_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "LDL-C", "value": value, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] is None
+    assert checked["reference_high"] == 2.58
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (4.5,  "normal"), # no lower bound in RI — any low value is normal
+        (5.5,  "normal"), # clearly within RI
+        (5.7,  "normal"), # = upper bound (inclusive)
+        (5.8,  "high"),   # just above upper bound
+        (7.5,  "high"),   # clearly high
+    ],
+)
+async def test_e2e_17_hba1c_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "HbA1c", "value": value, "unit": "%"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] is None
+    assert checked["reference_high"] == 5.7
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (127, "low"),    # below lower bound
+        (128, "normal"), # = lower bound (inclusive)
+        (155, "normal"), # mid range
+        (183, "normal"), # = upper bound (inclusive)
+        (184, "high"),   # above upper bound
+    ],
+)
+async def test_e2e_18_hgb_male_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "HGB", "value": value, "unit": "g/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] == 128
+    assert checked["reference_high"] == 183
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (109, "low"),    # below lower bound
+        (110, "normal"), # = lower bound (inclusive)
+        (130, "normal"), # mid range
+        (150, "normal"), # = upper bound (inclusive)
+        (151, "high"),   # above upper bound
+    ],
+)
+async def test_e2e_19_hgb_female_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "HGB", "value": value, "unit": "g/L"}],
+        patient_age=30,
+        patient_gender="female",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] == 110
+    assert checked["reference_high"] == 150
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (1.03, "low"),    # below lower bound
+        (1.04, "normal"), # = lower bound (inclusive)
+        (1.28, "normal"), # mid range
+        (1.53, "normal"), # = upper bound (inclusive)
+        (1.54, "high"),   # above upper bound
+    ],
+)
+async def test_e2e_20_hdl_c_male_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "HDL-Cholesterol", "value": value, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] == 1.04
+    assert checked["reference_high"] == 1.53
+    assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "expected_status"),
+    [
+        (1.29, "low"),    # below lower bound
+        (1.30, "normal"), # = lower bound (inclusive)
+        (1.40, "normal"), # mid range
+        (1.53, "normal"), # = upper bound (inclusive)
+        (1.54, "high"),   # above upper bound
+    ],
+)
+async def test_e2e_21_hdl_c_female_ri_boundaries(value, expected_status):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "HDL-Cholesterol", "value": value, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="female",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == expected_status
+    assert checked["reference_low"] == 1.30
+    assert checked["reference_high"] == 1.53
+    assert only_indicator(critical_result)["is_critical"] is False
