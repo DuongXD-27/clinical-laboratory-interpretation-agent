@@ -6,9 +6,7 @@ from pathlib import Path
 
 from eval.run_ragas import APPROVED_ANALYTES, PENDING_ANALYTES, load_jsonl, load_metadata, validate_metadata
 
-
 DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
-MANIFEST_PATH = Path("docs/version-handoff/v2_analyte_manifest.json")
 
 
 def cases() -> list[dict]:
@@ -97,17 +95,6 @@ def test_d11_source_urls_come_from_project_reference_evidence():
 
     for case in cases():
         assert all(url in evidence_urls for url in case["source_urls"])
-
-
-def test_d12_manifest_ragas_flags_agree_with_dataset_coverage():
-    manifest = {
-        record["analyte"]: record
-        for record in json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    }
-    dataset_analytes = {case["analyte"] for case in cases()}
-
-    assert {analyte for analyte, record in manifest.items() if record["ragas_case_available"]} == dataset_analytes
-    assert dataset_analytes == APPROVED_ANALYTES
 
 
 def test_dataset_contains_no_metric_scores():

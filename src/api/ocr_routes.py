@@ -17,6 +17,10 @@ router = APIRouter()
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     """Factory lỏng — dễ thay mock trong test."""
+    if not get_settings().openrouter_api_key.strip():
+        raise VisionAdapterError(
+            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+        )
     return ImageProcessor(), VisionAdapter()
 
 
@@ -34,7 +38,12 @@ async def ocr_upload(
     file: UploadFile = File(...),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> OCRReviewResponse:
-    processor, adapter = _get_dependencies()
+    try:
+        processor, adapter = _get_dependencies()
+    except VisionAdapterError as exc:
+        # Keep configuration failures inside FastAPI's HTTP error path so the
+        # CORS middleware can expose the real message to the browser.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     raw = await file.read()
     try:
@@ -48,6 +57,15 @@ async def ocr_upload(
         drafts = adapter.extract(image_to_data_url(processed.bytes, processed.mime_type))
     except VisionAdapterError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if not drafts:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Không tìm thấy chỉ số xét nghiệm trong ảnh. Hãy dùng ảnh chụp rõ toàn bộ "
+                "phiếu xét nghiệm, không dùng ảnh chụp màn hình của ứng dụng."
+            ),
+        )
 
     prepared_drafts, review_token = prepare_review(
         drafts,

@@ -7,7 +7,7 @@ import json
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -90,11 +90,11 @@ RUNTIME_FIELDS = [
 ]
 
 
-class BuildFailure(Exception):
+class BuildError(Exception):
     """Invalid input or output failure."""
 
 
-class InvariantFailure(Exception):
+class InvariantError(Exception):
     """Invariant or source-integrity failure."""
 
 
@@ -351,11 +351,11 @@ def read_source_rows(input_path: Path) -> tuple[list[dict[str, str]], list[str]]
             fieldnames = list(reader.fieldnames or [])
             rows = list(reader)
     except FileNotFoundError as exc:
-        raise BuildFailure(f"input file not found: {input_path}") from exc
+        raise BuildError(f"input file not found: {input_path}") from exc
 
     missing = [field for field in SOURCE_REQUIRED_FIELDS if field not in fieldnames]
     if missing:
-        raise BuildFailure(f"input file missing required columns: {', '.join(missing)}")
+        raise BuildError(f"input file missing required columns: {', '.join(missing)}")
     return rows, fieldnames
 
 
@@ -428,11 +428,11 @@ def build_reference_config(
     runtime_accepted_rows = len(accepted_csv)
     quarantined_rows = len(quarantined)
     if input_rows != runtime_accepted_rows + quarantined_rows:
-        raise InvariantFailure("input row count does not equal accepted + quarantined")
+        raise InvariantError("input row count does not equal accepted + quarantined")
     if runtime_accepted_rows > strict_quality_eligible_rows:
-        raise InvariantFailure("runtime accepted rows exceed strict quality eligible rows")
+        raise InvariantError("runtime accepted rows exceed strict quality eligible rows")
     if strict_quality_eligible_rows > input_rows:
-        raise InvariantFailure("strict quality eligible rows exceed input rows")
+        raise InvariantError("strict quality eligible rows exceed input rows")
 
     runtime_csv_path = output_path / RUNTIME_CSV
     runtime_json_path = output_path / RUNTIME_JSON
@@ -445,7 +445,7 @@ def build_reference_config(
     if supplemental_path is not None:
         sup_file = resolve_repo_path(supplemental_path, root)
         if not sup_file.exists():
-            raise BuildFailure(f"supplemental file not found: {sup_file}")
+            raise BuildError(f"supplemental file not found: {sup_file}")
         primary_analytes = {str(row["analyte_canonical"]) for row in accepted_json if row.get("analyte_canonical")}
         supplemental_json, supplemental_warnings = extract_supplemental_rules(sup_file, primary_analytes)
 
@@ -474,7 +474,7 @@ def build_reference_config(
 
     input_hash_after = sha256_file(input_file)
     if input_hash_after != input_hash_before:
-        raise InvariantFailure("source hash changed during build")
+        raise InvariantError("source hash changed during build")
 
     multiple_reason_rows = sum(1 for row in quarantined if int(row["rejection_reason_count"]) > 1)
     accepted_analytes = sorted({str(row["analyte_canonical"]) for row in accepted_csv if row.get("analyte_canonical")})
@@ -523,7 +523,7 @@ def build_reference_config(
                 "sha256": sha256_file(quarantine_csv_path),
             },
         },
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "source_integrity_verified": True,
     }
 
@@ -563,10 +563,10 @@ def main(argv: list[str] | None = None) -> int:
             args.output_dir,
             supplemental_path=DEFAULT_SUPPLEMENTAL,
         )
-    except InvariantFailure as exc:
+    except InvariantError as exc:
         print(f"Build failed: {exc}", file=sys.stderr)
         return 2
-    except (BuildFailure, OSError, ValueError) as exc:
+    except (BuildError, OSError, ValueError) as exc:
         print(f"Build failed: {exc}", file=sys.stderr)
         return 1
 

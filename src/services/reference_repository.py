@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+import unicodedata
 from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -100,7 +101,7 @@ class ReferenceRepository:
             raise ReferenceRepositoryError("no approved analytes remain after unit validation")
 
     @classmethod
-    def from_default_files(cls) -> "ReferenceRepository":
+    def from_default_files(cls) -> ReferenceRepository:
         root = cls.default_repo_root()
         return cls.from_files(
             config_path=root / "data/reference/reference_checker_v2_config.json",
@@ -115,7 +116,7 @@ class ReferenceRepository:
         config_path: str | Path,
         ranges_path: str | Path,
         units_path: str | Path | None = None,
-    ) -> "ReferenceRepository":
+    ) -> ReferenceRepository:
         config_file = Path(config_path)
         ranges_file = Path(ranges_path)
         units_file = Path(units_path) if units_path is not None else None
@@ -324,7 +325,10 @@ class ReferenceRepository:
 
     @staticmethod
     def _alias_key(value: Any) -> str:
-        return str(value or "").strip().lower()
+        text = unicodedata.normalize("NFKD", str(value or "").strip().casefold())
+        text = "".join(character for character in text if not unicodedata.combining(character))
+        text = text.replace("đ", "d")
+        return re.sub(r"[^a-z0-9]+", " ", text).strip()
 
     @staticmethod
     def _norm_text(value: Any) -> str:
