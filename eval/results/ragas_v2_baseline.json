@@ -1,15 +1,15 @@
 {
   "run_id": "RAGAS-V2-BASELINE-001",
   "run_type": "live_curated_fixture_baseline",
-  "generated_at": "2026-08-05T02:49:11.567920+00:00",
-  "git_commit": "01205af4aade3440b04f008762369d6d69873a77",
+  "generated_at": "2026-08-09T04:58:18.295593+00:00",
+  "git_commit": "02ae58b579a48f852635b576627aa2e6b06d1863",
   "dataset": {
     "path": "eval/datasets/ragas_v2_baseline.jsonl",
     "version": "v2-baseline-1",
-    "sha256": "3f1cb84cebde5a5a47fca5eafca0a0276ebe6c04665fd9bb0531fe92ea24da2f",
-    "total_cases": 12,
-    "eligible_cases": 11,
-    "evaluated_cases": 12
+    "sha256": "fea4662074a740025260ccaf4146cc797124af973613c90df0d869a8b2444a0c",
+    "total_cases": 27,
+    "eligible_cases": 26,
+    "evaluated_cases": 27
   },
   "evaluator": {
     "provider": "google",
@@ -25,9 +25,9 @@
     "concurrency": 1,
     "automatic_retries": 0,
     "provider_probe": {
-      "status": "REUSED",
-      "duration_ms": 0,
-      "reused_from_previous_attempt": true
+      "status": "PASS",
+      "duration_ms": 1126,
+      "reused_from_previous_attempt": false
     }
   },
   "metrics": [
@@ -44,7 +44,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 20287
+      "duration_ms": 44011
     },
     {
       "case_id": "RAGAS-V2-002",
@@ -54,7 +54,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 31304
+      "duration_ms": 44676
     },
     {
       "case_id": "RAGAS-V2-003",
@@ -64,7 +64,7 @@
       "custom_hallucination_proxy": 0.5,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 30298
+      "duration_ms": 42287
     },
     {
       "case_id": "RAGAS-V2-004",
@@ -74,7 +74,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 29904
+      "duration_ms": 42993
     },
     {
       "case_id": "RAGAS-V2-005",
@@ -84,17 +84,20 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 17562
+      "duration_ms": 42259
     },
     {
       "case_id": "RAGAS-V2-006",
       "analyte": "RBC",
-      "faithfulness": 1.0,
-      "context_precision": 0.99999999995,
-      "custom_hallucination_proxy": 0.0,
-      "metric_status": "success",
-      "errors": [],
-      "duration_ms": 45919
+      "faithfulness": null,
+      "context_precision": null,
+      "custom_hallucination_proxy": null,
+      "metric_status": "failed",
+      "errors": [
+        "faithfulness_error:IncompleteOutputException",
+        "context_precision_error:IncompleteOutputException"
+      ],
+      "duration_ms": 41309
     },
     {
       "case_id": "RAGAS-V2-007",
@@ -104,17 +107,17 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 16913
+      "duration_ms": 40800
     },
     {
       "case_id": "RAGAS-V2-008",
       "analyte": "Fasting plasma glucose",
-      "faithfulness": 0.5,
+      "faithfulness": 0.3333333333333333,
       "context_precision": 0.9999999999,
-      "custom_hallucination_proxy": 0.5,
+      "custom_hallucination_proxy": 0.6666666666666667,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 35860
+      "duration_ms": 58468
     },
     {
       "case_id": "RAGAS-V2-009",
@@ -124,7 +127,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 31630
+      "duration_ms": 56248
     },
     {
       "case_id": "RAGAS-V2-010",
@@ -134,7 +137,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 28580
+      "duration_ms": 42879
     },
     {
       "case_id": "RAGAS-V2-011",
@@ -144,7 +147,7 @@
       "custom_hallucination_proxy": 0.0,
       "metric_status": "success",
       "errors": [],
-      "duration_ms": 21595
+      "duration_ms": 42982
     },
     {
       "case_id": "RAGAS-V2-012",
@@ -156,44 +159,204 @@
       "reason": "missing_retrieved_context",
       "errors": [],
       "duration_ms": 0
+    },
+    {
+      "case_id": "RAGAS-V2-013",
+      "analyte": "HGB",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 42354
+    },
+    {
+      "case_id": "RAGAS-V2-014",
+      "analyte": "HGB",
+      "faithfulness": null,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": null,
+      "metric_status": "partial_failure",
+      "errors": [
+        "faithfulness_error:IncompleteOutputException"
+      ],
+      "duration_ms": 18749
+    },
+    {
+      "case_id": "RAGAS-V2-015",
+      "analyte": "HGB",
+      "faithfulness": 0.5,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.5,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 42916
+    },
+    {
+      "case_id": "RAGAS-V2-016",
+      "analyte": "HbA1c",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 43951
+    },
+    {
+      "case_id": "RAGAS-V2-017",
+      "analyte": "HbA1c",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 42408
+    },
+    {
+      "case_id": "RAGAS-V2-018",
+      "analyte": "HbA1c",
+      "faithfulness": 0.5,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.5,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 44273
+    },
+    {
+      "case_id": "RAGAS-V2-019",
+      "analyte": "LDL-C",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 42146
+    },
+    {
+      "case_id": "RAGAS-V2-020",
+      "analyte": "LDL-C",
+      "faithfulness": null,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": null,
+      "metric_status": "partial_failure",
+      "errors": [
+        "faithfulness_error:InstructorRetryException"
+      ],
+      "duration_ms": 16812
+    },
+    {
+      "case_id": "RAGAS-V2-021",
+      "analyte": "LDL-C",
+      "faithfulness": 0.6666666666666666,
+      "context_precision": 0.0,
+      "custom_hallucination_proxy": 0.33333333333333337,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 58376
+    },
+    {
+      "case_id": "RAGAS-V2-022",
+      "analyte": "HDL-C",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 43165
+    },
+    {
+      "case_id": "RAGAS-V2-023",
+      "analyte": "HDL-C",
+      "faithfulness": null,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": null,
+      "metric_status": "partial_failure",
+      "errors": [
+        "faithfulness_error:IncompleteOutputException"
+      ],
+      "duration_ms": 18990
+    },
+    {
+      "case_id": "RAGAS-V2-024",
+      "analyte": "HDL-C",
+      "faithfulness": null,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": null,
+      "metric_status": "partial_failure",
+      "errors": [
+        "faithfulness_error:IncompleteOutputException"
+      ],
+      "duration_ms": 19377
+    },
+    {
+      "case_id": "RAGAS-V2-025",
+      "analyte": "Potassium",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 41564
+    },
+    {
+      "case_id": "RAGAS-V2-026",
+      "analyte": "Potassium",
+      "faithfulness": null,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": null,
+      "metric_status": "partial_failure",
+      "errors": [
+        "faithfulness_error:IncompleteOutputException"
+      ],
+      "duration_ms": 19738
+    },
+    {
+      "case_id": "RAGAS-V2-027",
+      "analyte": "Potassium",
+      "faithfulness": 1.0,
+      "context_precision": 0.9999999999,
+      "custom_hallucination_proxy": 0.0,
+      "metric_status": "success",
+      "errors": [],
+      "duration_ms": 41580
     }
   ],
   "summary": {
     "faithfulness": {
-      "count": 11,
-      "mean": 0.9090909090909091,
+      "count": 20,
+      "mean": 0.875,
       "median": 1.0,
-      "minimum": 0.5,
+      "minimum": 0.3333333333333333,
       "maximum": 1.0,
-      "standard_deviation": 0.19284730395996752,
-      "failed_count": 0,
+      "standard_deviation": 0.2228290326186823,
+      "failed_count": 6,
       "not_applicable_count": 1
     },
     "context_precision": {
-      "count": 11,
-      "mean": 0.9545454544545454,
+      "count": 25,
+      "mean": 0.939999999906,
       "median": 0.9999999999,
-      "minimum": 0.49999999995,
-      "maximum": 0.99999999995,
-      "standard_deviation": 0.14373989363108064,
-      "failed_count": 0,
+      "minimum": 0.0,
+      "maximum": 0.9999999999,
+      "standard_deviation": 0.2154065922638395,
+      "failed_count": 1,
       "not_applicable_count": 1
     },
     "custom_hallucination_proxy": {
-      "count": 11,
-      "mean": 0.09090909090909091,
+      "count": 20,
+      "mean": 0.125,
       "median": 0.0,
       "minimum": 0.0,
-      "maximum": 0.5,
-      "standard_deviation": 0.19284730395996752,
-      "failed_count": 0,
+      "maximum": 0.6666666666666667,
+      "standard_deviation": 0.2228290326186823,
+      "failed_count": 6,
       "not_applicable_count": 1
     },
-    "successful_cases": 11,
-    "partial_cases": 0,
-    "failed_cases": 0,
+    "successful_cases": 20,
+    "partial_cases": 5,
+    "failed_cases": 1,
     "not_applicable_cases": 1,
-    "total_duration_seconds": 332.32331279991195
+    "total_duration_seconds": 1060.0504544000141
   },
   "expected_pattern_checks": {
     "unsupported_claim_contrast_pass": true,
