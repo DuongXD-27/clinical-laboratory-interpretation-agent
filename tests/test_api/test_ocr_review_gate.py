@@ -104,12 +104,14 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
         )
 
     monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
     headers = await _auth_headers(client)
     headers["Origin"] = "http://localhost:3000"
     response = await client.post(
         "/api/v1/ocr/upload",
         headers=headers,
         files={"file": ("report.png", b"image", "image/png")},
+        data={"consent_acknowledged": "true"},
     )
 
     assert response.status_code == 503
@@ -134,11 +136,13 @@ async def test_ocr_upload_rejects_empty_extraction(client, monkeypatch):
         "_get_dependencies",
         lambda: (FakeProcessor(), EmptyAdapter()),
     )
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
     headers = await _auth_headers(client)
     response = await client.post(
         "/api/v1/ocr/upload",
         headers=headers,
         files={"file": ("not-a-lab-report.png", b"image", "image/png")},
+        data={"consent_acknowledged": "true"},
     )
 
     assert response.status_code == 422
