@@ -15,15 +15,14 @@ from eval.run_ragas import (
     ProviderProbeError,
     ProviderProbeResult,
     build_summary,
+    ensure_async_metric_llm,
     hallucination_proxy,
     main,
     metric_result_to_float,
     run_live,
     score_case,
     select_credential,
-    ensure_async_metric_llm,
 )
-
 
 DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
 

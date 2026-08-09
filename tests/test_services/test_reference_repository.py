@@ -299,7 +299,7 @@ def test_unit_g_l_not_mapped_to_count_unit() -> None:
     assert ReferenceRepository.normalize_unit("g/L") != "10^9/L"
 
 
-def test_unit_G_L_uppercase_maps_to_count() -> None:
+def test_unit_g_l_uppercase_maps_to_count() -> None:
     assert ReferenceRepository.normalize_unit("G/L") == "10^9/L"
 
 
@@ -492,7 +492,22 @@ def test_u01_unit_map_agreement_for_final_approved_analytes(repository):
     assert repository.unit_conflict_analytes == set()
 
 
-def test_u02_unit_conflict_isolation():
+@pytest.mark.parametrize(
+    ("ocr_label", "canonical"),
+    [
+        ("Bạch cầu (WBC)", "WBC"),
+        ("Hồng cầu (RBC)", "RBC"),
+        ("Đường huyết lúc đói", "Fasting plasma glucose"),
+        ("BACH CAU ( WBC )", "WBC"),
+    ],
+)
+def test_u02_default_repository_resolves_ocr_labels(ocr_label, canonical):
+    repo = ReferenceRepository.from_default_files()
+
+    assert repo.resolve_analyte(ocr_label) == canonical
+
+
+def test_u03_unit_conflict_isolation():
     repo = ReferenceRepository(
         config=make_config(approved=["WBC", "HGB"], pending=[]),
         rules=[make_rule("WBC", unit="10^9/L"), make_rule("HGB", unit="10^9/L")],

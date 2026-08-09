@@ -3,22 +3,23 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
-import { mockScenarios } from "@/lib/mockData";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
+import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 
 export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
 
-  const [inputMode, setInputMode] = useState<"scenario" | "ocr">("scenario");
+  const [inputMode, setInputMode] = useState<"manual" | "ocr">("manual");
   const [ocrPanelKey, setOcrPanelKey] = useState(0);
+  const [manualMeta, setManualMeta] = useState({ age: "35", gender: "male", date: "" });
+  const [manualValues, setManualValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
@@ -54,7 +55,9 @@ export default function PatientPage() {
       }
       
       if (!response.ok) {
-        throw new Error("Lỗi kết nối đến server");
+        const payload = await response.json().catch(() => null);
+        const detail = typeof payload?.detail === "string" ? payload.detail : null;
+        throw new Error(detail ?? `Server trả về lỗi ${response.status}`);
       }
       setResult(await response.json());
     } catch (err: unknown) {
@@ -64,10 +67,29 @@ export default function PatientPage() {
     }
   };
 
-  const handleAnalyze = async () => {
-    const scenario = mockScenarios.find((s) => s.id === selectedScenario);
-    if (!scenario) return;
-    await runAnalyze(scenario.data);
+  const handleManualAnalyze = async () => {
+    const age = Number(manualMeta.age);
+    if (!Number.isInteger(age) || age < 18 || age > 60) {
+      setError("Dữ liệu tham chiếu hiện hỗ trợ người từ 18 đến 60 tuổi.");
+      return;
+    }
+    if (!manualMeta.date) {
+      setError("Hãy chọn ngày xét nghiệm.");
+      return;
+    }
+
+    try {
+      const indicators = buildManualIndicators(manualValues);
+      await runAnalyze({
+        patient_age: age,
+        patient_gender: manualMeta.gender,
+        test_date: manualMeta.date,
+        language: "vi",
+        indicators,
+      });
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Dữ liệu nhập tay không hợp lệ.");
+    }
   };
 
   if (checkingAuth) return null;
@@ -96,60 +118,34 @@ export default function PatientPage() {
               </button>
             </p>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
-            {inputMode === "scenario" ? (
-              <>
-                <select
-                  className="flex-1 sm:w-64 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  value={selectedScenario}
-                  onChange={(e) => setSelectedScenario(e.target.value)}
-                >
-                  {mockScenarios.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleAnalyze}
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[120px]"
-                >
-                  {loading ? (
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    "Phân Tích"
-                  )}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  setOcrPanelKey((current) => current + 1);
-                  setResult(null);
-                }}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20"
-              >
-                Đặt lại
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null);
+              setError(null);
+              if (inputMode === "manual") {
+                setManualValues({});
+              } else {
+                setOcrPanelKey((current) => current + 1);
+              }
+            }}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20"
+          >
+            Đặt lại
+          </button>
         </div>
 
         {/* Mode toggle */}
         <div className="flex gap-2">
           <button
-            onClick={() => setInputMode("scenario")}
+            onClick={() => setInputMode("manual")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-              inputMode === "scenario"
+              inputMode === "manual"
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-blue-400"
             }`}
           >
-            Nhập tay (demo)
+            Nhập tay
           </button>
           <button
             onClick={() => setInputMode("ocr")}
@@ -162,6 +158,85 @@ export default function PatientPage() {
             Tải ảnh phiếu
           </button>
         </div>
+
+        {inputMode === "manual" && (
+          <section className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-5">
+            <div>
+              <h2 className="font-semibold text-lg">Nhập kết quả xét nghiệm</h2>
+              <p className="text-sm text-zinc-500 mt-1">
+                Nhập một hoặc nhiều chỉ số. Hiện hệ thống có khoảng tham chiếu đã duyệt cho 4 chỉ số dưới đây và người từ 18–60 tuổi.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Tuổi</span>
+                <input
+                  aria-label="Tuổi bệnh nhân"
+                  type="number"
+                  min="18"
+                  max="60"
+                  value={manualMeta.age}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                />
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Giới tính</span>
+                <select
+                  aria-label="Giới tính bệnh nhân"
+                  value={manualMeta.gender}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                >
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
+                </select>
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Ngày xét nghiệm</span>
+                <input
+                  aria-label="Ngày xét nghiệm"
+                  type="date"
+                  value={manualMeta.date}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {MANUAL_ANALYTES.map((analyte) => (
+                <label key={analyte.name} className="grid grid-cols-[1fr_7rem_auto] items-center gap-2 border rounded-xl px-3 py-2 dark:border-zinc-700">
+                  <span className="text-sm font-medium">{analyte.label}</span>
+                  <input
+                    aria-label={analyte.label}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={manualValues[analyte.name] ?? ""}
+                    onChange={(event) => setManualValues((current) => ({
+                      ...current,
+                      [analyte.name]: event.target.value,
+                    }))}
+                    placeholder="Nhập số"
+                    className="min-w-0 border rounded-lg px-3 py-2 text-sm dark:bg-zinc-950 dark:border-zinc-700"
+                  />
+                  <span className="text-xs text-zinc-500 min-w-14">{analyte.unit}</span>
+                </label>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualAnalyze}
+              disabled={loading}
+              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
+            >
+              {loading ? "Đang phân tích..." : "Phân tích các chỉ số đã nhập"}
+            </button>
+          </section>
+        )}
 
         {inputMode === "ocr" && (
           <OcrReviewPanel
