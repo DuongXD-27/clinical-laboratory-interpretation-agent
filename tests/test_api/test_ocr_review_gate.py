@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.api import ocr_routes, routes
+from src.config import get_settings
 from src.models.ocr_schemas import OCRIndicatorDraft, OCRReviewedIndicator
 from src.models.schemas import IndicatorInputSchema
 from src.services.ocr_review_gate import prepare_review
@@ -169,11 +170,16 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
         "_get_dependencies",
         lambda: (FakeProcessor(), FakeAdapter()),
     )
+    # Test này kiểm tra riêng cơ chế confidence/review token, nên mở chế độ
+    # nhận ảnh tuỳ ý và tick sẵn consent — hai cổng đó có bộ test riêng ở
+    # tests/test_api/test_ocr_public_safeguards.py.
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
     headers = await _auth_headers(client)
     response = await client.post(
         "/api/v1/ocr/upload",
         headers=headers,
         files={"file": ("report.png", b"image", "image/png")},
+        data={"consent_acknowledged": "true"},
     )
 
     assert response.status_code == 200, response.text

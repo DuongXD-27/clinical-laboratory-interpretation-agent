@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     vision_timeout_seconds: float = Field(default=90.0, ge=1.0, le=300.0)
     ocr_low_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     ocr_review_token_expire_minutes: int = Field(default=15, ge=1, le=60)
+    # Chính sách nhận ảnh cho bản demo public (V3). Đổi được bằng biến môi
+    # trường, không phải sửa code:
+    #   internal_only     — tắt hẳn /ocr/upload (503), dùng khi chưa muốn mở ra ngoài
+    #   demo_only         — CHỈ nhận đúng bộ ảnh mẫu trong data/ocr_samples
+    #                       (đối chiếu SHA-256), chặn người dùng đưa ảnh thật lên
+    #   open_with_consent — nhận ảnh bất kỳ, nhưng bắt buộc tick consent trước
+    ocr_upload_mode: Literal["internal_only", "demo_only", "open_with_consent"] = "demo_only"
+    ocr_samples_dir: str = "./data/ocr_samples"
 
     # Database
     database_url: str = "sqlite:///./data/app.db"

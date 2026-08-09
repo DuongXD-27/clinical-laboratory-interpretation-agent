@@ -3,6 +3,20 @@
 > Bệnh nhân nhận phiếu kết quả xét nghiệm đầy chỉ số và thuật ngữ (WBC, HbA1c, LDL...) nhưng không hiểu ý nghĩa, lo lắng quá mức hoặc chủ quan, gọi hỏi bác sĩ/hotline nhiều. Cần AI Agent tiếp nhận phiếu kết quả (mô phỏng), đối chiếu khoảng tham chiếu, giải thích từng chỉ số bằng ngôn ngữ đơn giản, nêu chỉ số bất thường và ý nghĩa chung, gợi ý câu hỏi nên hỏi bác sĩ. Agent lập kế hoạch: phân tích - tra cứu chỉ số có nguồn - cá nhân hóa lời giải - tạo bản tóm tắt thân thiện.
 
 
+## Link chạy thật (Live)
+
+| Thành phần | URL | Ghi chú |
+|---|---|---|
+| Frontend | https://vmec-05.vercel.app | Next.js trên Vercel |
+| Backend API | https://vmec-05-api-production.up.railway.app | FastAPI trên Railway |
+| API docs | https://vmec-05-api-production.up.railway.app/docs | Swagger UI |
+| Health / Readiness | `/health` · `/ready` | `/ready` báo cả trạng thái RAG |
+
+Tài khoản demo: `benhnhan` / `benhnhan123` · `bacsi` / `bacsi123`
+
+> Deploy chạy tay, **merge vào `main` không tự động cập nhật bản live**:
+> `railway up --service vmec-05-api` (backend) và `vercel --prod` (frontend, chạy trong `frontend/`).
+
 ## Vấn đề (Problem)
 
 Bệnh nhân ngoại trú 25-55 tuổi, vừa nhận phiếu sau khám sức khoẻ định kỳ hoặc theo dõi bệnh mãn tính, chưa có cuộc hẹn tái khám với bác sĩ, đang tự đọc phiếu một mình mà không có ai giải thích. Phiếu kết quả xét nghiệm đầy chỉ số và thuật ngữ (WBC, HbA1c, LDL...) nhưng không hiểu ý nghĩa, lo lắng quá mức hoặc chủ quan, gọi hỏi bác sĩ/hotline nhiều.
@@ -96,7 +110,7 @@ uvicorn src.main:app --reload
 - [x] README.md
 - [x] Architecture Diagram (`docs/architecture_diagram.md`)
 - [x] AI Logs (auto-collected)
-- [ ] Live URL / Deploy
+- [x] Live URL / Deploy (xem mục [Link chạy thật](#link-chạy-thật-live))
 - [ ] Video Demo
 - [ ] Pitch Deck (`presentation/`)
 - [x] Weekly Journal (`JOURNAL.md`)
