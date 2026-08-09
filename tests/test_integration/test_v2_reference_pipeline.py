@@ -109,6 +109,33 @@ async def test_e2e_04_fasting_plasma_glucose_uses_ri_not_cdl():
 
 
 @pytest.mark.asyncio
+async def test_e2e_04b_ocr_vietnamese_labels_use_the_same_reference_rules():
+    checker_result, critical_result = await run_reference_pipeline(
+        [
+            {"name": "Bạch cầu (WBC)", "value": 6.5, "unit": "10^9/L"},
+            {"name": "Hồng cầu (RBC)", "value": 4.5, "unit": "10^12/L"},
+            {"name": "Đường huyết lúc đói", "value": 5.2, "unit": "mmol/L"},
+            {"name": "Creatinine", "value": 75, "unit": "µmol/L"},
+        ],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    assert [indicator["status"] for indicator in checker_result["indicators"]] == [
+        "normal",
+        "normal",
+        "normal",
+        "normal",
+    ]
+    assert [indicator["status"] for indicator in critical_result["indicators"]] == [
+        "normal",
+        "normal",
+        "normal",
+        "normal",
+    ]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("patient_age", "expected_status", "expected_low", "expected_high"),
     [

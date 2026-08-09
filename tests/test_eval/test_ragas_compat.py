@@ -13,7 +13,6 @@ import pytest
 from eval import ragas_compat
 from eval.ragas_compat import import_ragas_api, install_vertexai_legacy_import_shim
 
-
 FORBIDDEN_KEYS = {"OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "ANTHROPIC_API_KEY"}
 
 

@@ -97,6 +97,55 @@ async def test_ocr_upload_requires_auth(client):
 
 
 @pytest.mark.asyncio
+async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monkeypatch):
+    def missing_provider():
+        raise ocr_routes.VisionAdapterError(
+            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+        )
+
+    monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
+    headers = await _auth_headers(client)
+    headers["Origin"] = "http://localhost:3000"
+    response = await client.post(
+        "/api/v1/ocr/upload",
+        headers=headers,
+        files={"file": ("report.png", b"image", "image/png")},
+    )
+
+    assert response.status_code == 503
+    assert "OPENROUTER_API_KEY" in response.json()["detail"]
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+@pytest.mark.asyncio
+async def test_ocr_upload_rejects_empty_extraction(client, monkeypatch):
+    class FakeProcessor:
+        def process(self, _raw, *, filename):
+            return SimpleNamespace(bytes=b"processed", mime_type="image/jpeg")
+
+    class EmptyAdapter:
+        model = "test-vision"
+
+        def extract(self, _data_url):
+            return []
+
+    monkeypatch.setattr(
+        ocr_routes,
+        "_get_dependencies",
+        lambda: (FakeProcessor(), EmptyAdapter()),
+    )
+    headers = await _auth_headers(client)
+    response = await client.post(
+        "/api/v1/ocr/upload",
+        headers=headers,
+        files={"file": ("not-a-lab-report.png", b"image", "image/png")},
+    )
+
+    assert response.status_code == 422
+    assert "Không tìm thấy chỉ số xét nghiệm" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypatch):
     class FakeProcessor:
         def process(self, _raw, *, filename):

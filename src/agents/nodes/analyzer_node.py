@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.agents.state import AgentState, IndicatorExplanation, RetrievedChunk
+from src.config import get_settings
 from src.services.llm import get_llm
 from src.services.medical_knowledge_retriever import (
     MedicalKnowledgeRetriever,
@@ -90,6 +91,7 @@ async def process_single_indicator(
     retriever: MedicalKnowledgeRetriever | None,
     rag_semaphore: asyncio.Semaphore,
     llm_semaphore: asyncio.Semaphore,
+    llm_timeout_seconds: float,
 ) -> tuple[dict[str, Any], IndicatorExplanation, list[RetrievedChunk]]:
     name = str(indicator.get("name", ""))
     analyte_id = str(indicator.get("analyte_id", ""))
@@ -138,7 +140,10 @@ async def process_single_indicator(
     if structured_llm is not None and context:
         try:
             async with llm_semaphore:
-                result = await call_llm_with_retry(structured_llm, prompt)
+                result = await asyncio.wait_for(
+                    call_llm_with_retry(structured_llm, prompt),
+                    timeout=llm_timeout_seconds,
+                )
             if result.explanation.strip():
                 explanation_text = result.explanation.strip()
         except Exception as exc:
@@ -185,6 +190,7 @@ async def analyzer_node(state: AgentState) -> dict:
     patient_gender = state.get("patient_gender")
     gender_str = "Nam" if patient_gender == "male" else "Nữ" if patient_gender == "female" else "Khác"
     language = state.get("language", "vi")
+    llm_timeout_seconds = get_settings().llm_timeout_seconds
 
     # Local/remote embeddings and LLM calls have different resource profiles.
     # Keep retrieval serialized; LLM generation may use bounded concurrency.
@@ -201,6 +207,7 @@ async def analyzer_node(state: AgentState) -> dict:
                 retriever,
                 rag_semaphore,
                 llm_semaphore,
+                llm_timeout_seconds,
             )
             for indicator in indicators
         ]

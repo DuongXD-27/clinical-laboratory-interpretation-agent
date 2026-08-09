@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE, authFetch } from "@/lib/api";
-import { parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
+import { getOcrIndicators, parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 
 type SampleItem = {
@@ -53,6 +53,7 @@ export default function OcrReviewPanel({
   const [threshold, setThreshold] = useState(0.7);
   const [meta, setMeta] = useState({ age: "", gender: "male", date: "" });
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"upload" | "confirm" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const buttonClass = accent === "indigo" ? "bg-indigo-600 hover:bg-indigo-700" : "bg-blue-600 hover:bg-blue-700";
@@ -119,6 +120,7 @@ export default function OcrReviewPanel({
       return;
     }
     setBusy(true);
+    setBusyAction("upload");
     setError(null);
     try {
       const form = new FormData();
@@ -132,9 +134,18 @@ export default function OcrReviewPanel({
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || "OCR thất bại");
 
+      const indicators = getOcrIndicators(data);
+      if (indicators.length === 0) {
+        setRows([]);
+        setReviewToken("");
+        throw new Error(
+          "Không tìm thấy chỉ số xét nghiệm trong ảnh. Hãy chụp rõ toàn bộ phiếu xét nghiệm và thử lại."
+        );
+      }
+
       setReviewToken(String(data.review_token || ""));
       setThreshold(Number(data.low_confidence_threshold ?? 0.7));
-      setRows((data.indicators ?? []).map((item: Record<string, unknown>) => ({
+      setRows(indicators.map((item: Record<string, unknown>) => ({
         draft_id: String(item.draft_id || ""),
         name: String(item.name || ""),
         value: Number(item.value),
@@ -150,6 +161,7 @@ export default function OcrReviewPanel({
       setError(caught instanceof Error ? caught.message : "Không thể nhận diện ảnh");
     } finally {
       setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -177,10 +189,14 @@ export default function OcrReviewPanel({
     }
 
     setBusy(true);
+    setBusyAction("confirm");
     setError(null);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
     try {
       const response = await authFetch("/api/v1/ocr/confirm", {
         method: "POST",
+        signal: controller.signal,
         body: JSON.stringify({
           review_token: reviewToken,
           patient_age: Number(meta.age),
@@ -206,9 +222,17 @@ export default function OcrReviewPanel({
       if (!response.ok) throw new Error(data.detail || "Không thể xác nhận bản OCR");
       onResult(data as AnalysisResult);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "Không thể xác nhận bản OCR");
+      setError(
+        caught instanceof DOMException && caught.name === "AbortError"
+          ? "Phân tích quá 90 giây. Backend hoặc dịch vụ AI đang chậm; vui lòng thử lại."
+          : caught instanceof Error
+            ? caught.message
+            : "Không thể xác nhận bản OCR"
+      );
     } finally {
+      window.clearTimeout(timeoutId);
       setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -220,6 +244,7 @@ export default function OcrReviewPanel({
           Ảnh chỉ tạo bản nháp. Mọi dòng phải được đối chiếu; dòng dưới {Math.round(threshold * 100)}% cần xác nhận tăng cường.
         </p>
       </div>
+      
       {policy && !policy.upload_enabled ? (
         <div className="rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 p-4 text-sm text-zinc-600 dark:text-zinc-400">
           Tính năng tải ảnh phiếu đang tạm tắt.
@@ -299,6 +324,14 @@ export default function OcrReviewPanel({
         </>
       )}
 
+      {busy && (
+        <div role="status" className="p-3 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-sm">
+          {busyAction === "confirm"
+            ? "Đã xác nhận bản OCR. Hệ thống đang đối chiếu ngưỡng và tạo giải thích; nếu AI chậm sẽ tự dùng bản giải thích đã kiểm duyệt."
+            : "Đang tải ảnh và nhận diện chỉ số. Bước này thường mất 20–90 giây, vui lòng giữ trang đang mở."}
+        </div>
+      )}
+
       {rows.length > 0 && (
         <div className="space-y-4 border-t border-zinc-200 dark:border-zinc-800 pt-4">
           {rows.map((row, index) => (
@@ -339,7 +372,7 @@ export default function OcrReviewPanel({
             <input type="date" value={meta.date} onChange={(event) => setMeta((current) => ({ ...current, date: event.target.value }))} className="border rounded-lg px-3 py-2 text-sm dark:bg-zinc-950 dark:border-zinc-700" />
           </div>
           <button type="button" onClick={confirm} disabled={busy} className={`w-full px-6 py-3 ${buttonClass} text-white rounded-xl text-sm font-semibold disabled:opacity-50`}>
-            Xác nhận an toàn & Phân tích
+            {busyAction === "confirm" ? "Đang phân tích..." : "Xác nhận an toàn & Phân tích"}
           </button>
         </div>
       )}

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 
 from src.agents.nodes import analyzer_node as analyzer_module
@@ -94,3 +97,33 @@ async def test_rag_is_optional_and_only_metadata_sources_are_returned(monkeypatc
         "https://trusted.test/rag",
     ]
     assert "hallucinated" not in " ".join(result["indicators"][0]["sources"])
+
+
+@pytest.mark.asyncio
+async def test_slow_llm_times_out_and_uses_curated_fallback(monkeypatch):
+    class HangingStructuredLLM:
+        async def ainvoke(self, messages):
+            await asyncio.sleep(10)
+
+    class HangingLLM:
+        def with_structured_output(self, schema):
+            return HangingStructuredLLM()
+
+    monkeypatch.setattr(analyzer_module, "get_llm", lambda: HangingLLM())
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_medical_knowledge_retriever",
+        lambda: (_ for _ in ()).throw(RuntimeError("no rag")),
+    )
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_settings",
+        lambda: SimpleNamespace(llm_timeout_seconds=0.01),
+    )
+
+    result = await asyncio.wait_for(
+        analyzer_node({"indicators": [indicator()], "patient_gender": "male"}),
+        timeout=0.5,
+    )
+
+    assert result["indicators"][0]["explanation"] == indicator()["explanation"]
