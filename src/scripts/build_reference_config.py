@@ -30,7 +30,16 @@ SUPPLEMENTAL_FIELDS = [
     "range_group",
     "range_note",
     "source_urls",
+    "source_unit_original",
+    "source_range_lower_original",
+    "source_range_upper_original",
+    "conversion_factor",
+    "conversion_rounding",
 ]
+
+# Analytes whose primary catalog rules are superseded by supplemental rules derived from explanations.json.
+# Primary rules for these analytes are excluded from the final catalog (but still counted in runtime_accepted_rows).
+SUPPLEMENTAL_REPLACEMENT_ANALYTES: frozenset[str] = frozenset({"HDL-C"})
 
 QUALITY_REASON_ORDER = [
     "range_flag_not_ok",
@@ -447,19 +456,24 @@ def build_reference_config(
         if not sup_file.exists():
             raise BuildError(f"supplemental file not found: {sup_file}")
         primary_analytes = {str(row["analyte_canonical"]) for row in accepted_json if row.get("analyte_canonical")}
+        # Exclude replacement analytes so extractor generates their rules from explanations.json instead
+        primary_analytes -= SUPPLEMENTAL_REPLACEMENT_ANALYTES
         supplemental_json, supplemental_warnings = extract_supplemental_rules(sup_file, primary_analytes)
 
     # --- Write output files ---
     if supplemental_json:
         catalog_fields = RUNTIME_FIELDS + SUPPLEMENTAL_FIELDS
-        combined_json = sorted(accepted_json + supplemental_json, key=sort_runtime_key)
+        # Exclude primary rules for replacement analytes — their supplemental counterparts take precedence
+        catalog_accepted_json = [r for r in accepted_json if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
+        catalog_accepted_csv = [r for r in accepted_csv if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
+        combined_json = sorted(catalog_accepted_json + supplemental_json, key=sort_runtime_key)
         # Build CSV-compatible copies of supplemental records (lists → pipe strings)
         supplemental_csv: list[dict[str, Any]] = []
         for rec in supplemental_json:
             csv_rec = dict(rec)
             csv_rec["source_urls"] = "|".join(str(u) for u in (rec.get("source_urls") or []))
             supplemental_csv.append(csv_rec)
-        combined_csv = sorted(accepted_csv + supplemental_csv, key=sort_runtime_key)
+        combined_csv = sorted(catalog_accepted_csv + supplemental_csv, key=sort_runtime_key)
         write_csv(runtime_csv_path, combined_csv, catalog_fields)
         write_json(runtime_json_path, combined_json)
     else:
@@ -537,7 +551,7 @@ def build_reference_config(
             "boundary_warnings": supplemental_warnings,
         }
         report["catalog"] = {
-            "total_rules": runtime_accepted_rows + len(supplemental_json),
+            "total_rules": len(catalog_accepted_json) + len(supplemental_json),
         }
 
     build_report_path.write_text(

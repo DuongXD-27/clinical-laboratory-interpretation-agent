@@ -13,13 +13,12 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from eval.ragas_compat import import_ragas_api
-
 
 DATASET_VERSION = "v2-baseline-1"
 DEFAULT_PROVIDER = "google"
@@ -33,8 +32,8 @@ METRIC_TRANSPORT_LIBRARY = "openai-python"
 RUN_ID = "RAGAS-V2-BASELINE-001"
 CONCURRENCY = 1
 CASE_ID_PATTERN = re.compile(r"^RAGAS-V2-\d{3}$")
-APPROVED_ANALYTES = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine"}
-PENDING_ANALYTES = {"HGB", "HDL-C", "HbA1c", "LDL-C", "Potassium"}
+APPROVED_ANALYTES = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine", "HGB", "HbA1c", "LDL-C", "HDL-C", "Potassium"}
+PENDING_ANALYTES: set[str] = set()
 REQUIRED_FIELDS = {
     "case_id",
     "dataset_version",
@@ -205,8 +204,8 @@ def text_values(case: dict[str, object]) -> list[str]:
 
 def validate_cases(cases: list[dict[str, object]]) -> ValidationSummary:
     errors: list[str] = []
-    if len(cases) != 12:
-        errors.append(f"expected 12 cases, found {len(cases)}")
+    if len(cases) != 27:
+        errors.append(f"expected 27 cases, found {len(cases)}")
 
     ids = [str(case.get("case_id", "")) for case in cases]
     if len(ids) != len(set(ids)):
@@ -391,8 +390,8 @@ def validate_live_config(config: LiveRunConfig) -> None:
         raise SecurityGateError("Only provider google is allowed for TIP-004B.")
     if config.model != DEFAULT_MODEL:
         raise SecurityGateError("Only model gemini-2.5-flash is allowed for TIP-004B.")
-    if not 1 <= config.max_cases <= 12:
-        raise DatasetValidationError("max_cases must satisfy 1 <= max_cases <= 12")
+    if not 1 <= config.max_cases <= 27:
+        raise DatasetValidationError("max_cases must satisfy 1 <= max_cases <= 27")
 
 
 def create_google_client(api_key: str, request_timeout_seconds: int):
@@ -725,7 +724,7 @@ def write_markdown_report(path: Path, result: dict[str, Any], command: str) -> N
         f"- Dataset: {result['dataset']['path']}",
         f"- Dataset SHA-256: {result['dataset']['sha256']}",
         "- This evaluates curated fixtures, not retrieved contexts captured from the production graph.",
-        "- Approved analytes only: WBC, RBC, Fasting plasma glucose, Creatinine.",
+        "- Approved analytes: WBC, RBC, Fasting plasma glucose, Creatinine, HGB, HbA1c, LDL-C, HDL-C, Potassium.",
         "- Pending analytes are excluded.",
         "",
         "## Evaluator configuration",
@@ -865,7 +864,7 @@ async def run_live(config: LiveRunConfig, *, client_factory=None, probe_func=Non
     result = {
         "run_id": RUN_ID,
         "run_type": "live_curated_fixture_baseline",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": current_git_commit(),
         "dataset": {
             "path": str(config.dataset_path).replace("\\", "/"),
@@ -919,12 +918,12 @@ async def run_live(config: LiveRunConfig, *, client_factory=None, probe_func=Non
             result,
             command=(
                 "python -B -m eval.run_ragas --dataset eval/datasets/ragas_v2_baseline.jsonl "
-                "--live --provider google --model gemini-2.5-flash --max-cases 12 "
+                "--live --provider google --model gemini-2.5-flash --max-cases 27 "
                 "--confirm-key-rotated --skip-probe-after-confirmed "
                 "--output eval/results/ragas_v2_baseline.json"
             ),
         )
-    print(f"Live evaluation executed: YES")
+    print("Live evaluation executed: YES")
     print(f"Cases evaluated: {len(case_results)}")
     print(f"Result JSON: {config.output_path}")
     print(f"Result CSV: {csv_path}")

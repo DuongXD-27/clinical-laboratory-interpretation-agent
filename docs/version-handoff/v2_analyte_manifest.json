@@ -1,0 +1,101 @@
+[
+  {
+    "analyte": "WBC",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": true,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "RBC",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": true,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "HGB",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": false,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "Fasting plasma glucose",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": true,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": true
+  },
+  {
+    "analyte": "HbA1c",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": false,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "LDL-C",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": false,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": true
+  },
+  {
+    "analyte": "HDL-C",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": false,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "Creatinine",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": true,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": false
+  },
+  {
+    "analyte": "Potassium",
+    "normal_reference_supported": true,
+    "approval_status": "approved",
+    "unit_validated": true,
+    "blockers": [],
+    "ragas_case_available": false,
+    "explanation_available": true,
+    "source_available": true,
+    "critical_rule_available": true
+  }
+]

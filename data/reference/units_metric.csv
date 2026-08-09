@@ -23,8 +23,8 @@ Fasting Blood Glucose,mmol/L
 HbA1c,%
 Total Cholesterol,mg/dL
 Triglycerides,mg/dL
-HDL-Cholesterol,mg/dL
-LDL-Cholesterol,mg/dL
+HDL-Cholesterol,mmol/L
+LDL-Cholesterol,mmol/L
 AST (GOT),U/L
 ALT (GPT),U/L
 GGT,U/L

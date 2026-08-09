@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ _ID_PREFIX: dict[str, str] = {
     "HbA1c": "EXPV2-HBA1C",
     "LDL-C": "EXPV2-LDLC",
     "Potassium": "EXPV2-POTASSIUM",
+    "HDL-C": "EXPV2-HDLC",
 }
 
 # Deterministic group ordering for stable rule ID assignment across rebuilds
@@ -34,12 +36,13 @@ _GROUP_ORDER: dict[str, list[str]] = {
         "moderate_hypokalemia",
         "severe_hypokalemia",
     ],
+    "HDL-C": ["optimal", "average", "low"],
 }
 
 # Groups classified as medical-decision (MD) rather than reference-interval (RI)
 _MD_GROUPS: dict[str, set[str]] = {
-    "HbA1c": {"normal", "prediabetes", "diabetes"},
-    "LDL-C": {"optimal", "acceptable", "borderline_high", "high", "very_high"},
+    "HbA1c": {"prediabetes", "diabetes"},
+    "LDL-C": {"acceptable", "borderline_high", "high", "very_high"},
     "Potassium": {
         "mild_hyperkalemia",
         "moderate_hyperkalemia",
@@ -48,6 +51,7 @@ _MD_GROUPS: dict[str, set[str]] = {
         "moderate_hypokalemia",
         "severe_hypokalemia",
     },
+    "HDL-C": {"optimal", "low"},
 }
 
 # Inclusive boundary overlaps preserved verbatim from source; reported as warnings.
@@ -74,7 +78,30 @@ _BOUNDARY_WARNINGS: list[dict[str, Any]] = [
         "unit": "mmol/L",
         "note": "moderate_hyperkalemia upper=7.0 equals severe_hyperkalemia lower=7.0; preserved verbatim",
     },
+    {
+        "analyte": "HDL-C",
+        "groups": ("average_m", "low_m"),
+        "boundary_value": 1.04,
+        "unit": "mmol/L",
+        "note": "average_m lower=1.04 mmol/L equals low_m upper=1.04 mmol/L; converted from 40 mg/dL × 0.0259; inclusive overlap preserved verbatim",
+    },
+    {
+        "analyte": "HDL-C",
+        "groups": ("average_f", "low_f"),
+        "boundary_value": 1.30,
+        "unit": "mmol/L",
+        "note": "average_f lower=1.30 mmol/L equals low_f upper=1.30 mmol/L; converted from 50 mg/dL × 0.0259; inclusive overlap preserved verbatim",
+    },
 ]
+
+# Conversion factor for HDL-C mg/dL → mmol/L
+_HDL_CONVERSION_FACTOR = Decimal("0.0259")
+
+
+def convert_mgdl_to_mmol(value_mgdl: float) -> float:
+    """Convert mg/dL to mmol/L using factor 0.0259, rounded ROUND_HALF_UP to 2 decimal places."""
+    result = _HDL_CONVERSION_FACTOR * Decimal(str(value_mgdl))
+    return float(result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def canonical_analyte(indicator: str) -> str:
@@ -142,8 +169,25 @@ def extract_supplemental_rules(
             high = rng.get("high")
             note = str(rng.get("note") or "")
 
-            range_lower = float(low) if low is not None else None
-            range_upper = float(high) if high is not None else None
+            # Provenance fields — populated only for unit-converted analytes
+            source_unit_original: str | None = None
+            source_range_lower_original: float | None = None
+            source_range_upper_original: float | None = None
+            conversion_factor: str | None = None
+            conversion_rounding: str | None = None
+
+            if analyte == "HDL-C":
+                source_unit_original = unit
+                source_range_lower_original = float(low) if low is not None else None
+                source_range_upper_original = float(high) if high is not None else None
+                conversion_factor = "0.0259"
+                conversion_rounding = "ROUND_HALF_UP_2DP"
+                unit = "mmol/L"
+                range_lower = convert_mgdl_to_mmol(low) if low is not None else None
+                range_upper = convert_mgdl_to_mmol(high) if high is not None else None
+            else:
+                range_lower = float(low) if low is not None else None
+                range_upper = float(high) if high is not None else None
 
             rules.append({
                 "rule_id": f"{prefix}-{seq:03d}",
@@ -170,6 +214,11 @@ def extract_supplemental_rules(
                 "range_group": group,
                 "range_note": note,
                 "source_urls": sources,
+                "source_unit_original": source_unit_original,
+                "source_range_lower_original": source_range_lower_original,
+                "source_range_upper_original": source_range_upper_original,
+                "conversion_factor": conversion_factor,
+                "conversion_rounding": conversion_rounding,
             })
 
     return rules, [dict(w) for w in _BOUNDARY_WARNINGS]

@@ -357,109 +357,184 @@
     "range_flag": "OK"
   },
   {
-    "rule_id": "RRV2-0076",
-    "source_row_number": 76,
+    "rule_id": "EXPV2-HDLC-001",
+    "source_row_number": null,
     "analyte_canonical": "HDL-C",
-    "specimen": "Serum/plasma",
-    "fasting_required": "CONDITIONAL",
+    "specimen": null,
+    "fasting_required": null,
     "sex": "A",
     "age_scope": "Adult",
     "unit_machine": "mmol/L",
     "unit_display_vn": "mmol/L",
     "unit_raw": "mmol/L",
     "unit_canonical": "mmol/L",
-    "value_type": "concentration",
-    "range_lower": 1.5,
+    "value_type": null,
+    "range_lower": 1.55,
     "range_upper": null,
-    "reference_type": "CDL",
-    "source_priority_tier": "T2",
-    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
-    "confidence": "HIGH",
-    "range_flag": "OK"
+    "reference_type": "MD",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "hdl_cholesterol",
+    "range_group": "optimal",
+    "range_note": "Tối ưu - bảo vệ tim mạch tốt nhất. Tương đương >= 1.5 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+      "https://tamanhhospital.vn"
+    ],
+    "source_unit_original": "mg/dL",
+    "source_range_lower_original": 60.0,
+    "source_range_upper_original": null,
+    "conversion_factor": "0.0259",
+    "conversion_rounding": "ROUND_HALF_UP_2DP"
   },
   {
-    "rule_id": "RRV2-0073",
-    "source_row_number": 73,
+    "rule_id": "EXPV2-HDLC-004",
+    "source_row_number": null,
     "analyte_canonical": "HDL-C",
-    "specimen": "Serum/plasma",
-    "fasting_required": "CONDITIONAL",
+    "specimen": null,
+    "fasting_required": null,
     "sex": "F",
     "age_scope": "Adult",
     "unit_machine": "mmol/L",
     "unit_display_vn": "mmol/L",
     "unit_raw": "mmol/L",
     "unit_canonical": "mmol/L",
-    "value_type": "concentration",
-    "range_lower": 0,
-    "range_upper": 1.29,
-    "reference_type": "CDL",
-    "source_priority_tier": "T2",
-    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
-    "confidence": "HIGH",
-    "range_flag": "OK"
+    "value_type": null,
+    "range_lower": null,
+    "range_upper": 1.3,
+    "reference_type": "MD",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "hdl_cholesterol",
+    "range_group": "low",
+    "range_note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.3 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+      "https://tamanhhospital.vn"
+    ],
+    "source_unit_original": "mg/dL",
+    "source_range_lower_original": null,
+    "source_range_upper_original": 50.0,
+    "conversion_factor": "0.0259",
+    "conversion_rounding": "ROUND_HALF_UP_2DP"
   },
   {
-    "rule_id": "RRV2-0075",
-    "source_row_number": 75,
+    "rule_id": "EXPV2-HDLC-002",
+    "source_row_number": null,
     "analyte_canonical": "HDL-C",
-    "specimen": "Serum/plasma",
-    "fasting_required": "CONDITIONAL",
+    "specimen": null,
+    "fasting_required": null,
     "sex": "F",
     "age_scope": "Adult",
     "unit_machine": "mmol/L",
     "unit_display_vn": "mmol/L",
     "unit_raw": "mmol/L",
     "unit_canonical": "mmol/L",
-    "value_type": "concentration",
+    "value_type": null,
     "range_lower": 1.3,
-    "range_upper": 1.49,
-    "reference_type": "CDL",
-    "source_priority_tier": "T2",
-    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
-    "confidence": "HIGH",
-    "range_flag": "OK"
+    "range_upper": 1.53,
+    "reference_type": "RI",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "hdl_cholesterol",
+    "range_group": "average",
+    "range_note": "Trung bình (bình thường) nữ. Tương đương 1.3 - 1.5 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+      "https://tamanhhospital.vn"
+    ],
+    "source_unit_original": "mg/dL",
+    "source_range_lower_original": 50.0,
+    "source_range_upper_original": 59.0,
+    "conversion_factor": "0.0259",
+    "conversion_rounding": "ROUND_HALF_UP_2DP"
   },
   {
-    "rule_id": "RRV2-0072",
-    "source_row_number": 72,
+    "rule_id": "EXPV2-HDLC-005",
+    "source_row_number": null,
     "analyte_canonical": "HDL-C",
-    "specimen": "Serum/plasma",
-    "fasting_required": "CONDITIONAL",
+    "specimen": null,
+    "fasting_required": null,
     "sex": "M",
     "age_scope": "Adult",
     "unit_machine": "mmol/L",
     "unit_display_vn": "mmol/L",
     "unit_raw": "mmol/L",
     "unit_canonical": "mmol/L",
-    "value_type": "concentration",
-    "range_lower": 0,
-    "range_upper": 0.99,
-    "reference_type": "CDL",
-    "source_priority_tier": "T2",
-    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
-    "confidence": "HIGH",
-    "range_flag": "OK"
+    "value_type": null,
+    "range_lower": null,
+    "range_upper": 1.04,
+    "reference_type": "MD",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "hdl_cholesterol",
+    "range_group": "low",
+    "range_note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.0 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+      "https://tamanhhospital.vn"
+    ],
+    "source_unit_original": "mg/dL",
+    "source_range_lower_original": null,
+    "source_range_upper_original": 40.0,
+    "conversion_factor": "0.0259",
+    "conversion_rounding": "ROUND_HALF_UP_2DP"
   },
   {
-    "rule_id": "RRV2-0074",
-    "source_row_number": 74,
+    "rule_id": "EXPV2-HDLC-003",
+    "source_row_number": null,
     "analyte_canonical": "HDL-C",
-    "specimen": "Serum/plasma",
-    "fasting_required": "CONDITIONAL",
+    "specimen": null,
+    "fasting_required": null,
     "sex": "M",
     "age_scope": "Adult",
     "unit_machine": "mmol/L",
     "unit_display_vn": "mmol/L",
     "unit_raw": "mmol/L",
     "unit_canonical": "mmol/L",
-    "value_type": "concentration",
-    "range_lower": 1,
-    "range_upper": 1.49,
-    "reference_type": "CDL",
-    "source_priority_tier": "T2",
-    "source_url": "https://www.mayoclinic.org/tests-procedures/cholesterol-test/about/pac-20384601",
-    "confidence": "HIGH",
-    "range_flag": "OK"
+    "value_type": null,
+    "range_lower": 1.04,
+    "range_upper": 1.53,
+    "reference_type": "RI",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "hdl_cholesterol",
+    "range_group": "average",
+    "range_note": "Trung bình (bình thường) nam. Tương đương 1.0 - 1.5 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+      "https://tamanhhospital.vn"
+    ],
+    "source_unit_original": "mg/dL",
+    "source_range_lower_original": 40.0,
+    "source_range_upper_original": 59.0,
+    "conversion_factor": "0.0259",
+    "conversion_rounding": "ROUND_HALF_UP_2DP"
   },
   {
     "rule_id": "RRV2-0006",
@@ -504,36 +579,6 @@
     "range_flag": "OK"
   },
   {
-    "rule_id": "EXPV2-HBA1C-001",
-    "source_row_number": null,
-    "analyte_canonical": "HbA1c",
-    "specimen": null,
-    "fasting_required": null,
-    "sex": "A",
-    "age_scope": "Adult",
-    "unit_machine": "%",
-    "unit_display_vn": "%",
-    "unit_raw": "%",
-    "unit_canonical": "%",
-    "value_type": null,
-    "range_lower": null,
-    "range_upper": 5.7,
-    "reference_type": "MD",
-    "source_priority_tier": null,
-    "source_url": "https://diabetes.org/about-diabetes/a1c",
-    "confidence": "CURATED",
-    "range_flag": "OK",
-    "source_origin": "explanations.json",
-    "source_entry_id": "hba1c",
-    "range_group": "normal",
-    "range_note": "Bình thường, người trưởng thành khỏe mạnh, không mang thai.",
-    "source_urls": [
-      "https://diabetes.org/about-diabetes/a1c",
-      "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
-      "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
-    ]
-  },
-  {
     "rule_id": "EXPV2-HBA1C-002",
     "source_row_number": null,
     "analyte_canonical": "HbA1c",
@@ -561,7 +606,12 @@
       "https://diabetes.org/about-diabetes/a1c",
       "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
       "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-HBA1C-003",
@@ -591,40 +641,47 @@
       "https://diabetes.org/about-diabetes/a1c",
       "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
       "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
-    "rule_id": "EXPV2-LDLC-001",
+    "rule_id": "EXPV2-HBA1C-001",
     "source_row_number": null,
-    "analyte_canonical": "LDL-C",
+    "analyte_canonical": "HbA1c",
     "specimen": null,
     "fasting_required": null,
     "sex": "A",
     "age_scope": "Adult",
-    "unit_machine": "mmol/L",
-    "unit_display_vn": "mmol/L",
-    "unit_raw": "mmol/L",
-    "unit_canonical": "mmol/L",
+    "unit_machine": "%",
+    "unit_display_vn": "%",
+    "unit_raw": "%",
+    "unit_canonical": "%",
     "value_type": null,
     "range_lower": null,
-    "range_upper": 2.58,
-    "reference_type": "MD",
+    "range_upper": 5.7,
+    "reference_type": "RI",
     "source_priority_tier": null,
-    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "source_url": "https://diabetes.org/about-diabetes/a1c",
     "confidence": "CURATED",
     "range_flag": "OK",
     "source_origin": "explanations.json",
-    "source_entry_id": "ldl_cholesterol",
-    "range_group": "optimal",
-    "range_note": "Tối ưu. < 2.59 mmol/L.",
+    "source_entry_id": "hba1c",
+    "range_group": "normal",
+    "range_note": "Bình thường, người trưởng thành khỏe mạnh, không mang thai.",
     "source_urls": [
-      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
-      "https://www.cdc.gov/cholesterol/about/index.html",
-      "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
-      "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
-      "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-    ]
+      "https://diabetes.org/about-diabetes/a1c",
+      "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
+      "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-LDLC-002",
@@ -657,7 +714,12 @@
       "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
       "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
       "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-LDLC-003",
@@ -690,7 +752,12 @@
       "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
       "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
       "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-LDLC-004",
@@ -723,7 +790,12 @@
       "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
       "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
       "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-LDLC-005",
@@ -756,7 +828,50 @@
       "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
       "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
       "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
+  },
+  {
+    "rule_id": "EXPV2-LDLC-001",
+    "source_row_number": null,
+    "analyte_canonical": "LDL-C",
+    "specimen": null,
+    "fasting_required": null,
+    "sex": "A",
+    "age_scope": "Adult",
+    "unit_machine": "mmol/L",
+    "unit_display_vn": "mmol/L",
+    "unit_raw": "mmol/L",
+    "unit_canonical": "mmol/L",
+    "value_type": null,
+    "range_lower": null,
+    "range_upper": 2.58,
+    "reference_type": "RI",
+    "source_priority_tier": null,
+    "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+    "confidence": "CURATED",
+    "range_flag": "OK",
+    "source_origin": "explanations.json",
+    "source_entry_id": "ldl_cholesterol",
+    "range_group": "optimal",
+    "range_note": "Tối ưu. < 2.59 mmol/L.",
+    "source_urls": [
+      "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+      "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+      "https://www.cdc.gov/cholesterol/about/index.html",
+      "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
+      "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
+      "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "RRV2-0024",
@@ -1167,7 +1282,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-003",
@@ -1200,7 +1320,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-004",
@@ -1233,7 +1358,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-005",
@@ -1266,7 +1396,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-006",
@@ -1299,7 +1434,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-007",
@@ -1332,7 +1472,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "EXPV2-POTASSIUM-001",
@@ -1365,7 +1510,12 @@
       "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
       "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
       "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-    ]
+    ],
+    "source_unit_original": null,
+    "source_range_lower_original": null,
+    "source_range_upper_original": null,
+    "conversion_factor": null,
+    "conversion_rounding": null
   },
   {
     "rule_id": "RRV2-0004",

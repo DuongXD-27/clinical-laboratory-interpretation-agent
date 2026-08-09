@@ -25,9 +25,11 @@
     "Eosinophils abs",
     "Fasting plasma glucose",
     "GGT",
+    "HbA1c",
     "HCT",
     "HDL-C",
     "HGB",
+    "LDL-C",
     "Lymphocytes %",
     "Lymphocytes abs",
     "MCH",
@@ -38,6 +40,7 @@
     "Neutrophils %",
     "Neutrophils abs",
     "PLT",
+    "Potassium",
     "RBC",
     "RDW-CV",
     "Sodium",
@@ -52,10 +55,7 @@
     "Basophils %",
     "Basophils abs",
     "Direct bilirubin",
-    "HbA1c",
-    "LDL-C",
     "MPV",
-    "Potassium",
     "Uric acid",
     "eGFR"
   ],
@@ -63,37 +63,55 @@
     "Basophils %",
     "Basophils abs",
     "Direct bilirubin",
-    "HbA1c",
-    "LDL-C",
-    "MPV",
-    "Potassium"
+    "MPV"
   ],
+  "runtime_approval": {
+    "note": "Analytes below were quarantined at build time but manually promoted to approved after medical-data review (BONUS-TIP-010). They are now active in reference_ranges_v2.json.",
+    "promoted_analytes": [
+      {
+        "name": "HbA1c",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-HBA1C-001 added"
+      },
+      {
+        "name": "LDL-C",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-LDLC-001 added"
+      },
+      {
+        "name": "Potassium",
+        "promoted_at": "2026-08-08",
+        "reason": "supplemental source (explanations.json) accepted; rule EXPV2-POTASSIUM-001 added; critical thresholds <2.5/>6.5 mmol/L active in critical_detector"
+      }
+    ]
+  },
   "output_files": {
     "reference_ranges_v2_csv": {
       "path": "data/reference/reference_ranges_v2.csv",
-      "sha256": "BC53BB146D3892D4918CE5174CC462B60C2C2B75CE99B12E33A6490A0EEC9C3F"
+      "sha256": "E3AB3C671731384E781058D7CB59562701B38099EFE4807CF741191B2C8034E5"
     },
     "reference_ranges_v2_json": {
       "path": "data/reference/reference_ranges_v2.json",
-      "sha256": "B59F49B9B70CC831F3884057080C97AEA45BF6575F4FA0031DE9F1C0F0FEB815"
+      "sha256": "0F07E1CCC07C08335A504AFC2F12ADAF8B81FDA405F28010FA3DF68BFD985017"
     },
     "quarantine_v2_csv": {
       "path": "data/reference/quarantine_v2.csv",
       "sha256": "F6F91C4F9B459BE3E7CA2C0D0551B7B95735A2D8D3AAC7AB941BBD283EB7C92B"
     }
   },
-  "generated_at": "2026-08-06T05:59:59Z",
+  "generated_at": "2026-08-07T15:45:20Z",
   "source_integrity_verified": true,
   "explanation_supplement": {
     "supplemental_file": "data/reference/explanations.json",
     "entries_scanned": 9,
-    "missing_analytes": 3,
+    "missing_analytes": 4,
     "supplemental_analytes": [
+      "HDL-C",
       "HbA1c",
       "LDL-C",
       "Potassium"
     ],
-    "rules_added": 15,
+    "rules_added": 20,
     "boundary_warnings": [
       {
         "analyte": "HbA1c",
@@ -124,10 +142,34 @@
         "boundary_value": 7.0,
         "unit": "mmol/L",
         "note": "moderate_hyperkalemia upper=7.0 equals severe_hyperkalemia lower=7.0; preserved verbatim"
+      },
+      {
+        "analyte": "HDL-C",
+        "groups": [
+          "average_m",
+          "low_m"
+        ],
+        "boundary_value": 1.04,
+        "unit": "mmol/L",
+        "note": "average_m lower=1.04 mmol/L equals low_m upper=1.04 mmol/L; converted from 40 mg/dL × 0.0259; inclusive overlap preserved verbatim"
+      },
+      {
+        "analyte": "HDL-C",
+        "groups": [
+          "average_f",
+          "low_f"
+        ],
+        "boundary_value": 1.3,
+        "unit": "mmol/L",
+        "note": "average_f lower=1.30 mmol/L equals low_f upper=1.30 mmol/L; converted from 50 mg/dL × 0.0259; inclusive overlap preserved verbatim"
       }
     ]
   },
   "catalog": {
-    "total_rules": 73
-  }
+    "total_rules": 73,
+    "accepted_analytes_count": 34,
+    "quarantined_analytes_count": 6,
+    "runtime_promoted_count": 3
+  },
+  "last_updated_at": "2026-08-09"
 }
