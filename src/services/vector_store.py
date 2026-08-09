@@ -1,31 +1,38 @@
+"""Chroma vector repository with explicit embedding compatibility metadata."""
+
+from __future__ import annotations
+
 import logging
-from functools import lru_cache
+from typing import Any
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from langchain_huggingface import HuggingFaceEmbeddings
+from chromadb.errors import NotFoundError
 
-from src.config import get_settings
+from src.services.embedding_provider import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
+COLLECTION_SCHEMA_VERSION = "1"
+
 
 class VectorStoreError(Exception):
-    """Lỗi khi thao tác với vector store (embedding hoặc ChromaDB)."""
+    """Raised when vector storage, embeddings or collection metadata are unsafe."""
 
 
 class VectorStore:
     def __init__(
         self,
+        *,
         persist_dir: str,
-        collection_name: str = "medical_kb",
-        device: str | None = None,
-    ):
+        collection_name: str,
+        corpus_version: str,
+        embedding_provider: EmbeddingProvider,
+    ) -> None:
         self.persist_dir = persist_dir
         self.collection_name = collection_name
-        # device: ưu tiên tham số truyền vào (test/override), fallback settings
-        # (config qua .env: EMBEDDING_DEVICE=cpu|cuda|mps) thay vì hardcode "cpu".
-        self.device = device or get_settings().embedding_device
+        self.corpus_version = corpus_version
+        self.embedding_provider = embedding_provider
         try:
             self._client = chromadb.PersistentClient(
                 path=persist_dir,
@@ -33,88 +40,142 @@ class VectorStore:
             )
         except Exception as exc:
             raise VectorStoreError(
-                f"Không khởi tạo được ChromaDB PersistentClient tại '{persist_dir}': {exc}"
+                f"cannot initialize ChromaDB at '{persist_dir}': {exc}"
             ) from exc
 
-        try:
-            self._embeddings = HuggingFaceEmbeddings(
-                model_name="BAAI/bge-m3",
-                model_kwargs={"device": self.device},
-                encode_kwargs={"normalize_embeddings": True},
-            )
-        except Exception as exc:
-            raise VectorStoreError(
-                f"Không load được embedding model BAAI/bge-m3 (device={self.device}): {exc}"
-            ) from exc
+    @property
+    def expected_metadata(self) -> dict[str, str | int]:
+        return {
+            "hnsw:space": "cosine",
+            "schema_version": COLLECTION_SCHEMA_VERSION,
+            "embedding_provider": self.embedding_provider.provider_name,
+            "embedding_model": self.embedding_provider.model_name,
+            "embedding_dimension": self.embedding_provider.dimension,
+            "corpus_version": self.corpus_version,
+        }
 
-    def get_collection(self):
+    def get_collection(self, *, create_if_missing: bool = True):
         try:
-            return self._client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={"hnsw:space": "cosine"},
-            )
+            collection = self._client.get_collection(name=self.collection_name)
+        except NotFoundError:
+            if not create_if_missing:
+                raise VectorStoreError(
+                    f"collection '{self.collection_name}' does not exist; run the ingestion job first"
+                ) from None
+            try:
+                collection = self._client.create_collection(
+                    name=self.collection_name,
+                    metadata=self.expected_metadata,
+                )
+            except Exception as exc:
+                raise VectorStoreError(
+                    f"cannot create collection '{self.collection_name}': {exc}"
+                ) from exc
         except Exception as exc:
             raise VectorStoreError(
-                f"Không lấy/tạo được collection '{self.collection_name}': {exc}"
+                f"cannot get collection '{self.collection_name}': {exc}"
             ) from exc
+        self._validate_collection_metadata(collection.metadata or {})
+        return collection
+
+    def _validate_collection_metadata(self, actual: dict[str, Any]) -> None:
+        mismatches = {
+            key: {"expected": expected, "actual": actual.get(key)}
+            for key, expected in self.expected_metadata.items()
+            if actual.get(key) != expected
+        }
+        if mismatches:
+            details = ", ".join(
+                f"{key}={values['actual']!r} (expected {values['expected']!r})"
+                for key, values in mismatches.items()
+            )
+            raise VectorStoreError(
+                f"collection '{self.collection_name}' metadata mismatch: {details}. "
+                "Create and ingest a new versioned collection; do not mix embeddings."
+            )
 
     def add_documents(
-        self, texts: list[str], metadatas: list[dict], ids: list[str]
-    ):
+        self,
+        texts: list[str],
+        metadatas: list[dict[str, Any]],
+        ids: list[str],
+    ) -> None:
         if not (len(texts) == len(metadatas) == len(ids)):
             raise VectorStoreError(
-                "texts, metadatas, ids phải cùng độ dài — nhận được "
+                "texts, metadatas and ids must have the same length: "
                 f"{len(texts)}, {len(metadatas)}, {len(ids)}"
             )
-
         collection = self.get_collection()
-
         try:
-            embeddings = self._embeddings.embed_documents(texts)
+            embeddings = self.embedding_provider.embed_documents(texts)
         except Exception as exc:
-            logger.exception("Loi khi embed %d documents", len(texts))
-            raise VectorStoreError(f"Embedding thất bại: {exc}") from exc
-
+            logger.exception("Failed to embed %d medical documents", len(texts))
+            raise VectorStoreError(f"document embedding failed: {exc}") from exc
+        self._validate_embedding_dimensions(embeddings)
         try:
-            collection.add(
+            collection.upsert(
                 embeddings=embeddings,
                 documents=texts,
                 metadatas=metadatas,
                 ids=ids,
             )
         except Exception as exc:
-            # Bat loi pho bien: dimension mismatch (doi model embedding giua
-            # cac lan add), duplicate id, disk/permission loi khi ghi persist.
-            logger.exception("Loi khi ghi %d embeddings vao ChromaDB", len(texts))
-            raise VectorStoreError(f"Ghi vào ChromaDB thất bại: {exc}") from exc
+            logger.exception("Failed to write %d embeddings to ChromaDB", len(texts))
+            raise VectorStoreError(f"cannot write embeddings to ChromaDB: {exc}") from exc
 
-    def search(self, query: str, k: int = 5, filter: dict | None = None):
-        collection = self.get_collection()
-
+    def search(
+        self,
+        query: str,
+        *,
+        k: int = 5,
+        filter: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        collection = self.get_collection(create_if_missing=False)
+        if collection.count() == 0:
+            return {
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+                "ids": [[]],
+            }
         try:
-            query_embedding = self._embeddings.embed_query(query)
+            query_embedding = self.embedding_provider.embed_query(query)
         except Exception as exc:
-            logger.exception("Loi khi embed query: %r", query)
-            raise VectorStoreError(f"Embedding câu truy vấn thất bại: {exc}") from exc
-
+            logger.exception("Failed to embed medical query")
+            raise VectorStoreError(f"query embedding failed: {exc}") from exc
+        self._validate_embedding_dimensions([query_embedding])
         try:
             return collection.query(
                 query_embeddings=[query_embedding],
-                n_results=k,
+                n_results=min(k, collection.count()),
                 where=filter,
             )
         except Exception as exc:
-            logger.exception("Loi khi query ChromaDB")
-            raise VectorStoreError(f"Truy vấn ChromaDB thất bại: {exc}") from exc
+            logger.exception("Failed to query ChromaDB")
+            raise VectorStoreError(f"cannot query ChromaDB: {exc}") from exc
 
-    def delete_collection(self):
+    def readiness(self) -> dict[str, Any]:
+        collection = self.get_collection(create_if_missing=False)
+        return {
+            "status": "ready" if collection.count() else "empty",
+            "collection": self.collection_name,
+            "document_count": collection.count(),
+            "embedding_provider": self.embedding_provider.provider_name,
+            "embedding_model": self.embedding_provider.model_name,
+            "embedding_dimension": self.embedding_provider.dimension,
+            "corpus_version": self.corpus_version,
+        }
+
+    def _validate_embedding_dimensions(self, embeddings: list[list[float]]) -> None:
+        invalid = [len(embedding) for embedding in embeddings if len(embedding) != self.embedding_provider.dimension]
+        if invalid:
+            raise VectorStoreError(
+                "embedding provider returned an unexpected dimension: "
+                f"{invalid[0]} (expected {self.embedding_provider.dimension})"
+            )
+
+    def delete_collection(self) -> None:
         try:
             self._client.delete_collection(self.collection_name)
         except ValueError:
             pass
-
-
-@lru_cache
-def get_vector_store() -> VectorStore:
-    settings = get_settings()
-    return VectorStore(persist_dir=settings.chroma_persist_dir)

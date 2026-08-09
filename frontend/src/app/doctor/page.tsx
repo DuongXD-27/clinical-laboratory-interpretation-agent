@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { mockScenarios } from "@/lib/mockData";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
+import type { AnalysisResult } from "@/types/analysis";
 
 export default function DoctorPage() {
   const router = useRouter();
@@ -11,7 +13,7 @@ export default function DoctorPage() {
   const [username, setUsername] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doctorNotes, setDoctorNotes] = useState("");
 
@@ -20,6 +22,7 @@ export default function DoctorPage() {
       router.replace("/");
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
     setUsername(getUsername());
     setCheckingAuth(false);
   }, [router]);
@@ -56,8 +59,8 @@ export default function DoctorPage() {
 
       const data = await response.json();
       setResult(data);
-    } catch (err: any) {
-      setError(err.message || "Đã xảy ra lỗi hệ thống");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi hệ thống");
     } finally {
       setLoading(false);
     }
@@ -106,6 +109,19 @@ export default function DoctorPage() {
           </div>
         </div>
 
+        <OcrReviewPanel
+          accent="indigo"
+          onResult={(data) => {
+            setResult(data);
+            setError(null);
+            setDoctorNotes("");
+          }}
+          onUnauthorized={() => {
+            clearSession();
+            router.replace("/");
+          }}
+        />
+
         {error && (
           <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-200 text-sm">
             {error}
@@ -148,7 +164,7 @@ export default function DoctorPage() {
                     Cảnh báo từ hệ thống
                   </h2>
                   <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-                    {result.critical_alerts?.map((alert: any, idx: number) => (
+                    {result.critical_alerts?.map((alert, idx) => (
                       <li key={idx}>{alert.message}</li>
                     ))}
                   </ul>
@@ -189,7 +205,7 @@ export default function DoctorPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {result.indicators?.map((ind: any, idx: number) => {
+                      {result.indicators?.map((ind, idx) => {
                         let statusColor = "text-green-600 bg-green-50 dark:bg-green-900/20";
                         if (ind.is_critical) statusColor = "text-red-600 bg-red-50 dark:bg-red-900/20";
                         else if (ind.is_abnormal) statusColor = "text-orange-600 bg-orange-50 dark:bg-orange-900/20";
@@ -222,7 +238,7 @@ export default function DoctorPage() {
                   <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Luận điểm của AI</h2>
                 </div>
                 <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {result.indicators?.map((ind: any, idx: number) => (
+                  {result.indicators?.map((ind, idx) => (
                     ind.explanation ? (
                       <div key={idx} className="p-5">
                         <h3 className="font-medium text-sm text-indigo-600 dark:text-indigo-400 mb-2">{ind.name}</h3>

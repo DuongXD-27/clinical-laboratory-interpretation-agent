@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from datetime import date
+from typing import TYPE_CHECKING, Literal
+from uuid import uuid4
+
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -15,8 +18,16 @@ class OCRIndicatorDraft(BaseModel):
     xác nhận/sửa trước khi submit qua `/analyze` (luồng Adapter_JSON cũ).
     """
 
+    draft_id: str = Field(
+        default_factory=lambda: uuid4().hex,
+        description="Định danh ngắn hạn của dòng OCR trong phiên review",
+    )
     name: str = Field(..., min_length=1, description="Tên chỉ số, vd. WBC, Glucose, LDL")
-    value: float = Field(..., description="Giá trị đo được")
+    value: float = Field(
+        ...,
+        allow_inf_nan=False,
+        description="Giá trị đo được; bắt buộc là số hữu hạn",
+    )
     unit: str = Field(..., min_length=1, description="Đơn vị đo")
     confidence: float = Field(
         ...,
@@ -43,6 +54,17 @@ class OCRReviewResponse(BaseModel):
 
     source_image: str = Field(default="", description="Tên file ảnh gốc")
     model_used: str = Field(default="", description="Model Vision LLM đã dùng")
+    review_token: str = Field(
+        ...,
+        description="Token ký ngắn hạn buộc bước xác nhận dùng đúng confidence do server cấp",
+    )
+    low_confidence_threshold: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Ngưỡng confidence áp dụng cho phiên review này",
+    )
+    expires_in_seconds: int = Field(..., ge=1)
     metadata_hint: dict = Field(
         default_factory=dict,
         description="Thông tin bệnh nhân đọc được (nếu có) — mặc định trống, người dùng tự nhập",
@@ -51,3 +73,32 @@ class OCRReviewResponse(BaseModel):
         default_factory=list,
         description="Danh sách chỉ số đọc được — cần bệnh nhân/bác sĩ xác nhận",
     )
+
+
+class OCRReviewedIndicator(BaseModel):
+    """Một dòng OCR cùng bằng chứng xác nhận thủ công của người dùng."""
+
+    draft_id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
+    value: float = Field(..., allow_inf_nan=False)
+    unit: str = Field(..., min_length=1)
+    included: bool = True
+    reviewed: bool = Field(
+        ...,
+        description="Người dùng đã đối chiếu dòng này với ảnh gốc",
+    )
+    low_confidence_acknowledged: bool = Field(
+        default=False,
+        description="Xác nhận tăng cường, bắt buộc nếu confidence gốc dưới ngưỡng",
+    )
+
+
+class OCRConfirmRequest(BaseModel):
+    """Bước 2 của OCR Review Gate; chỉ request hợp lệ mới được vào graph."""
+
+    review_token: str = Field(..., min_length=1)
+    patient_age: int = Field(..., ge=0, le=120)
+    patient_gender: Literal["male", "female", "other"]
+    test_date: date
+    language: str = "vi"
+    indicators: list[OCRReviewedIndicator] = Field(..., min_length=1)

@@ -5,11 +5,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api.ocr_routes import router as ocr_router
 from src.api.auth_routes import router as auth_router
+from src.api.ocr_routes import router as ocr_router
 from src.api.routes import router
 from src.config import get_settings
 from src.models.db import init_db
+from src.services.medical_knowledge_retriever import get_rag_readiness
 
 logger = logging.getLogger(__name__)
 
@@ -73,3 +74,18 @@ app.include_router(ocr_router, prefix="/api/v1")
 @app.get("/health")
 async def health():
     return {"status": "ok", "env": settings.app_env}
+
+
+@app.get("/ready")
+async def readiness():
+    """Report optional RAG separately without making the core API unavailable."""
+
+    rag = get_rag_readiness()
+    return {
+        "status": "ok" if rag["status"] in {"ready", "disabled"} else "degraded",
+        "env": settings.app_env,
+        "components": {
+            "api": {"status": "ready"},
+            "rag": rag,
+        },
+    }

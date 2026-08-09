@@ -1,14 +1,26 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from src.adapters.vision_adapter import VisionAdapter, VisionAdapterError
-from src.models.ocr_schemas import OCRReviewResponse
+from src.api.deps import CurrentUser, get_current_user
+from src.config import get_settings
+from src.models.ocr_schemas import OCRConfirmRequest, OCRReviewResponse
+from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorInputSchema
 from src.services.image_processor import ImageProcessor, ImageProcessorError
+from src.services.ocr_review_gate import (
+    OCRReviewGateError,
+    prepare_review,
+    validate_review,
+)
 
 router = APIRouter()
 
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     """Factory lỏng — dễ thay mock trong test."""
+    if not get_settings().openrouter_api_key.strip():
+        raise VisionAdapterError(
+            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+        )
     return ImageProcessor(), VisionAdapter()
 
 
@@ -22,8 +34,16 @@ def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
         "vào AgentState — người dùng phải xác nhận/sửa ở UI rồi gọi /analyze."
     ),
 )
-async def ocr_upload(file: UploadFile = File(...)) -> OCRReviewResponse:
-    processor, adapter = _get_dependencies()
+async def ocr_upload(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> OCRReviewResponse:
+    try:
+        processor, adapter = _get_dependencies()
+    except VisionAdapterError as exc:
+        # Keep configuration failures inside FastAPI's HTTP error path so the
+        # CORS middleware can expose the real message to the browser.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     raw = await file.read()
     try:
@@ -38,9 +58,64 @@ async def ocr_upload(file: UploadFile = File(...)) -> OCRReviewResponse:
     except VisionAdapterError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    if not drafts:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Không tìm thấy chỉ số xét nghiệm trong ảnh. Hãy dùng ảnh chụp rõ toàn bộ "
+                "phiếu xét nghiệm, không dùng ảnh chụp màn hình của ứng dụng."
+            ),
+        )
+
+    prepared_drafts, review_token = prepare_review(
+        drafts,
+        username=current_user.username,
+    )
+    settings = get_settings()
     return OCRReviewResponse(
         source_image=file.filename or "upload",
         model_used=adapter.model,
+        review_token=review_token,
+        low_confidence_threshold=settings.ocr_low_confidence_threshold,
+        expires_in_seconds=settings.ocr_review_token_expire_minutes * 60,
         metadata_hint={},
-        indicators=drafts,
+        indicators=prepared_drafts,
+    )
+
+
+@router.post(
+    "/ocr/confirm",
+    response_model=AnalyzeResponse,
+    summary="Xác nhận thủ công bản nháp OCR rồi mới chạy phân tích",
+)
+async def ocr_confirm(
+    request: OCRConfirmRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> AnalyzeResponse:
+    """Server-side gate: rejects incomplete or forged OCR review evidence."""
+    try:
+        reviewed_drafts, included_inputs = validate_review(
+            request.review_token,
+            request.indicators,
+            username=current_user.username,
+        )
+    except OCRReviewGateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    analyze_request = AnalyzeRequest(
+        patient_age=request.patient_age,
+        patient_gender=request.patient_gender,
+        test_date=request.test_date,
+        language=request.language,
+        indicators=[IndicatorInputSchema(**item) for item in included_inputs],
+    )
+
+    # Local import avoids a module cycle while keeping one graph instance and
+    # one response mapping for both manual and OCR flows.
+    from src.api.routes import run_analysis
+
+    return await run_analysis(
+        analyze_request,
+        username=current_user.username,
+        ocr_drafts=reviewed_drafts,
     )

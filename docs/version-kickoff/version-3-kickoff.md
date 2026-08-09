@@ -5,6 +5,25 @@
 
 ---
 
+## 0. Phụ lục điều chỉnh phạm vi — 07/08/2026
+
+PO điều chỉnh `release/v3.0` để hoàn thiện ngay OCR confidence Review Gate, thay
+cho quyết định dời sang V4 ở bản kickoff ban đầu. Lý do: OCR không được công bố
+khi bước xác nhận mới chỉ tồn tại ở frontend và backend chưa thể cưỡng chế xác
+nhận riêng cho confidence thấp.
+
+- OCR được chốt là **Nâng cao nhưng làm sớm**, không đổi thành phạm vi Cơ bản.
+- Bổ sung `/ocr/confirm`, review token ngắn hạn, xác nhận mọi dòng và xác nhận
+  tăng cường khi confidence `< 0.7`.
+- Patient Portal và Doctor Portal dùng chung UI Review.
+- Guardrail validator chuyển sang kiểm tra tại chỗ Regex + luật ý định, giữ đúng
+  một lượt LLM retry trước Template Library.
+- Tài liệu quyết định: `docs/product-requirements/prd-v3.md` và ADR-007.
+
+Phụ lục này có hiệu lực cao hơn các dòng cũ nói confidence gate “dời sang V4”.
+
+---
+
 ## 1. Ràng buộc an toàn cố định
 
 - TUYỆT ĐỐI KHÔNG chẩn đoán, không kết luận nguyên nhân, không đề nghị điều trị.
@@ -103,8 +122,10 @@ cốt lõi từ đề bài gốc (Glucose, LDL-C, Kali).
 
 ### Ưu tiên #2 — Deploy mượt mà, ổn định qua link công khai
 
-**4.5. Thay Embedding Model cho Guardrail** — BGE-M3 → `all-MiniLM-L6-v2`
-hoặc API ngoài, xử lý gốc rễ nguyên nhân crash Railway/Render free-tier.
+**4.5. Tách lookup chỉ số khỏi RAG và bỏ BGE-M3 khỏi API runtime** — khoảng
+tham chiếu/trạng thái/critical dùng lookup xác định; RAG chỉ làm giàu tài liệu y khoa
+phi cấu trúc qua embedding provider ngoài. Xem ADR-008. Thay đổi này xử lý gốc rễ
+nguyên nhân crash Railway/Render free-tier mà không loại bỏ bằng chứng PLO3.
 
 **4.6. Chốt URL production thật + CORS đúng domain** — cập nhật
 `.env.example`/`README.md`.
@@ -125,9 +146,8 @@ consent gate chặn cứng, ảnh mẫu sẵn có, không lưu ảnh gốc, feat
 
 ## 5. Phạm vi KHÔNG làm ở version này
 
-- Không hoàn thiện OCR end-to-end theo confidence-based gate (khác với lớp
-  bảo vệ OCR ở 4.7 — đây là 2 việc khác nhau, việc confidence gate vẫn dời
-  sang V4).
+- Không tự động bỏ qua review cho OCR confidence cao. Confidence-based gate đã
+  được đưa vào V3 theo phụ lục mục 0; mọi dòng vẫn phải được xác nhận thủ công.
 - Không đo RAGAS production RAG, không triển khai RAG rerank thật (đã chốt
   kỹ thuật, chưa code).
 - Không làm Memory/checkpointer, HITL bác sĩ ghi chú, đa ngôn ngữ.

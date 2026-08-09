@@ -27,7 +27,11 @@ class IndicatorInputSchema(BaseModel):
     """Một chỉ số thô trong phiếu xét nghiệm gửi lên từ client."""
 
     name: str = Field(..., min_length=1, description="Tên chỉ số, vd. WBC, Glucose, LDL")
-    value: float = Field(..., description="Giá trị đo được")
+    value: float = Field(
+        ...,
+        allow_inf_nan=False,
+        description="Giá trị đo được; bắt buộc là số hữu hạn",
+    )
     unit: str = Field(..., min_length=1, description="Đơn vị đo, vd. mg/dL, mmol/L")
 
 

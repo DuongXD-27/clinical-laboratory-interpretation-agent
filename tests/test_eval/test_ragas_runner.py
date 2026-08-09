@@ -17,7 +17,6 @@ from eval.run_ragas import (
     validate_cases,
 )
 
-
 DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
 FORBIDDEN_KEYS = {"OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "ANTHROPIC_API_KEY"}
 

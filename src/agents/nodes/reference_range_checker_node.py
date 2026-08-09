@@ -1,26 +1,12 @@
-import json
 import logging
 from decimal import Decimal, InvalidOperation
 from functools import lru_cache
-from pathlib import Path
 
 from src.agents.state import AgentState, IndicatorAssessment
-from src.config import get_settings
+from src.services.analyte_catalog import AnalyteCatalogError, get_analyte_catalog
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
-
-def load_explanations() -> dict:
-    get_settings()
-    config_path = Path("data/reference/explanations.json")
-    if config_path.exists():
-        with open(config_path, encoding="utf-8") as f:
-            data = json.load(f)
-            return {item["indicator"].lower(): item for item in data}
-    return {}
-
-EXPLANATIONS_DB = load_explanations()
-
 
 @lru_cache(maxsize=1)
 def get_reference_repository() -> ReferenceRepository:
@@ -72,20 +58,9 @@ def _json_number_or_none(value: Decimal | None):
     return float(format(normalized, "f"))
 
 
-def _find_explanation(name: str, canonical_analyte: str | None) -> dict:
-    candidates = [name.lower()]
-    if canonical_analyte:
-        candidates.append(canonical_analyte.lower())
-    for key in candidates:
-        if key in EXPLANATIONS_DB:
-            return EXPLANATIONS_DB[key]
-    return {}
-
-
-def _sources_from_explanation_or_rule(explanation_info: dict, rule: dict) -> list[str]:
-    sources = explanation_info.get("sources", [])
-    if sources:
-        return sources
+def _sources_from_catalog_or_rule(catalog_sources: tuple[str, ...], rule: dict) -> list[str]:
+    if catalog_sources:
+        return list(catalog_sources)
     source_url = rule.get("source_url")
     return [source_url] if source_url else []
 
@@ -119,6 +94,11 @@ async def reference_range_checker_node(state: AgentState) -> dict:
     except ReferenceRepositoryError as exc:
         logger.error("Reference repository unavailable: %s", exc)
         repository = None
+    try:
+        catalog = get_analyte_catalog()
+    except AnalyteCatalogError as exc:
+        logger.error("Analyte catalog unavailable: %s", exc)
+        catalog = None
 
     for ind in raw_indicators:
         name = ind.get("name", "")
@@ -148,13 +128,22 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             indicators.append(assessment)
             continue
 
-        explanation_info = _find_explanation(name, result.canonical_analyte)
+        definition = (
+            catalog.resolve(result.canonical_analyte or name)
+            if catalog is not None
+            else None
+        )
+        if definition is not None:
+            assessment["analyte_id"] = definition.analyte_id
         assessment["reference_low"] = _json_number_or_none(lower)
         assessment["reference_high"] = _json_number_or_none(upper)
         assessment["status"] = status
         assessment["is_abnormal"] = status in {"low", "high"}
-        assessment["explanation"] = explanation_info.get("simple_explanation", "")
-        assessment["sources"] = _sources_from_explanation_or_rule(explanation_info, result.rule)
+        assessment["explanation"] = definition.curated_explanation if definition else ""
+        assessment["sources"] = _sources_from_catalog_or_rule(
+            definition.sources if definition else (),
+            result.rule,
+        )
 
         indicators.append(assessment)
 

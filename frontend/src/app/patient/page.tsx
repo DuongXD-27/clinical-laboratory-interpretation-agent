@@ -2,40 +2,31 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { mockScenarios } from "@/lib/mockData";
+import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
-
-type DraftIndicator = {
-  name: string;
-  value: number;
-  unit: string;
-  confidence?: number;
-  raw_text?: string;
-};
+import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
+import type { AnalysisResult } from "@/types/analysis";
 
 export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
 
-// ---- UI_Review (ADR-006): upload ảnh -> bản nháp -> xác nhận -> /analyze ----
-  const [inputMode, setInputMode] = useState<"scenario" | "ocr">("scenario");
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
-  const [ocrDraft, setOcrDraft] = useState<DraftIndicator[] | null>(null);
-  const [editing, setEditing] = useState<DraftIndicator[]>([]);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrMeta, setOcrMeta] = useState({ age: "", gender: "male", date: "" });
+  const [inputMode, setInputMode] = useState<"manual" | "ocr">("manual");
+  const [ocrPanelKey, setOcrPanelKey] = useState(0);
+  const [manualMeta, setManualMeta] = useState({ age: "35", gender: "male", date: "" });
+  const [manualValues, setManualValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
       router.replace("/");
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
     setUsername(getUsername());
     setCheckingAuth(false);
   }, [router]);
@@ -64,7 +55,9 @@ export default function PatientPage() {
       }
       
       if (!response.ok) {
-        throw new Error("Lỗi kết nối đến server");
+        const payload = await response.json().catch(() => null);
+        const detail = typeof payload?.detail === "string" ? payload.detail : null;
+        throw new Error(detail ?? `Server trả về lỗi ${response.status}`);
       }
       setResult(await response.json());
     } catch (err: unknown) {
@@ -74,73 +67,34 @@ export default function PatientPage() {
     }
   };
 
-  const handleAnalyze = async () => {
-    const scenario = mockScenarios.find((s) => s.id === selectedScenario);
-    if (!scenario) return;
-    await runAnalyze(scenario.data);
-  };
-
-  const handleOcrUpload = async () => {
-    if (!ocrFile) {
-      setError("Vui lòng chọn ảnh phiếu xét nghiệm.");
+  const handleManualAnalyze = async () => {
+    const age = Number(manualMeta.age);
+    if (!Number.isInteger(age) || age < 18 || age > 60) {
+      setError("Dữ liệu tham chiếu hiện hỗ trợ người từ 18 đến 60 tuổi.");
       return;
     }
-    setOcrLoading(true);
-    setError(null);
-    setOcrDraft(null);
+    if (!manualMeta.date) {
+      setError("Hãy chọn ngày xét nghiệm.");
+      return;
+    }
+
     try {
-      const form = new FormData();
-      form.append("file", ocrFile);
-      const response = await fetch("http://localhost:8000/api/v1/ocr/upload", {
-        method: "POST",
-        body: form,
+      const indicators = buildManualIndicators(manualValues);
+      await runAnalyze({
+        patient_age: age,
+        patient_gender: manualMeta.gender,
+        test_date: manualMeta.date,
+        language: "vi",
+        indicators,
       });
-      if (!response.ok) {
-        const detail = await response.json().catch(() => ({}));
-        throw new Error(detail.detail || "OCR thất bại");
-      }
-      const data = await response.json();
-      const drafts: DraftIndicator[] = (data.indicators ?? []).map((d: Record<string, unknown>) => ({
-        name: String(d.name ?? ""),
-        value: Number(d.value ?? 0),
-        unit: String(d.unit ?? ""),
-        confidence: d.confidence == null ? undefined : Number(d.confidence),
-        raw_text: d.raw_text == null ? undefined : String(d.raw_text),
-      }));
-      setOcrDraft(drafts);
-      setEditing(drafts);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi nhận diện ảnh");
-    } finally {
-      setOcrLoading(false);
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Dữ liệu nhập tay không hợp lệ.");
     }
-  };
-
-  const handleOcrConfirm = async () => {
-    if (editing.length === 0) {
-      setError("Chưa có chỉ số nào để phân tích.");
-      return;
-    }
-    if (!ocrMeta.age || !ocrMeta.date) {
-      setError("Vui lòng điền tuổi và ngày xét nghiệm trước khi xác nhận.");
-      return;
-    }
-    await runAnalyze({
-      patient_age: Number(ocrMeta.age),
-      patient_gender: ocrMeta.gender,
-      test_date: ocrMeta.date,
-      language: "vi",
-      indicators: editing.map((d) => ({ name: d.name, value: Number(d.value), unit: d.unit })),
-    });
-  };
-
-  const updateEdit = (idx: number, field: keyof DraftIndicator, value: unknown) => {
-    setEditing((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
   };
 
   if (checkingAuth) return null;
 
-  const hasCritical = result?.critical_alerts?.length > 0;
+  const hasCritical = (result?.critical_alerts.length ?? 0) > 0;
   const showCriticalBanner = hasCritical && !gate3Acknowledged;
 
   return (
@@ -164,61 +118,34 @@ export default function PatientPage() {
               </button>
             </p>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
-            {inputMode === "scenario" ? (
-              <>
-                <select
-                  className="flex-1 sm:w-64 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  value={selectedScenario}
-                  onChange={(e) => setSelectedScenario(e.target.value)}
-                >
-                  {mockScenarios.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleAnalyze}
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[120px]"
-                >
-                  {loading ? (
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    "Phân Tích"
-                  )}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  setOcrDraft(null);
-                  setEditing([]);
-                  setResult(null);
-                }}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20"
-              >
-                Đặt lại
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null);
+              setError(null);
+              if (inputMode === "manual") {
+                setManualValues({});
+              } else {
+                setOcrPanelKey((current) => current + 1);
+              }
+            }}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20"
+          >
+            Đặt lại
+          </button>
         </div>
 
         {/* Mode toggle */}
         <div className="flex gap-2">
           <button
-            onClick={() => setInputMode("scenario")}
+            onClick={() => setInputMode("manual")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-              inputMode === "scenario"
+              inputMode === "manual"
                 ? "bg-blue-600 text-white border-blue-600"
                 : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-blue-400"
             }`}
           >
-            Nhập tay (demo)
+            Nhập tay
           </button>
           <button
             onClick={() => setInputMode("ocr")}
@@ -232,124 +159,98 @@ export default function PatientPage() {
           </button>
         </div>
 
-        {/* OCR input + UI_Review gate */}
-        {inputMode === "ocr" && (
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-            <h2 className="font-semibold text-lg">Tải ảnh phiếu xét nghiệm</h2>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  setOcrFile(e.target.files?.[0] ?? null);
-                  setOcrDraft(null);
-                  setEditing([]);
-                }}
-                className="file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-zinc-800 dark:file:text-blue-400 text-sm text-zinc-600 dark:text-zinc-400 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 w-full"
-              />
-              <button
-                onClick={handleOcrUpload}
-                disabled={ocrLoading}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-              >
-                {ocrLoading ? "Đang nhận diện..." : "Nhận diện OCR"}
-              </button>
+        {inputMode === "manual" && (
+          <section className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-5">
+            <div>
+              <h2 className="font-semibold text-lg">Nhập kết quả xét nghiệm</h2>
+              <p className="text-sm text-zinc-500 mt-1">
+                Nhập một hoặc nhiều chỉ số. Hiện hệ thống có khoảng tham chiếu đã duyệt cho 4 chỉ số dưới đây và người từ 18–60 tuổi.
+              </p>
             </div>
 
-            {!ocrDraft && (
-              <p className="text-xs text-zinc-500">
-                Hệ thống sẽ đọc chỉ số từ ảnh, hiển thị bản nháp để bạn kiểm tra/sửa trước khi phân tích.
-              </p>
-            )}
-
-            {ocrDraft && (
-              <div className="space-y-4 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                <div>
-                  <h3 className="text-sm font-semibold mb-1 text-zinc-500 uppercase tracking-wider">
-                    Bước 1 — Kiểm tra & sửa chỉ số đọc được
-                  </h3>
-                  <p className="text-xs text-zinc-400 mb-3">
-                    Chỉ số có độ tin cậy thấp được đánh dấu cần xác nhận.
-                  </p>
-                  <div className="space-y-2">
-                    {editing.map((row, idx) => (
-                      <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-2">
-                        <input
-                          value={row.name}
-                          onChange={(e) => updateEdit(idx, "name", e.target.value)}
-                          placeholder="Tên chỉ số"
-                          className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[120px]"
-                        />
-                        <input
-                          type="number"
-                          value={row.value}
-                          onChange={(e) => updateEdit(idx, "value", e.target.value)}
-                          placeholder="Giá trị"
-                          className="w-28 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        <input
-                          value={row.unit}
-                          onChange={(e) => updateEdit(idx, "unit", e.target.value)}
-                          placeholder="Đơn vị"
-                          className="w-24 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                        {row.raw_text && (
-                          <span className="text-xs text-zinc-400 truncate max-w-[160px]" title={row.raw_text}>
-                            “{row.raw_text}”
-                          </span>
-                        )}
-                        <button
-                          onClick={() => setEditing((prev) => prev.filter((_, i) => i !== idx))}
-                          className="px-2 text-red-500 hover:text-red-700 text-sm"
-                          title="Bỏ chỉ số này"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-1 text-zinc-500 uppercase tracking-wider">
-                    Bước 2 — Thông tin bệnh nhân
-                  </h3>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="number"
-                      value={ocrMeta.age}
-                      onChange={(e) => setOcrMeta((m) => ({ ...m, age: e.target.value }))}
-                      placeholder="Tuổi"
-                      className="w-24 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <select
-                      value={ocrMeta.gender}
-                      onChange={(e) => setOcrMeta((m) => ({ ...m, gender: e.target.value }))}
-                      className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    >
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
-                      <option value="other">Khác</option>
-                    </select>
-                    <input
-                      type="date"
-                      value={ocrMeta.date}
-                      onChange={(e) => setOcrMeta((m) => ({ ...m, date: e.target.value }))}
-                      className="flex-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleOcrConfirm}
-                  disabled={loading}
-                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Tuổi</span>
+                <input
+                  aria-label="Tuổi bệnh nhân"
+                  type="number"
+                  min="18"
+                  max="60"
+                  value={manualMeta.age}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                />
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Giới tính</span>
+                <select
+                  aria-label="Giới tính bệnh nhân"
+                  value={manualMeta.gender}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
                 >
-                  {loading ? "Đang phân tích..." : "Xác nhận & Phân tích"}
-                </button>
-              </div>
-            )}
-          </div>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
+                </select>
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="font-medium">Ngày xét nghiệm</span>
+                <input
+                  aria-label="Ngày xét nghiệm"
+                  type="date"
+                  value={manualMeta.date}
+                  onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {MANUAL_ANALYTES.map((analyte) => (
+                <label key={analyte.name} className="grid grid-cols-[1fr_7rem_auto] items-center gap-2 border rounded-xl px-3 py-2 dark:border-zinc-700">
+                  <span className="text-sm font-medium">{analyte.label}</span>
+                  <input
+                    aria-label={analyte.label}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={manualValues[analyte.name] ?? ""}
+                    onChange={(event) => setManualValues((current) => ({
+                      ...current,
+                      [analyte.name]: event.target.value,
+                    }))}
+                    placeholder="Nhập số"
+                    className="min-w-0 border rounded-lg px-3 py-2 text-sm dark:bg-zinc-950 dark:border-zinc-700"
+                  />
+                  <span className="text-xs text-zinc-500 min-w-14">{analyte.unit}</span>
+                </label>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualAnalyze}
+              disabled={loading}
+              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
+            >
+              {loading ? "Đang phân tích..." : "Phân tích các chỉ số đã nhập"}
+            </button>
+          </section>
+        )}
+
+        {inputMode === "ocr" && (
+          <OcrReviewPanel
+            key={ocrPanelKey}
+            onResult={(data) => {
+              setResult(data);
+              setError(null);
+              setGate3Acknowledged(false);
+            }}
+            onUnauthorized={() => {
+              clearSession();
+              router.replace("/");
+            }}
+          />
         )}
 
         {error && (
@@ -377,7 +278,7 @@ export default function PatientPage() {
                   <div>
                     <h3 className="text-xl font-bold mb-1">Cảnh Báo Sức Khỏe Nguy Kịch</h3>
                     <div className="text-red-50 text-sm space-y-1">
-                      {result.critical_alerts?.map((alert: any, idx: number) => (
+                      {result.critical_alerts?.map((alert, idx) => (
                         <p key={idx}>{alert.message}</p>
                       ))}
                     </div>
@@ -412,7 +313,7 @@ export default function PatientPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold px-1">Chi tiết kết quả</h2>
               <div className="grid grid-cols-1 gap-4">
-                {result.indicators?.map((ind: any, idx: number) => {
+                {result.indicators?.map((ind, idx) => {
                   const isCrit = ind.is_critical;
                   const isAbnormal = ind.is_abnormal;
                   
@@ -446,7 +347,7 @@ export default function PatientPage() {
                           {ind.sources && ind.sources.length > 0 && (
                             <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
                               <span className="text-xs text-zinc-500 mr-2">Nguồn tham khảo:</span>
-                              {ind.sources.map((src: string, sIdx: number) => (
+                              {ind.sources.map((src, sIdx) => (
                                 <a key={sIdx} href={src} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-blue-600 dark:text-blue-400 hover:underline mr-3 break-all">
                                   [{sIdx + 1}] {new URL(src).hostname}
                                 </a>

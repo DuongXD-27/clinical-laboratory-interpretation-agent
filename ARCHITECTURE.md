@@ -68,9 +68,13 @@ graph LR
 - **Migrations:** Alembic
 
 ### 5. Vector Store
-- **Type:** [ChromaDB / FAISS / Pinecone]
-- **Embeddings:** [model]
-- **Purpose:** [RAG / similarity search]
+- **Type:** ChromaDB hiện tại; có thể thay bằng vector service qua abstraction.
+- **Embeddings:** provider ngoài, cấu hình bằng môi trường; không tải model local trong API.
+- **Purpose:** chỉ truy xuất tài liệu y khoa phi cấu trúc để làm giàu giải thích.
+- **Boundary:** mã chỉ số, alias, đơn vị, khoảng tham chiếu và critical threshold dùng
+  deterministic lookup; RAG không có quyền sửa hoặc quyết định các trường này.
+- **Failure policy:** RAG là optional enrichment. Lỗi provider/index/metadata phải rơi
+  về curated fallback và không được làm chết `/analyze`.
 
 ## Data Flow
 

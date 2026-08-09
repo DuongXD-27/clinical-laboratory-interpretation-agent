@@ -10,8 +10,6 @@ import csv
 import json
 from pathlib import Path
 
-import pytest
-
 from src.scripts.build_reference_config import (
     RUNTIME_CSV,
     RUNTIME_JSON,
@@ -172,7 +170,7 @@ def test_sync_06_stable_ids(tmp_path: Path):
 # SYNC-07: Provenance — every supplemental rule records origin, entry ID, group, URL
 # ---------------------------------------------------------------------------
 def test_sync_07_provenance(tmp_path: Path):
-    result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     supplemental = [r for r in catalog if str(r.get("rule_id", "")).startswith("EXPV2-")]
 
@@ -190,7 +188,7 @@ def test_sync_07_provenance(tmp_path: Path):
 # SYNC-08: HbA1c mapping — 3 MD rules matching explanations.json
 # ---------------------------------------------------------------------------
 def test_sync_08_hba1c_mapping(tmp_path: Path):
-    result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     hba1c_rules = [r for r in catalog if r["analyte_canonical"] == "HbA1c"]
 
@@ -229,7 +227,7 @@ def test_sync_08_hba1c_mapping(tmp_path: Path):
 # SYNC-09: LDL-C mapping — 5 non-RI rules matching explanations.json
 # ---------------------------------------------------------------------------
 def test_sync_09_ldl_c_mapping(tmp_path: Path):
-    result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     ldlc_rules = [r for r in catalog if r["analyte_canonical"] == "LDL-C"]
 
@@ -261,7 +259,7 @@ def test_sync_09_ldl_c_mapping(tmp_path: Path):
 # SYNC-10: Potassium mapping — 7 rules, normal=RI, severity=MD
 # ---------------------------------------------------------------------------
 def test_sync_10_potassium_mapping(tmp_path: Path):
-    result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     pot_rules = [r for r in catalog if r["analyte_canonical"] == "Potassium"]
 
@@ -295,7 +293,7 @@ def test_sync_10_potassium_mapping(tmp_path: Path):
 # SYNC-11: Units — no numeric conversion
 # ---------------------------------------------------------------------------
 def test_sync_11_units(tmp_path: Path):
-    result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
     for rule in catalog:
@@ -314,7 +312,7 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
     baseline_by_id = {r["rule_id"]: r for r in baseline.accepted}
 
     # Build with supplemental
-    combined_result = build_reference_config(SOURCE, tmp_path / "combined", supplemental_path=EXPLANATIONS_PATH)
+    build_reference_config(SOURCE, tmp_path / "combined", supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / "combined" / RUNTIME_JSON).read_text(encoding="utf-8"))
     catalog_by_id = {r["rule_id"]: r for r in catalog}
 
