@@ -13,13 +13,12 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from eval.ragas_compat import import_ragas_api
-
 
 DATASET_VERSION = "v2-baseline-1"
 DEFAULT_PROVIDER = "google"
@@ -865,7 +864,7 @@ async def run_live(config: LiveRunConfig, *, client_factory=None, probe_func=Non
     result = {
         "run_id": RUN_ID,
         "run_type": "live_curated_fixture_baseline",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "git_commit": current_git_commit(),
         "dataset": {
             "path": str(config.dataset_path).replace("\\", "/"),
@@ -924,7 +923,7 @@ async def run_live(config: LiveRunConfig, *, client_factory=None, probe_func=Non
                 "--output eval/results/ragas_v2_baseline.json"
             ),
         )
-    print(f"Live evaluation executed: YES")
+    print("Live evaluation executed: YES")
     print(f"Cases evaluated: {len(case_results)}")
     print(f"Result JSON: {config.output_path}")
     print(f"Result CSV: {csv_path}")
