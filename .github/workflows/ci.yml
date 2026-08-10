@@ -6,9 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+# Runner của BTC dùng chung cho tất cả team, jobs xếp hàng FIFO. Push liên tiếp
+# vào cùng 1 nhánh thì huỷ run cũ, khỏi chiếm chỗ của team khác.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    # Org hết hạn mức GitHub-hosted runner nên job không start được.
+    # BTC có runner dùng chung, chỉ cần trỏ runs-on sang self-hosted.
+    runs-on: self-hosted
+    # Chặn job treo chiếm runner chung; bình thường chạy dưới 5 phút.
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
