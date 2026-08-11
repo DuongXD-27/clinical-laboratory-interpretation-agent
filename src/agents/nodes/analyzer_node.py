@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import textwrap
+import time
 from typing import Any
 
 from langchain_core.messages import HumanMessage
@@ -18,6 +19,7 @@ from src.services.medical_knowledge_retriever import (
     MedicalKnowledgeRetriever,
     get_medical_knowledge_retriever,
 )
+from src.services.request_timing import add_timing_event
 from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
@@ -68,13 +70,36 @@ async def _retrieve_optional_context(
         return []
     query = f"Ý nghĩa xét nghiệm {name} khi kết quả ở mức {status}"
     try:
+        queue_started_at = time.perf_counter()
         async with rag_semaphore:
-            return await asyncio.to_thread(
-                retriever.retrieve,
-                query=query,
+            add_timing_event(
+                "rag-semaphore-wait",
+                (time.perf_counter() - queue_started_at) * 1000,
                 analyte_id=analyte_id,
-                limit=3,
             )
+            call_started_at = time.perf_counter()
+            try:
+                result = await asyncio.to_thread(
+                    retriever.retrieve,
+                    query=query,
+                    analyte_id=analyte_id,
+                    limit=3,
+                )
+            except Exception:
+                add_timing_event(
+                    "rag-call",
+                    (time.perf_counter() - call_started_at) * 1000,
+                    analyte_id=analyte_id,
+                    outcome="error",
+                )
+                raise
+            add_timing_event(
+                "rag-call",
+                (time.perf_counter() - call_started_at) * 1000,
+                analyte_id=analyte_id,
+                outcome="success",
+            )
+            return result
     except Exception as exc:
         # RAG is enrichment only. Structured classification and curated fallback
         # remain available even when the provider, network or vector index fails.
@@ -139,10 +164,32 @@ async def process_single_indicator(
     explanation_text = fallback_explanation
     if structured_llm is not None and context:
         try:
+            queue_started_at = time.perf_counter()
             async with llm_semaphore:
-                result = await asyncio.wait_for(
-                    call_llm_with_retry(structured_llm, prompt),
-                    timeout=llm_timeout_seconds,
+                add_timing_event(
+                    "llm-semaphore-wait",
+                    (time.perf_counter() - queue_started_at) * 1000,
+                    analyte_id=analyte_id or "unknown",
+                )
+                call_started_at = time.perf_counter()
+                try:
+                    result = await asyncio.wait_for(
+                        call_llm_with_retry(structured_llm, prompt),
+                        timeout=llm_timeout_seconds,
+                    )
+                except Exception:
+                    add_timing_event(
+                        "llm-explanation-call",
+                        (time.perf_counter() - call_started_at) * 1000,
+                        analyte_id=analyte_id or "unknown",
+                        outcome="error",
+                    )
+                    raise
+                add_timing_event(
+                    "llm-explanation-call",
+                    (time.perf_counter() - call_started_at) * 1000,
+                    analyte_id=analyte_id or "unknown",
+                    outcome="success",
                 )
             if result.explanation.strip():
                 explanation_text = result.explanation.strip()

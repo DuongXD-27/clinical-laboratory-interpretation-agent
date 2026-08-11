@@ -100,7 +100,7 @@ async def test_ocr_upload_requires_auth(client):
 async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monkeypatch):
     def missing_provider():
         raise ocr_routes.VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
         )
 
     monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
@@ -115,7 +115,7 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
     )
 
     assert response.status_code == 503
-    assert "OPENROUTER_API_KEY" in response.json()["detail"]
+    assert "GOOGLE_API_KEY" in response.json()["detail"]
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
 
 
@@ -128,7 +128,7 @@ async def test_ocr_upload_rejects_empty_extraction(client, monkeypatch):
     class EmptyAdapter:
         model = "test-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             return []
 
     monkeypatch.setattr(
@@ -159,7 +159,7 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
     class FakeAdapter:
         model = "test-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             return [
                 OCRIndicatorDraft(
                     name="Glucose",
@@ -190,6 +190,12 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
     payload = response.json()
     assert payload["review_token"]
     assert payload["indicators"][0]["needs_review"] is True
+    server_timing = response.headers["server-timing"]
+    assert "ocr-file-read;dur=" in server_timing
+    assert "ocr-preprocess;dur=" in server_timing
+    # Direct Gemini receives inline bytes; base64 belongs only to the fallback.
+    assert "ocr-base64;dur=" not in server_timing
+    assert "ocr-review-prepare;dur=" in server_timing
 
 
 @pytest.mark.asyncio

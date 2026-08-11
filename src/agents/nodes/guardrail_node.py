@@ -1,4 +1,5 @@
 import logging
+import time
 from copy import deepcopy
 
 from langchain_core.messages import HumanMessage
@@ -6,6 +7,7 @@ from langchain_core.messages import HumanMessage
 from src.agents.state import AgentState
 from src.services.llm import get_llm
 from src.services.medical_safety_validator import MedicalSafetyValidator
+from src.services.request_timing import add_timing_event
 from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
@@ -29,12 +31,25 @@ Yêu cầu:
 3. Không suy đoán nguyên nhân.
 4. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
 """
+    started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        return str(response.content).strip()
     except Exception as exc:
+        add_timing_event(
+            "guardrail-rewrite-call",
+            (time.perf_counter() - started_at) * 1000,
+            outcome="error",
+            target="text",
+        )
         logger.error("Guardrail rewrite thất bại: %s", exc)
         return original_text
+    add_timing_event(
+        "guardrail-rewrite-call",
+        (time.perf_counter() - started_at) * 1000,
+        outcome="success",
+        target="text",
+    )
+    return str(response.content).strip()
 
 
 async def rewrite_questions_with_llm(llm, questions: list[str]) -> list[str]:
@@ -50,6 +65,7 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
 
 {questions_text}
 """
+    started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         rewritten = [
@@ -57,10 +73,22 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
             for line in str(response.content).splitlines()
             if line.strip()
         ]
-        return rewritten or questions
     except Exception as exc:
+        add_timing_event(
+            "guardrail-rewrite-call",
+            (time.perf_counter() - started_at) * 1000,
+            outcome="error",
+            target="questions",
+        )
         logger.error("Guardrail question rewrite thất bại: %s", exc)
         return questions
+    add_timing_event(
+        "guardrail-rewrite-call",
+        (time.perf_counter() - started_at) * 1000,
+        outcome="success",
+        target="questions",
+    )
+    return rewritten or questions
 
 
 async def guardrail_node(state: AgentState) -> dict:

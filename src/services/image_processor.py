@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from src.config import get_settings
+from src.services.request_timing import timing_span
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,9 @@ class ImageProcessor:
             raise ImageProcessorError("File ảnh rỗng.")
 
         try:
-            img = Image.open(io.BytesIO(raw_bytes))
-            img.load()
+            with timing_span("image-decode"):
+                img = Image.open(io.BytesIO(raw_bytes))
+                img.load()
         except Exception as exc:
             raise ImageProcessorError(f"Không đọc được file ảnh: {exc}") from exc
 
@@ -88,16 +90,20 @@ class ImageProcessor:
             img = background
 
         img = img.convert("RGB")
-        img = self._auto_contrast(img)
-        img = self._deskew(img)
+        with timing_span("image-auto-contrast"):
+            img = self._auto_contrast(img)
+        with timing_span("image-deskew"):
+            img = self._deskew(img)
 
         # Giới hạn cạnh dài để không đẩy base64 quá lớn lên VLM.
         max_edge = 2048
-        if max(img.size) > max_edge:
-            img.thumbnail((max_edge, max_edge), Image.LANCZOS)
+        with timing_span("image-resize"):
+            if max(img.size) > max_edge:
+                img.thumbnail((max_edge, max_edge), Image.LANCZOS)
 
         out = io.BytesIO()
-        img.save(out, format="JPEG", quality=92)
+        with timing_span("image-jpeg-encode"):
+            img.save(out, format="JPEG", quality=92)
         return ProcessedImage(
             bytes=out.getvalue(),
             mime_type="image/jpeg",
