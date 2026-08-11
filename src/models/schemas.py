@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -9,6 +9,17 @@ IndicatorStatus = str
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
+
+
+class RegisterRequest(BaseModel):
+    """Đăng ký tài khoản mới — luôn tạo role patient.
+
+    Doctor không tự đăng ký qua endpoint này (theo ma trận phân quyền:
+    tài khoản doctor được cấp sẵn bởi admin/seed), nên không có field role.
+    """
+
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=8, description="Tối thiểu 8 ký tự")
 
 
 class LoginResponse(BaseModel):
@@ -96,3 +107,37 @@ class AnalyzeResponse(BaseModel):
             "critical-value chưa cắm vào graph) — không được dùng để đánh giá lâm sàng."
         ),
     )
+
+
+class LabReportSummarySchema(BaseModel):
+    """1 dòng trong danh sách lịch sử xét nghiệm — không kèm chi tiết chỉ số."""
+
+    id: int
+    test_date: date
+    has_critical_values: bool
+    summary: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class LabReportDetailSchema(BaseModel):
+    """1 phiếu xét nghiệm đầy đủ, dùng khi xem chi tiết 1 record lịch sử."""
+
+    id: int
+    patient_id: int
+    test_date: date
+    patient_age_at_test: int | None
+    patient_gender_at_test: str | None
+    language: str
+    summary: str
+    has_critical_values: bool
+    guardrail_passed: bool
+    disclaimer: str
+    questions_for_doctor: list[str]
+    out_of_scope_indicators: list[str]
+    created_at: datetime
+    indicators: list[IndicatorResultSchema]
+    critical_alerts: list[CriticalAlertSchema]
+
+    model_config = {"from_attributes": True}
