@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from src.adapters.vision_adapter import VisionAdapter, VisionAdapterError
 from src.api.deps import CurrentUser, get_current_user
 from src.config import get_settings
+from src.models.db import get_db
 from src.models.ocr_schemas import (
     OCRConfirmRequest,
     OCRReviewResponse,
@@ -21,18 +23,13 @@ from src.services.ocr_sample_library import get_sample, is_known_sample, load_sa
 
 router = APIRouter()
 
-CONSENT_TEXT = (
-    "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm thật "
-    "của tôi hay của người khác."
-)
+CONSENT_TEXT = "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm thật của tôi hay của người khác."
 
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     """Factory lỏng — dễ thay mock trong test."""
     if not get_settings().openrouter_api_key.strip():
-        raise VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
-        )
+        raise VisionAdapterError("OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend.")
     return ImageProcessor(), VisionAdapter()
 
 
@@ -183,6 +180,7 @@ async def ocr_upload(
 async def ocr_confirm(
     request: OCRConfirmRequest,
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> AnalyzeResponse:
     """Server-side gate: rejects incomplete or forged OCR review evidence."""
     try:
@@ -208,6 +206,7 @@ async def ocr_confirm(
 
     return await run_analysis(
         analyze_request,
-        username=current_user.username,
+        current_user=current_user,
+        db=db,
         ocr_drafts=reviewed_drafts,
     )

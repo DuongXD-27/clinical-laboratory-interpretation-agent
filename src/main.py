@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.api.auth_routes import router as auth_router
+from src.api.history_routes import router as history_router
 from src.api.ocr_routes import router as ocr_router
 from src.api.routes import router
 from src.config import get_settings
@@ -69,6 +70,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(ocr_router, prefix="/api/v1")
+app.include_router(history_router, prefix="/api/v1")
 
 
 @app.get("/health")

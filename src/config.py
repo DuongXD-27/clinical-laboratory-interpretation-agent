@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default=_INSECURE_DEFAULT_JWT_SECRET, alias="JWT_SECRET")
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = Field(default=60 * 12, ge=1)
+    # Phiên khách sống ngắn hơn phiên đăng nhập: khách không có gì để khôi phục
+    # sau khi hết hạn, giữ token lâu chỉ kéo dài quyền gọi LLM/OCR ẩn danh.
+    guest_session_expire_minutes: int = Field(default=120, ge=1)
 
     @model_validator(mode="after")
     def _reject_insecure_jwt_secret_in_production(self) -> "Settings":

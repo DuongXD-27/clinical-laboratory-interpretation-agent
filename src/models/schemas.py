@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 IndicatorStatus = str
+
+SessionRole = Literal["patient", "doctor", "guest"]
 
 
 class LoginRequest(BaseModel):
@@ -11,16 +13,47 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class RegisterRequest(BaseModel):
+    """Đăng ký tài khoản bệnh nhân.
+
+    Không có trường `role`: tài khoản bác sĩ do admin cấp qua
+    `python -m src.scripts.create_doctor`, không tự đăng ký được — nếu để client
+    tự khai role thì bất kỳ ai cũng tự nâng quyền thành bác sĩ.
+    """
+
+    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: str = Field(..., min_length=6, max_length=128)
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    role: Literal["patient", "doctor"]
+    role: SessionRole
     username: str
+
+
+class RegisterResponse(BaseModel):
+    id: int
+    username: str
+    role: Literal["patient"]
+
+
+class GuestSessionResponse(BaseModel):
+    """Phiên khách: có token để gọi API, không có tài khoản trong DB."""
+
+    access_token: str
+    token_type: str = "bearer"
+    role: Literal["guest"] = "guest"
+    username: str
+    session_id: str
+    expires_in_seconds: int
+    can_save_history: bool = False
 
 
 class CurrentUserResponse(BaseModel):
     username: str
-    role: Literal["patient", "doctor"]
+    role: SessionRole
+    is_guest: bool = False
 
 
 class IndicatorInputSchema(BaseModel):
@@ -96,3 +129,39 @@ class AnalyzeResponse(BaseModel):
             "critical-value chưa cắm vào graph) — không được dùng để đánh giá lâm sàng."
         ),
     )
+    saved_report_id: int | None = Field(
+        default=None,
+        description=(
+            "ID phiếu đã lưu vào lịch sử bệnh nhân; None nếu phiên hiện tại không "
+            "lưu lịch sử (khách, hoặc tài khoản bác sĩ)."
+        ),
+    )
+
+
+class LabReportSummarySchema(BaseModel):
+    """Một dòng trong danh sách lịch sử — đủ để hiển thị, chưa kèm giải thích dài."""
+
+    id: int
+    patient_username: str
+    test_date: date
+    created_at: datetime
+    indicator_count: int
+    abnormal_count: int
+    has_critical_values: bool
+    source: Literal["manual", "ocr"]
+    summary: str = ""
+
+
+class LabReportDetailSchema(LabReportSummarySchema):
+    """Chi tiết một phiếu đã lưu, kèm toàn bộ chỉ số và giải thích."""
+
+    patient_age: int
+    patient_gender: str
+    language: str
+    guardrail_passed: bool
+    indicators: list[IndicatorResultSchema] = Field(default_factory=list)
+
+
+class LabReportListResponse(BaseModel):
+    total: int
+    items: list[LabReportSummarySchema] = Field(default_factory=list)
