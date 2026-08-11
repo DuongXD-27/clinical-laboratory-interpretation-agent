@@ -7,6 +7,7 @@ from src.agents.graph import build_graph
 from src.api.deps import CurrentUser, get_current_user
 from src.models.ocr_schemas import OCRIndicatorDraft
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
+from src.services.request_timing import timing_span
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,8 @@ async def run_analysis(
     started_at = time.perf_counter()
     config = {"configurable": {"thread_id": uuid.uuid4().hex}}
 
-    final_state = await agent.ainvoke(initial_state, config=config)
+    with timing_span("analysis-graph-total"):
+        final_state = await agent.ainvoke(initial_state, config=config)
 
     elapsed_ms = (time.perf_counter() - started_at) * 1000
     logger.info(
@@ -49,23 +51,24 @@ async def run_analysis(
         elapsed_ms,
     )
 
-    # Convert dữ liệu về Response Schema
-    indicators = [
-        IndicatorResultSchema(**ind)
-        for ind in final_state.get("indicators", [])
-    ]
+    with timing_span("analysis-response-map"):
+        # Convert dữ liệu về Response Schema
+        indicators = [
+            IndicatorResultSchema(**ind)
+            for ind in final_state.get("indicators", [])
+        ]
 
-    return AnalyzeResponse(
-        indicators=indicators,
-        has_critical_values=final_state.get("has_critical_values", False),
-        critical_alerts=final_state.get("critical_alerts", []),
-        guardrail_passed=final_state.get("guardrail_passed", True),
-        disclaimer=final_state.get("disclaimer", ""),
-        questions_for_doctor=final_state.get("questions_for_doctor", []),
-        out_of_scope_indicators=final_state.get("out_of_scope_indicators", []),
-        summary=final_state.get("summary", ""),
-        is_placeholder=False,
-    )
+        return AnalyzeResponse(
+            indicators=indicators,
+            has_critical_values=final_state.get("has_critical_values", False),
+            critical_alerts=final_state.get("critical_alerts", []),
+            guardrail_passed=final_state.get("guardrail_passed", True),
+            disclaimer=final_state.get("disclaimer", ""),
+            questions_for_doctor=final_state.get("questions_for_doctor", []),
+            out_of_scope_indicators=final_state.get("out_of_scope_indicators", []),
+            summary=final_state.get("summary", ""),
+            is_placeholder=False,
+        )
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)

@@ -18,6 +18,7 @@ from src.services.ocr_review_gate import (
     validate_review,
 )
 from src.services.ocr_sample_library import get_sample, is_known_sample, load_samples
+from src.services.request_timing import timing_span
 
 router = APIRouter()
 
@@ -29,11 +30,15 @@ CONSENT_TEXT = (
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     """Factory lỏng — dễ thay mock trong test."""
-    if not get_settings().openrouter_api_key.strip():
+    if not get_settings().google_api_key.strip():
         raise VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
         )
-    return ImageProcessor(), VisionAdapter()
+    with timing_span("image-processor-init"):
+        processor = ImageProcessor()
+    with timing_span("vision-client-init"):
+        adapter = VisionAdapter()
+    return processor, adapter
 
 
 @router.get(
@@ -118,10 +123,17 @@ async def ocr_upload(
     # Ảnh chỉ tồn tại trong RAM suốt vòng đời request — không ghi ra đĩa, không
     # đưa vào DB, không log nội dung. Hết request là mất, đúng cam kết
     # "không lưu ảnh gốc" (V3).
-    raw = await file.read()
+    with timing_span("ocr-file-read"):
+        raw = await file.read()
 
     # --- Lớp bảo vệ 3: demo_only chỉ nhận đúng bộ ảnh mẫu ---
-    if settings.ocr_upload_mode == "demo_only" and not is_known_sample(raw):
+    with timing_span("ocr-sample-policy-check"):
+        known_sample = (
+            is_known_sample(raw)
+            if settings.ocr_upload_mode == "demo_only"
+            else True
+        )
+    if settings.ocr_upload_mode == "demo_only" and not known_sample:
         raise HTTPException(
             status_code=403,
             detail=(
@@ -140,14 +152,13 @@ async def ocr_upload(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     try:
-        processed = processor.process(raw, filename=file.filename)
+        with timing_span("ocr-preprocess"):
+            processed = processor.process(raw, filename=file.filename)
     except ImageProcessorError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    from src.adapters.vision_adapter import image_to_data_url
-
     try:
-        drafts = adapter.extract(image_to_data_url(processed.bytes, processed.mime_type))
+        drafts = await adapter.extract(processed.bytes, processed.mime_type)
     except VisionAdapterError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -160,13 +171,14 @@ async def ocr_upload(
             ),
         )
 
-    prepared_drafts, review_token = prepare_review(
-        drafts,
-        username=current_user.username,
-    )
+    with timing_span("ocr-review-prepare"):
+        prepared_drafts, review_token = prepare_review(
+            drafts,
+            username=current_user.username,
+        )
     return OCRReviewResponse(
         source_image=file.filename or "upload",
-        model_used=adapter.model,
+        model_used=getattr(adapter, "last_model", adapter.model),
         review_token=review_token,
         low_confidence_threshold=settings.ocr_low_confidence_threshold,
         expires_in_seconds=settings.ocr_review_token_expire_minutes * 60,
@@ -186,21 +198,23 @@ async def ocr_confirm(
 ) -> AnalyzeResponse:
     """Server-side gate: rejects incomplete or forged OCR review evidence."""
     try:
-        reviewed_drafts, included_inputs = validate_review(
-            request.review_token,
-            request.indicators,
-            username=current_user.username,
-        )
+        with timing_span("ocr-review-validate"):
+            reviewed_drafts, included_inputs = validate_review(
+                request.review_token,
+                request.indicators,
+                username=current_user.username,
+            )
     except OCRReviewGateError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    analyze_request = AnalyzeRequest(
-        patient_age=request.patient_age,
-        patient_gender=request.patient_gender,
-        test_date=request.test_date,
-        language=request.language,
-        indicators=[IndicatorInputSchema(**item) for item in included_inputs],
-    )
+    with timing_span("ocr-build-analysis-request"):
+        analyze_request = AnalyzeRequest(
+            patient_age=request.patient_age,
+            patient_gender=request.patient_gender,
+            test_date=request.test_date,
+            language=request.language,
+            indicators=[IndicatorInputSchema(**item) for item in included_inputs],
+        )
 
     # Local import avoids a module cycle while keeping one graph instance and
     # one response mapping for both manual and OCR flows.

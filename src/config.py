@@ -32,11 +32,15 @@ class Settings(BaseSettings):
 
     # Vision LLM Adapter (OCR — ADR-006)
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
+    gemini_vision_model: str = "gemini-3.5-flash-lite"
+    gemini_vision_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
+    gemini_vision_max_output_tokens: int = Field(default=500, ge=100, le=1000)
+    gemini_vision_thinking_level: Literal["low", "medium", "high"] = "low"
     vision_model: str = "google/gemma-4-26b-a4b-it:free"
     vision_base_url: str = "https://openrouter.ai/api/v1"
     vision_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     vision_max_image_mb: int = Field(default=10, ge=1, le=25)
-    vision_timeout_seconds: float = Field(default=90.0, ge=1.0, le=300.0)
+    vision_timeout_seconds: float = Field(default=30.0, ge=1.0, le=60.0)
     ocr_low_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     ocr_review_token_expire_minutes: int = Field(default=15, ge=1, le=60)
     # Chính sách nhận ảnh cho bản demo public (V3). Đổi được bằng biến môi

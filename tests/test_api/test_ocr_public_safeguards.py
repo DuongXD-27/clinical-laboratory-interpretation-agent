@@ -162,7 +162,7 @@ async def test_uploaded_image_is_never_written_to_disk(client, set_mode, monkeyp
     class _StubAdapter:
         model = "stub-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             from src.models.ocr_schemas import OCRIndicatorDraft
 
             return [

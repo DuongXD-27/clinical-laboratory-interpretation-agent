@@ -1,3 +1,6 @@
+import inspect
+from functools import wraps
+
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
@@ -6,6 +9,7 @@ from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.guardrail_node import guardrail_node
 from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.agents.state import AgentState
+from src.services.request_timing import timing_span
 
 
 def ui_review_node(state: AgentState) -> dict:
@@ -35,17 +39,37 @@ def route_on_input(state: AgentState) -> str:
     return "reference_range_checker"
 
 
+def _timed_node(metric_name, node):
+    """Wrap a LangGraph node without changing its state contract."""
+
+    @wraps(node)
+    async def wrapped(state: AgentState) -> dict:
+        with timing_span(metric_name):
+            result = node(state)
+            if inspect.isawaitable(result):
+                return await result
+            return result
+
+    return wrapped
+
+
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
     # Đăng ký các node
-    graph.add_node("reference_range_checker", reference_range_checker_node)
-    graph.add_node("critical_detector", detect_critical_values_node)
-    graph.add_node("analyzer", analyzer_node)
-    graph.add_node("guardrail", guardrail_node)
+    graph.add_node(
+        "reference_range_checker",
+        _timed_node("analysis-reference-range", reference_range_checker_node),
+    )
+    graph.add_node(
+        "critical_detector",
+        _timed_node("analysis-critical-detector", detect_critical_values_node),
+    )
+    graph.add_node("analyzer", _timed_node("analysis-analyzer", analyzer_node))
+    graph.add_node("guardrail", _timed_node("analysis-guardrail", guardrail_node))
 
     # Đăng ký Gate node chờ review (HITL)
-    graph.add_node("ui_review_gate", ui_review_node)
+    graph.add_node("ui_review_gate", _timed_node("analysis-ui-review-gate", ui_review_node))
 
     # Định tuyến ngay từ đầu bằng Conditional Entry Point
     graph.set_conditional_entry_point(

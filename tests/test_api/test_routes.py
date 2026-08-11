@@ -65,6 +65,8 @@ async def test_health(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
+    assert response.headers["x-request-id"]
+    assert "http-total;dur=" in response.headers["server-timing"]
 
 
 @pytest.mark.asyncio
