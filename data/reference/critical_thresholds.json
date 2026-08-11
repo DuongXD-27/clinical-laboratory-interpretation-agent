@@ -3,5 +3,11 @@
   "Kali": {"low": 2.5, "high": 6.5, "unit": "mmol/L"},
   "Glucose": {"low": 3.0, "high": 27.8, "unit": "mmol/L"},
   "Fasting plasma glucose": {"low": 3.0, "high": 27.8, "unit": "mmol/L"},
-  "LDL-C": {"low": -1.0, "high": 4.91, "unit": "mmol/L"}
+  "LDL-C": {"low": -1.0, "high": 4.91, "unit": "mmol/L"},
+  "WBC": {"low": 2.5, "high": 30.0, "unit": "10^9/L"},
+  "HGB": {"low": 60.0, "high": 200.0, "unit": "g/L"},
+  "Hemoglobin": {"low": 60.0, "high": 200.0, "unit": "g/L"},
+  "HbA1c": {"low": 4.0,"high": 9.0,"unit": "%"},
+  "HDL-C": {"low": 0.7, "high": 2.1, "unit": "mmol/L"},
+  "Creatinine": {"low": -1.0, "high": 353.6, "unit": "umol/L"}  
 }
