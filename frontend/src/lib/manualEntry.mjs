@@ -1,8 +1,8 @@
 export const MANUAL_ANALYTES = Object.freeze([
-  { name: "WBC", label: "Bạch cầu (WBC)", unit: "10^9/L" },
-  { name: "RBC", label: "Hồng cầu (RBC)", unit: "10^12/L" },
-  { name: "Glucose", label: "Đường huyết lúc đói", unit: "mmol/L" },
-  { name: "Creatinine", label: "Creatinine", unit: "µmol/L" },
+  { name: "WBC", label: "Bạch cầu (WBC)", unit: "10^9/L", category: "Huyết học" },
+  { name: "RBC", label: "Hồng cầu (RBC)", unit: "10^12/L", category: "Huyết học" },
+  { name: "Glucose", label: "Đường huyết lúc đói", unit: "mmol/L", category: "Đường huyết" },
+  { name: "Creatinine", label: "Creatinine", unit: "µmol/L", category: "Chức năng thận" },
 ]);
 
 /**
