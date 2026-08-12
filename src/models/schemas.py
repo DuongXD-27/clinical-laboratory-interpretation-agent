@@ -64,7 +64,13 @@ class AnalyzeRequest(BaseModel):
 
 
 class IndicatorResultSchema(BaseModel):
-    """Kết quả đối chiếu + giải thích cho một chỉ số."""
+    """Kết quả đối chiếu + giải thích cho một chỉ số.
+
+    from_attributes=True: cho phép dựng trực tiếp từ ORM row
+    (`ReportIndicator`, xem `src/models/db.py`) — model đó derive
+    is_abnormal/is_critical bằng @property từ `status`, không lưu cột
+    riêng, nên field ở đây vẫn đọc được bình thường qua getattr.
+    """
 
     name: str
     value: float
@@ -77,12 +83,16 @@ class IndicatorResultSchema(BaseModel):
     explanation: str = Field(default="", description="Giải thích ngôn ngữ dễ hiểu")
     sources: list[str] = Field(default_factory=list, description="Nguồn tài liệu giáo dục y khoa")
 
+    model_config = {"from_attributes": True}
+
 
 class CriticalAlertSchema(BaseModel):
     indicator_name: str
     value: float
     unit: str
     message: str
+
+    model_config = {"from_attributes": True}
 
 
 class AnalyzeResponse(BaseModel):

@@ -111,6 +111,10 @@ class LabReport(Base):
     )
 
 
+_ABNORMAL_STATUSES = frozenset({"low", "high", "critical_low", "critical_high"})
+_CRITICAL_STATUSES = frozenset({"critical_low", "critical_high"})
+
+
 class ReportIndicator(Base):
     """Một chỉ số trong 1 phiếu — snapshot kết quả phân tích tại thời điểm lưu."""
 
@@ -129,8 +133,6 @@ class ReportIndicator(Base):
     reference_low = Column(Float, nullable=True)
     reference_high = Column(Float, nullable=True)
     status = Column(String, nullable=False, default="unknown")
-    is_abnormal = Column(Boolean, nullable=False, default=False)
-    is_critical = Column(Boolean, nullable=False, default=False)
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
 
@@ -139,6 +141,18 @@ class ReportIndicator(Base):
     questions = relationship(
         "ReportQuestion", back_populates="indicator", cascade="all, delete-orphan"
     )
+
+    @property
+    def is_abnormal(self) -> bool:
+        """Derive từ `status` — KHÔNG lưu cột riêng để tránh 2 nguồn sự thật
+        có thể mâu thuẫn nhau (status="critical_high" nhưng is_abnormal=False
+        do bug tầng ứng dụng). `status` là nguồn sự thật duy nhất."""
+        return self.status in _ABNORMAL_STATUSES
+
+    @property
+    def is_critical(self) -> bool:
+        """Derive từ `status`, cùng lý do với `is_abnormal` ở trên."""
+        return self.status in _CRITICAL_STATUSES
 
 
 class ReportCriticalAlert(Base):
