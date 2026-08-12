@@ -87,6 +87,11 @@ class LabReport(Base):
     # và tuổi/giới tính khai báo có thể khác nhau giữa các lần xét nghiệm.
     patient_age_at_test = Column(Integer, nullable=True)
     patient_gender_at_test = Column(String, nullable=True)
+    # Chỉ TÊN FILE (label hiển thị) nếu report tới từ luồng OCR, KHÔNG phải
+    # đường dẫn/ảnh thật — đúng field `source_image` đã có sẵn trong
+    # OCRReviewResponse, vốn đã trả về client rồi nên lưu lại không phát
+    # sinh rủi ro privacy mới. Nullable vì input JSON thủ công không có.
+    ocr_source_filename = Column(String, nullable=True)
     language = Column(String, nullable=False, default="vi")
     summary = Column(Text, nullable=False, default="")
     has_critical_values = Column(Boolean, nullable=False, default=False)
@@ -135,6 +140,13 @@ class ReportIndicator(Base):
     status = Column(String, nullable=False, default="unknown")
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
+    # Provenance OCR — CHỈ metadata đã hiển thị cho người dùng ở UI_Review
+    # (confidence, text thô đọc được). TUYỆT ĐỐI không lưu ảnh/đường dẫn ảnh
+    # ở đây hay bất kỳ đâu khác — vi phạm cam kết "không lưu ảnh gốc" (V3),
+    # xem src/api/ocr_routes.py dòng gần "không ghi ra đĩa, không đưa vào DB".
+    # Nullable vì input nhập tay (JSON) không có OCR.
+    ocr_confidence = Column(Float, nullable=True)
+    ocr_raw_text = Column(Text, nullable=True)
 
     report = relationship("LabReport", back_populates="indicators")
     catalog_entry = relationship("IndicatorCatalog", back_populates="indicators")
