@@ -16,6 +16,17 @@ users (1) --- (N) lab_reports (1) --- (N) report_indicators (N) --- (1) indicato
   DB không tự ràng buộc target_id phải tồn tại — tầng ứng dụng chịu trách
   nhiệm đảm bảo tính đúng đắn, không có FK constraint thật cho cột này.
 
+  Hệ quả trực tiếp: xoá report/indicator/question qua cascade (CASCADE
+  từ lab_reports/report_indicators) KHÔNG kéo theo xoá doctor_notes trỏ
+  vào chúng — vì target_id không phải FK thật, DB không biết để cascade.
+  Note mồ côi (orphan) sẽ tồn tại vĩnh viễn, trỏ vào target_id không còn
+  tồn tại, trừ khi tầng ứng dụng tự dọn khi xoá report/question. Hướng
+  thay thế cho tương lai nếu cần ràng buộc chặt hơn: đổi sang 2 cột FK
+  nullable riêng (report_indicator_id, report_question_id) thay vì
+  target_type/target_id — đánh đổi ngược lại là schema cứng hơn, khó mở
+  rộng thêm loại target mới. Chưa đổi ở đây vì chưa có code nào ghi
+  doctor_notes thật, còn kịp quyết định khi cần.
+
 Guest (request không có JWT hợp lệ) không có row ở bất kỳ bảng nào —
 mọi bảng lịch sử đều bắt buộc patient_id NOT NULL trỏ vào users.id thật,
 nên guest tự động không lưu được gì mà không cần logic riêng.
@@ -32,6 +43,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -79,9 +91,16 @@ class LabReport(Base):
     """Một phiếu xét nghiệm đã phân tích, gắn với đúng 1 patient."""
 
     __tablename__ = "lab_reports"
+    __table_args__ = (
+        # Phục vụ đúng query lịch sử thật: WHERE patient_id=:X AND
+        # test_date BETWEEN :A AND :B — composite (patient_id, test_date)
+        # tự cover luôn query chỉ lọc patient_id (leftmost prefix), nên
+        # bỏ index đơn ở patient_id bên dưới, tránh 2 index trùng công dụng.
+        Index("ix_lab_reports_patient_id_test_date", "patient_id", "test_date"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    patient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     test_date = Column(Date, nullable=False, index=True)
     # Snapshot tuổi/giới tính lúc xét nghiệm — users không lưu tuổi cố định
     # và tuổi/giới tính khai báo có thể khác nhau giữa các lần xét nghiệm.
