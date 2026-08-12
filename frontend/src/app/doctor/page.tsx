@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import HistoryPanel from "@/components/HistoryPanel";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { mockScenarios } from "@/lib/mockData";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
@@ -108,6 +109,15 @@ export default function DoctorPage() {
             </button>
           </div>
         </div>
+
+        <HistoryPanel
+          mode="doctor"
+          accent="indigo"
+          onUnauthorized={() => {
+            clearSession();
+            router.replace("/");
+          }}
+        />
 
         <OcrReviewPanel
           accent="indigo"

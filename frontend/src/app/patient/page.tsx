@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import HistoryPanel from "@/components/HistoryPanel";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
@@ -11,10 +12,12 @@ export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   const [inputMode, setInputMode] = useState<"manual" | "ocr">("manual");
   const [ocrPanelKey, setOcrPanelKey] = useState(0);
@@ -22,12 +25,16 @@ export default function PatientPage() {
   const [manualValues, setManualValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!getToken() || getRole() !== "patient") {
+    const role = getRole();
+    // Khách dùng chung màn này với bệnh nhân (ma trận cho khách nhập chỉ số +
+    // tải ảnh); phần lịch sử mới là chỗ phân biệt.
+    if (!getToken() || (role !== "patient" && role !== "guest")) {
       router.replace("/");
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
     setUsername(getUsername());
+    setIsGuest(role === "guest");
     setCheckingAuth(false);
   }, [router]);
 
@@ -59,7 +66,14 @@ export default function PatientPage() {
         const detail = typeof payload?.detail === "string" ? payload.detail : null;
         throw new Error(detail ?? `Server trả về lỗi ${response.status}`);
       }
-      setResult(await response.json());
+
+      const data: AnalysisResult = await response.json();
+      setResult(data);
+      // Phiếu chỉ được lưu khi backend trả về ID — khách thì không có, nên
+      // không cần nạp lại danh sách lịch sử.
+      if (data.saved_report_id) {
+        setHistoryRefresh((current) => current + 1);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi hệ thống");
     } finally {
@@ -108,13 +122,13 @@ export default function PatientPage() {
               Phân Tích Sức Khỏe AI
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Trải nghiệm người bệnh (Patient View) — {username}
+              Trải nghiệm người bệnh (Patient View) — {isGuest ? "phiên khách" : username}
               <button
                 type="button"
                 onClick={handleLogout}
                 className="ml-3 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
               >
-                Đăng xuất
+                {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
               </button>
             </p>
           </div>
@@ -134,6 +148,14 @@ export default function PatientPage() {
             Đặt lại
           </button>
         </div>
+
+        {isGuest && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+            Bạn đang dùng thử với tư cách khách. Kết quả phân tích{" "}
+            <strong>không được lưu lại</strong> — thoát phiên là mất. Đăng ký tài khoản nếu muốn xem
+            lại lịch sử xét nghiệm của mình về sau.
+          </div>
+        )}
 
         {/* Mode toggle */}
         <div className="flex gap-2">
@@ -262,7 +284,19 @@ export default function PatientPage() {
         {/* Results Container */}
         {result && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
+
+            {result.saved_report_id ? (
+              <p className="text-xs text-zinc-500">
+                Đã lưu vào lịch sử của bạn (phiếu #{result.saved_report_id}).
+              </p>
+            ) : (
+              isGuest && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Kết quả này không được lưu vì bạn đang ở phiên khách.
+                </p>
+              )
+            )}
+
             {/* Critical Banner (Gate 3) */}
             {showCriticalBanner && (
               <div className="bg-red-600 text-white p-6 rounded-2xl shadow-lg shadow-red-600/20 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
@@ -369,6 +403,17 @@ export default function PatientPage() {
             </div>
 
           </div>
+        )}
+
+        {!isGuest && (
+          <HistoryPanel
+            mode="patient"
+            refreshToken={historyRefresh}
+            onUnauthorized={() => {
+              clearSession();
+              router.replace("/");
+            }}
+          />
         )}
       </div>
     </div>

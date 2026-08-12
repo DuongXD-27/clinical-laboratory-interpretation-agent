@@ -162,9 +162,36 @@ test vẫn assert đúng 12) — thuộc phần của Tuấn.
    role. Phần "doctor KHÔNG được nhập chỉ số / upload xét nghiệm" chưa chặn —
    làm ngay sẽ đổi hành vi API đang chạy public và cần sửa frontend `/doctor`.
    Cần Dương chốt thời điểm.
-4. **Chưa có giao diện.** Phần này mới là backend: chưa có form đăng ký, nút
-   "Dùng thử với tư cách khách", màn xem lịch sử. Frontend vẫn đang dùng luồng
-   đăng nhập cũ (vẫn chạy bình thường vì `/auth/login` giữ nguyên hợp đồng).
+4. **Giao diện đã có, nhưng chưa ai click thử ngoài tôi.** Xem mục 4 bên dưới.
 5. **Vẫn chưa có rate limiting.** `/auth/register` là endpoint public mới —
    không giới hạn, ai cũng tạo được hàng loạt tài khoản. Chưa chặn trong version
    này, ghi nhận là nợ.
+
+## 4. Giao diện
+
+| Màn | Thay đổi | File |
+| --- | --- | --- |
+| Đăng nhập | Thêm tab **Đăng ký** (tạo tài khoản bệnh nhân, đăng nhập luôn sau khi tạo) và nút **"Dùng thử với tư cách khách"** | `frontend/src/app/page.tsx` |
+| Bệnh nhân | Nhận cả phiên khách; khách thấy banner "không lưu lịch sử"; sau mỗi lần phân tích hiện "đã lưu phiếu #N"; thêm mục **Lịch sử xét nghiệm của tôi** | `frontend/src/app/patient/page.tsx` |
+| Bác sĩ | Thêm mục **Lịch sử xét nghiệm của bệnh nhân**, tra được theo tên bệnh nhân + khoảng ngày | `frontend/src/app/doctor/page.tsx` |
+| Dùng chung | Component lịch sử (lọc theo ngày, mở chi tiết từng phiếu) | `frontend/src/components/HistoryPanel.tsx` |
+
+Backend vẫn là ranh giới thật: giao diện chỉ phản ánh quyền, không tạo ra quyền.
+Khách không thấy mục lịch sử vì `/history` trả 403 cho khách, không phải vì UI
+giấu đi.
+
+Đã kiểm: `npm run lint` sạch, `npm run build` (kèm type-check) thành công, trang
+đăng nhập render đúng nút khách. Gọi thật qua HTTP kèm `Origin:
+http://localhost:3000` để kiểm CORS:
+
+```
+CORS preflight /auth/register  -> 200, access-control-allow-origin: http://localhost:3000
+register                       -> {"id":3,"username":"ui_smoke","role":"patient"}
+register trùng tên             -> {"detail":"Tên đăng nhập đã tồn tại, vui lòng chọn tên khác."}
+tên quá ngắn                   -> 422 (đã chặn trước ở client bằng thông báo tiếng Việt)
+guest                          -> access_token role=guest
+```
+
+**Chưa làm:** chưa có ai ngoài tôi bấm thử trên trình duyệt, và chưa deploy bản
+này lên Vercel/Railway. Đây là phần smoke test cần người thật, nên để Dương hoặc
+một người ngoài team làm sau khi merge.
