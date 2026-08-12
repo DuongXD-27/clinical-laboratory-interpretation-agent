@@ -82,7 +82,7 @@
     ]
   },
   {
-    "name": "Fasting Plasma Glucose",
+    "name": "Fasting plasma glucose",
     "metric": "mmol/L",
     "sources": [
       {
