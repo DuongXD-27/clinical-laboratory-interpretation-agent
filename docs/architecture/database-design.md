@@ -286,13 +286,24 @@ users (1) ─── (N) lab_reports (1) ─── (N) report_indicators (N) ─�
 users (1) ─── (N) doctor_notes  [polymorphic → report_indicators | report_questions]
 ```
 
-Xoá 1 `user` → cascade xoá toàn bộ `lab_reports`/`doctor_notes` của họ.
-Xoá 1 `lab_report` → cascade xoá `report_indicators`/`report_critical_alerts`/
+Xoá 1 `user` → cascade xoá toàn bộ `lab_reports` (nếu là patient) hoặc
+`doctor_notes` (nếu là doctor, qua `doctor_id`) của chính họ. Xoá 1
+`lab_report` → cascade xoá `report_indicators`/`report_critical_alerts`/
 `report_questions`/`out_of_scope_log` của riêng phiếu đó. Xoá 1
 `indicator_catalog` → `report_indicators.indicator_catalog_id` bị set
 `NULL` (không xoá lịch sử chỉ số chỉ vì catalog bị dọn dẹp). Trên SQLite,
 cascade/`SET NULL` chỉ có hiệu lực vì `db.py` bật `PRAGMA foreign_keys=ON`
 cho từng connection lúc khởi tạo engine.
+
+> ⚠️ **`doctor_notes` mồ côi (orphan) khi cascade phía target.** Cascade ở
+> trên chỉ áp dụng cho FK thật (`patient_id`, `report_id`, `doctor_id`...).
+> `doctor_notes.target_id` KHÔNG phải FK thật (polymorphic association —
+> xem cảnh báo ở mục `doctor_notes` bên trên), nên khi 1 `report_indicator`
+> hoặc `report_question` bị cascade-xoá (vì report cha của nó bị xoá),
+> **note trỏ vào nó vẫn còn nguyên**, giờ trỏ vào 1 `target_id` không còn
+> tồn tại. Tầng ứng dụng phải tự dọn (hoặc chấp nhận orphan như audit log).
+> Test `test_cascade_delete_removes_report_and_children_but_orphans_doctor_note`
+> trong `tests/test_db_schema.py` xác nhận đúng hành vi này.
 
 ## Trả lời 5 câu hỏi checklist
 
@@ -313,6 +324,11 @@ cho từng connection lúc khởi tạo engine.
    WHERE patient_id = :X AND test_date BETWEEN :A AND :B
    ORDER BY test_date;
    ```
+   `lab_reports` có composite index `(patient_id, test_date)` phục vụ
+   đúng câu query này (`__table_args__` trong `db.py`) — leftmost prefix
+   của composite tự cover luôn query chỉ lọc `patient_id`, nên không cần
+   giữ thêm index đơn ở `patient_id`. `test_date` vẫn giữ index đơn riêng.
+
    Xem chi tiết từng chỉ số/cảnh báo/câu hỏi của 1 report thì join thêm
    `report_indicators`/`report_critical_alerts`/`report_questions`/
    `out_of_scope_log` theo `report_id`. `LabReportSummarySchema`/
