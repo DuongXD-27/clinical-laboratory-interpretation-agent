@@ -245,3 +245,68 @@ async def test_tc05_guest_has_no_patient_history_persistence(client, test_db, st
 @pytest.mark.asyncio
 async def test_history_requires_authentication(client):
     assert (await client.get("/api/v1/history")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_ocr_path_is_stored_and_marked_as_ocr(client, stub_graph, monkeypatch):
+    """Phiếu vào bằng ảnh cũng được lưu, và phân biệt được với nhập tay."""
+    from src.api import ocr_routes
+    from src.config import get_settings
+    from src.services.image_processor import ImageProcessor
+    from src.services.ocr_sample_library import load_samples
+
+    class _StubAdapter:
+        model = "stub-vision"
+
+        def extract(self, _data_url):
+            from src.models.ocr_schemas import OCRIndicatorDraft
+
+            return [
+                OCRIndicatorDraft(
+                    name="LDL-Cholesterol",
+                    value=4.2,
+                    unit="mmol/L",
+                    confidence=0.95,
+                    raw_text="LDL 4.2",
+                )
+            ]
+
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "demo_only")
+    monkeypatch.setattr(ocr_routes, "_get_dependencies", lambda: (ImageProcessor(), _StubAdapter()))
+
+    headers = await register_and_login(client, "benhnhan_a")
+    upload = await client.post(
+        "/api/v1/ocr/upload",
+        headers=headers,
+        files={"file": ("phieu.png", load_samples()[0].path.read_bytes(), "image/png")},
+        data={"consent_acknowledged": "true"},
+    )
+    assert upload.status_code == 200, upload.text
+    draft = upload.json()["indicators"][0]
+
+    confirm = await client.post(
+        "/api/v1/ocr/confirm",
+        headers=headers,
+        json={
+            "review_token": upload.json()["review_token"],
+            "patient_age": 40,
+            "patient_gender": "female",
+            "test_date": "2026-08-09",
+            "indicators": [
+                {
+                    "draft_id": draft["draft_id"],
+                    "name": "LDL-Cholesterol",
+                    "value": 4.2,
+                    "unit": "mmol/L",
+                    "included": True,
+                    "reviewed": True,
+                    "low_confidence_acknowledged": True,
+                }
+            ],
+        },
+    )
+    assert confirm.status_code == 200, confirm.text
+    assert confirm.json()["saved_report_id"] is not None
+
+    listing = await client.get("/api/v1/history", headers=headers)
+    assert listing.json()["items"][0]["source"] == "ocr"

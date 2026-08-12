@@ -64,7 +64,24 @@ python -m src.scripts.create_doctor --username bs.nam --random-password
 ## 2. Bằng chứng nghiệm thu
 
 Chạy lại: `pytest tests/test_api/test_auth_persistence.py tests/test_api/test_guest_flow.py tests/test_api/test_patient_history.py -v`
-Kết quả: **33 passed** (12/08/2026).
+Kết quả: **35 passed** (12/08/2026).
+
+### TC-02 chạy bằng restart process thật
+
+Test tự động mô phỏng restart ở tầng DB (đóng sạch connection, mở lại từ file).
+Để chắc chắn, tôi chạy thêm một lượt thủ công với backend thật: bật `uvicorn`
+(DATABASE_URL trỏ file tạm), đăng ký, **kill process**, bật lại rồi login.
+
+```
+[1] Backend chay lan 1, PID=12656
+[2] Register -> 201 {"id":3,"username":"duy_tc02_that","role":"patient"}
+[3] Da giet process backend (exit=1)
+[4] Backend chay lan 2, PID=13656 (process MOI)
+[5] Login sau restart -> 200 role=patient username=duy_tc02_that
+[6] /auth/me -> 200 {"username":"duy_tc02_that","role":"patient","is_guest":false}
+```
+
+Hai PID khác nhau — user đăng ký ở process này login được ở process khác.
 
 ### Nhiệm vụ 1 — Authentication thật
 
@@ -83,6 +100,14 @@ Kết quả: **33 passed** (12/08/2026).
 | TC-05c | Sửa tay payload JWT rồi gọi `/auth/me` | 401 (chữ ký không khớp) | Đúng như expected | `test_tc05_tampered_token_is_rejected` |
 | TC-05d | `python -m src.scripts.create_doctor --username bs.nam` rồi login | 200, role `doctor` | Đúng như expected | `test_create_doctor_script_provisions_doctor_account` |
 
+Về ý "không xác định role bằng hardcode phía frontend": `frontend/src/app/page.tsx`
+điều hướng theo `session.role` lấy từ response của `/auth/login`, không có nhánh
+nào suy ra role từ tên đăng nhập hay từ nút bấm. Hai nút "Bệnh nhân demo" /
+"Bác sĩ demo" chỉ điền sẵn tên + mật khẩu rồi gọi API thật, không phải 2 nút
+mock của V1. `getRole()` đọc localStorage nên người dùng sửa được, nhưng đó chỉ
+đổi giao diện: quyền thật nằm ở token do server ký, và `/history` kiểm role ở
+backend.
+
 ### Nhiệm vụ 2 — Guest flow
 
 | Tiêu chí | Input | Expected | Actual | Test |
@@ -92,6 +117,7 @@ Kết quả: **33 passed** (12/08/2026).
 | Dùng được chức năng được cho phép | Khách gọi `/analyze` | 200, `saved_report_id = null` | Đúng như expected | `test_guest_analysis_is_not_persisted` |
 | Không dùng được patient memory | Khách gọi `/history` và `/history/1` | 403 kèm thông điệp mời đăng ký | Đúng như expected | `test_guest_cannot_use_patient_memory` |
 | Hết session → session mới không lấy lại được history cũ | Phiên 1 phân tích → mở phiên 2 | `session_id` khác nhau; phiên 2 không truy được gì (403, và phiên 1 cũng không để lại bản ghi nào) | Đúng như expected | `test_new_guest_session_cannot_reach_previous_session_data` |
+| Khách upload được xét nghiệm (ma trận cho phép) | Khách đi hết `/ocr/upload` → `/ocr/confirm` | Qua đủ 4 lớp bảo vệ, 200; vẫn không lưu bản ghi nào | Đúng như expected | `test_guest_can_complete_the_ocr_flow_without_persistence` |
 
 ### Nhiệm vụ 3 — Patient memory
 
@@ -106,13 +132,14 @@ Kết quả: **33 passed** (12/08/2026).
 | TC-04b | Patient B gọi `/history?patient_username=benhnhan_a` | Tham số bị bỏ qua, vẫn rỗng | Đúng như expected | `test_tc04_patient_cannot_widen_scope_via_query_param` |
 | TC-04c | Bác sĩ gọi `/history` và `/history?patient_username=benhnhan_a` | Thấy toàn bộ (2 phiếu) / lọc đúng 1 phiếu | Đúng như expected | `test_doctor_can_read_all_patients_history` |
 | TC-05 | Khách phân tích 1 phiếu | Bảng `lab_reports` trống; `/history` trả 403 | Đúng như expected | `test_tc05_guest_has_no_patient_history_persistence` |
+| Bổ sung | Bệnh nhân vào bằng luồng ảnh (`/ocr/upload` → `/ocr/confirm`) | Phiếu được lưu, đánh dấu `source="ocr"` để phân biệt với nhập tay | Đúng như expected | `test_ocr_path_is_stored_and_marked_as_ocr` |
 
 Ghi chú TC-04: truy cập phiếu của người khác trả **404 chứ không 403** — 403 sẽ
 gián tiếp xác nhận "phiếu ID này có tồn tại", đủ để dò ID phiếu của người khác.
 
 ### Toàn bộ bộ test
 
-`pytest tests/ -q` → **347 passed, 7 failed**.
+`pytest tests/ -q` → **349 passed, 7 failed**.
 
 7 test đỏ là lỗi có sẵn trên `main`, không do thay đổi này: toàn bộ nằm trong bộ
 RAGAS eval, cùng một nguyên nhân (dataset tăng từ 12 lên 27 case ở PR #30 nhưng
