@@ -8,17 +8,34 @@ purpose of this gate. Only explicit review evidence controls admission.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 
 from jose import JWTError, jwt
 
 from src.config import get_settings
 from src.models.ocr_schemas import OCRIndicatorDraft, OCRReviewedIndicator
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 _TOKEN_PURPOSE = "ocr-review"
 
 
 class OCRReviewGateError(ValueError):
     """The OCR review evidence is invalid, incomplete, or expired."""
+
+
+@lru_cache(maxsize=1)
+def _get_reference_repository() -> ReferenceRepository:
+    return ReferenceRepository.from_default_files()
+
+
+def _is_supported_analyte(name: str) -> bool:
+    try:
+        repository = _get_reference_repository()
+    except ReferenceRepositoryError:
+        return True
+
+    canonical = repository.resolve_analyte(name)
+    return canonical in repository.approved_analytes
 
 
 def prepare_review(
@@ -29,10 +46,18 @@ def prepare_review(
     """Annotate low-confidence rows and issue a short-lived signed review token."""
     settings = get_settings()
     threshold = settings.ocr_low_confidence_threshold
-    prepared = [
-        draft.model_copy(update={"needs_review": draft.confidence < threshold})
-        for draft in drafts
-    ]
+    prepared = []
+    for draft in drafts:
+        supported = _is_supported_analyte(draft.name)
+        prepared.append(
+            draft.model_copy(
+                update={
+                    "needs_review": supported and draft.confidence < threshold,
+                    "supported": supported,
+                    "unsupported_reason": "" if supported else "Chỉ số này hiện tại chưa được hỗ trợ.",
+                }
+            )
+        )
     expires_at = datetime.now(UTC) + timedelta(
         minutes=settings.ocr_review_token_expire_minutes
     )

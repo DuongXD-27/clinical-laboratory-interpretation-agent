@@ -24,6 +24,7 @@ export type AnalysisResult = {
   has_critical_values?: boolean;
   summary?: string;
   disclaimer?: string;
+  out_of_scope_indicators?: string[];
   patient_info?: {
     name?: string;
     age?: number;

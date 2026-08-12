@@ -199,6 +199,53 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
 
 
 @pytest.mark.asyncio
+async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
+    class FakeProcessor:
+        def process(self, _raw, *, filename):
+            return SimpleNamespace(bytes=b"processed", mime_type="image/jpeg")
+
+    class FakeAdapter:
+        model = "test-vision"
+
+        async def extract(self, _image_bytes, _mime_type):
+            return [
+                OCRIndicatorDraft(
+                    name="WBC",
+                    value=7.2,
+                    unit="10^9/L",
+                    confidence=0.95,
+                ),
+                OCRIndicatorDraft(
+                    name="AST",
+                    value=48,
+                    unit="U/L",
+                    confidence=0.95,
+                ),
+            ]
+
+    monkeypatch.setattr(
+        ocr_routes,
+        "_get_dependencies",
+        lambda: (FakeProcessor(), FakeAdapter()),
+    )
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
+    headers = await _auth_headers(client)
+    response = await client.post(
+        "/api/v1/ocr/upload",
+        headers=headers,
+        files={"file": ("report.png", b"image", "image/png")},
+        data={"consent_acknowledged": "true"},
+    )
+
+    assert response.status_code == 200, response.text
+    indicators = response.json()["indicators"]
+    assert indicators[0]["supported"] is True
+    assert indicators[1]["name"] == "AST"
+    assert indicators[1]["supported"] is False
+    assert "chưa được hỗ trợ" in indicators[1]["unsupported_reason"]
+
+
+@pytest.mark.asyncio
 async def test_low_confidence_cannot_bypass_explicit_acknowledgement(client):
     headers = await _auth_headers(client)
     response = await client.post(
@@ -259,3 +306,73 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
     assert initial_state["is_ocr_reviewed"] is True
     assert initial_state["ocr_drafts"][0].confidence == 0.4
     assert initial_state["raw_indicators"][0]["value"] == 5.2
+
+
+@pytest.mark.asyncio
+async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, monkeypatch):
+    drafts, token = prepare_review(
+        [
+            OCRIndicatorDraft(name="WBC", value=7.2, unit="10^9/L", confidence=0.95),
+            OCRIndicatorDraft(name="AST", value=48, unit="U/L", confidence=0.95),
+        ],
+        username="benhnhan",
+    )
+    final_state = {
+        "indicators": [
+            {
+                "name": "WBC",
+                "value": 7.2,
+                "unit": "10^9/L",
+                "reference_low": 4.72,
+                "reference_high": 11.3,
+                "status": "normal",
+                "is_abnormal": False,
+                "is_critical": False,
+                "explanation": "",
+                "sources": [],
+            }
+        ],
+        "critical_alerts": [],
+        "has_critical_values": False,
+        "guardrail_passed": True,
+        "disclaimer": "Thông tin giáo dục, vui lòng trao đổi với bác sĩ.",
+    }
+    mock_ainvoke = AsyncMock(return_value=final_state)
+    monkeypatch.setattr(routes.agent, "ainvoke", mock_ainvoke)
+    headers = await _auth_headers(client)
+
+    response = await client.post(
+        "/api/v1/ocr/confirm",
+        json={
+            "review_token": token,
+            "patient_age": 35,
+            "patient_gender": "male",
+            "test_date": "2026-08-07",
+            "indicators": [
+                {
+                    "draft_id": drafts[0].draft_id,
+                    "name": "WBC",
+                    "value": 7.2,
+                    "unit": "10^9/L",
+                    "included": True,
+                    "reviewed": True,
+                    "low_confidence_acknowledged": False,
+                },
+                {
+                    "draft_id": drafts[1].draft_id,
+                    "name": "AST",
+                    "value": 48,
+                    "unit": "U/L",
+                    "included": True,
+                    "reviewed": True,
+                    "low_confidence_acknowledged": False,
+                },
+            ],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    initial_state = mock_ainvoke.await_args.args[0]
+    assert [item["name"] for item in initial_state["raw_indicators"]] == ["WBC"]
+    assert response.json()["out_of_scope_indicators"] == ["AST"]

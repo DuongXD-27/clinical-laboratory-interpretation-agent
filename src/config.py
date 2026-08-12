@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
     gemini_vision_model: str = "gemini-3.5-flash-lite"
     gemini_vision_timeout_seconds: float = Field(default=15.0, ge=1.0, le=60.0)
-    gemini_vision_max_output_tokens: int = Field(default=500, ge=100, le=1000)
+    gemini_vision_max_output_tokens: int = Field(default=2048, ge=100, le=4096)
     gemini_vision_thinking_level: Literal["low", "medium", "high"] = "low"
     vision_model: str = "google/gemma-4-26b-a4b-it:free"
     vision_base_url: str = "https://openrouter.ai/api/v1"

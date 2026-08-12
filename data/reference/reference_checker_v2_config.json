@@ -23,10 +23,14 @@
     "Hồng cầu (RBC)": "RBC",
     "Số lượng hồng cầu": "RBC",
     "HGB": "HGB",
+    "Hemoglobin": "HGB",
+    "Hemoglobin (HGB)": "HGB",
+    "Huyết sắc tố": "HGB",
     "Glucose": "Fasting plasma glucose",
     "Đường huyết": "Fasting plasma glucose",
     "Đường huyết lúc đói": "Fasting plasma glucose",
     "Glucose máu lúc đói": "Fasting plasma glucose",
+    "Fasting Blood Glucose": "Fasting plasma glucose",
     "Fasting plasma glucose": "Fasting plasma glucose",
     "HDL-Cholesterol": "HDL-C",
     "HDL-C": "HDL-C",
@@ -35,7 +39,8 @@
     "LDL-Cholesterol": "LDL-C",
     "LDL-C": "LDL-C",
     "Kali": "Potassium",
-    "Potassium": "Potassium"
+    "Potassium": "Potassium",
+    "Potassium (K+)": "Potassium"
   },
   "age_scope_aliases": {
     "Adult": {

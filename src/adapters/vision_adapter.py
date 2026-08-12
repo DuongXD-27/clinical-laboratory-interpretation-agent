@@ -33,11 +33,16 @@ logger = logging.getLogger(__name__)
 
 EXTRACTION_SYSTEM_PROMPT = (
     "Bạn là công cụ trích xuất dữ liệu từ ảnh phiếu xét nghiệm máu. "
-    "Chỉ đọc các dòng chỉ số gồm tên, giá trị, đơn vị, độ tin cậy và nguyên văn. "
+    "Chỉ đọc các dòng chỉ số gồm tên, giá trị, đơn vị, độ tin cậy và nguyên văn ngắn. "
+    "Đọc cả chỉ số phổ biến và chỉ số chưa chắc được hệ thống hỗ trợ; không tự bỏ dòng chỉ vì tên chỉ số lạ. "
+    "Không đưa khoảng tham chiếu, đánh giá, STT hoặc ghi chú vào kết quả. "
     "Không giải thích, bình luận y khoa hoặc chẩn đoán. "
     "Nếu ảnh không phải phiếu xét nghiệm máu, trả về danh sách indicators rỗng."
 )
-EXTRACTION_USER_PROMPT = "Đọc các chỉ số xét nghiệm trên ảnh theo schema đã cung cấp."
+EXTRACTION_USER_PROMPT = (
+    "Trích xuất tất cả dòng chỉ số xét nghiệm trong bảng theo schema đã cung cấp. "
+    "Mỗi indicator chỉ gồm name, value, unit, confidence, raw_text; raw_text tối đa một dòng ngắn."
+)
 
 
 class VisionAdapterError(Exception):

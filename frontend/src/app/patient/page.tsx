@@ -17,6 +17,10 @@ function sourceHostname(source: string) {
   }
 }
 
+function metricInputId(name: string) {
+  return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+}
+
 export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -256,7 +260,7 @@ export default function PatientPage() {
                   {selectedMetrics.map((metric) => (
                     <MetricInput
                       key={metric.name}
-                      id={`manual-${metric.name}`}
+                      id={`manual-${metricInputId(metric.name)}`}
                       name={metric.name}
                       label={metric.label}
                       unit={metric.unit}
@@ -319,6 +323,15 @@ export default function PatientPage() {
               </div>
 
               {result.summary && <div className="summary-box mt-5">{result.summary}</div>}
+
+              {(result.out_of_scope_indicators?.length ?? 0) > 0 && (
+                <div className="info-message mt-5" role="status">
+                  <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
+                  <p className="mt-1">
+                    {result.out_of_scope_indicators?.join(", ")} hiện tại chưa được hỗ trợ, nên chưa được đưa vào phần phân tích.
+                  </p>
+                </div>
+              )}
 
               <div className="mt-5 grid gap-3">
                 {result.indicators?.map((indicator, index) => {

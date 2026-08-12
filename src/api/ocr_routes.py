@@ -18,6 +18,7 @@ from src.services.ocr_review_gate import (
     validate_review,
 )
 from src.services.ocr_sample_library import get_sample, is_known_sample, load_samples
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 from src.services.request_timing import timing_span
 
 router = APIRouter()
@@ -39,6 +40,25 @@ def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     with timing_span("vision-client-init"):
         adapter = VisionAdapter()
     return processor, adapter
+
+
+def _split_supported_inputs(included_inputs: list[dict]) -> tuple[list[dict], list[str]]:
+    try:
+        repository = ReferenceRepository.from_default_files()
+    except ReferenceRepositoryError:
+        return included_inputs, []
+
+    supported: list[dict] = []
+    out_of_scope: list[str] = []
+    for item in included_inputs:
+        name = str(item.get("name", "")).strip()
+        canonical = repository.resolve_analyte(name)
+        if canonical in repository.approved_analytes:
+            supported.append(item)
+        elif name:
+            out_of_scope.append(name)
+
+    return supported, list(dict.fromkeys(out_of_scope))
 
 
 @router.get(
@@ -207,6 +227,13 @@ async def ocr_confirm(
     except OCRReviewGateError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    included_inputs, out_of_scope_indicators = _split_supported_inputs(included_inputs)
+    if not included_inputs:
+        raise HTTPException(
+            status_code=400,
+            detail="Phiếu này chưa có chỉ số nào nằm trong danh sách hiện được hỗ trợ.",
+        )
+
     with timing_span("ocr-build-analysis-request"):
         analyze_request = AnalyzeRequest(
             patient_age=request.patient_age,
@@ -220,8 +247,12 @@ async def ocr_confirm(
     # one response mapping for both manual and OCR flows.
     from src.api.routes import run_analysis
 
-    return await run_analysis(
+    response = await run_analysis(
         analyze_request,
         username=current_user.username,
         ocr_drafts=reviewed_drafts,
     )
+    response.out_of_scope_indicators = list(
+        dict.fromkeys([*response.out_of_scope_indicators, *out_of_scope_indicators])
+    )
+    return response
