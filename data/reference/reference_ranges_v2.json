@@ -661,7 +661,7 @@
     "unit_raw": "%",
     "unit_canonical": "%",
     "value_type": null,
-    "range_lower": null,
+    "range_lower": 4.0,
     "range_upper": 5.7,
     "reference_type": "RI",
     "source_priority_tier": null,

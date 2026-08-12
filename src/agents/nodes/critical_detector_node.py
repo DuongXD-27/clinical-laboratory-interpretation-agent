@@ -59,7 +59,7 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             high_val = thresholds.get("high")
             unit_str = new_ind.get("unit") or thresholds.get("unit", "")
 
-            if low_val is not None and val <= low_val:
+            if low_val is not None and low_val >= 0 and val <= low_val:
                 new_ind["status"] = "critical_low"
                 new_ind["is_abnormal"] = True
                 new_ind["is_critical"] = True
@@ -72,7 +72,7 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                         "unit": unit_str,
                         "message": f"CẢNH BÁO: {name} giảm tới ngưỡng nguy kịch ({val} <= {low_val} {unit_str}). Yêu cầu can thiệp y tế."
                     })
-            elif high_val is not None and val >= high_val:
+            elif high_val is not None and high_val >= 0 and val >= high_val:
                 new_ind["status"] = "critical_high"
                 new_ind["is_abnormal"] = True
                 new_ind["is_critical"] = True
