@@ -248,6 +248,12 @@ class DoctorNote(Base):
     xem docstring đầu file về đánh đổi (không có FK constraint thật)."""
 
     __tablename__ = "doctor_notes"
+    __table_args__ = (
+        # Phục vụ query "lấy note cho đúng 1 indicator/question cụ thể"
+        # (target_type, target_id) — không phải FK thật (polymorphic) nên
+        # không tự có index qua FK như các cột khác, phải khai báo tay.
+        Index("ix_doctor_notes_target_type_target_id", "target_type", "target_id"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     doctor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
