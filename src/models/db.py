@@ -5,8 +5,16 @@ này chưa cần versioned migration). Seed vài tài khoản demo lúc khởi �
 nếu bảng users đang trống, để hoạt động ổn định kể cả khi disk trên
 Render bị reset (free tier không có persistent disk).
 
-users (1) --- (N) lab_reports (1) --- (N) report_indicators
+users (1) --- (N) lab_reports (1) --- (N) report_indicators (N) --- (1) indicator_catalog
                               (1) --- (N) report_critical_alerts
+                              (1) --- (N) report_questions (1) --- (N) doctor_notes*
+                              (1) --- (N) out_of_scope_log
+
+* doctor_notes dùng polymorphic association (target_type/target_id) để trỏ
+  vào "indicator" (report_indicators.id) hoặc "report_question"
+  (report_questions.id) mà không cần 2 cột FK nullable riêng. Đánh đổi:
+  DB không tự ràng buộc target_id phải tồn tại — tầng ứng dụng chịu trách
+  nhiệm đảm bảo tính đúng đắn, không có FK constraint thật cho cột này.
 
 Guest (request không có JWT hợp lệ) không có row ở bất kỳ bảng nào —
 mọi bảng lịch sử đều bắt buộc patient_id NOT NULL trỏ vào users.id thật,
@@ -84,8 +92,6 @@ class LabReport(Base):
     has_critical_values = Column(Boolean, nullable=False, default=False)
     guardrail_passed = Column(Boolean, nullable=False, default=True)
     disclaimer = Column(Text, nullable=False, default="")
-    questions_for_doctor = Column(JSON, nullable=False, default=list)
-    out_of_scope_indicators = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
 
     indicators = relationship(
@@ -93,6 +99,15 @@ class LabReport(Base):
     )
     critical_alerts = relationship(
         "ReportCriticalAlert", back_populates="report", cascade="all, delete-orphan"
+    )
+    # Thay cho 2 cột JSON questions_for_doctor/out_of_scope_indicators cũ —
+    # chuẩn hoá thành bảng riêng để mỗi câu hỏi/chỉ số ngoài phạm vi có PK
+    # thật, tránh 2 nguồn sự thật trùng lặp (JSON blob + bảng con).
+    questions = relationship(
+        "ReportQuestion", back_populates="report", cascade="all, delete-orphan"
+    )
+    out_of_scope_entries = relationship(
+        "OutOfScopeLog", back_populates="report", cascade="all, delete-orphan"
     )
 
 
@@ -103,6 +118,11 @@ class ReportIndicator(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Nullable: OCR/nhập tay có thể tạo ra tên chưa từng có trong catalog —
+    # không được chặn cứng việc lưu report chỉ vì 1 chỉ số chưa canonical hoá.
+    indicator_catalog_id = Column(
+        Integer, ForeignKey("indicator_catalog.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     name = Column(String, nullable=False)
     value = Column(Float, nullable=False)
     unit = Column(String, nullable=False, default="")
@@ -115,6 +135,10 @@ class ReportIndicator(Base):
     sources = Column(JSON, nullable=False, default=list)
 
     report = relationship("LabReport", back_populates="indicators")
+    catalog_entry = relationship("IndicatorCatalog", back_populates="indicators")
+    questions = relationship(
+        "ReportQuestion", back_populates="indicator", cascade="all, delete-orphan"
+    )
 
 
 class ReportCriticalAlert(Base):
@@ -130,6 +154,77 @@ class ReportCriticalAlert(Base):
     message = Column(Text, nullable=False, default="")
 
     report = relationship("LabReport", back_populates="critical_alerts")
+
+
+class IndicatorCatalog(Base):
+    """Danh mục chỉ số chuẩn hoá — resolve tên đọc được (OCR/nhập tay) về 1
+    canonical_name duy nhất, để trend (so sánh nhiều lần xét nghiệm) match
+    đúng theo thời gian thay vì string-match trực tiếp trên report_indicators.name
+    (dễ gãy âm thầm nếu OCR đọc "HbA1c" lần này, "Hemoglobin A1c" lần khác).
+    """
+
+    __tablename__ = "indicator_catalog"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    canonical_name = Column(String, nullable=False, unique=True, index=True)
+    canonical_unit = Column(String, nullable=False)
+    aliases = Column(JSON, nullable=False, default=list)  # list[str]
+    unit_conversions = Column(JSON, nullable=False, default=dict)  # {"mg/dL": 0.0555, ...}
+    max_gap_days_for_trend = Column(Integer, nullable=True)
+
+    indicators = relationship("ReportIndicator", back_populates="catalog_entry")
+
+
+class ReportQuestion(Base):
+    """1 câu hỏi gợi ý hỏi bác sĩ, gắn với đúng 1 chỉ số bất thường/nguy kịch
+    của 1 report. Thay cho JSON list[str] cũ (lab_reports.questions_for_doctor)
+    — cần PK thật để doctor_notes trỏ vào, và cần trạng thái riêng từng câu.
+    """
+
+    __tablename__ = "report_questions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    indicator_id = Column(
+        Integer, ForeignKey("report_indicators.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    question_text = Column(Text, nullable=False)
+    priority = Column(String, nullable=False)  # "critical" | "abnormal"
+    status = Column(String, nullable=False, default="generated")  # "generated" | "sent_to_doctor" | "answered"
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+    report = relationship("LabReport", back_populates="questions")
+    indicator = relationship("ReportIndicator", back_populates="questions")
+
+
+class DoctorNote(Base):
+    """Ghi chú diễn giải của bác sĩ (Human-in-the-loop) trên 1 chỉ số hoặc
+    1 câu hỏi cụ thể. target_type/target_id là polymorphic association —
+    xem docstring đầu file về đánh đổi (không có FK constraint thật)."""
+
+    __tablename__ = "doctor_notes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    doctor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_type = Column(String, nullable=False)  # "indicator" | "report_question"
+    target_id = Column(Integer, nullable=False)
+    note_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+
+class OutOfScopeLog(Base):
+    """Log riêng cho từng chỉ số ngoài phạm vi hỗ trợ, tách khỏi JSON blob
+    trong lab_reports để truy vấn được "chỉ số nào out-of-scope nhiều nhất"
+    mà không cần parse JSON qua toàn bộ report."""
+
+    __tablename__ = "out_of_scope_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    raw_indicator_name = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+    report = relationship("LabReport", back_populates="out_of_scope_entries")
 
 
 DEMO_USERS = [

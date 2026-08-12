@@ -121,6 +121,50 @@ class LabReportSummarySchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReportQuestionSchema(BaseModel):
+    """1 câu hỏi gợi ý hỏi bác sĩ, gắn với 1 chỉ số cụ thể."""
+
+    id: int
+    indicator_id: int
+    question_text: str
+    priority: Literal["critical", "abnormal"]
+    status: Literal["generated", "sent_to_doctor", "answered"]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class OutOfScopeLogSchema(BaseModel):
+    """1 dòng log cho 1 chỉ số ngoài phạm vi hỗ trợ trong report."""
+
+    id: int
+    raw_indicator_name: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DoctorNoteSchema(BaseModel):
+    """Ghi chú của bác sĩ trên 1 chỉ số hoặc 1 câu hỏi (target_type/target_id)."""
+
+    id: int
+    doctor_id: int
+    target_type: Literal["indicator", "report_question"]
+    target_id: int
+    note_text: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DoctorNoteCreateRequest(BaseModel):
+    """Request tạo ghi chú mới — doctor_id lấy từ token, không nhận từ body."""
+
+    target_type: Literal["indicator", "report_question"]
+    target_id: int
+    note_text: str = Field(..., min_length=1)
+
+
 class LabReportDetailSchema(BaseModel):
     """1 phiếu xét nghiệm đầy đủ, dùng khi xem chi tiết 1 record lịch sử."""
 
@@ -134,10 +178,10 @@ class LabReportDetailSchema(BaseModel):
     has_critical_values: bool
     guardrail_passed: bool
     disclaimer: str
-    questions_for_doctor: list[str]
-    out_of_scope_indicators: list[str]
     created_at: datetime
     indicators: list[IndicatorResultSchema]
     critical_alerts: list[CriticalAlertSchema]
+    questions: list[ReportQuestionSchema]
+    out_of_scope_entries: list[OutOfScopeLogSchema]
 
     model_config = {"from_attributes": True}
