@@ -31,7 +31,12 @@ Yêu cầu:
 """
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        return str(response.content).strip()
+        # `.text` chứ KHÔNG phải `str(response.content)`: với Gemini, content là
+        # danh sách content block (`[{"type": "text", "text": ..., "extras":
+        # {"signature": ...}}]`), nên str() sẽ đổ nguyên repr Python kèm chữ ký
+        # nội bộ ra thẳng màn hình bệnh nhân. `.text` ghép đúng phần text và bỏ
+        # các block thinking.
+        return response.text.strip()
     except Exception as exc:
         logger.error("Guardrail rewrite thất bại: %s", exc)
         return original_text
@@ -52,9 +57,10 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
 """
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
+        # Xem ghi chú ở `rewrite_with_llm` về `.text` vs `str(response.content)`.
         rewritten = [
             line.strip().removeprefix("-").strip()
-            for line in str(response.content).splitlines()
+            for line in response.text.splitlines()
             if line.strip()
         ]
         return rewritten or questions
