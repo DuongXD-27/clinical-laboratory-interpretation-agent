@@ -174,9 +174,12 @@ def project_source_urls() -> set[str]:
     explanations_path = Path("data/reference/explanations.json")
     if explanations_path.exists():
         for item in json.loads(explanations_path.read_text(encoding="utf-8")):
-            urls.update(url for url in item.get("sources", []) if url)
+            for src in item.get("sources", []):
+                url = src.get("url") if isinstance(src, dict) else src
+                if url:
+                    urls.add(str(url))
 
-    runtime_path = Path("data/reference/reference_ranges_v2.json")
+    runtime_path = Path("data/reference/reference_ranges.json")
     if runtime_path.exists():
         for item in json.loads(runtime_path.read_text(encoding="utf-8")):
             if item.get("source_url"):

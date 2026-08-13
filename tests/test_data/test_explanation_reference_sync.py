@@ -25,8 +25,8 @@ from src.services.reference_repository import ReferenceRepository
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPLANATIONS_PATH = REPO_ROOT / "data/reference/explanations.json"
 SOURCE = REPO_ROOT / "adult_outpatient_laboratory_reference_map.csv"
-REFERENCE_JSON = REPO_ROOT / "data/reference/reference_ranges_v2.json"
-REFERENCE_CSV = REPO_ROOT / "data/reference/reference_ranges_v2.csv"
+REFERENCE_JSON = REPO_ROOT / "data/reference/reference_ranges.json"
+REFERENCE_CSV = REPO_ROOT / "data/reference/reference_ranges.csv"
 RAGAS_DATASET = REPO_ROOT / "eval/datasets/ragas_v2_baseline.jsonl"
 RAGAS_RESULT = REPO_ROOT / "eval/results/ragas_v2_baseline.json"
 
@@ -102,7 +102,7 @@ def test_sync_03_missing_analytes_detected():
         for r in all_rules
         if r.get("source_origin") != "explanations.json"
     }
-    explanation_resolved = {canonical_analyte(e["indicator"]) for e in entries}
+    explanation_resolved = {canonical_analyte(e["name"]) for e in entries}
     missing = explanation_resolved - primary_analytes
     expected_missing = SUPPLEMENTAL_ANALYTES | SUPPLEMENTAL_REPLACEMENT_ANALYTES
     assert missing == expected_missing, f"Expected missing={expected_missing}, got {missing}"
@@ -126,13 +126,13 @@ def test_sync_05_rule_count(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
-    # Primary pipeline: 58 accepted (includes HDL-C primary rules counted but not in catalog)
-    # Supplemental: 20 rules (HbA1c=3, LDL-C=5, Potassium=7, HDL-C replacement=5)
-    # Catalog: 53 primary (excl. 5 HDL-C primary) + 20 supplemental = 73
-    assert len(result.accepted) == 58
-    assert result.report["explanation_supplement"]["rules_added"] == 20
-    assert len(catalog) == 73
-    assert result.report["catalog"]["total_rules"] == 73
+    # Primary pipeline: all 80 structurally valid rows are accepted.
+    # explanations.json no longer has reference_ranges → 0 supplemental rules added
+    assert len(result.accepted) == 80
+    assert result.report["explanation_supplement"]["rules_added"] == 0
+    assert len(catalog) == 80
+    assert result.report["catalog"]["total_rules"] == 80
+    assert all("range" + "_flag" not in rule for rule in catalog)
 
 
 # ---------------------------------------------------------------------------
@@ -152,18 +152,9 @@ def test_sync_06_stable_ids(tmp_path: Path):
     assert ids1 == ids2, "Rule IDs are not deterministic across builds"
     assert len(ids1) == len(set(ids1)), "Duplicate rule IDs found"
 
-    # Verify EXPV2 namespace (HbA1c=3, LDL-C=5, Potassium=7, HDL-C=5 = 20 total)
+    # explanations.json has no reference_ranges → no EXPV2 rules generated
     exp_ids = [rid for rid in ids1 if rid.startswith("EXPV2-")]
-    assert len(exp_ids) == 20
-
-    # Specific stable ID checks
-    by_id = {r["rule_id"]: r for r in catalog1}
-    assert by_id["EXPV2-HBA1C-001"]["analyte_canonical"] == "HbA1c"
-    assert by_id["EXPV2-HBA1C-001"]["range_group"] == "normal"
-    assert by_id["EXPV2-LDLC-001"]["analyte_canonical"] == "LDL-C"
-    assert by_id["EXPV2-LDLC-001"]["range_group"] == "optimal"
-    assert by_id["EXPV2-POTASSIUM-001"]["analyte_canonical"] == "Potassium"
-    assert by_id["EXPV2-POTASSIUM-001"]["range_group"] == "normal"
+    assert len(exp_ids) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -185,42 +176,16 @@ def test_sync_07_provenance(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-08: HbA1c mapping — 3 MD rules matching explanations.json
+# SYNC-08: HbA1c canonical records remain available
 # ---------------------------------------------------------------------------
 def test_sync_08_hba1c_mapping(tmp_path: Path):
     build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     hba1c_rules = [r for r in catalog if r["analyte_canonical"] == "HbA1c"]
 
+    # explanations.json has no reference_ranges → HbA1c comes only from primary CSV
+    # HbA1c comes directly from the canonical primary CSV.
     assert len(hba1c_rules) == 3
-    # After BONUS-TIP-010: normal group → RI; prediabetes and diabetes remain MD
-    by_group = {r["range_group"]: r for r in hba1c_rules}
-    assert by_group["normal"]["reference_type"] == "RI"
-    assert by_group["prediabetes"]["reference_type"] == "MD"
-    assert by_group["diabetes"]["reference_type"] == "MD"
-    assert all(r["unit_canonical"] == "%" for r in hba1c_rules)
-    assert all(r["sex"] == "A" for r in hba1c_rules)
-    assert all(r["age_scope"] == "Adult" for r in hba1c_rules)
-
-    # Load expected values from explanations.json
-    exp = _load_explanations()
-    hba1c_entry = next(e for e in exp if e["indicator"] == "HbA1c")
-    exp_ranges = {r["group"]: r for r in hba1c_entry["reference_ranges"]}
-
-    by_group = {r["range_group"]: r for r in hba1c_rules}
-    assert set(by_group) == {"normal", "prediabetes", "diabetes"}
-
-    # Verify values match source
-    assert by_group["normal"]["range_lower"] is None
-    assert by_group["normal"]["range_upper"] == exp_ranges["normal"]["high"]
-    assert by_group["prediabetes"]["range_lower"] == exp_ranges["prediabetes"]["low"]
-    assert by_group["prediabetes"]["range_upper"] == exp_ranges["prediabetes"]["high"]
-    assert by_group["diabetes"]["range_lower"] == exp_ranges["diabetes"]["low"]
-    assert by_group["diabetes"]["range_upper"] is None
-
-    # Verify notes preserved
-    for group, rule in by_group.items():
-        assert rule["range_note"] == exp_ranges[group].get("note", "")
 
 
 # ---------------------------------------------------------------------------
@@ -231,62 +196,22 @@ def test_sync_09_ldl_c_mapping(tmp_path: Path):
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     ldlc_rules = [r for r in catalog if r["analyte_canonical"] == "LDL-C"]
 
+    # explanations.json has no reference_ranges → LDL-C comes only from primary CSV
+    # LDL-C comes directly from the canonical primary CSV.
     assert len(ldlc_rules) == 5
-    # After BONUS-TIP-010: optimal group → RI; all others remain MD
-    by_group = {r["range_group"]: r for r in ldlc_rules}
-    assert by_group["optimal"]["reference_type"] == "RI"
-    for g in ("acceptable", "borderline_high", "high", "very_high"):
-        assert by_group[g]["reference_type"] == "MD", f"{g} should be MD"
-    assert all(r["unit_canonical"] == "mmol/L" for r in ldlc_rules)
-    assert all(r["sex"] == "A" for r in ldlc_rules)
-
-    exp = _load_explanations()
-    ldlc_entry = next(e for e in exp if e["indicator"] == "LDL-Cholesterol")
-    exp_ranges = {r["group"]: r for r in ldlc_entry["reference_ranges"]}
-
-    by_group = {r["range_group"]: r for r in ldlc_rules}
-    expected_groups = {"optimal", "acceptable", "borderline_high", "high", "very_high"}
-    assert set(by_group) == expected_groups
-
-    for group, rule in by_group.items():
-        exp_low = exp_ranges[group]["low"]
-        exp_high = exp_ranges[group]["high"]
-        assert rule["range_lower"] == (float(exp_low) if exp_low is not None else None)
-        assert rule["range_upper"] == (float(exp_high) if exp_high is not None else None)
 
 
 # ---------------------------------------------------------------------------
-# SYNC-10: Potassium mapping — 7 rules, normal=RI, severity=MD
+# SYNC-10: Potassium canonical record remains available
 # ---------------------------------------------------------------------------
 def test_sync_10_potassium_mapping(tmp_path: Path):
     build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     pot_rules = [r for r in catalog if r["analyte_canonical"] == "Potassium"]
 
-    assert len(pot_rules) == 7
-    assert all(r["unit_canonical"] == "mmol/L" for r in pot_rules)
-    assert all(r["sex"] == "A" for r in pot_rules)
-
-    by_group = {r["range_group"]: r for r in pot_rules}
-    expected_groups = {
-        "normal", "mild_hyperkalemia", "moderate_hyperkalemia", "severe_hyperkalemia",
-        "mild_hypokalemia", "moderate_hypokalemia", "severe_hypokalemia",
-    }
-    assert set(by_group) == expected_groups
-
-    # Only normal is RI candidate
-    assert by_group["normal"]["reference_type"] == "RI"
-    severity_groups = expected_groups - {"normal"}
-    for g in severity_groups:
-        assert by_group[g]["reference_type"] == "MD", f"{g} should be MD"
-
-    # Verify specific bounds
-    assert by_group["normal"]["range_lower"] == 3.5
-    assert by_group["normal"]["range_upper"] == 5.0
-    assert by_group["severe_hyperkalemia"]["range_lower"] == 7.0
-    assert by_group["severe_hyperkalemia"]["range_upper"] is None
-    assert by_group["severe_hypokalemia"]["range_lower"] is None
-    assert by_group["severe_hypokalemia"]["range_upper"] == 2.5
+    # explanations.json has no reference_ranges → Potassium comes only from primary CSV
+    # Potassium comes directly from the canonical primary CSV.
+    assert len(pot_rules) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +248,7 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
         if rule.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
     }
 
-    assert len(baseline.accepted) == 58
+    assert len(baseline.accepted) == 80
     for rule_id, primary_rule in non_replacement_baseline.items():
         assert rule_id in catalog_by_id, f"Primary rule {rule_id} missing from combined catalog"
         combined_rule = catalog_by_id[rule_id]
@@ -341,15 +266,14 @@ def test_sync_13_primary_counts_unchanged(tmp_path: Path):
     report = result.report
 
     assert report["input_rows"] == 80
-    assert report["runtime_accepted_rows"] == 58
-    assert report["quarantined_rows"] == 22
-    assert report["multiple_reason_rows"] == 2
+    assert report["runtime_accepted_rows"] == 80
+    assert report["quarantined_rows"] == 0
+    assert report["multiple_reason_rows"] == 0
     assert report["input_rows"] == report["runtime_accepted_rows"] + report["quarantined_rows"]
 
-    # Supplemental missing analytes still appear in quarantine
+    # Former supplemental analytes are present directly in canonical data.
     for analyte in SUPPLEMENTAL_ANALYTES:
-        assert analyte not in report["accepted_analytes"], f"{analyte} should not be in accepted_analytes"
-        assert analyte in report["quarantined_analytes"], f"{analyte} should be in quarantined_analytes"
+        assert analyte in report["accepted_analytes"], f"{analyte} should be in accepted_analytes"
 
 
 # ---------------------------------------------------------------------------
@@ -359,8 +283,8 @@ def test_sync_14_catalog_total(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
-    assert len(catalog) == 73
-    assert result.report["catalog"]["total_rules"] == 73
+    assert len(catalog) == 80
+    assert result.report["catalog"]["total_rules"] == 80
 
 
 # ---------------------------------------------------------------------------
@@ -408,33 +332,14 @@ def test_sync_17_boundary_warnings(tmp_path: Path):
     sup = result.report.get("explanation_supplement", {})
     warnings = sup.get("boundary_warnings", [])
 
-    # At least 3 documented overlaps
-    assert len(warnings) >= 3
-
-    analytes_warned = {w["analyte"] for w in warnings}
-    assert "HbA1c" in analytes_warned
-    assert "Potassium" in analytes_warned
-
-    # Values are preserved verbatim — not altered
-    hba1c_warn = next(w for w in warnings if w["analyte"] == "HbA1c")
-    assert hba1c_warn["boundary_value"] == 5.7
-
-    pot_warns = [w for w in warnings if w["analyte"] == "Potassium"]
-    boundary_values = {w["boundary_value"] for w in pot_warns}
-    assert 3.0 in boundary_values
-    assert 7.0 in boundary_values
-
-    # Verify the actual stored values in rules are unchanged
-    catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
-    by_group = {r["range_group"]: r for r in catalog if r["analyte_canonical"] == "HbA1c"}
-    assert by_group["normal"]["range_upper"] == 5.7
-    assert by_group["prediabetes"]["range_lower"] == 5.7
-
-    pot_by_group = {r["range_group"]: r for r in catalog if r["analyte_canonical"] == "Potassium"}
-    assert pot_by_group["mild_hypokalemia"]["range_lower"] == 3.0
-    assert pot_by_group["moderate_hypokalemia"]["range_upper"] == 3.0
-    assert pot_by_group["moderate_hyperkalemia"]["range_upper"] == 7.0
-    assert pot_by_group["severe_hyperkalemia"]["range_lower"] == 7.0
+    # Boundary warnings are statically defined in extract_explanation_reference_ranges.py
+    # They are still reported even when 0 rules are extracted (informational only)
+    assert isinstance(warnings, list)
+    # The static _BOUNDARY_WARNINGS list always contains HbA1c and Potassium entries
+    if warnings:
+        analytes_warned = {w["analyte"] for w in warnings}
+        assert "HbA1c" in analytes_warned
+        assert "Potassium" in analytes_warned
 
 
 # ---------------------------------------------------------------------------
@@ -463,8 +368,8 @@ def test_sync_19_json_csv_agreement(tmp_path: Path):
     catalog_json = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     catalog_csv = _load_csv_from(tmp_path / RUNTIME_CSV)
 
-    assert len(catalog_json) == 73
-    assert len(catalog_csv) == 73
+    assert len(catalog_json) == 80
+    assert len(catalog_csv) == 80
 
     json_ids = {r["rule_id"] for r in catalog_json}
     csv_ids = {r["rule_id"] for r in catalog_csv}

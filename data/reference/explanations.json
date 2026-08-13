@@ -1,436 +1,249 @@
 [
-    {
-        "id": "wbc",
-        "indicator": "WBC",
-        "display_name": "White Blood Cell Count",
-        "vietnamese_name": "Số lượng bạch cầu",
-        "simple_explanation": "Bạch cầu là các tế bào máu giúp cơ thể chống lại nhiễm trùng và viêm.",
-        "reference_ranges": [
-            {
-                "group": "adult",
-                "gender": "A",
-                "unit": "10^9/L",
-                "low": 4.0,
-                "high": 10.0,
-                "note": "Tương đương 4.000 - 10.000 /mm3. Một số nguồn quốc tế (Mayo Clinic, MedlinePlus) dùng khoảng 4.5 - 11.0 x10^9/L. Khoảng 4.0-10.0 được chọn vì phổ biến hơn trên phiếu xét nghiệm tại Việt Nam."
-            }
-        ],
-        "high_meaning": "Thường gặp khi cơ thể đang phản ứng với nhiễm trùng, viêm, stress, hoặc sau khi vận động mạnh. Cũng có thể do một số thuốc (ví dụ corticosteroid) hoặc tình trạng khác.",
-        "low_meaning": "Có thể liên quan đến nhiễm virus, một số bệnh lý tủy xương, tác dụng phụ của thuốc, hoặc hệ miễn dịch suy giảm.",
-        "sources": [
-            "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
-            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
-            "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500"
-        ]
-    },
-    {
-        "id": "rbc",
-        "indicator": "RBC",
-        "display_name": "Red Blood Cell Count",
-        "vietnamese_name": "Số lượng hồng cầu",
-        "simple_explanation": "Hồng cầu mang oxy từ phổi đến các cơ quan trong cơ thể.",
-        "reference_ranges": [
-            {
-                "group": "adult",
-                "gender": "M",
-                "unit": "10^12/L",
-                "low": 4.2,
-                "high": 5.9,
-                "note": "Tương đương 4.2 - 5.9 triệu tế bào/µL. Khoảng quốc tế (Mayo Clinic) thường hẹp hơn (~4.7-6.1)."
-            },
-            {
-                "group": "adult",
-                "gender": "F",
-                "unit": "10^12/L",
-                "low": 4.0,
-                "high": 5.4,
-                "note": "Tương đương 4.0 - 5.4 triệu tế bào/µL. Khoảng quốc tế (Mayo Clinic) thường hẹp hơn (~4.2-5.4)."
-            }
-        ],
-        "high_meaning": "Có thể do mất nước, sống ở vùng cao, hút thuốc lá, hoặc một số bệnh lý về máu/tim phổi.",
-        "low_meaning": "Thường liên quan đến thiếu máu - có thể do thiếu sắt, thiếu vitamin, mất máu, hoặc bệnh mạn tính.",
-        "sources": [
-            "https://medlineplus.gov/lab-tests/red-blood-cell-rbc-count/",
-            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
-            "https://www.vinmec.com/vie/bai-viet/so-luong-hong-cau-trong-co-la-bao-nhieu-vi",
-            "https://benhvienthucuc.vn/song-khoe/xet-nghiem/rbc-la-gi-chi-so-rbc-tang-hay-giam-co-anh-huong-den-suc-khoe"
-        ]
-    },
-    {
-        "id": "hgb",
-        "indicator": "HGB",
-        "display_name": "Hemoglobin",
-        "vietnamese_name": "Huyết sắc tố",
-        "simple_explanation": "Hemoglobin là protein trong hồng cầu giúp vận chuyển oxy. Chỉ số này thường đi kèm với RBC để đánh giá tình trạng thiếu máu.",
-        "reference_ranges": [
-            {
-                "group": "adult",
-                "gender": "M",
-                "unit": "g/dL",
-                "low": 13.5,
-                "high": 17.5
-            },
-            {
-                "group": "adult",
-                "gender": "F",
-                "unit": "g/dL",
-                "low": 12.0,
-                "high": 15.5
-            },
-            {
-                "group": "child",
-                "gender": "A",
-                "unit": "g/dL",
-                "low": 11.0,
-                "high": 16.0,
-                "note": "Tùy độ tuổi. Ngoài phạm vi persona chính (25-55 tuổi), giữ lại để tham khảo nếu mở rộng."
-            },
-            {
-                "group": "pregnant",
-                "gender": "F",
-                "unit": "g/dL",
-                "low": 11.0,
-                "high": 12.0,
-                "note": "Phụ nữ mang thai và người cao tuổi thường có giới hạn dưới sinh lý thấp hơn (khoảng > 11.0 g/dL vẫn có thể là bình thường với nhóm này)."
-            }
-        ],
-        "high_meaning": "Có thể do mất nước, sống/làm việc ở vùng thiếu oxy, hút thuốc lá, hoặc một số bệnh lý.",
-        "low_meaning": "Dấu hiệu thường gặp của thiếu máu - có thể gây mệt mỏi, chóng mặt, da xanh xao.",
-        "sources": [
-            "https://medlineplus.gov/lab-tests/hemoglobin-test/",
-            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
-            "https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html",
-            "https://www.vinmec.com/vie/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-gi-vi"
-        ]
-    },
-    {
-        "id": "glucose",
-        "indicator": "Glucose",
-        "display_name": "Glucose (Fasting Blood Glucose)",
-        "vietnamese_name": "Đường huyết",
-        "simple_explanation": "Glucose là nồng độ đường trong máu, nguồn năng lượng chính để nuôi cơ thể.",
-        "reference_ranges": [
-            {
-                "group": "fasting_normal",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 3.9,
-                "high": 5.5,
-                "note": "Đường huyết đói - nhịn ăn ít nhất 8 tiếng, người trưởng thành khỏe mạnh, không mang thai. Tương đương 70 - 99 mg/dL."
-            },
-            {
-                "group": "fasting_prediabetes",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 5.6,
-                "high": 6.9,
-                "note": "Tiền đái tháo đường. Tương đương 100 - 125 mg/dL."
-            },
-            {
-                "group": "fasting_diabetes",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 7.0,
-                "high": null,
-                "note": "Đái tháo đường (>= 126 mg/dL). Chẩn đoán xác định khi có ở 2 lần xét nghiệm vào 2 ngày riêng biệt."
-            },
-            {
-                "group": "postprandial_2h",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": null,
-                "high": 7.8,
-                "note": "Đường huyết sau ăn 2 giờ bình thường < 7.8 mmol/L (< 140 mg/dL)."
-            },
-            {
-                "group": "random_with_symptoms",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 11.1,
-                "high": null,
-                "note": "Đường huyết bất kỳ kèm triệu chứng sụt cân, uống nhiều, tiểu nhiều: >= 11.1 mmol/L gợi ý đái tháo đường."
-            }
-        ],
-        "critical_low": 2.2,
-        "critical_high": 22.2,
-        "critical_note": "Ngưỡng nguy kịch tham khảo: < 2.2 mmol/L (< 40 mg/dL) hoặc > 22.2 mmol/L (> 400 mg/dL) cần cấp cứu ngay.",
-        "high_meaning": "Có thể liên quan đến tiền đái tháo đường hoặc đái tháo đường (nếu đo lúc đói và lặp lại), cũng có thể tăng tạm thời do ăn trước khi lấy máu, stress, hoặc một số thuốc. Bác sĩ thường kết hợp thêm chỉ số HbA1c để đánh giá chính xác hơn.",
-        "low_meaning": "Hạ đường huyết (< 3.9 mmol/L): cơ thể thiếu năng lượng, có thể gây đói cồn cào, tay chân bủn rủn, vã mồ hôi lạnh, tim đập nhanh - cần xử trí sớm nếu có triệu chứng.",
-        "sources": [
-            "https://diabetes.org/about-diabetes/a1c",
-            "https://www.cdc.gov/diabetes/diagnosis/index.html",
-            "https://www.vinmec.com/vie/bai-viet/duong-huyet-luc-doi-binh-thuong-vi",
-            "https://www.vinmec.com/vie/bai-viet/chi-so-glucose-trong-mau-o-muc-bao-nhieu-la-mac-benh-tieu-duong-vi",
-            "https://nhathuoclongchau.com.vn/bai-viet/glucose-trong-mau-binh-thuong-la-bao-nhieu-bao-nhieu-la-tieu-duong.html",
-            "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
-        ]
-    },
-    {
-        "id": "hba1c",
-        "indicator": "HbA1c",
-        "display_name": "Hemoglobin A1c",
-        "vietnamese_name": "Đường huyết trung bình 2-3 tháng",
-        "simple_explanation": "HbA1c phản ánh mức đường huyết trung bình trong khoảng 2-3 tháng gần nhất, không bị ảnh hưởng bởi bữa ăn hay vận động ngay trước khi lấy máu như glucose đo tức thời - vì vậy không cần nhịn ăn khi xét nghiệm.",
-        "reference_ranges": [
-            {
-                "group": "normal",
-                "gender": "A",
-                "unit": "%",
-                "low": null,
-                "high": 5.7,
-                "note": "Bình thường, người trưởng thành khỏe mạnh, không mang thai."
-            },
-            {
-                "group": "prediabetes",
-                "gender": "A",
-                "unit": "%",
-                "low": 5.7,
-                "high": 6.4,
-                "note": "Tiền đái tháo đường - nguy cơ cao tiến triển thành đái tháo đường."
-            },
-            {
-                "group": "diabetes",
-                "gender": "A",
-                "unit": "%",
-                "low": 6.5,
-                "high": null,
-                "note": "Đái tháo đường - chẩn đoán xác định khi dương tính lần 2 hoặc kèm triệu chứng lâm sàng rõ."
-            }
-        ],
-        "high_meaning": "Gợi ý đường huyết đã tăng cao trong thời gian dài, liên quan đến nguy cơ tiền đái tháo đường/đái tháo đường. Với người đã điều trị, chỉ số này giúp đánh giá việc kiểm soát bệnh có đang hiệu quả hay chưa.",
-        "low_meaning": "Hiếm gặp hơn, có thể liên quan đến một số bệnh lý về máu ảnh hưởng đến kết quả xét nghiệm.",
-        "sources": [
-            "https://diabetes.org/about-diabetes/a1c",
-            "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
-            "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/"
-        ]
-    },
-    {
-        "id": "ldl_cholesterol",
-        "indicator": "LDL-Cholesterol",
-        "display_name": "LDL Cholesterol",
-        "vietnamese_name": "Cholesterol xấu (LDL)",
-        "simple_explanation": "LDL là loại cholesterol có thể bám vào thành mạch máu, hình thành mảng xơ vữa, thường được gọi là \"cholesterol xấu\".",
-        "reference_ranges": [
-            {
-                "group": "optimal",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": null,
-                "high": 2.58,
-                "note": "Tối ưu. < 2.59 mmol/L."
-            },
-            {
-                "group": "acceptable",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 2.59,
-                "high": 3.35,
-                "note": "Chấp nhận được (Gần tối ưu). 2.59 - 3.35 mmol/L."
-            },
-            {
-                "group": "borderline_high",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 3.36,
-                "high": 4.13,
-                "note": "Giới hạn cao. 3.36 - 4.13 mmol/L."
-            },
-            {
-                "group": "high",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 4.14,
-                "high": 4.90,
-                "note": "Cao. 4.14 - 4.90 mmol/L."
-            },
-            {
-                "group": "very_high",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 4.91,
-                "high": null,
-                "note": "Rất cao. >= 4.91 mmol/L."
-            }
-        ],
-        "high_meaning": "Liên quan đến tăng nguy cơ bệnh tim mạch (nhồi máu cơ tim, đột quỵ) theo thời gian, đặc biệt nếu kết hợp với các yếu tố nguy cơ khác. Một số yếu tố góp phần làm LDL tăng: chế độ ăn nhiều chất béo bão hòa/chất béo chuyển hóa (thịt mỡ, đồ chiên rán, thức ăn nhanh), ít vận động, thừa cân, hút thuốc lá, uống nhiều rượu bia, hoặc yếu tố di truyền.",
-        "low_meaning": "Thường không phải vấn đề đáng lo, mức thấp thường được xem là có lợi.",
-        "sources": [
-            "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-            "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
-            "https://www.cdc.gov/cholesterol/about/index.html",
-            "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
-            "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
-            "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html"
-        ]
-    },
-    {
-        "id": "hdl_cholesterol",
-        "indicator": "HDL-Cholesterol",
-        "display_name": "HDL Cholesterol",
-        "vietnamese_name": "Cholesterol tốt (HDL)",
-        "simple_explanation": "HDL giúp vận chuyển cholesterol dư thừa ra khỏi mạch máu về gan để xử lý, nên thường gọi là \"cholesterol tốt\". Khác với LDL, chỉ số này càng cao thường càng có lợi cho tim mạch.",
-        "reference_ranges": [
-            {
-                "group": "optimal",
-                "gender": "A",
-                "unit": "mg/dL",
-                "low": 60,
-                "high": null,
-                "note": "Tối ưu - bảo vệ tim mạch tốt nhất. Tương đương >= 1.5 mmol/L."
-            },
-            {
-                "group": "average",
-                "gender": "M",
-                "unit": "mg/dL",
-                "low": 40,
-                "high": 59,
-                "note": "Trung bình (bình thường) nam. Tương đương 1.0 - 1.5 mmol/L."
-            },
-            {
-                "group": "average",
-                "gender": "F",
-                "unit": "mg/dL",
-                "low": 50,
-                "high": 59,
-                "note": "Trung bình (bình thường) nữ. Tương đương 1.3 - 1.5 mmol/L."
-            },
-            {
-                "group": "low",
-                "gender": "M",
-                "unit": "mg/dL",
-                "low": null,
-                "high": 40,
-                "note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.0 mmol/L."
-            },
-            {
-                "group": "low",
-                "gender": "F",
-                "unit": "mg/dL",
-                "low": null,
-                "high": 50,
-                "note": "Thấp - tăng nguy cơ tim mạch. Tương đương < 1.3 mmol/L."
-            }
-        ],
-        "high_meaning": "Thường được xem là có lợi, tuy nhiên mức rất cao bất thường đôi khi cần bác sĩ đánh giá thêm.",
-        "low_meaning": "Có thể liên quan đến tăng nguy cơ bệnh tim mạch. Một số yếu tố góp phần làm HDL giảm: ít vận động, hút thuốc lá, chế độ ăn nhiều tinh bột tinh chế/đường/chất béo chuyển hóa, thừa cân hoặc hội chứng chuyển hóa, hoặc tác dụng phụ của một số thuốc.",
-        "lifestyle_note": "Các yếu tố lối sống thường được nhắc đến để hỗ trợ cải thiện HDL (thông tin tham khảo chung, không phải khuyến nghị điều trị cá nhân hoá): vận động thể chất đều đặn, ăn nhiều chất béo có lợi (dầu ô liu, các loại hạt, cá béo), hạn chế tinh bột tinh chế và chất béo chuyển hóa, không hút thuốc lá, và duy trì cân nặng hợp lý.",
-        "sources": [
-            "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-            "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
-            "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
-            "https://tamanhhospital.vn"
-        ]
-    },
-    {
-        "id": "creatinine",
-        "indicator": "Creatinine",
-        "display_name": "Creatinine",
-        "vietnamese_name": "Creatinin - đánh giá chức năng thận",
-        "simple_explanation": "Creatinine là sản phẩm thải từ quá trình phân hủy mô cơ, được thận lọc khỏi máu và đào thải qua nước tiểu. Đây là chỉ số quan trọng để đánh giá chức năng lọc của thận.",
-        "reference_ranges": [
-            {
-                "group": "adult",
-                "gender": "M",
-                "unit": "mg/dL",
-                "low": 0.6,
-                "high": 1.2,
-                "note": "Tương đương 53 - 106 µmol/L. Tùy khối lượng cơ theo giới."
-            },
-            {
-                "group": "adult",
-                "gender": "F",
-                "unit": "mg/dL",
-                "low": 0.5,
-                "high": 1.1,
-                "note": "Tương đương 44 - 97 µmol/L. Tùy khối lượng cơ theo giới."
-            }
-        ],
-        "high_meaning": "Có thể gợi ý thận đang lọc kém hiệu quả hơn bình thường (thường gặp trong tổn thương thận cấp hoặc bệnh thận mạn). Tuy nhiên chỉ số cũng có thể tăng tạm thời do mất nước, ăn nhiều thịt đỏ, hoặc vận động/tập luyện cường độ cao trước khi xét nghiệm.",
-        "low_meaning": "Ít khi có ý nghĩa bệnh lý, thường gặp ở người có khối lượng cơ thấp (suy dinh dưỡng, teo cơ, người cao tuổi suy kiệt, hoặc phụ nữ mang thai).",
-        "related_indicator_note": "Chỉ số liên quan thường đi kèm - eGFR (độ lọc cầu thận ước tính): Bác sĩ thường không chỉ nhìn riêng Creatinine mà dùng nó để tính ra eGFR (dựa trên tuổi, giới tính) nhằm đánh giá chức năng thận chính xác hơn. Mức tham khảo chung: eGFR >= 90 mL/min/1.73m2 là bình thường; < 60 mL/min/1.73m2 kéo dài trên 3 tháng gợi ý bệnh thận mạn. (Việc tính toán/diễn giải eGFR cụ thể cần bác sĩ thực hiện, nằm ngoài phạm vi giải thích chung của hệ thống.)",
-        "sources": [
-            "https://medlineplus.gov/lab-tests/creatinine-test/",
-            "https://www.kidney.org/kidney-topics/creatinine",
-            "https://tamanhhospital.vn"
-        ]
-    },
-    {
-        "id": "kali",
-        "indicator": "Kali",
-        "display_name": "Potassium",
-        "vietnamese_name": "Kali huyết thanh",
-        "simple_explanation": "Kali là một chất điện giải quan trọng, liên quan đến hoạt động điện của tim, cơ bắp, và cân bằng dịch trong/ngoài tế bào.",
-        "reference_ranges": [
-            {
-                "group": "normal",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 3.5,
-                "high": 5.0,
-                "note": "Một số nguồn tiếng Việt khác ghi nhận khoảng hơi rộng hơn (3.6-5.2 hoặc 3.5-5.5 mEq/L), do khác biệt giữa các phòng xét nghiệm/thiết bị."
-            },
-            {
-                "group": "mild_hyperkalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 5.1,
-                "high": 6.0,
-                "note": "Tăng kali máu nhẹ."
-            },
-            {
-                "group": "moderate_hyperkalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 6.1,
-                "high": 7.0,
-                "note": "Tăng kali máu trung bình."
-            },
-            {
-                "group": "severe_hyperkalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 7.0,
-                "high": null,
-                "note": "Tăng kali máu nặng - nguy kịch. VUNA khuyến nghị mức >= 6.5 mmol/L cần đánh giá khẩn tại cơ sở y tế."
-            },
-            {
-                "group": "mild_hypokalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 3.0,
-                "high": 3.4,
-                "note": "Hạ kali máu nhẹ."
-            },
-            {
-                "group": "moderate_hypokalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": 2.5,
-                "high": 3.0,
-                "note": "Hạ kali máu trung bình."
-            },
-            {
-                "group": "severe_hypokalemia",
-                "gender": "A",
-                "unit": "mmol/L",
-                "low": null,
-                "high": 2.5,
-                "note": "Hạ kali máu nặng."
-            }
-        ],
-        "critical_low": 2.5,
-        "critical_high": 7.0,
-        "critical_note": "Ngưỡng nguy kịch tham khảo theo nguồn Việt Nam: hạ kali máu nặng < 2.5 mmol/L; tăng kali máu nặng > 7.0 mmol/L.",
-        "high_meaning": "Nguyên nhân phổ biến nhất là suy thận - khi thận hoạt động không bình thường, cơ thể không thể loại bỏ kali dư thừa. Mẫu máu bị tán huyết khi lấy mẫu có thể gây giá trị cao giả. Một số thuốc cũng có thể ảnh hưởng: kháng sinh chứa kali, NSAID, heparin, insulin, glucose, corticosteroid, thuốc lợi tiểu, thuốc điều trị huyết áp cao.",
-        "low_meaning": "Thường liên quan đến mất kali quá mức qua đường tiêu hoá hoặc qua thận - hay gặp ở người dùng thuốc lợi tiểu (đặc biệt furosemide), nôn ói/tiêu chảy kéo dài, lạm dụng thuốc nhuận tràng, hoặc chế độ ăn thiếu kali.",
-        "sources": [
-            "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
-            "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
-            "https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce",
-            "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
-            "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
-            "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
-        ]
-    }
+  {
+    "name": "WBC",
+    "metric": "10^9/L",
+    "sources": [
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+        "description": "WBC là viết tắt của White Blood Cell, tức bạch cầu. Xét nghiệm WBC được thực hiện trong xét nghiệm máu ngoại vi nhằm đo số lượng tế bào bạch cầu có trong máu.",
+        "high_note": "WBC cao hơn khoảng bình thường tương ứng với tình trạng tăng bạch cầu. Nguyên nhân có thể là viêm nhiễm, máu ác tính hoặc các bệnh về bạch cầu; ngoài ra thuốc nhóm corticosteroid và hút thuốc lá cũng có thể làm chỉ số này tăng.",
+        "low_note": "WBC thấp hơn ngưỡng bình thường tương ứng với tình trạng giảm bạch cầu. Tình trạng này có thể gặp khi nhiễm virus, suy tủy xương, thiếu vitamin B12 hoặc folate, bệnh gan và lá lách, tổn thương tủy do nhiễm khuẩn nặng hoặc khi đang dùng thuốc điều trị ung thư.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+        "description": "WBC trong xét nghiệm máu là chỉ số phản ánh số lượng tế bào bạch cầu trong máu. Bạch cầu là thành phần quan trọng của hệ miễn dịch, tham gia chống lại các mầm bệnh và nguy cơ nhiễm trùng.",
+        "high_note": "Chỉ số WBC tăng cao hơn mức bình thường đồng nghĩa số lượng bạch cầu trong máu tăng. Điều này có thể phản ánh bệnh lý viêm nhiễm, bệnh máu ác tính hoặc các bệnh bạch cầu.",
+        "low_note": "Chỉ số WBC giảm thấp hơn mức bình thường đồng nghĩa số lượng bạch cầu trong máu giảm. Bài viết ghi nhận tình trạng này thường phản ánh ở người thiếu máu, thiếu hụt vitamin B12 hoặc folate, hoặc đang nhiễm khuẩn.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://miraihealthcare.vn/xet-nghiem-wbc/",
+        "description": "Xét nghiệm WBC là xét nghiệm máu trong phòng thí nghiệm dùng để đo số lượng bạch cầu trong cơ thể. Bạch cầu là thành phần quan trọng của hệ miễn dịch, được tạo ra từ tủy xương và đóng vai trò bảo vệ cơ thể khỏi các tác nhân gây hại như vi khuẩn, virus, nấm và ký sinh trùng.",
+        "high_note": "WBC cao hơn mức bình thường được gọi là tăng bạch cầu. Một số nguyên nhân có thể bao gồm nhiễm trùng, phản ứng viêm, stress thể chất hoặc tinh thần, tổn thương mô, rối loạn miễn dịch, ung thư máu và tác dụng phụ của một số thuốc như corticosteroid. WBC cũng có thể tăng tạm thời sau vận động mạnh hoặc khi bị stress.",
+        "low_note": "WBC thấp hơn mức bình thường được gọi là giảm bạch cầu, làm giảm khả năng bảo vệ của hệ miễn dịch và có thể làm tăng nguy cơ nhiễm trùng. Một số nguyên nhân gồm nhiễm virus, nhiễm trùng nặng, bệnh tự miễn, tổn thương tủy xương do hóa trị, xạ trị hoặc một số ung thư, thiếu vitamin B12 hoặc folate và tác dụng phụ của một số thuốc.",
+        "critical_high_note": null,
+        "critical_low_note": null
+     }
+    ]
+  },
+  {
+    "name": "RBC",
+    "metric": "10^12/L",
+    "sources": [
+      {
+        "url": "https://medlatec.vn/tin-tuc/chi-so-rbc-trong-xet-nghiem-mau-la-gi-nen-xet-nghiem-rbc-o-dau-s58-n27586",
+        "description": "RBC là chỉ số phản ánh lượng hồng cầu trong máu, tên đầy đủ là Red Blood Cell. Hồng cầu được sinh ra từ tủy xương và giữ nhiệm vụ vận chuyển oxy từ phổi tới các mô, đồng thời đưa CO2 về phổi để đào thải.",
+        "high_note": "Chỉ số RBC tăng cao thường gặp ở người mất nước, nôn và đi ngoài nhiều, rối loạn tuần hoàn tim hoặc phổi, thiếu oxy trong máu, hoặc người sống ở vùng núi cao. Khi tăng hồng cầu, người bệnh có thể đau đầu, chóng mặt, da môi và cổ đỏ hơn khi trời lạnh, lá lách to.",
+        "low_note": "Chỉ số RBC giảm thường gặp ở người thiếu máu, mất máu, thiếu sắt, thiếu vitamin B12 hoặc ăn uống không đủ dưỡng chất, cũng như ở phụ nữ mang thai, bệnh nhân suy tủy, bệnh thận hoặc ung thư. Khi giảm đáng kể, người bệnh có thể khó tập trung, đau đầu, mệt mỏi và thay đổi tâm lý thất thường.",
+        "critical_high_note": "Bài viết nêu rằng khi hồng cầu tăng quá cao, máu sẽ đặc quánh lại và dễ dẫn tới tắc nghẽn mạch máu. Nếu không được cải thiện, tình trạng này có thể gây đột quỵ và nguy hiểm đến tính mạng.",
+        "critical_low_note": "Với những trường hợp thiếu máu nặng do hồng cầu giảm, người bệnh có thể bị khó thở, da nhợt nhạt, đau lưỡi, móng tay giòn và bị choáng khi đứng lên."
+      },
+      {
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/rbc-trong-xet-nghiem-mau-la-gi-nguyen-nhan-khien-chi-so-nay-tang-giam-64304.html",
+        "description": "RBC trong xét nghiệm máu là chỉ số đo số lượng hồng cầu (Red Blood Cell) có trong một lít máu, nằm trong xét nghiệm công thức máu toàn phần. Chỉ số này giúp đánh giá khả năng vận chuyển oxy, chức năng tủy xương và tình trạng sức khỏe tổng quát.",
+        "high_note": "Khi RBC cao hơn mức bình thường, tình trạng này được gọi là đa hồng cầu, khiến máu đặc và lưu thông kém. Nguyên nhân thường gặp gồm thiếu oxy mạn tính, hút thuốc lá, bệnh tim bẩm sinh hoặc suy tim, mất nước và rối loạn tủy xương; biểu hiện có thể là đau đầu, chóng mặt kéo dài, da mặt ửng đỏ, tê hoặc ngứa đầu ngón tay chân.",
+        "low_note": "Khi RBC thấp hơn bình thường, đây có thể là dấu hiệu thiếu máu do thiếu sắt, thiếu vitamin B12 hoặc acid folic, mất máu cấp hoặc mạn tính, bệnh lý mạn tính và rối loạn tủy xương. Người bệnh thường mệt mỏi kéo dài, hoa mắt, chóng mặt, da nhợt nhạt, nhịp tim nhanh và lạnh tay chân.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "HGB",
+    "metric": "g/L",
+    "sources": [
+      {
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html",
+        "description": "HGB là chỉ số Hemoglobin (huyết sắc tố) - protein giàu sắt trong hồng cầu có nhiệm vụ vận chuyển oxy và CO2 trong cơ thể. Chỉ số này giúp đánh giá tình trạng thiếu máu, mất nước hoặc một số bệnh lý tim phổi.",
+        "high_note": "HGB tăng xảy ra khi lượng hồng cầu vượt mức bình thường hoặc khi máu bị cô đặc. Nguyên nhân thường gặp gồm sống ở vùng núi cao thiếu oxy, mất nước nhiều làm tăng giả, rối loạn tủy xương hoặc bệnh lý tăng sinh dòng hồng cầu, và việc sử dụng steroid hay thuốc kích thích tạo máu.",
+        "low_note": "HGB thấp thường là biểu hiện của thiếu máu, hay gặp ở phụ nữ, người cao tuổi hoặc người có bệnh nền. Nguyên nhân gồm thiếu sắt, vitamin B12 hoặc folate, mất máu, bệnh mạn tính như suy thận, rối loạn tủy xương; người bệnh có thể mệt mỏi, hoa mắt, khó thở, tim đập nhanh và giảm tập trung.",
+        "critical_high_note": "Bài viết nêu HGB cao kéo dài có thể làm máu cô đặc, làm tăng nguy cơ huyết khối, đột quỵ và biến chứng tim mạch, vì vậy cần được kiểm tra và xử lý kịp thời.",
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tin-tuc/hgb-trong-xet-nghiem-mau-la-gi-cach-kiem-soat-chi-so-hgb-tai-nha",
+        "description": "HgB hay Hb là chữ viết tắt của Hemoglobin, một loại protein có trong tế bào hồng cầu với nhiệm vụ nhận oxy từ phổi rồi vận chuyển đi khắp cơ thể. Chỉ số HgB trong xét nghiệm máu dùng để xác định lượng Hemoglobin có trong một thể tích máu.",
+        "high_note": "Bài viết ghi nhận hàm lượng Hemoglobin trong máu tăng có thể xảy ra ở bệnh nhân mất nước, mắc các bệnh liên quan đến tim mạch và phổi, hoặc có các phản ứng gây hiện tượng tan máu.",
+        "low_note": "HgB thấp được dùng để đánh giá thiếu máu, với các nguyên nhân như thiếu sắt, thiếu vitamin B12, thiếu máu bất sản hoặc mất máu. Bài viết cũng nêu các vấn đề về tủy xương, gan, thận, u đường tiêu hóa, bệnh bạch cầu, rối loạn phản ứng viêm, cũng như thai kỳ và sau sinh, hiến máu liên tục hay rong kinh.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://miraihealthcare.vn/xet-nghiem-hgb/",
+        "description": "Hemoglobin (HGB), hay huyết sắc tố, là protein giàu sắt nằm trong hồng cầu và có vai trò chính trong việc gắn kết, vận chuyển oxy trong máu đi khắp cơ thể. Xét nghiệm HGB là một thành phần của công thức máu toàn bộ (CBC), dùng để đo nồng độ huyết sắc tố trong máu và hỗ trợ đánh giá khả năng vận chuyển oxy cũng như phát hiện các rối loạn huyết học.",
+        "high_note": "HGB tăng cao có thể xảy ra khi cơ thể sản xuất quá nhiều hồng cầu hoặc khi máu bị cô đặc do mất nước. Các nguyên nhân có thể bao gồm sống ở vùng cao, bệnh phổi mạn tính như COPD, bệnh đa hồng cầu, mất nước và sử dụng một số thuốc như erythropoietin hoặc thuốc lợi tiểu. Khi HGB tăng cao, máu có thể trở nên đặc hơn, làm tăng nguy cơ hình thành cục máu đông, đột quỵ, nhồi máu cơ tim và các biến chứng tim mạch.",
+        "low_note": "HGB thấp thường là dấu hiệu của thiếu máu, làm giảm lượng oxy cung cấp cho các tế bào và có thể gây mệt mỏi, chóng mặt, da xanh, tim đập nhanh hoặc khó thở. Các nguyên nhân thường gặp gồm thiếu sắt, vitamin B12 hoặc acid folic, mất máu do chấn thương, phẫu thuật, rong kinh hoặc xuất huyết tiêu hóa, bệnh mạn tính như suy thận, viêm kéo dài hoặc ung thư, và các rối loạn tủy xương hoặc bệnh lý về máu.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "Fasting plasma glucose",
+    "metric": "mmol/L",
+    "sources": [
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi",
+        "description": "Xét nghiệm glucose huyết tương lúc đói (tiếng Anh là fasting plasma glucose test, viết tắt FPG) đo mức đường trong máu sau khi người bệnh nhịn ăn ít nhất tám giờ. Đây là phương pháp thường được dùng để xét nghiệm tiểu đường.",
+        "high_note": "Khi kết quả glucose huyết tương lúc đói vượt trên ngưỡng bình thường, bài viết cho biết người đó có thể đang ở tình trạng suy giảm mức đường huyết lúc đói nhưng chưa hẳn mắc tiểu đường. Nếu chỉ số tăng cao hơn nữa và kèm các xét nghiệm máu khác bất thường thì có thể được chẩn đoán là mắc bệnh tiểu đường.",
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://diag.vn/blog/glycemic/xet-nghiem-duong-huyet-luc-doi/",
+        "description": "Xét nghiệm chỉ số đường huyết lúc đói (FPG - Fasting Plasma Glucose) là xét nghiệm máu đo lượng glucose huyết tương sau khi nhịn ăn ít nhất 8 giờ. Xét nghiệm này được dùng để đánh giá khả năng chuyển hóa glucose, phát hiện sớm rối loạn đường huyết và theo dõi hiệu quả điều trị.",
+        "high_note": "Chỉ số đường huyết lúc đói tăng trên mức bình thường được bài viết mô tả là dấu hiệu của tiền tiểu đường, thường đi kèm giảm dung nạp glucose. Nếu không thay đổi lối sống như kiểm soát dinh dưỡng, tăng vận động và giảm cân thì nguy cơ mắc đái tháo đường type 2 là rất cao.",
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+       "url": "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar",
+       "description": "Xét nghiệm đường huyết lúc đói đo lượng glucose trong máu sau một khoảng thời gian không ăn hoặc uống, thường cần nhịn ăn từ 8 đến 12 giờ. Đây là xét nghiệm máu phổ biến được sử dụng để sàng lọc tiền tiểu đường, tiểu đường và tiểu đường thai kỳ.",
+       "high_note": "Đường huyết lúc đói từ 100 đến 125 mg/dL (5.6 đến 6.9 mmol/L) thường cho thấy tiền tiểu đường, nghĩa là mức đường huyết cao hơn bình thường nhưng chưa đủ để được phân loại là tiểu đường. Mức từ 126 mg/dL (7.0 mmol/L) trở lên cho thấy đường huyết cao và là dấu hiệu chính của bệnh tiểu đường. Khi kết quả đường huyết lúc đói cao, bác sĩ có thể yêu cầu xét nghiệm lại để xác nhận vì không nên chẩn đoán tiểu đường chỉ dựa trên một kết quả bất thường.",
+       "low_note": "Đường huyết lúc đói dưới 70 mg/dL được xem là đường huyết thấp đối với người mắc bệnh tiểu đường, nhưng mức này có thể vẫn bình thường ở một số người không mắc tiểu đường. Khi có kết quả thấp, bác sĩ có thể đánh giá các triệu chứng hạ đường huyết như run rẩy và thực hiện thêm xét nghiệm để xác định liệu tình trạng đường huyết thấp có lặp lại hay không.",
+       "critical_high_note": null,
+       "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "HbA1c",
+    "metric": "%",
+    "sources": [
+      {
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-hb-a1c-binh-thuong-la-bao-nhieu-khi-nao-nen-lam-xet-nghiem-hb-a1-c.html",
+        "description": "Xét nghiệm HbA1c là xét nghiệm máu đo tỷ lệ glucose gắn với hemoglobin trong hồng cầu. Do vòng đời hồng cầu khoảng 120 ngày, chỉ số này phản ánh mức đường huyết trung bình trong khoảng 2-3 tháng gần nhất chứ không phải tại một thời điểm, và không yêu cầu nhịn ăn.",
+        "high_note": "HbA1c tăng khi nồng độ glucose máu tăng kéo dài và đường huyết không được kiểm soát tốt, thường gặp ở người mới chẩn đoán hoặc đang điều trị đái tháo đường nhưng kiểm soát kém. Bài viết cũng nêu suy thận mạn, thiếu máu hoặc thiếu sắt, nghiện rượu kéo dài và ngộ độc chì có thể làm chỉ số này tăng.",
+        "low_note": "HbA1c có thể giảm trong thiếu máu mạn tính, hoặc khi đời sống hồng cầu ngắn như thiếu máu tan máu, hồng cầu hình liềm và thalassemia. Các tình huống sau truyền máu, sau cắt lách, dùng liều cao vitamin C hoặc vitamin E và thai kỳ cũng có thể làm kết quả giảm và không phản ánh đúng đường huyết thực tế.",
+        "critical_high_note": "Bài viết nêu khi HbA1c tăng cao kéo dài, nguy cơ biến chứng tim mạch, thận, mắt và thần kinh sẽ gia tăng nếu không được kiểm soát tốt. Duy trì chỉ số ở mức mục tiêu giúp hạn chế tổn thương mạch máu nhỏ và lớn, từ đó giảm nguy cơ mù lòa, suy thận, đột quỵ và nhồi máu cơ tim.",
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tin-tuc/xet-nghiem-hba1c-la-gi-khi-nao-can-thuc-hien",
+        "description": "Kết quả xét nghiệm HbA1c cho biết mức đường huyết trung bình của người bệnh trong khoảng thời gian từ 2 đến 3 tháng. Dựa vào kết quả này, bác sĩ có thể chẩn đoán bệnh và điều chỉnh phác đồ điều trị cho bệnh nhân đã mắc tiểu đường.",
+        "high_note": "Chỉ số HbA1c càng cao nghĩa là lượng đường tồn dư trong máu càng nhiều. Với bệnh nhân đã mắc tiểu đường, HbA1c tăng cao làm tăng nguy cơ biến chứng nguy hiểm như bệnh võng mạc tiểu đường, đục thủy tinh thể, tăng nhãn áp và các bệnh lý tim mạch.",
+        "low_note": "Bài viết nêu HbA1c giảm bất thường có thể do thiếu máu mạn tính, hoặc do bệnh lý thiếu máu tán huyết và hồng cầu hình liềm khiến đời sống hồng cầu ngắn hơn bình thường. Người vừa truyền máu hoặc vừa dùng lượng lớn vitamin C, vitamin E cũng có thể có kết quả giảm.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-hba1c-trong-kiem-soat-glucose-o-benh-nhan-dai-thao-duong-va-tam-soat-som-benh-dai-thao-duong-vi",
+        "description": "HbA1c là một dạng hemoglobin kết hợp với glucose và phản ánh tình trạng glucose máu trong khoảng 3 tháng gần nhất. Xét nghiệm HbA1c được sử dụng để đánh giá mức độ kiểm soát đường huyết, hỗ trợ chẩn đoán và tầm soát sớm tiền đái tháo đường, đồng thời giúp bác sĩ xây dựng kế hoạch điều trị và phòng ngừa biến chứng.",
+        "high_note": "HbA1c tăng trên mức bình thường phản ánh tình trạng glucose máu tăng và khả năng kiểm soát đường huyết kém. Theo bài viết, HbA1c trên 6,5% cho thấy đường huyết đang được kiểm soát kém; mức trên 7% cảnh báo tình trạng kiểm soát glucose rất xấu. Kiểm soát HbA1c không tốt có liên quan đến nguy cơ phát triển các biến chứng của bệnh tiểu đường ở mắt, thận, tim mạch và thần kinh.",
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-hb-a1c-bao-nhieu-la-nguy-hiem.html",
+        "description": "HbA1c là chỉ số phản ánh mức đường huyết trung bình trong khoảng 2 - 3 tháng gần nhất thông qua lượng glucose gắn với hemoglobin. Chỉ số này có ý nghĩa trong phát hiện và theo dõi bệnh tiểu đường, đánh giá khả năng kiểm soát bệnh, thiết lập mục tiêu điều trị và dự báo nguy cơ biến chứng.",
+        "high_note": "HbA1c từ 5,7% đến 6,4% tương ứng với tiền đái tháo đường, còn từ 6,5% trở lên được sử dụng để chẩn đoán đái tháo đường. HbA1c tăng cao có thể liên quan đến chế độ ăn nhiều tinh bột, chất béo hoặc chất tạo ngọt, một số thuốc làm tăng đường huyết, uống rượu, ít vận động, căng thẳng, không tuân thủ thuốc hoặc insulin, suy thận, ngộ độc chì và thiếu máu hoặc thiếu sắt.",
+        "low_note": "HbA1c dưới 4% có thể liên quan đến thiếu máu, thiếu sắt, mang thai, mới truyền máu hoặc sử dụng quá liều vitamin E hoặc vitamin C.",
+        "critical_high_note": "HbA1c từ 9% trở lên được bài viết mô tả là mức báo động về sức khỏe, với nguy cơ cao gặp các biến chứng tiểu đường nghiêm trọng như bệnh võng mạc, giảm hoặc mất thị lực, tổn thương mạch máu nuôi dây thần kinh, mất cảm giác ở tay chân, suy tim, suy thận và đột quỵ.",
+        "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "LDL-C",
+    "metric": "mmol/L",
+    "sources": [
+
+     {
+       "url": "https://medlatec.vn/tin-tuc/xet-nghiem-ldl-la-gi-chi-so-ldl-nhu-the-nao-an-toan-s58-n16614",
+       "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, là một loại lipoprotein cholesterol tỷ trọng thấp có nhiệm vụ vận chuyển cholesterol từ máu đến các mô trong cơ thể để sử dụng. LDL thường được gọi là cholesterol xấu vì khi nồng độ trong máu tăng cao có thể gây ảnh hưởng không tốt đến sức khỏe tim mạch.",
+       "high_note": "LDL-C tăng cao là một dấu hiệu xấu, có thể làm tăng nguy cơ xơ vữa động mạch và các bệnh lý về tim mạch, huyết áp, đặc biệt là bệnh mạch vành.",
+       "low_note": null,
+      "critical_high_note": "LDL-C tăng ở mức rất cao có thể làm nguy cơ xơ vữa động mạch và các bệnh lý tim mạch nghiêm trọng trở nên rõ rệt hơn, đặc biệt là nguy cơ mắc bệnh mạch vành.",
+       "critical_low_note": null
+      },
+      {
+         "url": "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
+         "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, tức lipoprotein cholesterol tỷ trọng thấp. LDL thường được gọi là cholesterol xấu vì khi tích tụ trong cơ thể có thể góp phần gây xơ vữa động mạch và làm tăng nguy cơ mắc các bệnh tim mạch.",
+         "high_note": "LDL-C tăng cao có thể thúc đẩy tình trạng xơ vữa động mạch, làm tăng nguy cơ mắc các bệnh tim mạch nghiêm trọng như nhồi máu cơ tim và đột quỵ.",
+         "low_note": null,
+         "critical_high_note": "LDL-C ở mức rất cao có thể làm gia tăng nghiêm trọng nguy cơ xơ vữa động mạch và các biến cố tim mạch đe dọa tính mạng như nhồi máu cơ tim và đột quỵ.",
+         "critical_low_note": null
+       }
+    ]
+  },
+   {
+    "name": "HDL-C",
+    "metric": "mmol/L",
+    "sources": [
+      {
+         "url": "https://tiemchunglongchau.com.vn/kien-thuc-tiem-chung/xet-nghiem-hdl-c-ket-qua-hdl-cholesterol-co-y-nghia-gi",
+         "description": "HDL-C là viết tắt của High-Density Lipoprotein Cholesterol, tức cholesterol lipoprotein tỷ trọng cao. HDL-C có chức năng thu gom cholesterol dư thừa từ máu và thành mạch, sau đó vận chuyển về gan để xử lý và đào thải ra khỏi cơ thể. Chỉ số này thường được gọi là cholesterol tốt vì có vai trò bảo vệ thành mạch và giúp đánh giá nguy cơ xơ vữa động mạch cũng như các bệnh tim mạch liên quan.",
+         "high_note": "HDL-C cao thường được xem là yếu tố có lợi cho sức khỏe tim mạch. Tuy nhiên, HDL-C quá cao không đồng nghĩa với việc loại bỏ hoàn toàn nguy cơ bệnh tim mạch, đặc biệt khi các chỉ số lipid khác vẫn ở mức cao.",
+         "low_note": "HDL-C thấp làm suy giảm khả năng loại bỏ cholesterol dư thừa khỏi mạch máu, từ đó làm tăng nguy cơ tích tụ mảng xơ vữa và dẫn đến các biến cố tim mạch.",
+         "critical_high_note": null,
+         "critical_low_note": null
+      },
+      {
+         "url": "https://medlatec.vn/tin-tuc/hdl-cholesterol-la-gi-va-nhung-canh-bao-doi-voi-suc-khoe-tim-mach-s63-n21358",
+         "description": "HDL-C là lipoprotein tỷ trọng cao, thường được gọi là cholesterol tốt. HDL-C giúp di chuyển LDL cholesterol ra khỏi cơ thể bằng cách liên kết với cholesterol trong máu và mang về gan để xử lý, đồng thời có thể góp phần làm giảm viêm. Xét nghiệm HDL-C giúp đánh giá tình trạng rối loạn lipoprotein trong máu và nguy cơ hình thành xơ vữa động mạch.",
+         "high_note": "HDL-C cao thường có liên quan đến nguy cơ mắc bệnh tim mạch thấp hơn, tuy nhiên khi HDL-C tăng quá cao thì có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
+         "low_note": "HDL-C thấp có thể làm giảm khả năng đưa cholesterol xấu ra khỏi cơ thể, từ đó làm tăng nguy cơ tích tụ cholesterol, hình thành xơ vữa động mạch và ảnh hưởng bất lợi đến sức khỏe tim mạch.",
+         "critical_high_note": "HDL-C ở mức quá cao có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
+         "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "Creatinine",
+    "metric": "µmol/L",
+    "sources": [
+      {
+         "url": "https://medlatec.vn/tin-tuc/gia-tri-xet-nghiem-creatinin-mau-bao-nhieu-la-mac-benh-suy-than-s159-n18192",
+         "description": "Creatinin là sản phẩm của quá trình phân hủy creatin, được đưa vào máu và thải trừ qua thận. Creatinin được lọc qua cầu thận và không được ống thận tái hấp thu, vì vậy xét nghiệm creatinin máu có giá trị quan trọng trong đánh giá chức năng thận, chẩn đoán và theo dõi các bệnh lý về thận.",
+         "high_note": "Creatinin máu tăng cao có thể phản ánh chức năng thận bị suy giảm và làm tăng nguy cơ suy thận. Tình trạng này có thể liên quan đến suy thận do giảm tuần hoàn đến thận, tổn thương cầu thận, tổn thương ống thận hoặc các nguyên nhân gây cản trở đường bài xuất nước tiểu.",
+         "low_note": "Creatinin máu giảm có thể gặp khi máu bị hòa loãng, trong tình trạng suy dinh dưỡng nặng hoặc ở phụ nữ mang thai.",
+         "critical_high_note": "Creatinin tăng ở mức nghiêm trọng có thể phản ánh tình trạng suy thận tiến triển, làm suy giảm khả năng lọc và bài tiết của thận, gây ứ dịch và tích tụ các chất thừa, chất độc trong cơ thể. Tình trạng này có thể đi kèm phù, mệt mỏi, buồn nôn, ngứa, khó thở và nhiều ảnh hưởng nghiêm trọng đến sức khỏe.",
+         "critical_low_note": null
+      },
+      {
+         "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-xet-nghiem-creatinine-trong-chan-doan-suy-vi",
+         "description": "Creatinine là sản phẩm của sự thoái hóa creatin trong cơ, được đào thải qua thận và lọc qua cầu thận. Nồng độ creatinine máu là chỉ số quan trọng giúp phản ánh chức năng lọc của thận và hỗ trợ đánh giá tình trạng rối loạn chức năng thận.",
+         "high_note": "Creatinine tăng cao có thể phản ánh rối loạn chức năng thận do khả năng lọc creatinine của thận bị suy giảm. Tình trạng này có thể liên quan đến suy thận do giảm tưới máu đến thận, tổn thương cầu thận, tổn thương ống thận hoặc tắc nghẽn đường tiết niệu.",
+         "low_note": "Creatinine thấp có thể gặp ở người có khối lượng cơ giảm, suy dinh dưỡng nặng, sụt cân nghiêm trọng hoặc mắc các bệnh mạn tính kéo dài làm khối lượng cơ giảm dần theo thời gian.",
+         "critical_high_note": "Creatinine tăng ở mức nghiêm trọng có thể đi kèm suy thận rất nặng, với các biểu hiện như mệt mỏi, phù, khó thở, thiếu máu, tăng huyết áp, đái ít, buồn nôn, nôn và da khô. Khi suy thận tiến triển nặng, chức năng thận có thể suy giảm nghiêm trọng và người bệnh có thể phải điều trị thay thế thận.",
+         "critical_low_note": null
+      },
+      {
+         "url": "https://nhathuoclongchau.com.vn/bai-viet/nhung-dieu-can-biet-ve-xet-nghiem-creatinine-mau.html",
+         "description": "Creatinine là sản phẩm của quá trình phân hủy creatin trong cơ thể, được đưa vào máu, lọc qua cầu thận và loại bỏ qua đường tiểu. Nồng độ creatinine trong máu được sử dụng như một chỉ số quan trọng để đánh giá chức năng thận, hỗ trợ phát hiện rối loạn chức năng thận cũng như chẩn đoán và đánh giá mức độ suy thận.",
+         "high_note": "Creatinine máu tăng cao có thể là dấu hiệu cho thấy thận hoạt động không hiệu quả hoặc bị tổn thương, do khả năng loại bỏ creatinine khỏi cơ thể bị suy giảm. Tình trạng này có thể liên quan đến rối loạn chức năng thận hoặc bệnh lý suy thận và cần được đánh giá để xác định nguyên nhân.",
+         "low_note": null,
+         "critical_high_note": "Creatinine tăng nghiêm trọng có thể đi kèm tình trạng suy giảm chức năng lọc và bài tiết của thận, khiến chất lỏng, chất thừa và độc tố tích tụ trong cơ thể. Người bệnh có thể xuất hiện phù, mệt mỏi, buồn nôn, nôn, ngứa, khó thở, thay đổi bất thường về tiểu tiện và các biểu hiện nghiêm trọng có thể ảnh hưởng đến tính mạng nếu không được phát hiện và điều trị kịp thời.",
+         "critical_low_note": null
+      }
+    ]
+  },
+  {
+    "name": "Potassium",
+    "metric": "mmol/L",
+    "sources": [
+      {
+         "url": "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+         "description": "Kali là một cation chủ lực trong các chất điện giải của tế bào, có vai trò thiết yếu đối với hoạt động thần kinh - cơ và giúp duy trì chức năng bình thường của cơ vân, cơ trơn và cơ tim.",
+         "high_note": "Kali máu tăng có thể gây vô cảm, tê các đầu ngón, giảm phản xạ gân xương và ảnh hưởng đến hoạt động điện của tim, làm xuất hiện các rối loạn dẫn truyền và nhịp tim bất thường.",
+         "low_note": "Kali máu giảm có thể gây mệt mỏi, rã rời cơ thần kinh, táo bón dai dẳng và chướng bụng do ảnh hưởng đến hoạt động bình thường của cơ và hệ thần kinh.",
+         "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây rối loạn hoạt động điện của tim, tiến triển thành nhịp nhanh thất, rung thất, ngừng tim và tử vong.",
+         "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây rối loạn nhịp tim, nhịp nhanh thất, rung thất và dẫn tới tử vong."
+      },
+      {
+         "url": "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
+         "description": "Kali là một cation chủ lực trong tế bào, đóng vai trò quan trọng trong việc điều hòa cân bằng nước và điện giải, duy trì hiệu thế màng và tính chịu kích thích của các tế bào thần kinh - cơ. Kali cần thiết cho hoạt động bình thường của cơ bắp, hệ tiêu hóa, tiết niệu và tim mạch.",
+         "high_note": "Kali máu tăng có thể gây buồn nôn, đầy hơi, tiêu chảy, tê các đầu ngón tay và chân, đồng thời làm nhịp tim trở nên bất thường và ảnh hưởng đến hoạt động bình thường của tim.",
+         "low_note": "Kali máu giảm có thể gây mệt mỏi, đau nhức cơ bắp, đau mỏi ở các chi, khó ngủ, trầm cảm và rối loạn tiêu hóa. Tình trạng thiếu Kali kéo dài còn có thể gây các vấn đề nghiêm trọng cho hệ tim mạch và thần kinh.",
+         "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây tổn thương trầm trọng chức năng tim, dẫn đến ngừng tim và tử vong.",
+         "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây nhịp tim không đều, hỗn loạn tâm trí, mất tập trung, phản xạ chậm, liệt cơ và trở thành tình trạng nguy hiểm đến tính mạng."
+      }
+    ]
+  }
 ]

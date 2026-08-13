@@ -2,6 +2,8 @@
 
 > Bệnh nhân nhận phiếu kết quả xét nghiệm đầy chỉ số và thuật ngữ (WBC, HbA1c, LDL...) nhưng không hiểu ý nghĩa, lo lắng quá mức hoặc chủ quan, gọi hỏi bác sĩ/hotline nhiều. Cần AI Agent tiếp nhận phiếu kết quả (mô phỏng), đối chiếu khoảng tham chiếu, giải thích từng chỉ số bằng ngôn ngữ đơn giản, nêu chỉ số bất thường và ý nghĩa chung, gợi ý câu hỏi nên hỏi bác sĩ. Agent lập kế hoạch: phân tích - tra cứu chỉ số có nguồn - cá nhân hóa lời giải - tạo bản tóm tắt thân thiện.
 
+Reference data contained in the application's canonical reference dataset is treated as authoritative input for application logic. The application does not perform a secondary quality classification of those records. This is an application assumption, not a claim that every range is medically universal in every context.
+
 
 ## Link chạy thật (Live)
 

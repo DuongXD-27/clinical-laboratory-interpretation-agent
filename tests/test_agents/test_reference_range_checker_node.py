@@ -36,7 +36,6 @@ def make_rule(
         "source_priority_tier": "T1",
         "source_url": source_url,
         "confidence": "HIGH",
-        "range_flag": "OK",
     }
 
 
@@ -138,6 +137,7 @@ def assert_contract_shape(assessment):
     assert isinstance(assessment["explanation"], str)
     assert isinstance(assessment["sources"], list)
     assert "category" not in assessment
+    assert "range" + "_flag" not in assessment
 
 
 @pytest.mark.asyncio

@@ -19,8 +19,8 @@ from src.scripts.build_reference_config import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = REPO_ROOT / "adult_outpatient_laboratory_reference_map.csv"
 PROTECTED_REFERENCE_FILES = [
-    REPO_ROOT / "data/reference/metrics_range.csv",
-    REPO_ROOT / "data/reference/metrics_range.json",
+    REPO_ROOT / "data/reference/reference_ranges.csv",
+    REPO_ROOT / "data/reference/reference_ranges.json",
     REPO_ROOT / "data/reference/explanations.json",
     REPO_ROOT / "data/reference/critical_thresholds.json",
     REPO_ROOT / "data/reference/units_metric.csv",
@@ -56,7 +56,6 @@ HEADER = [
     "normalization_note",
     "vn_unit_verified",
     "confidence",
-    "range_flag",
     "range_notes",
 ]
 
@@ -82,7 +81,6 @@ def make_row(**overrides: str) -> dict[str, str]:
             "source_url": "https://example.test/reference",
             "evidence_location": "fixture table",
             "confidence": "HIGH",
-            "range_flag": "OK",
         }
     )
     row.update(overrides)
@@ -108,26 +106,23 @@ def test_actual_source_dry_run(tmp_path: Path) -> None:
     report = result.report
 
     assert report["input_rows"] == 80
-    assert report["strict_quality_eligible_rows"] == 58
-    assert report["strict_quality_rejected_rows"] == 22
+    assert report["structurally_eligible_rows"] == 80
+    assert report["structurally_rejected_rows"] == 0
 
     accepted_analytes = set(report["accepted_analytes"])
-    quarantined_analytes = set(report["quarantined_analytes"])
     for analyte in {"HbA1c", "LDL-C", "Potassium"}:
-        assert analyte not in accepted_analytes
-        assert analyte in quarantined_analytes
+        assert analyte in accepted_analytes
 
     assert sha256_file(SOURCE) == before
 
 
-def test_multiple_rejection_reasons(tmp_path: Path) -> None:
+def test_metadata_does_not_reject_canonical_record(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     write_source(
         source,
         [
             make_row(
-                analyte_canonical="BadQuality",
-                range_flag="MD",
+                analyte_canonical="CanonicalRecord",
                 confidence="LOW",
                 source_priority_tier="T3",
             )
@@ -135,12 +130,11 @@ def test_multiple_rejection_reasons(tmp_path: Path) -> None:
     )
 
     build_reference_config(source, tmp_path / "out")
+    runtime = read_csv(tmp_path / "out" / RUNTIME_CSV)
     quarantine = read_csv(tmp_path / "out" / QUARANTINE_CSV)
 
-    assert quarantine[0]["rejection_reasons"] == (
-        "range_flag_not_ok|confidence_not_high|unsupported_source_tier"
-    )
-    assert quarantine[0]["rejection_reason_count"] == "3"
+    assert [row["analyte_canonical"] for row in runtime] == ["CanonicalRecord"]
+    assert quarantine == []
 
 
 def test_structural_rejection(tmp_path: Path) -> None:
@@ -252,7 +246,7 @@ def test_deterministic_output(tmp_path: Path) -> None:
         [
             make_row(analyte_canonical="B", sex="F", range_lower="1.0", range_upper="2.0"),
             make_row(analyte_canonical="A", sex="M", range_lower="3.0", range_upper="4.0"),
-            make_row(analyte_canonical="Q", range_flag="MD"),
+            make_row(analyte_canonical="Q"),
         ],
     )
     out1 = tmp_path / "out1"
@@ -284,7 +278,7 @@ def test_count_invariants(tmp_path: Path) -> None:
     report = result.report
 
     assert report["input_rows"] == report["runtime_accepted_rows"] + report["quarantined_rows"]
-    assert report["runtime_accepted_rows"] <= report["strict_quality_eligible_rows"]
+    assert report["runtime_accepted_rows"] == report["structurally_eligible_rows"]
 
 
 def test_stable_traceability(tmp_path: Path) -> None:
