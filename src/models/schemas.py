@@ -263,3 +263,42 @@ class SaveReportResponse(BaseModel):
     existing_report_id: int | None = None
     requires_date_confirmation: bool = False
     message: str = ""
+
+
+TrendFilter = Literal["latest5", "three_months"]
+
+
+class TrendAnalyteSummary(BaseModel):
+    analyte_canonical: str
+    display_name: str
+    canonical_unit: str
+    result_count: int
+    trend_available: bool
+
+
+class TrendAnalyteListResponse(BaseModel):
+    analytes: list[TrendAnalyteSummary] = Field(default_factory=list)
+
+
+class TrendPointResponse(BaseModel):
+    report_id: int
+    test_date: date
+    value: float
+    assessment: str
+
+
+class TrendResponse(BaseModel):
+    analyte_canonical: str
+    display_name: str
+    canonical_unit: str
+    filter: TrendFilter
+    result_count: int
+    trend_available: bool
+    points: list[TrendPointResponse] = Field(default_factory=list)
+    reason: str | None = None
+
+
+class TrendExplanationResponse(BaseModel):
+    explanation: str
+    fallback: bool = False
+    reason: str | None = None

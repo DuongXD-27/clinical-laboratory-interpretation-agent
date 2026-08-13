@@ -9,6 +9,10 @@ from src.models.schemas import (
     PatientLabReportListResponse,
     PatientProfileSchema,
     PatientProfileUpdateRequest,
+    TrendAnalyteListResponse,
+    TrendExplanationResponse,
+    TrendFilter,
+    TrendResponse,
 )
 from src.services.lab_history_service import (
     ReportNotFoundError,
@@ -22,6 +26,11 @@ from src.services.patient_service import (
     PatientServiceError,
     get_patient_by_username,
     update_patient_profile,
+)
+from src.services.trend_service import get_patient_trend, get_patient_trend_analytes
+from src.services.trend_explanation_service import (
+    TrendExplanationUnavailable,
+    explain_patient_trend,
 )
 
 router = APIRouter(prefix="/patient/me", tags=["patient"])
@@ -94,6 +103,60 @@ async def lab_reports(
     _require_patient(current_user)
     try:
         return PatientLabReportListResponse(reports=list_reports(db, username=current_user.username))
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/trends/analytes", response_model=TrendAnalyteListResponse)
+async def trend_analytes(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TrendAnalyteListResponse:
+    _require_patient(current_user)
+    try:
+        return TrendAnalyteListResponse(
+            analytes=get_patient_trend_analytes(db, username=current_user.username)
+        )
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/trends/{analyte_canonical}", response_model=TrendResponse)
+async def trend_data(
+    analyte_canonical: str,
+    filter: TrendFilter = "latest5",
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TrendResponse:
+    _require_patient(current_user)
+    try:
+        return get_patient_trend(
+            db,
+            username=current_user.username,
+            analyte_canonical=analyte_canonical,
+            trend_filter=filter,
+        )
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/trends/{analyte_canonical}/explain", response_model=TrendExplanationResponse)
+async def trend_explanation(
+    analyte_canonical: str,
+    filter: TrendFilter = "latest5",
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TrendExplanationResponse:
+    _require_patient(current_user)
+    try:
+        return await explain_patient_trend(
+            db,
+            username=current_user.username,
+            analyte_canonical=analyte_canonical,
+            trend_filter=filter,
+        )
+    except TrendExplanationUnavailable as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PatientNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

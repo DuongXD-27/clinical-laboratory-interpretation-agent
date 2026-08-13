@@ -257,6 +257,7 @@ export default function PatientPage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href="/patient/history" className="text-button">Xem toàn bộ lịch sử</Link>
                 <Link href="/patient/profile" className="text-button">Hồ sơ cá nhân</Link>
+                <Link href="/patient/trends" className="text-button">Xu hướng chỉ số</Link>
               </div>
             </>
           )}

@@ -22,10 +22,15 @@ APPROVED_ANALYTES = [
     ("Potassium", "mmol/L", 3.5, 5.3),
 ]
 
+APPROVED_ANALYTE_META = {
+    canonical: {"unit": unit, "reference_low": low, "reference_high": high}
+    for canonical, unit, low, high in APPROVED_ANALYTES
+}
+
 DEMO_REPORTS = [
     {
         "test_date": "2026-08-12",
-        "summary": "Phiếu mẫu có LDL-C cao và các chỉ số còn lại trong vùng tham khảo.",
+        "summary": "Phiếu mẫu gần nhất có đủ 9 chỉ số đã hỗ trợ, phục vụ Dashboard và Trend.",
         "values": {
             "WBC": (7.1, "normal"),
             "RBC": (4.9, "normal"),
@@ -35,69 +40,59 @@ DEMO_REPORTS = [
             "LDL-C": (3.4, "high"),
             "HDL-C": (1.3, "normal"),
             "Creatinine": (82, "normal"),
-            "Potassium": (4.2, "normal"),
-        },
-    },
-    {
-        "test_date": "2026-08-11",
-        "summary": "Phiếu mẫu bình thường với đủ 9 chỉ số đã được hỗ trợ.",
-        "values": {
-            "WBC": (6.8, "normal"),
-            "RBC": (5.0, "normal"),
-            "HGB": (152, "normal"),
-            "Fasting plasma glucose": (5.0, "normal"),
-            "HbA1c": (5.2, "normal"),
-            "LDL-C": (2.1, "normal"),
-            "HDL-C": (1.4, "normal"),
-            "Creatinine": (78, "normal"),
-            "Potassium": (4.1, "normal"),
-        },
-    },
-    {
-        "test_date": "2026-08-10",
-        "summary": "Phiếu mẫu có Kali ở mức nguy kịch để kiểm tra trạng thái CRITICAL.",
-        "values": {
-            "WBC": (9.5, "normal"),
-            "RBC": (4.7, "normal"),
-            "HGB": (145, "normal"),
-            "Fasting plasma glucose": (6.4, "high"),
-            "HbA1c": (6.2, "high"),
-            "LDL-C": (3.2, "high"),
-            "HDL-C": (0.9, "low"),
-            "Creatinine": (92, "normal"),
             "Potassium": (7.0, "critical_high"),
         },
     },
     {
-        "test_date": "2026-08-09",
-        "summary": "Phiếu mẫu dùng alias Glucose để kiểm tra canonical analyte.",
-        "raw_names": {"Fasting plasma glucose": "Glucose"},
+        "test_date": "2026-07-28",
+        "summary": "Phiếu mẫu có LDL-C cao nhẹ và Creatinine lần thứ hai.",
         "values": {
-            "WBC": (5.9, "normal"),
-            "RBC": (4.6, "normal"),
-            "HGB": (135, "normal"),
-            "Fasting plasma glucose": (5.7, "normal"),
-            "HbA1c": (5.5, "normal"),
-            "LDL-C": (2.4, "normal"),
-            "HDL-C": (1.2, "normal"),
-            "Creatinine": (70, "normal"),
-            "Potassium": (3.8, "normal"),
+            "WBC": (6.8, "normal"),
+            "Fasting plasma glucose": (5.4, "normal"),
+            "HbA1c": (5.3, "normal"),
+            "LDL-C": (3.0, "high"),
+            "HDL-C": (1.4, "normal"),
+            "Creatinine": (78, "normal"),
         },
     },
     {
-        "test_date": "2026-08-08",
-        "summary": "Phiếu mẫu có HGB thấp để kiểm tra trạng thái ABNORMAL.",
+        "test_date": "2026-07-05",
+        "summary": "Phiếu mẫu dùng alias Glucose để kiểm tra canonical analyte trong Trend.",
+        "raw_names": {"Fasting plasma glucose": "Glucose"},
+        "values": {
+            "RBC": (4.7, "normal"),
+            "Fasting plasma glucose": (5.8, "normal"),
+            "LDL-C": (2.8, "high"),
+            "HDL-C": (1.2, "normal"),
+        },
+    },
+    {
+        "test_date": "2026-06-10",
+        "summary": "Phiếu mẫu có Glucose cao để demo filter 3 tháng gần nhất.",
+        "values": {
+            "WBC": (9.5, "normal"),
+            "Fasting plasma glucose": (6.4, "high"),
+            "HbA1c": (6.2, "high"),
+            "LDL-C": (3.2, "high"),
+        },
+    },
+    {
+        "test_date": "2026-05-15",
+        "summary": "Phiếu mẫu nằm trong mốc 3 tháng để Trend có đủ dữ liệu.",
         "raw_names": {"HGB": "Hemoglobin"},
         "values": {
             "WBC": (6.2, "normal"),
-            "RBC": (4.3, "low"),
             "HGB": (105, "low"),
             "Fasting plasma glucose": (5.1, "normal"),
-            "HbA1c": (5.3, "normal"),
-            "LDL-C": (2.0, "normal"),
+            "LDL-C": (2.5, "normal"),
+        },
+    },
+    {
+        "test_date": "2026-04-10",
+        "summary": "Phiếu mẫu cũ hơn 3 tháng, dùng để demo latest5 khác three_months.",
+        "values": {
+            "LDL-C": (2.3, "normal"),
             "HDL-C": (1.1, "normal"),
-            "Creatinine": (65, "normal"),
-            "Potassium": (4.0, "normal"),
         },
     },
 ]
@@ -112,16 +107,16 @@ def seed_demo_patient_reports(db: Session) -> int:
     for report in DEMO_REPORTS:
         rows = []
         raw_names = report.get("raw_names", {})
-        for canonical, unit, low, high in APPROVED_ANALYTES:
-            value, status = report["values"][canonical]
+        for canonical, (value, status) in report["values"].items():
+            meta = APPROVED_ANALYTE_META[canonical]
             rows.append(
                 {
                     "canonical": canonical,
                     "name": raw_names.get(canonical, canonical),
                     "value": value,
-                    "unit": unit,
-                    "reference_low": low,
-                    "reference_high": high,
+                    "unit": meta["unit"],
+                    "reference_low": meta["reference_low"],
+                    "reference_high": meta["reference_high"],
                     "status": status,
                     "is_abnormal": status in {"low", "high", "critical_low", "critical_high"},
                     "is_critical": status in {"critical_low", "critical_high"},

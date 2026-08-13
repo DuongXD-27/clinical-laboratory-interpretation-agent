@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import Counter
 
 import pytest
 import pytest_asyncio
@@ -103,15 +104,24 @@ def _save(session_local, username: str, test_date: str, rows):
 
 
 @pytest.mark.asyncio
-async def test_demo_seed_creates_five_reports_with_nine_approved_results(isolated_client):
+async def test_demo_seed_creates_reports_for_history_and_trend_demo(isolated_client):
     _, session_local = isolated_client
     with session_local() as session:
         saved = seed_demo_patient_reports(session)
-        assert saved == 5
+        assert saved == 6
         patient = session.query(db_module.User).filter_by(username="benhnhan").one()
         reports = session.query(db_module.LabReport).filter_by(patient_id=patient.id).all()
-        assert len(reports) == 5
-        assert all(len(report.indicators) == 9 for report in reports)
+        assert len(reports) == 6
+        assert any(len(report.indicators) == 9 for report in reports)
+        counts = Counter(
+            indicator.analyte_canonical
+            for report in reports
+            for indicator in report.indicators
+        )
+        assert counts["LDL-C"] >= 5
+        assert counts["Fasting plasma glucose"] >= 3
+        assert counts["Creatinine"] == 2
+        assert counts["Potassium"] == 1
         assert {report.status for report in reports} >= {"NORMAL", "ABNORMAL", "CRITICAL"}
 
 

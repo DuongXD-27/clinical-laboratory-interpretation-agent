@@ -35,3 +35,37 @@ export type AnalysisResult = {
     gender?: string;
   };
 };
+
+export type TrendFilter = "latest5" | "three_months";
+
+export type TrendAnalyteSummary = {
+  analyte_canonical: string;
+  display_name: string;
+  canonical_unit: string;
+  result_count: number;
+  trend_available: boolean;
+};
+
+export type TrendPoint = {
+  report_id: number;
+  test_date: string;
+  value: number;
+  assessment: string;
+};
+
+export type TrendResponse = {
+  analyte_canonical: string;
+  display_name: string;
+  canonical_unit: string;
+  filter: TrendFilter;
+  result_count: number;
+  trend_available: boolean;
+  points: TrendPoint[];
+  reason?: string | null;
+};
+
+export type TrendExplanationResponse = {
+  explanation: string;
+  fallback: boolean;
+  reason?: string | null;
+};
