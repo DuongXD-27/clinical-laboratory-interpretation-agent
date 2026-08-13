@@ -13,6 +13,7 @@ admission to the analysis graph.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 
 from jose import JWTError, jwt
 
@@ -21,12 +22,31 @@ from src.models.ocr_schemas import (
     OCRIndicatorDraft,
     OCRReviewedIndicator,
 )
+from src.services.reference_repository import (
+    ReferenceRepository,
+    ReferenceRepositoryError,
+)
 
 _TOKEN_PURPOSE = "ocr-review"
 
 
 class OCRReviewGateError(ValueError):
     """OCR review evidence is invalid, incomplete, forged, or expired."""
+
+
+@lru_cache(maxsize=1)
+def _get_reference_repository() -> ReferenceRepository:
+    return ReferenceRepository.from_default_files()
+
+
+def _is_supported_analyte(name: str) -> bool:
+    try:
+        repository = _get_reference_repository()
+    except ReferenceRepositoryError:
+        return True
+
+    canonical = repository.resolve_analyte(name)
+    return canonical in repository.approved_analytes
 
 
 def prepare_review(
@@ -45,14 +65,22 @@ def prepare_review(
     settings = get_settings()
     threshold = settings.ocr_low_confidence_threshold
 
-    prepared = [
-        draft.model_copy(
-            update={
-                "needs_review": draft.confidence < threshold,
-            }
+    prepared = []
+    for draft in drafts:
+        supported = _is_supported_analyte(draft.name)
+        prepared.append(
+            draft.model_copy(
+                update={
+                    "needs_review": supported and draft.confidence < threshold,
+                    "supported": supported,
+                    "unsupported_reason": (
+                        ""
+                        if supported
+                        else "Chỉ số này hiện tại chưa được hỗ trợ."
+                    ),
+                }
+            )
         )
-        for draft in drafts
-    ]
 
     expires_at = datetime.now(UTC) + timedelta(
         minutes=settings.ocr_review_token_expire_minutes
@@ -235,9 +263,8 @@ def validate_review(
         confidence = float(signed["confidence"])
         raw_text = str(signed["raw_text"])
 
-        is_low_confidence = (
-            confidence < float(threshold)
-        )
+        supported = _is_supported_analyte(row.name)
+        is_low_confidence = supported and confidence < float(threshold)
 
         if not row.reviewed:
             raise OCRReviewGateError(
@@ -266,6 +293,10 @@ def validate_review(
             confidence=confidence,
             raw_text=raw_text,
             needs_review=is_low_confidence,
+            supported=supported,
+            unsupported_reason=(
+                "" if supported else "Chỉ số này hiện tại chưa được hỗ trợ."
+            ),
         )
 
         drafts.append(draft)

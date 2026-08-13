@@ -7,6 +7,7 @@ from pathlib import Path
 from eval.run_ragas import APPROVED_ANALYTES, PENDING_ANALYTES, load_jsonl, load_metadata, validate_metadata
 
 DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
+EXPECTED_CASE_COUNT = 27
 
 
 def cases() -> list[dict]:
@@ -31,16 +32,18 @@ def project_source_urls() -> set[str]:
     return urls
 
 
-def test_d01_exactly_12_valid_cases():
+def test_d01_exactly_expected_valid_cases():
     summary = validate_metadata(cases(), metadata())
 
-    assert summary.case_count == 12
+    assert summary.case_count == EXPECTED_CASE_COUNT
 
 
 def test_d02_unique_sequential_case_ids():
     ids = [case["case_id"] for case in cases()]
 
-    assert ids == [f"RAGAS-V2-{index:03d}" for index in range(1, 13)]
+    assert ids == [
+        f"RAGAS-V2-{index:03d}" for index in range(1, EXPECTED_CASE_COUNT + 1)
+    ]
     assert len(ids) == len(set(ids))
 
 

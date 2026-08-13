@@ -164,7 +164,7 @@ def test_live_05_openai_key_not_read(monkeypatch):
     assert select_credential().variable == "GOOGLE_API_KEY"
 
 
-@pytest.mark.parametrize("max_cases", [0, 13])
+@pytest.mark.parametrize("max_cases", [0, 28])
 def test_live_06_maximum_cases_rejected(max_cases, tmp_path: Path):
     exit_code = main(
         [

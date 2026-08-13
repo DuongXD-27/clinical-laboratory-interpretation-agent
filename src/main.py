@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.adapters.vision_adapter import close_vision_clients
 from src.api.auth_routes import router as auth_router
 from src.api.history_routes import router as history_router
 from src.api.ocr_routes import router as ocr_router
@@ -12,6 +13,11 @@ from src.api.routes import router
 from src.config import get_settings
 from src.models.db import init_db
 from src.services.medical_knowledge_retriever import get_rag_readiness
+from src.services.request_timing import (
+    RequestTiming,
+    reset_current_timing,
+    set_current_timing,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +27,11 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
     init_db()
-    yield
-    print("Shutting down...")
+    try:
+        yield
+    finally:
+        await close_vision_clients()
+        print("Shutting down...")
 
 
 app = FastAPI(
@@ -51,7 +60,45 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Server-Timing", "X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    """Measure complete HTTP time and correlate detailed stage timings.
+
+    The timer starts before FastAPI parses multipart/JSON bodies or resolves
+    dependencies.  Route/service spans use the context variable installed here,
+    so one structured log line contains the complete latency breakdown.
+    """
+
+    timing = RequestTiming()
+    request.state.timing = timing
+    token = set_current_timing(timing)
+    status_code = 500
+    response = None
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        timing.finish()
+        if response is not None:
+            response.headers["X-Request-ID"] = timing.request_id
+            response.headers["Server-Timing"] = timing.server_timing_header()
+            origin = request.headers.get("origin")
+            if origin in _cors_origins:
+                response.headers["Timing-Allow-Origin"] = origin
+        logger.info(
+            "request_timing %s",
+            timing.as_log_payload(
+                method=request.method,
+                path=request.url.path,
+                status_code=status_code,
+            ),
+        )
+        reset_current_timing(token)
 
 
 @app.exception_handler(Exception)

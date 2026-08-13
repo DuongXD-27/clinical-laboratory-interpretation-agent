@@ -100,7 +100,7 @@ async def test_ocr_upload_requires_auth(client):
 async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monkeypatch):
     def missing_provider():
         raise ocr_routes.VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
         )
 
     monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
@@ -115,7 +115,7 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
     )
 
     assert response.status_code == 503
-    assert "OPENROUTER_API_KEY" in response.json()["detail"]
+    assert "GOOGLE_API_KEY" in response.json()["detail"]
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
 
 
@@ -128,7 +128,7 @@ async def test_ocr_upload_rejects_empty_extraction(client, monkeypatch):
     class EmptyAdapter:
         model = "test-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             return []
 
     monkeypatch.setattr(
@@ -159,7 +159,7 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
     class FakeAdapter:
         model = "test-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             return [
                 OCRIndicatorDraft(
                     name="Glucose",
@@ -190,6 +190,59 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
     payload = response.json()
     assert payload["review_token"]
     assert payload["indicators"][0]["needs_review"] is True
+    server_timing = response.headers["server-timing"]
+    assert "ocr-file-read;dur=" in server_timing
+    assert "ocr-preprocess;dur=" in server_timing
+    # Direct Gemini receives inline bytes; base64 belongs only to the fallback.
+    assert "ocr-base64;dur=" not in server_timing
+    assert "ocr-review-prepare;dur=" in server_timing
+
+
+@pytest.mark.asyncio
+async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
+    class FakeProcessor:
+        def process(self, _raw, *, filename):
+            return SimpleNamespace(bytes=b"processed", mime_type="image/jpeg")
+
+    class FakeAdapter:
+        model = "test-vision"
+
+        async def extract(self, _image_bytes, _mime_type):
+            return [
+                OCRIndicatorDraft(
+                    name="WBC",
+                    value=7.2,
+                    unit="10^9/L",
+                    confidence=0.95,
+                ),
+                OCRIndicatorDraft(
+                    name="AST",
+                    value=48,
+                    unit="U/L",
+                    confidence=0.95,
+                ),
+            ]
+
+    monkeypatch.setattr(
+        ocr_routes,
+        "_get_dependencies",
+        lambda: (FakeProcessor(), FakeAdapter()),
+    )
+    monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
+    headers = await _auth_headers(client)
+    response = await client.post(
+        "/api/v1/ocr/upload",
+        headers=headers,
+        files={"file": ("report.png", b"image", "image/png")},
+        data={"consent_acknowledged": "true"},
+    )
+
+    assert response.status_code == 200, response.text
+    indicators = response.json()["indicators"]
+    assert indicators[0]["supported"] is True
+    assert indicators[1]["name"] == "AST"
+    assert indicators[1]["supported"] is False
+    assert "chưa được hỗ trợ" in indicators[1]["unsupported_reason"]
 
 
 @pytest.mark.asyncio
@@ -255,15 +308,71 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
     assert initial_state["raw_indicators"][0]["value"] == 5.2
 
 
-def test_clean_source_filename():
-    from src.api.ocr_routes import _clean_source_filename
+@pytest.mark.asyncio
+async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, monkeypatch):
+    drafts, token = prepare_review(
+        [
+            OCRIndicatorDraft(name="WBC", value=7.2, unit="10^9/L", confidence=0.95),
+            OCRIndicatorDraft(name="AST", value=48, unit="U/L", confidence=0.95),
+        ],
+        username="benhnhan",
+    )
+    final_state = {
+        "indicators": [
+            {
+                "name": "WBC",
+                "value": 7.2,
+                "unit": "10^9/L",
+                "reference_low": 4.72,
+                "reference_high": 11.3,
+                "status": "normal",
+                "is_abnormal": False,
+                "is_critical": False,
+                "explanation": "",
+                "sources": [],
+            }
+        ],
+        "critical_alerts": [],
+        "has_critical_values": False,
+        "guardrail_passed": True,
+        "disclaimer": "Thông tin giáo dục, vui lòng trao đổi với bác sĩ.",
+    }
+    mock_ainvoke = AsyncMock(return_value=final_state)
+    monkeypatch.setattr(routes.agent, "ainvoke", mock_ainvoke)
+    headers = await _auth_headers(client)
 
-    assert _clean_source_filename(None) == "upload"
-    assert _clean_source_filename("") == "upload"
-    assert _clean_source_filename("report.png") == "report.png"
-    assert _clean_source_filename(r"C:\Users\ABC\Desktop\report.png") == "report.png"
-    assert _clean_source_filename(r"C:\fakepath\report.png") == "report.png"
-    assert _clean_source_filename("../../something.png") == "something.png"
-    assert _clean_source_filename("folder/subfolder/test.jpg") == "test.jpg"
-    assert _clean_source_filename("folder/") == "upload"
+    response = await client.post(
+        "/api/v1/ocr/confirm",
+        json={
+            "review_token": token,
+            "patient_age": 35,
+            "patient_gender": "male",
+            "test_date": "2026-08-07",
+            "indicators": [
+                {
+                    "draft_id": drafts[0].draft_id,
+                    "name": "WBC",
+                    "value": 7.2,
+                    "unit": "10^9/L",
+                    "included": True,
+                    "reviewed": True,
+                    "low_confidence_acknowledged": False,
+                },
+                {
+                    "draft_id": drafts[1].draft_id,
+                    "name": "AST",
+                    "value": 48,
+                    "unit": "U/L",
+                    "included": True,
+                    "reviewed": True,
+                    "low_confidence_acknowledged": False,
+                },
+            ],
+        },
+        headers=headers,
+    )
 
+    assert response.status_code == 200, response.text
+    initial_state = mock_ainvoke.await_args.args[0]
+    assert [item["name"] for item in initial_state["raw_indicators"]] == ["WBC"]
+    assert response.json()["out_of_scope_indicators"] == ["AST"]

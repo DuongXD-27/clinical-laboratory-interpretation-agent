@@ -18,6 +18,7 @@ from eval.run_ragas import (
 )
 
 DATASET_PATH = Path("eval/datasets/ragas_v2_baseline.jsonl")
+EXPECTED_CASE_COUNT = 27
 FORBIDDEN_KEYS = {"OPENAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "ANTHROPIC_API_KEY"}
 
 
@@ -26,7 +27,7 @@ def valid_cases() -> list[dict]:
 
 
 def test_r01_valid_jsonl_loads():
-    assert len(valid_cases()) == 12
+    assert len(valid_cases()) == EXPECTED_CASE_COUNT
 
 
 def test_r02_malformed_json_line_produces_clear_failure(tmp_path: Path):
@@ -45,9 +46,9 @@ def test_r03_duplicate_case_id_rejected():
         validate_cases(cases)
 
 
-def test_r04_pending_analyte_rejected():
+def test_r04_unapproved_analyte_rejected():
     cases = valid_cases()
-    cases[0] = {**cases[0], "analyte": "Potassium"}
+    cases[0] = {**cases[0], "analyte": "Troponin"}
 
     with pytest.raises(DatasetValidationError, match="outside the approved"):
         validate_cases(cases)
@@ -61,10 +62,10 @@ def test_r05_unpermitted_empty_context_rejected():
         validate_cases(cases)
 
 
-def test_r06_valid_cases_convert_to_12_single_turn_samples():
+def test_r06_valid_cases_convert_to_single_turn_samples():
     dataset = build_ragas_dataset(valid_cases())
 
-    assert len(dataset.samples) == 12
+    assert len(dataset.samples) == EXPECTED_CASE_COUNT
     assert all(sample.__class__.__name__ == "SingleTurnSample" for sample in dataset.samples)
 
 

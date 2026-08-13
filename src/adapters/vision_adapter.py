@@ -1,235 +1,427 @@
-"""Adapter_Vision — Vision LLM Adapter (ADR-006).
+"""Async Vision adapter: direct Gemini first, OpenRouter as a narrow fallback.
 
-Nhận ảnh phiếu xét nghiệm (dạng base64 data-URI), gọi VLM qua OpenRouter
-(OpenAI-compatible API) để trích xuất danh sách chỉ số, parse thành
-`OCRIndicatorDraft` (bản nháp). Bản nháp này KHÔNG được đưa thẳng vào
-`AgentState` — luồng chính phải đi qua UI_Review (xem kickoff V2 mục 4.1).
+Images stay in memory and are sent inline.  The adapter never uses Gemini's
+Files API and never logs prompts, image bytes, extracted values, or secrets.
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
+import random
 import re
+import threading
 import time
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal
 
-from openai import OpenAI
+import aiohttp
+import httpx
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types
+from openai import AsyncOpenAI
+from pydantic import BaseModel, Field, ValidationError
 
-from src.config import get_settings
+from src.config import Settings, get_settings
 from src.models.ocr_schemas import OCRIndicatorDraft
+from src.services.request_timing import add_timing_event, timing_span
 
 logger = logging.getLogger(__name__)
 
-# Prompt buộc VLM trả về JSON — khớp schema OCRIndicatorDraft. Giữ prompt
-# không chứa khuyến nghị y khoa (guardrail, ADR-004).
 EXTRACTION_SYSTEM_PROMPT = (
     "Bạn là công cụ trích xuất dữ liệu từ ảnh phiếu xét nghiệm máu. "
-    "Nhiệm vụ DUY NHẤT của bạn: đọc các dòng chỉ số (tên, giá trị, đơn vị) "
-    "trên ảnh và trả về strict JSON. "
-    "TUYỆT ĐỐI không giải thích, không bình luận y khoa, không chẩn đoán, "
-    "không thêm chữ ngoài JSON. "
-    "Trả về đúng cấu trúc: "
-    '{"indicators": [{"name": "...", "value": 0.0, "unit": "...", '
-    '"confidence": 0.0, "raw_text": "..."}]} '
-    "Trong đó: name là tên viết tắt/viết đầy đủ của chỉ số; value là số đọc "
-    "được (float); unit là đơn vị; confidence là số 0-1 thể hiện mức bạn tin "
-    "giá trị đó đọc đúng; raw_text là chuỗi ký tự thô đúng như trên ảnh. "
-    "Những con số Không đọc chắc chắn → confidence thấp (vd 0.3). "
-    "Nếu ảnh không phải phiếu xét nghiệm máu, trả về {\"items\": []}."
+    "Chỉ đọc các dòng chỉ số gồm tên, giá trị, đơn vị, độ tin cậy và nguyên văn ngắn. "
+    "Đọc cả chỉ số phổ biến và chỉ số chưa chắc được hệ thống hỗ trợ; không tự bỏ dòng chỉ vì tên chỉ số lạ. "
+    "Không đưa khoảng tham chiếu, đánh giá, STT hoặc ghi chú vào kết quả. "
+    "Không giải thích, bình luận y khoa hoặc chẩn đoán. "
+    "Nếu ảnh không phải phiếu xét nghiệm máu, trả về danh sách indicators rỗng."
+)
+EXTRACTION_USER_PROMPT = (
+    "Trích xuất tất cả dòng chỉ số xét nghiệm trong bảng theo schema đã cung cấp. "
+    "Mỗi indicator chỉ gồm name, value, unit, confidence, raw_text; raw_text tối đa một dòng ngắn."
 )
 
 
 class VisionAdapterError(Exception):
-    """Lỗi khi gọi VLM hoặc parse kết quả OCR."""
+    """Provider call or response validation failed."""
+
+
+class _ProviderIndicator(BaseModel):
+    """Strict provider boundary matching the existing OCR domain fields."""
+
+    name: str = Field(..., min_length=1)
+    value: float = Field(..., allow_inf_nan=False)
+    unit: str = Field(..., min_length=1)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    raw_text: str
+
+
+class _GeminiOCRPayload(BaseModel):
+    indicators: list[_ProviderIndicator]
+
+
+_shared_gemini_client: Any | None = None
+_shared_openrouter_client: AsyncOpenAI | None = None
+_client_lock = threading.Lock()
+
+
+def _create_gemini_client(settings: Settings) -> Any:
+    """Create one process-wide client with all SDK retries disabled."""
+
+    return genai.Client(
+        api_key=settings.google_api_key,
+        http_options=types.HttpOptions(
+            timeout=int(settings.gemini_vision_timeout_seconds * 1000),
+            # attempts includes the original request; one means no SDK retry.
+            retry_options=types.HttpRetryOptions(attempts=1),
+        ),
+    )
+
+
+def _get_gemini_client(settings: Settings) -> tuple[Any, bool]:
+    global _shared_gemini_client
+    with _client_lock:
+        if _shared_gemini_client is None:
+            _shared_gemini_client = _create_gemini_client(settings)
+            return _shared_gemini_client, True
+        return _shared_gemini_client, False
+
+
+def _create_openrouter_client(settings: Settings) -> AsyncOpenAI:
+    return AsyncOpenAI(
+        api_key=settings.openrouter_api_key,
+        base_url=settings.vision_base_url,
+        timeout=settings.vision_timeout_seconds,
+        max_retries=0,
+    )
+
+
+def _get_openrouter_client(settings: Settings) -> tuple[AsyncOpenAI, bool]:
+    global _shared_openrouter_client
+    with _client_lock:
+        if _shared_openrouter_client is None:
+            _shared_openrouter_client = _create_openrouter_client(settings)
+            return _shared_openrouter_client, True
+        return _shared_openrouter_client, False
+
+
+async def close_vision_clients() -> None:
+    """Close shared HTTP transports during application shutdown."""
+
+    global _shared_gemini_client, _shared_openrouter_client
+    with _client_lock:
+        gemini_client = _shared_gemini_client
+        openrouter_client = _shared_openrouter_client
+        _shared_gemini_client = None
+        _shared_openrouter_client = None
+
+    if gemini_client is not None:
+        await gemini_client.aio.aclose()
+    if openrouter_client is not None:
+        await openrouter_client.close()
 
 
 def image_to_data_url(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
-    """Chuyển ảnh nhị phân thành base64 data-URI để gửi cho VLM."""
+    """Encode only for the OpenRouter compatibility fallback."""
+
     encoded = base64.b64encode(image_bytes).decode("ascii")
     return f"data:{mime_type};base64,{encoded}"
 
 
-class VisionAdapter:
-    """Adapter gọi OpenRouter VLM để OCR phiếu xét nghiệm.
+def _status_code(exc: BaseException) -> int | None:
+    code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+    if isinstance(code, int):
+        return code
+    response = getattr(exc, "response", None)
+    response_code = getattr(response, "status_code", None)
+    return response_code if isinstance(response_code, int) else None
 
-    Dependencies được inject (client/model) để dễ test mà không gọi API thật.
-    """
+
+def _is_transient(exc: BaseException) -> bool:
+    code = _status_code(exc)
+    if code is not None:
+        return code in {408, 429} or 500 <= code <= 599
+    return isinstance(
+        exc,
+        (
+            asyncio.TimeoutError,
+            TimeoutError,
+            httpx.TimeoutException,
+            httpx.TransportError,
+            aiohttp.ClientError,
+            genai_errors.ServerError,
+        ),
+    )
+
+
+class VisionAdapter:
+    """Extract OCR drafts with direct Gemini and an optional sequential fallback."""
 
     def __init__(
         self,
         *,
-        client: OpenAI | None = None,
+        gemini_client: Any | None = None,
+        openrouter_client: AsyncOpenAI | Any | None = None,
+        primary_provider: Literal["gemini", "openrouter"] = "gemini",
         model: str | None = None,
-        temperature: float | None = None,
-        max_retries: int = 3,
-        retry_backoff_seconds: float = 2.0,
+        fallback_enabled: bool = True,
+        sleep_func: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        jitter_func: Callable[[float, float], float] = random.uniform,
     ) -> None:
-        settings = get_settings()
-        if client is None:
-            self._client = OpenAI(
-                api_key=settings.openrouter_api_key,
-                base_url=settings.vision_base_url,
-                timeout=settings.vision_timeout_seconds,
+        self.settings = get_settings()
+        self.primary_provider = primary_provider
+        self.fallback_enabled = fallback_enabled
+        self._sleep = sleep_func
+        self._jitter = jitter_func
+        self._openrouter_client = openrouter_client
+
+        if primary_provider == "gemini":
+            if gemini_client is None:
+                self._gemini_client, created = _get_gemini_client(self.settings)
+            else:
+                self._gemini_client, created = gemini_client, False
+            self.model = model or self.settings.gemini_vision_model
+            logger.info(
+                "vision_client provider=gemini reused=%s",
+                str(not created).lower(),
             )
-            self.timeout_seconds = settings.vision_timeout_seconds
+            add_timing_event(
+                "vision-client",
+                0.0,
+                provider="gemini",
+                outcome="created" if created else "reused",
+            )
         else:
-            # Client inject (test): không phụ thuộc thuộc tính lỏng lẻo của mock;
-            # lấy timeout hợp lệ hoặc rơi về cấu hình mặc định.
-            self._client = client
-            injected_timeout = getattr(client, "timeout", None)
-            self.timeout_seconds = (
-                injected_timeout
-                if isinstance(injected_timeout, (int, float))
-                else settings.vision_timeout_seconds
+            self._gemini_client = gemini_client
+            self.model = model or self.settings.vision_model
+
+        self.last_provider = primary_provider
+        self.last_model = self.model
+
+    async def extract(
+        self,
+        image_bytes: bytes,
+        mime_type: str = "image/jpeg",
+    ) -> list[OCRIndicatorDraft]:
+        """Measure and execute the provider operation without blocking the event loop."""
+
+        with timing_span("vision-total"):
+            if self.primary_provider == "openrouter":
+                return await self._extract_openrouter(image_bytes, mime_type)
+            return await self._extract_gemini(image_bytes, mime_type)
+
+    async def _extract_gemini(
+        self,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> list[OCRIndicatorDraft]:
+        config = types.GenerateContentConfig(
+            system_instruction=EXTRACTION_SYSTEM_PROMPT,
+            temperature=0,
+            max_output_tokens=self.settings.gemini_vision_max_output_tokens,
+            response_mime_type="application/json",
+            response_json_schema=_GeminiOCRPayload.model_json_schema(),
+            thinking_config=types.ThinkingConfig(
+                thinking_level=self.settings.gemini_vision_thinking_level
+            ),
+        )
+        contents = [
+            EXTRACTION_USER_PROMPT,
+            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+        ]
+
+        last_transient: BaseException | None = None
+        for attempt in range(1, 3):
+            started_at = time.perf_counter()
+            try:
+                response = await asyncio.wait_for(
+                    self._gemini_client.aio.models.generate_content(
+                        model=self.model,
+                        contents=contents,
+                        config=config,
+                    ),
+                    timeout=self.settings.gemini_vision_timeout_seconds,
+                )
+            except Exception as exc:
+                transient = _is_transient(exc)
+                duration_ms = (time.perf_counter() - started_at) * 1000
+                self._record_attempt("gemini", self.model, attempt, "transient_error" if transient else "error", duration_ms)
+                if not transient:
+                    raise VisionAdapterError(
+                        f"Gemini OCR bị từ chối hoặc lỗi cấu hình (HTTP {_status_code(exc) or 'unknown'})."
+                    ) from exc
+                last_transient = exc
+                if attempt == 1:
+                    delay = 0.5 + self._jitter(0.0, 0.25)
+                    backoff_started_at = time.perf_counter()
+                    await self._sleep(delay)
+                    add_timing_event(
+                        "vision-backoff",
+                        (time.perf_counter() - backoff_started_at) * 1000,
+                        provider="gemini",
+                        after_attempt=attempt,
+                    )
+                    continue
+                break
+
+            duration_ms = (time.perf_counter() - started_at) * 1000
+            self._record_attempt("gemini", self.model, attempt, "response", duration_ms)
+            try:
+                with timing_span("vision-parse"):
+                    payload = _GeminiOCRPayload.model_validate_json(response.text or "")
+                    drafts = [
+                        OCRIndicatorDraft(**item.model_dump())
+                        for item in payload.indicators
+                    ]
+            except (ValidationError, TypeError, ValueError) as exc:
+                # A syntactically/semantically bad response is not a transport
+                # failure: do not retry it and do not silently switch providers.
+                raise VisionAdapterError("Gemini OCR trả về dữ liệu không đúng schema.") from exc
+            self.last_provider = "gemini"
+            self.last_model = self.model
+            return drafts
+
+        if self.fallback_enabled and self.settings.openrouter_api_key.strip():
+            logger.warning(
+                "vision_fallback from_provider=gemini to_provider=openrouter reason=transient_exhausted"
             )
-        self.model = model or settings.vision_model
-        self.temperature = temperature if temperature is not None else settings.vision_temperature
-        self.max_retries = max_retries
-        self.retry_backoff_seconds = retry_backoff_seconds
+            fallback_started_at = time.perf_counter()
+            drafts = await self._extract_openrouter(image_bytes, mime_type)
+            add_timing_event(
+                "vision-fallback",
+                (time.perf_counter() - fallback_started_at) * 1000,
+                from_provider="gemini",
+                to_provider="openrouter",
+                outcome="success",
+            )
+            return drafts
 
-    def extract(self, image_data_url: str) -> list[OCRIndicatorDraft]:
-        """Gọi VLM với ảnh (data URL) và parse kết quả thành bản nháp chỉ số.
+        raise VisionAdapterError(
+            "Gemini OCR tạm thời không khả dụng sau 2 lần gọi; fallback không được cấu hình."
+        ) from last_transient
 
-        Returns:
-            list[OCRIndicatorDraft]: danh sách chỉ số đọc được (có thể rỗng).
-        Raises:
-            VisionAdapterError: nếu gọi API lỗi hoặc JSON trả về không parse được.
-        """
+    async def _extract_openrouter(
+        self,
+        image_bytes: bytes,
+        mime_type: str,
+    ) -> list[OCRIndicatorDraft]:
+        if self._openrouter_client is None:
+            if not self.settings.openrouter_api_key.strip():
+                raise VisionAdapterError("OpenRouter OCR chưa được cấu hình.")
+            self._openrouter_client, created = _get_openrouter_client(self.settings)
+            logger.info(
+                "vision_client provider=openrouter reused=%s",
+                str(not created).lower(),
+            )
+
+        with timing_span("openrouter-base64"):
+            image_data_url = image_to_data_url(image_bytes, mime_type)
         messages = [
-            {
-                "role": "system",
-                "content": EXTRACTION_SYSTEM_PROMPT,
-            },
+            {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": "Đọc các chỉ số xét nghiệm trên ảnh và trả JSON như hướng dẫn.",
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": image_data_url},
-                    },
+                    {"type": "text", "text": EXTRACTION_USER_PROMPT},
+                    {"type": "image_url", "image_url": {"url": image_data_url}},
                 ],
             },
         ]
-
-        # Ngân sách thời gian tổng cho toàn bộ vòng retry (network lỗi + rỗng
-        # cộng dồn), tránh việc hai loại retry nối tiếp nhau vượt timeout kỳ
-        # vọng của caller.
-        deadline = time.monotonic() + self.max_retries * self.timeout_seconds + (
-            self.max_retries * self.retry_backoff_seconds
-        )
-
-        for attempt in range(self.max_retries):
-            if time.monotonic() > deadline:
-                raise VisionAdapterError(
-                    f"Vision LLM ({self.model}) vượt quá thời gian chờ tổng sau {attempt} lần thử."
-                )
-            try:
-                resp = self._client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=1000,
-                )
-            except Exception as exc:  # network / auth / rate-limit
-                logger.warning(
-                    "Lỗi gọi OpenRouter VLM (%s) lần %d/%d: %s",
-                    self.model,
-                    attempt + 1,
-                    self.max_retries,
-                    exc,
-                )
-                if attempt + 1 < self.max_retries:
-                    time.sleep(self.retry_backoff_seconds)
-                    continue
-                raise VisionAdapterError(
-                    f"Không gọi được Vision LLM ({self.model}): {exc}"
-                ) from exc
-
-            content = resp.choices[0].message.content if resp.choices else ""
-            if content:
-                return self._parse_response(content)
-
-            # Content rỗng — free-tier thường rate-limit; thử lại vài lần.
-            logger.warning(
-                "Vision LLM (%s) trả về rỗng lần %d/%d",
-                self.model,
-                attempt + 1,
-                self.max_retries,
+        model = self.settings.vision_model if self.primary_provider == "gemini" else self.model
+        started_at = time.perf_counter()
+        try:
+            response = await self._openrouter_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0,
+                max_tokens=self.settings.gemini_vision_max_output_tokens,
             )
-            time.sleep(self.retry_backoff_seconds)
+        except Exception as exc:
+            self._record_attempt(
+                "openrouter",
+                model,
+                1,
+                "error",
+                (time.perf_counter() - started_at) * 1000,
+            )
+            raise VisionAdapterError("OpenRouter OCR fallback không khả dụng.") from exc
 
-        raise VisionAdapterError(
-            f"Vision LLM ({self.model}) trả về rỗng sau {self.max_retries} lần thử."
+        content = response.choices[0].message.content if response.choices else ""
+        self._record_attempt(
+            "openrouter",
+            model,
+            1,
+            "response" if content else "empty",
+            (time.perf_counter() - started_at) * 1000,
         )
-
-    def _parse_response(self, content: str) -> list[OCRIndicatorDraft]:
-        """Tách JSON từ text reply (VLM hay kèm markdown/khai báo) rồi parse."""
-        payload = _extract_json(content)
-        if isinstance(payload, dict):
-            items = payload.get("indicators") or payload.get("items") or []
-        else:
-            items = []
-        drafts: list[OCRIndicatorDraft] = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            name = str(item.get("name", "")).strip()
-
-            value = item.get("value")
-            if name and value is not None:
-                try:
-                    drafts.append(
-                        OCRIndicatorDraft(
-                            name=name,
-                            value=float(value),
-                            unit=str(item.get("unit", "")).strip(),
-                            confidence=_clamp_conf(item.get("confidence")),
-                            raw_text=str(item.get("raw_text", "")).strip(),
-                        )
-                    )
-                except (TypeError, ValueError) as exc:
-                    logger.warning("Bỏ qua chỉ số không parse được: %r (%s)", item, exc)
+        if not content:
+            raise VisionAdapterError("OpenRouter OCR trả về nội dung rỗng.")
+        try:
+            with timing_span("vision-parse"):
+                drafts = self._parse_openrouter_response(content)
+        except (ValidationError, TypeError, ValueError, _NotParsableError) as exc:
+            raise VisionAdapterError("OpenRouter OCR trả về dữ liệu không đúng schema.") from exc
+        self.last_provider = "openrouter"
+        self.last_model = model
         return drafts
 
+    @staticmethod
+    def _record_attempt(
+        provider: str,
+        model: str,
+        attempt: int,
+        outcome: str,
+        duration_ms: float,
+    ) -> None:
+        add_timing_event(
+            "vision-provider-attempt",
+            duration_ms,
+            provider=provider,
+            model=model,
+            attempt=attempt,
+            outcome=outcome,
+            sdk_retries=0,
+        )
+        logger.info(
+            "vision_provider provider=%s model=%s attempt=%d outcome=%s duration_ms=%.3f",
+            provider,
+            model,
+            attempt,
+            outcome,
+            duration_ms,
+        )
 
-# Khớp mọi markdown code fence (```json ... ``` hoặc ``` ... ```), kể cả khi
-# VLM trả về nhiều khối hoặc kèm chữ thừa trước/sau.
+    @staticmethod
+    def _parse_openrouter_response(content: str) -> list[OCRIndicatorDraft]:
+        payload = _extract_json(content)
+        if not isinstance(payload, dict):
+            raise ValueError("response root must be an object")
+        items = payload.get("indicators") or payload.get("items") or []
+        if not isinstance(items, list):
+            raise ValueError("indicators must be a list")
+        return [OCRIndicatorDraft(**item) for item in items]
+
+
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
-def _extract_json(content: str):
-    """Trích khối JSON hợp lệ đầu tiên từ content của VLM.
+def _extract_json(content: str) -> Any:
+    """Compatibility parser used only by the OpenRouter fallback."""
 
-    Chiến lược, theo thứ tự ưu tiên:
-    1. Parse trực tiếp toàn bộ text.
-    2. Parse nội dung bên trong từng fence ``` ... ``` (có thể nhiều khối).
-    3. Dùng JSONDecoder.raw_decode quét từ mỗi vị trí '{' để tìm khối JSON
-       hợp lệ đầu tiên (bền hơn find/rfind vì không giả định JSON là khối
-       liên tục cuối cùng trong text).
-    """
     text = (content or "").strip()
     if not text:
-        raise _NotParsableError(text[:200])
-
+        raise _NotParsableError(text)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-
     for block in _FENCE_RE.findall(text):
-        block = block.strip()
-        if not block:
-            continue
         try:
-            return json.loads(block)
+            return json.loads(block.strip())
         except json.JSONDecodeError:
             continue
-
     decoder = json.JSONDecoder()
     for match in re.finditer(r"[{\[]", text):
         try:
@@ -237,17 +429,16 @@ def _extract_json(content: str):
             return payload
         except json.JSONDecodeError:
             continue
-
     raise _NotParsableError(text[:200])
 
 
 class _NotParsableError(Exception):
-    def __init__(self, snippet: str) -> None:
-        super().__init__(f"Không phân tích được JSON từ phản hồi VLM: {snippet!r}...")
+    pass
 
 
-def _clamp_conf(value) -> float:
-    """Chuẩn hoá confidence về [0,1]; giá trị thiếu/không hợp lệ -> 0.5."""
+def _clamp_conf(value: Any) -> float:
+    """Retained for callers of the former compatibility helper."""
+
     try:
         conf = float(value)
     except (TypeError, ValueError):

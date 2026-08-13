@@ -4,17 +4,18 @@ Với mỗi ảnh trong data/ocr_samples/*/report.png: preprocess -> VLM -> so
 với giá trị kỳ vọng (SAMPLE_ROWS trong generate_ocr_samples.py). In sai số
 theo từng biến thể. KHÔNG ghi vào AgentState — chỉ đánh giá Adapter_Vision.
 
-Usage (cần OPENROUTER_API_KEY trong .env):
+Usage (cần GOOGLE_API_KEY trong .env):
     .venv/bin/python src/scripts/eval_ocr.py
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from pathlib import Path
 
-from src.adapters.vision_adapter import VisionAdapter, image_to_data_url
+from src.adapters.vision_adapter import VisionAdapter, close_vision_clients
 from src.models.ocr_schemas import OCRIndicatorDraft
 from src.services.image_processor import ImageProcessor
 
@@ -49,11 +50,13 @@ def _rel_error(actual: float, expected: float) -> float:
     return abs(actual - expected) / max(abs(expected), 1e-9)
 
 
-def evaluate_folder(processor: ImageProcessor, adapter: VisionAdapter, folder: Path) -> dict:
+async def evaluate_folder(
+    processor: ImageProcessor, adapter: VisionAdapter, folder: Path
+) -> dict:
     report_path = folder / "report.png"
     raw = report_path.read_bytes()
     processed = processor.process(raw, filename="report.png")
-    drafts = adapter.extract(image_to_data_url(processed.bytes, processed.mime_type))
+    drafts = await adapter.extract(processed.bytes, processed.mime_type)
 
     matched = _match_by_name(drafts)
     results: list[dict] = []
@@ -77,23 +80,33 @@ def evaluate_folder(processor: ImageProcessor, adapter: VisionAdapter, folder: P
     return {"variant": folder.name, "results": results}
 
 
-def main() -> None:
+async def main() -> None:
     if not SAMPLES_DIR.exists():
         raise SystemExit("Chưa có ảnh mẫu. Chạy: python src/scripts/generate_ocr_samples.py")
 
     processor = ImageProcessor()
     adapter = VisionAdapter()
     summary: list[dict] = []
-    for folder in sorted(SAMPLES_DIR.iterdir()):
-        if not folder.is_dir():
-            continue
-        print(f"\n=== {folder.name} ===")
-        out = evaluate_folder(processor, adapter, folder)
-        summary.append(out)
-        for r in out["results"]:
-            status = f"abs_err={r['abs_err']:.3f}" if r["found"] else "NOT FOUND"
-            conf = f"conf={r['confidence']:.2f}" if r.get("confidence") is not None else ""
-            print(f"  {r['name']:<16} expected={r['value']:>5} {status:<16} {conf}")
+    try:
+        for folder in sorted(SAMPLES_DIR.iterdir()):
+            if not folder.is_dir():
+                continue
+            print(f"\n=== {folder.name} ===")
+            out = await evaluate_folder(processor, adapter, folder)
+            summary.append(out)
+            for r in out["results"]:
+                status = f"abs_err={r['abs_err']:.3f}" if r["found"] else "NOT FOUND"
+                conf = (
+                    f"conf={r['confidence']:.2f}"
+                    if r.get("confidence") is not None
+                    else ""
+                )
+                print(
+                    f"  {r['name']:<16} expected={r['value']:>5} "
+                    f"{status:<16} {conf}"
+                )
+    finally:
+        await close_vision_clients()
 
     report = {"expected": EXPECTED, "runs": summary}
     dest = ROOT / "eval" / "ocr_baseline.json"
@@ -103,4 +116,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

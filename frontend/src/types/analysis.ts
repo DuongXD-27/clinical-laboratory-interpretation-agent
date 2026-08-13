@@ -24,8 +24,7 @@ export type AnalysisResult = {
   has_critical_values?: boolean;
   summary?: string;
   disclaimer?: string;
-  /** ID phiếu đã lưu vào lịch sử; null với khách và với tài khoản bác sĩ. */
-  saved_report_id?: number | null;
+  out_of_scope_indicators?: string[];
   patient_info?: {
     name?: string;
     age?: number;

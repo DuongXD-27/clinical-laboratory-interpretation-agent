@@ -214,7 +214,7 @@ async def test_e2e_09_hba1c_approved():
 
     checked = only_indicator(checker_result)
     assert checked["status"] == "normal"
-    assert checked["reference_low"] is None
+    assert checked["reference_low"] == 4.0
     assert checked["reference_high"] == 5.7
     assert only_indicator(critical_result)["is_critical"] is False
 
@@ -372,7 +372,7 @@ async def test_e2e_16_ldl_c_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (4.5,  "normal"), # no lower bound in RI — any low value is normal
+        (4.5,  "normal"), # within RI [4.0, 5.7]
         (5.5,  "normal"), # clearly within RI
         (5.7,  "normal"), # = upper bound (inclusive)
         (5.8,  "high"),   # just above upper bound
@@ -388,7 +388,7 @@ async def test_e2e_17_hba1c_ri_boundaries(value, expected_status):
 
     checked = only_indicator(checker_result)
     assert checked["status"] == expected_status
-    assert checked["reference_low"] is None
+    assert checked["reference_low"] == 4.0
     assert checked["reference_high"] == 5.7
     assert only_indicator(critical_result)["is_critical"] is False
 

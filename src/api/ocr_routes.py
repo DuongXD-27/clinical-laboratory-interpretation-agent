@@ -31,6 +31,11 @@ from src.services.ocr_sample_library import (
     is_known_sample,
     load_samples,
 )
+from src.services.reference_repository import (
+    ReferenceRepository,
+    ReferenceRepositoryError,
+)
+from src.services.request_timing import timing_span
 
 router = APIRouter()
 
@@ -41,7 +46,7 @@ CONSENT_TEXT = (
 
 
 def _clean_source_filename(filename: str | None) -> str:
-    """Chỉ giữ tên file để persistence/display, không giữ client-side path."""
+    """Chỉ giữ tên file, không lưu client-side path."""
     if not filename:
         return "upload"
 
@@ -50,14 +55,51 @@ def _clean_source_filename(filename: str | None) -> str:
 
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
-    """Factory lỏng — dễ thay mock trong test."""
+    """Khởi tạo OCR dependencies sau khi request vượt qua policy gates."""
 
-    if not get_settings().openrouter_api_key.strip():
+    if not get_settings().google_api_key.strip():
         raise VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu OPENROUTER_API_KEY trên backend."
+            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
         )
 
-    return ImageProcessor(), VisionAdapter()
+    with timing_span("image-processor-init"):
+        processor = ImageProcessor()
+
+    with timing_span("vision-client-init"):
+        adapter = VisionAdapter()
+
+    return processor, adapter
+
+
+def _split_supported_inputs(
+    included_inputs: list[dict],
+) -> tuple[list[dict], list[str]]:
+    """Tách chỉ số được hỗ trợ khỏi chỉ số ngoài thư viện tham chiếu."""
+
+    try:
+        repository = ReferenceRepository.from_default_files()
+    except ReferenceRepositoryError:
+        # Không làm hỏng OCR flow chỉ vì reference repository không khởi tạo
+        # được ở bước pre-filter. Pipeline phía sau vẫn có guard riêng.
+        return included_inputs, []
+
+    supported: list[dict] = []
+    out_of_scope: list[str] = []
+
+    for item in included_inputs:
+        name = str(item.get("name", "")).strip()
+
+        if not name:
+            continue
+
+        canonical = repository.resolve_analyte(name)
+
+        if canonical in repository.approved_analytes:
+            supported.append(item)
+        else:
+            out_of_scope.append(name)
+
+    return supported, list(dict.fromkeys(out_of_scope))
 
 
 @router.get(
@@ -66,7 +108,7 @@ def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     summary="Chính sách nhận ảnh hiện hành + danh sách ảnh mẫu",
 )
 async def ocr_policy() -> OCRUploadPolicyResponse:
-    """Trả cấu hình OCR public để UI biết policy trước khi upload."""
+    """Trả chính sách OCR công khai để frontend cấu hình upload."""
 
     settings = get_settings()
     mode = settings.ocr_upload_mode
@@ -154,15 +196,23 @@ async def ocr_upload(
         )
 
     # Ảnh gốc chỉ tồn tại trong RAM trong vòng đời request.
-    # Không ghi file, không persistence vào DB, không log nội dung.
-    raw = await file.read()
+    # Không ghi file, không persistence vào DB, không log nội dung ảnh.
+    with timing_span("ocr-file-read"):
+        raw = await file.read()
 
     # ------------------------------------------------------------------
-    # Gate 3: public demo chỉ cho phép ảnh mẫu
+    # Gate 3: demo_only chỉ nhận ảnh mẫu
     # ------------------------------------------------------------------
+    with timing_span("ocr-sample-policy-check"):
+        known_sample = (
+            is_known_sample(raw)
+            if settings.ocr_upload_mode == "demo_only"
+            else True
+        )
+
     if (
         settings.ocr_upload_mode == "demo_only"
-        and not is_known_sample(raw)
+        and not known_sample
     ):
         raise HTTPException(
             status_code=403,
@@ -184,25 +234,23 @@ async def ocr_upload(
         ) from exc
 
     try:
-        processed = processor.process(
-            raw,
-            filename=file.filename,
-        )
+        with timing_span("ocr-preprocess"):
+            processed = processor.process(
+                raw,
+                filename=file.filename,
+            )
     except ImageProcessorError as exc:
         raise HTTPException(
             status_code=400,
             detail=str(exc),
         ) from exc
 
-    from src.adapters.vision_adapter import image_to_data_url
-
     try:
-        drafts = adapter.extract(
-            image_to_data_url(
+        with timing_span("ocr-vision-extract"):
+            drafts = await adapter.extract(
                 processed.bytes,
                 processed.mime_type,
             )
-        )
     except VisionAdapterError as exc:
         raise HTTPException(
             status_code=502,
@@ -221,19 +269,22 @@ async def ocr_upload(
 
     source_image = _clean_source_filename(file.filename)
 
-    # Quan trọng:
-    # source_image được bind vào signed review evidence cùng drafts/user.
-    # /ocr/confirm sẽ lấy lại giá trị này từ token, không tin filename
-    # do client tự gửi sau đó.
-    prepared_drafts, review_token = prepare_review(
-        drafts,
-        username=current_user.username,
-        source_image=source_image,
-    )
+    # source_image + confidence + raw_text được bind vào signed review
+    # evidence. Client không được tự cung cấp lại provenance ở confirm.
+    with timing_span("ocr-review-prepare"):
+        prepared_drafts, review_token = prepare_review(
+            drafts,
+            username=current_user.username,
+            source_image=source_image,
+        )
 
     return OCRReviewResponse(
         source_image=source_image,
-        model_used=adapter.model,
+        model_used=getattr(
+            adapter,
+            "last_model",
+            adapter.model,
+        ),
         review_token=review_token,
         low_confidence_threshold=(
             settings.ocr_low_confidence_threshold
@@ -259,40 +310,70 @@ async def ocr_confirm(
     """Server-side gate chặn OCR review thiếu hoặc bị giả mạo."""
 
     try:
-        (
-            reviewed_drafts,
-            included_inputs,
-            source_image,
-        ) = validate_review(
-            request.review_token,
-            request.indicators,
-            username=current_user.username,
-        )
+        with timing_span("ocr-review-validate"):
+            (
+                reviewed_drafts,
+                included_inputs,
+                source_image,
+            ) = validate_review(
+                request.review_token,
+                request.indicators,
+                username=current_user.username,
+            )
     except OCRReviewGateError as exc:
         raise HTTPException(
             status_code=400,
             detail=str(exc),
         ) from exc
 
-    analyze_request = AnalyzeRequest(
-        patient_age=request.patient_age,
-        patient_gender=request.patient_gender,
-        test_date=request.test_date,
-        language=request.language,
-        indicators=[
-            IndicatorInputSchema(**item)
-            for item in included_inputs
-        ],
-    )
+    # Chỉ đưa analyte có reference support vào LangGraph.
+    # Những analyte còn lại vẫn được báo cho người dùng dưới dạng
+    # out_of_scope_indicators.
+    (
+        supported_inputs,
+        out_of_scope_indicators,
+    ) = _split_supported_inputs(included_inputs)
 
-    # Local import tránh module cycle và đảm bảo manual/OCR cùng dùng
-    # một LangGraph instance + một response/persistence path.
+    if not supported_inputs:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Phiếu này chưa có chỉ số nào nằm trong "
+                "danh sách hiện được hỗ trợ."
+            ),
+        )
+
+    with timing_span("ocr-build-analysis-request"):
+        analyze_request = AnalyzeRequest(
+            patient_age=request.patient_age,
+            patient_gender=request.patient_gender,
+            test_date=request.test_date,
+            language=request.language,
+            indicators=[
+                IndicatorInputSchema(**item)
+                for item in supported_inputs
+            ],
+        )
+
+    # Local import tránh module cycle và đảm bảo manual/OCR dùng chung
+    # LangGraph, response mapping và persistence path.
     from src.api.routes import run_analysis
 
-    return await run_analysis(
+    response = await run_analysis(
         analyze_request,
         current_user=current_user,
         db=db,
         ocr_drafts=reviewed_drafts,
         ocr_source_filename=source_image,
     )
+
+    response.out_of_scope_indicators = list(
+        dict.fromkeys(
+            [
+                *response.out_of_scope_indicators,
+                *out_of_scope_indicators,
+            ]
+        )
+    )
+
+    return response

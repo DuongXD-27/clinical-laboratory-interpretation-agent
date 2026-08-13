@@ -268,7 +268,7 @@ async def test_ocr_path_is_stored_and_marked_as_ocr(client, stub_graph, monkeypa
     class _StubAdapter:
         model = "stub-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             from src.models.ocr_schemas import OCRIndicatorDraft
 
             return [

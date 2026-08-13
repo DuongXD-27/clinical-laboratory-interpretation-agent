@@ -2,45 +2,79 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import HistoryPanel from "@/components/HistoryPanel";
+import MetricInput from "@/components/MetricInput";
+import MetricSelector, { type MetricDefinition } from "@/components/MetricSelector";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 
+function sourceHostname(source: string) {
+  try {
+    return new URL(source).hostname;
+  } catch {
+    return source;
+  }
+}
+
+function metricInputId(name: string) {
+  return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+}
+
 export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
-  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
-  const [historyRefresh, setHistoryRefresh] = useState(0);
-
   const [inputMode, setInputMode] = useState<"manual" | "ocr">("manual");
   const [ocrPanelKey, setOcrPanelKey] = useState(0);
   const [manualMeta, setManualMeta] = useState({ age: "35", gender: "male", date: "" });
   const [manualValues, setManualValues] = useState<Record<string, string>>({});
+  const [selectedManualMetrics, setSelectedManualMetrics] = useState<string[]>([]);
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   useEffect(() => {
-    const role = getRole();
-    // Khách dùng chung màn này với bệnh nhân (ma trận cho khách nhập chỉ số +
-    // tải ảnh); phần lịch sử mới là chỗ phân biệt.
-    if (!getToken() || (role !== "patient" && role !== "guest")) {
+    if (!getToken() || getRole() !== "patient") {
       router.replace("/");
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
     setUsername(getUsername());
-    setIsGuest(role === "guest");
     setCheckingAuth(false);
   }, [router]);
 
   function handleLogout() {
     clearSession();
     router.replace("/");
+  }
+
+  function handleReset() {
+    setResult(null);
+    setError(null);
+    setGate3Acknowledged(false);
+    if (inputMode === "manual") {
+      setManualValues({});
+      setSelectedManualMetrics([]);
+      setSelectorOpen(false);
+    } else {
+      setOcrPanelKey((current) => current + 1);
+    }
+  }
+
+  function addManualMetric(metric: MetricDefinition) {
+    setSelectedManualMetrics((current) => current.includes(metric.name) ? current : [...current, metric.name]);
+  }
+
+  function removeManualMetric(name: string) {
+    setSelectedManualMetrics((current) => current.filter((item) => item !== name));
+    setManualValues((current) => {
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
   }
 
   const runAnalyze = async (body: unknown) => {
@@ -60,22 +94,17 @@ export default function PatientPage() {
         router.replace("/");
         return;
       }
-      
+
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         const detail = typeof payload?.detail === "string" ? payload.detail : null;
-        throw new Error(detail ?? `Server trả về lỗi ${response.status}`);
+        throw new Error(response.status >= 500
+          ? "Chưa thể phân tích kết quả lúc này. Vui lòng thử lại sau."
+          : (detail ?? "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại."));
       }
-
-      const data: AnalysisResult = await response.json();
-      setResult(data);
-      // Phiếu chỉ được lưu khi backend trả về ID — khách thì không có, nên
-      // không cần nạp lại danh sách lịch sử.
-      if (data.saved_report_id) {
-        setHistoryRefresh((current) => current + 1);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi hệ thống");
+      setResult(await response.json());
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -108,314 +137,248 @@ export default function PatientPage() {
 
   if (checkingAuth) return null;
 
+  const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
   const hasCritical = (result?.critical_alerts.length ?? 0) > 0;
   const showCriticalBanner = hasCritical && !gate3Acknowledged;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-6 font-sans text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Phân Tích Sức Khỏe AI
-            </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Trải nghiệm người bệnh (Patient View) — {isGuest ? "phiên khách" : username}
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="ml-3 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
-              >
-                {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
-              </button>
-            </p>
+    <main className="patient-shell">
+      <div className="patient-container">
+        <header className="patient-header">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="brand-mark" aria-hidden="true">+</div>
+            <div className="min-w-0">
+              <h1>Phân Tích Sức Khỏe AI</h1>
+              <p className="truncate">Xin chào, <span className="font-medium text-slate-700">{username}</span></p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setResult(null);
-              setError(null);
-              if (inputMode === "manual") {
-                setManualValues({});
-              } else {
-                setOcrPanelKey((current) => current + 1);
-              }
-            }}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all shadow-md shadow-blue-500/20"
-          >
-            Đặt lại
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={handleReset} className="secondary-button px-3 py-2.5 sm:px-4">
+              Đặt lại
+            </button>
+            <button type="button" onClick={handleLogout} className="text-button px-2 py-2.5 sm:px-3">
+              Đăng xuất
+            </button>
+          </div>
+        </header>
+
+        <div className="intro-copy">
+          <span className="eyebrow">Kết quả xét nghiệm của bạn</span>
+          <h2>Hiểu rõ hơn các chỉ số sức khỏe</h2>
+          <p>Nhập kết quả hoặc tải ảnh phiếu xét nghiệm để nhận phần giải thích dễ hiểu.</p>
         </div>
 
-        {isGuest && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
-            Bạn đang dùng thử với tư cách khách. Kết quả phân tích{" "}
-            <strong>không được lưu lại</strong> — thoát phiên là mất. Đăng ký tài khoản nếu muốn xem
-            lại lịch sử xét nghiệm của mình về sau.
-          </div>
-        )}
-
-        {/* Mode toggle */}
-        <div className="flex gap-2">
+        <div className="mode-tabs" role="tablist" aria-label="Cách nhập kết quả xét nghiệm">
           <button
+            type="button"
+            role="tab"
+            aria-selected={inputMode === "manual"}
+            aria-controls="manual-panel"
             onClick={() => setInputMode("manual")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-              inputMode === "manual"
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-blue-400"
-            }`}
+            className={inputMode === "manual" ? "active" : ""}
           >
             Nhập tay
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={inputMode === "ocr"}
+            aria-controls="upload-panel"
             onClick={() => setInputMode("ocr")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-              inputMode === "ocr"
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-blue-400"
-            }`}
+            className={inputMode === "ocr" ? "active" : ""}
           >
             Tải ảnh phiếu
           </button>
         </div>
 
         {inputMode === "manual" && (
-          <section className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-5">
-            <div>
-              <h2 className="font-semibold text-lg">Nhập kết quả xét nghiệm</h2>
-              <p className="text-sm text-zinc-500 mt-1">
-                Nhập một hoặc nhiều chỉ số. Hiện hệ thống có khoảng tham chiếu đã duyệt cho 4 chỉ số dưới đây và người từ 18–60 tuổi.
-              </p>
+          <section id="manual-panel" role="tabpanel" className="patient-card p-5 sm:p-7" aria-labelledby="manual-title">
+            <div className="section-heading">
+              <span className="eyebrow">Nhập kết quả</span>
+              <h2 id="manual-title">Thông tin xét nghiệm</h2>
+              <p>Điền thông tin chung, sau đó chỉ thêm những chỉ số bạn muốn phân tích.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <label className="text-sm space-y-1">
-                <span className="font-medium">Tuổi</span>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="field-label" htmlFor="manual-age">
+                Tuổi
                 <input
-                  aria-label="Tuổi bệnh nhân"
+                  id="manual-age"
                   type="number"
                   min="18"
                   max="60"
                   value={manualMeta.age}
                   onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                  className="form-control mt-2"
                 />
               </label>
-              <label className="text-sm space-y-1">
-                <span className="font-medium">Giới tính</span>
+              <label className="field-label" htmlFor="manual-gender">
+                Giới tính
                 <select
-                  aria-label="Giới tính bệnh nhân"
+                  id="manual-gender"
                   value={manualMeta.gender}
                   onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                  className="form-control mt-2"
                 >
                   <option value="male">Nam</option>
                   <option value="female">Nữ</option>
                 </select>
               </label>
-              <label className="text-sm space-y-1">
-                <span className="font-medium">Ngày xét nghiệm</span>
+              <label className="field-label" htmlFor="manual-date">
+                Ngày xét nghiệm
                 <input
-                  aria-label="Ngày xét nghiệm"
+                  id="manual-date"
                   type="date"
                   value={manualMeta.date}
                   onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))}
-                  className="w-full border rounded-lg px-3 py-2 dark:bg-zinc-950 dark:border-zinc-700"
+                  className="form-control mt-2"
                 />
               </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {MANUAL_ANALYTES.map((analyte) => (
-                <label key={analyte.name} className="grid grid-cols-[1fr_7rem_auto] items-center gap-2 border rounded-xl px-3 py-2 dark:border-zinc-700">
-                  <span className="text-sm font-medium">{analyte.label}</span>
-                  <input
-                    aria-label={analyte.label}
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={manualValues[analyte.name] ?? ""}
-                    onChange={(event) => setManualValues((current) => ({
-                      ...current,
-                      [analyte.name]: event.target.value,
-                    }))}
-                    placeholder="Nhập số"
-                    className="min-w-0 border rounded-lg px-3 py-2 text-sm dark:bg-zinc-950 dark:border-zinc-700"
-                  />
-                  <span className="text-xs text-zinc-500 min-w-14">{analyte.unit}</span>
-                </label>
-              ))}
+            <div className="mt-8 border-t border-slate-100 pt-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-950">Chỉ số xét nghiệm</h3>
+                  <p className="mt-1 text-sm text-slate-500">Chọn các chỉ số có trên phiếu của bạn.</p>
+                </div>
+                <button type="button" onClick={() => setSelectorOpen(true)} className="secondary-button w-full sm:w-auto">
+                  <span aria-hidden="true">+</span> Thêm chỉ số
+                </button>
+              </div>
+
+              {selectedMetrics.length === 0 ? (
+                <div className="empty-metrics mt-5">
+                  <div className="empty-metrics-icon" aria-hidden="true">+</div>
+                  <p className="font-medium text-slate-700">Bạn chưa thêm chỉ số xét nghiệm.</p>
+                  <button type="button" onClick={() => setSelectorOpen(true)} className="text-button mt-2">
+                    Thêm chỉ số đầu tiên
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {selectedMetrics.map((metric) => (
+                    <MetricInput
+                      key={metric.name}
+                      id={`manual-${metricInputId(metric.name)}`}
+                      name={metric.name}
+                      label={metric.label}
+                      unit={metric.unit}
+                      value={manualValues[metric.name] ?? ""}
+                      onValueChange={(value) => setManualValues((current) => ({ ...current, [metric.name]: value }))}
+                      onRemove={() => removeManualMetric(metric.name)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleManualAnalyze}
-              disabled={loading}
-              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
-            >
-              {loading ? "Đang phân tích..." : "Phân tích các chỉ số đã nhập"}
+            <button type="button" onClick={handleManualAnalyze} disabled={loading} className="primary-button mt-6 w-full">
+              {loading ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
             </button>
           </section>
         )}
 
         {inputMode === "ocr" && (
-          <OcrReviewPanel
-            key={ocrPanelKey}
-            onResult={(data) => {
-              setResult(data);
-              setError(null);
-              setGate3Acknowledged(false);
-            }}
-            onUnauthorized={() => {
-              clearSession();
-              router.replace("/");
-            }}
-          />
-        )}
-
-        {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl text-red-600 dark:text-red-400 text-sm">
-            {error}
+          <div id="upload-panel" role="tabpanel">
+            <OcrReviewPanel
+              key={ocrPanelKey}
+              onResult={(data) => {
+                setResult(data);
+                setError(null);
+                setGate3Acknowledged(false);
+              }}
+              onUnauthorized={() => {
+                clearSession();
+                router.replace("/");
+              }}
+            />
           </div>
         )}
 
-        {/* Results Container */}
+        {error && <div role="alert" className="error-message">{error}</div>}
+
         {result && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-            {result.saved_report_id ? (
-              <p className="text-xs text-zinc-500">
-                Đã lưu vào lịch sử của bạn (phiếu #{result.saved_report_id}).
-              </p>
-            ) : (
-              isGuest && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Kết quả này không được lưu vì bạn đang ở phiên khách.
-                </p>
-              )
-            )}
-
-            {/* Critical Banner (Gate 3) */}
+          <section className="results-section" aria-labelledby="result-title">
             {showCriticalBanner && (
-              <div className="bg-red-600 text-white p-6 rounded-2xl shadow-lg shadow-red-600/20 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
-                  <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                </div>
-                <div className="flex items-start gap-4 z-10 w-full">
-                  <div className="bg-white/20 p-2 rounded-full shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-1">Cảnh Báo Sức Khỏe Nguy Kịch</h3>
-                    <div className="text-red-50 text-sm space-y-1">
-                      {result.critical_alerts?.map((alert, idx) => (
-                        <p key={idx}>{alert.message}</p>
-                      ))}
-                    </div>
+              <div className="critical-banner" role="alert">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-100">Cần chú ý ngay</p>
+                  <h2 className="mt-1 text-xl font-bold">Cảnh báo sức khỏe nghiêm trọng</h2>
+                  <div className="mt-2 space-y-1 text-sm leading-6 text-red-50">
+                    {result.critical_alerts.map((alert, index) => <p key={index}>{alert.message}</p>)}
                   </div>
                 </div>
-                <button
-                  onClick={() => setGate3Acknowledged(true)}
-                  className="z-10 shrink-0 w-full md:w-auto px-6 py-3 bg-white text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-colors shadow-sm"
-                >
+                <button type="button" onClick={() => setGate3Acknowledged(true)} className="critical-button">
                   Tôi sẽ liên hệ bác sĩ
                 </button>
               </div>
             )}
 
-            {/* General Info */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-center">
-                <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Bệnh nhân</span>
-                <span className="text-lg font-medium mt-1">{result.patient_info?.name || "N/A"}</span>
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">{result.patient_info?.age} tuổi • {result.patient_info?.gender === 'M' ? 'Nam' : 'Nữ'}</span>
+            <div className="patient-card p-5 sm:p-7">
+              <div className="section-heading">
+                <span className="eyebrow">Kết quả phân tích</span>
+                <h2 id="result-title">Chi tiết các chỉ số</h2>
+                <p>Hệ thống đã phân tích {result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.</p>
               </div>
-              <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-center md:col-span-2">
-                <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Đánh giá chung</span>
-                <span className="text-base text-zinc-700 dark:text-zinc-300 mt-2 leading-relaxed">
-                  Hệ thống ghi nhận <strong className="text-zinc-900 dark:text-white">{result.indicators?.length || 0}</strong> chỉ số. 
-                  Có <strong className={hasCritical ? 'text-red-500' : 'text-zinc-900 dark:text-white'}>{result.critical_alerts?.length || 0}</strong> cảnh báo nguy hiểm.
-                </span>
-              </div>
-            </div>
 
-            {/* Explanations Grid */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold px-1">Chi tiết kết quả</h2>
-              <div className="grid grid-cols-1 gap-4">
-                {result.indicators?.map((ind, idx) => {
-                  const isCrit = ind.is_critical;
-                  const isAbnormal = ind.is_abnormal;
-                  
-                  let badgeColor = "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
-                  if (isCrit) {
-                    badgeColor = "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800";
-                  } else if (isAbnormal) {
-                    badgeColor = "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800";
-                  }
+              {result.summary && <div className="summary-box mt-5">{result.summary}</div>}
 
+              {(result.out_of_scope_indicators?.length ?? 0) > 0 && (
+                <div className="info-message mt-5" role="status">
+                  <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
+                  <p className="mt-1">
+                    {result.out_of_scope_indicators?.join(", ")} hiện tại chưa được hỗ trợ, nên chưa được đưa vào phần phân tích.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-5 grid gap-3">
+                {result.indicators?.map((indicator, index) => {
+                  const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
                   return (
-                    <div key={idx} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="p-5 border-b border-zinc-100 dark:border-zinc-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-10 rounded-full ${isCrit ? 'bg-red-500' : isAbnormal ? 'bg-orange-500' : 'bg-green-500'}`} />
-                          <div>
-                            <h3 className="font-semibold text-lg">{ind.name}</h3>
-                            <div className="text-2xl font-bold tracking-tight mt-1">
-                              {ind.value} <span className="text-sm font-normal text-zinc-500">{ind.unit}</span>
-                            </div>
-                          </div>
+                    <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h3 className="font-semibold text-slate-950">{indicator.name}</h3>
+                          <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+                            {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
+                          </p>
                         </div>
-                        <div className={`px-3 py-1 rounded-full border text-xs font-semibold tracking-wide uppercase ${badgeColor}`}>
-                          {ind.status}
-                        </div>
+                        <span className={`status-badge status-${tone}`}>{indicator.status}</span>
                       </div>
-                      
-                      {ind.explanation && (
-                        <div className="p-5 bg-zinc-50/50 dark:bg-zinc-900/50 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                          <p>{ind.explanation}</p>
-                          {ind.sources && ind.sources.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700/50">
-                              <span className="text-xs text-zinc-500 mr-2">Nguồn tham khảo:</span>
-                              {ind.sources.map((src, sIdx) => (
-                                <a key={sIdx} href={src} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-blue-600 dark:text-blue-400 hover:underline mr-3 break-all">
-                                  [{sIdx + 1}] {new URL(src).hostname}
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                      {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
+                      {indicator.sources && indicator.sources.length > 0 && (
+                        <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                          <span className="mr-2">Nguồn tham khảo:</span>
+                          {indicator.sources.map((source, sourceIndex) => (
+                            <a key={sourceIndex} href={source} target="_blank" rel="noopener noreferrer" className="mr-3 text-blue-700 hover:underline">
+                              [{sourceIndex + 1}] {sourceHostname(source)}
+                            </a>
+                          ))}
                         </div>
                       )}
-                    </div>
+                    </article>
                   );
                 })}
               </div>
+
+              <div className="disclaimer-box mt-6">
+                <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
+                <p className="mt-1">{result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}</p>
+              </div>
             </div>
-
-            {/* Disclaimer */}
-            <div className="mt-8 p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-xl text-center text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50">
-              <p className="font-semibold mb-1">Tuyên bố miễn trừ trách nhiệm</p>
-              <p>Kết quả phân tích này được tạo ra bởi AI nhằm mục đích tham khảo, KHÔNG thay thế cho chẩn đoán y khoa. Vui lòng luôn tham vấn bác sĩ chuyên môn.</p>
-            </div>
-
-          </div>
-        )}
-
-        {!isGuest && (
-          <HistoryPanel
-            mode="patient"
-            refreshToken={historyRefresh}
-            onUnauthorized={() => {
-              clearSession();
-              router.replace("/");
-            }}
-          />
+          </section>
         )}
       </div>
-    </div>
+
+      <MetricSelector
+        open={selectorOpen}
+        catalog={MANUAL_ANALYTES}
+        selectedNames={selectedManualMetrics}
+        onAdd={addManualMetric}
+        onClose={() => setSelectorOpen(false)}
+      />
+    </main>
   );
 }

@@ -147,7 +147,7 @@ async def test_guest_can_complete_the_ocr_flow_without_persistence(client, test_
     class _StubAdapter:
         model = "stub-vision"
 
-        def extract(self, _data_url):
+        async def extract(self, _image_bytes, _mime_type):
             from src.models.ocr_schemas import OCRIndicatorDraft
 
             return [

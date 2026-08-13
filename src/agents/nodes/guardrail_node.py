@@ -1,4 +1,5 @@
 import logging
+import time
 from copy import deepcopy
 
 from langchain_core.messages import HumanMessage
@@ -6,10 +7,30 @@ from langchain_core.messages import HumanMessage
 from src.agents.state import AgentState
 from src.services.llm import get_llm
 from src.services.medical_safety_validator import MedicalSafetyValidator
+from src.services.request_timing import add_timing_event
 from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
 DEFAULT_DISCLAIMER = load_templates().disclaimer
+
+
+def _visible_text_content(content: object) -> str:
+    """Return user-visible text without exposing provider metadata/reasoning."""
+    if isinstance(content, str):
+        return content.strip()
+
+    if not isinstance(content, list):
+        return ""
+
+    text_parts: list[str] = []
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "text":
+            continue
+        text = block.get("text")
+        if isinstance(text, str) and text.strip():
+            text_parts.append(text.strip())
+
+    return "\n".join(text_parts).strip()
 
 
 async def rewrite_with_llm(llm, original_text: str) -> str:
@@ -29,17 +50,25 @@ Yêu cầu:
 3. Không suy đoán nguyên nhân.
 4. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
 """
+    started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        # `.text` chứ KHÔNG phải `str(response.content)`: với Gemini, content là
-        # danh sách content block (`[{"type": "text", "text": ..., "extras":
-        # {"signature": ...}}]`), nên str() sẽ đổ nguyên repr Python kèm chữ ký
-        # nội bộ ra thẳng màn hình bệnh nhân. `.text` ghép đúng phần text và bỏ
-        # các block thinking.
-        return response.text.strip()
     except Exception as exc:
+        add_timing_event(
+            "guardrail-rewrite-call",
+            (time.perf_counter() - started_at) * 1000,
+            outcome="error",
+            target="text",
+        )
         logger.error("Guardrail rewrite thất bại: %s", exc)
         return original_text
+    add_timing_event(
+        "guardrail-rewrite-call",
+        (time.perf_counter() - started_at) * 1000,
+        outcome="success",
+        target="text",
+    )
+    return _visible_text_content(response.content)
 
 
 async def rewrite_questions_with_llm(llm, questions: list[str]) -> list[str]:
@@ -55,18 +84,31 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
 
 {questions_text}
 """
+    started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        # Xem ghi chú ở `rewrite_with_llm` về `.text` vs `str(response.content)`.
+        visible_content = _visible_text_content(response.content)
         rewritten = [
             line.strip().removeprefix("-").strip()
-            for line in response.text.splitlines()
+            for line in visible_content.splitlines()
             if line.strip()
         ]
-        return rewritten or questions
     except Exception as exc:
+        add_timing_event(
+            "guardrail-rewrite-call",
+            (time.perf_counter() - started_at) * 1000,
+            outcome="error",
+            target="questions",
+        )
         logger.error("Guardrail question rewrite thất bại: %s", exc)
         return questions
+    add_timing_event(
+        "guardrail-rewrite-call",
+        (time.perf_counter() - started_at) * 1000,
+        outcome="success",
+        target="questions",
+    )
+    return rewritten or questions
 
 
 async def guardrail_node(state: AgentState) -> dict:

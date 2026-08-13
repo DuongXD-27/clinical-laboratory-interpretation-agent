@@ -61,6 +61,14 @@ class OCRIndicatorDraft(BaseModel):
             "True nếu confidence thấp và cần người dùng review kỹ"
         ),
     )
+    supported: bool = Field(
+        default=True,
+        description="False nếu chỉ số OCR đọc được hiện chưa nằm trong danh sách hỗ trợ",
+    )
+    unsupported_reason: str = Field(
+        default="",
+        description="Lý do ngắn gọn để UI hiển thị khi chỉ số chưa được hỗ trợ",
+    )
 
     def to_indicator_input(self) -> IndicatorInput:
         """Chuyển sang input chuẩn sau khi người dùng đã review."""
