@@ -253,3 +253,17 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
     assert initial_state["is_ocr_reviewed"] is True
     assert initial_state["ocr_drafts"][0].confidence == 0.4
     assert initial_state["raw_indicators"][0]["value"] == 5.2
+
+
+def test_clean_source_filename():
+    from src.api.ocr_routes import _clean_source_filename
+
+    assert _clean_source_filename(None) == "upload"
+    assert _clean_source_filename("") == "upload"
+    assert _clean_source_filename("report.png") == "report.png"
+    assert _clean_source_filename(r"C:\Users\ABC\Desktop\report.png") == "report.png"
+    assert _clean_source_filename(r"C:\fakepath\report.png") == "report.png"
+    assert _clean_source_filename("../../something.png") == "something.png"
+    assert _clean_source_filename("folder/subfolder/test.jpg") == "test.jpg"
+    assert _clean_source_filename("folder/") == "upload"
+

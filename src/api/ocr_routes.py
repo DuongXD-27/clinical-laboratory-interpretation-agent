@@ -32,13 +32,20 @@ from src.services.ocr_sample_library import (
     load_samples,
 )
 
-
 router = APIRouter()
 
 CONSENT_TEXT = (
     "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm "
     "thật của tôi hay của người khác."
 )
+
+
+def _clean_source_filename(filename: str | None) -> str:
+    if not filename:
+        return "upload"
+
+    normalized = filename.replace("\\", "/")
+    return normalized.rsplit("/", 1)[-1] or "upload"
 
 
 def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
@@ -211,7 +218,7 @@ async def ocr_upload(
             ),
         )
 
-    source_image = file.filename or "upload"
+    source_image = _clean_source_filename(file.filename)
 
     # Quan trọng:
     # source_image được bind vào signed review evidence cùng drafts/user.

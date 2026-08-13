@@ -22,7 +22,6 @@ from src.models.ocr_schemas import (
     OCRReviewedIndicator,
 )
 
-
 _TOKEN_PURPOSE = "ocr-review"
 
 
