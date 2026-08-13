@@ -54,8 +54,16 @@ async def _auth_headers(client: AsyncClient, username="benhnhan", password="benh
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def _token_headers(username: str, role: str = "patient"):
-    token = create_access_token(username=username, role=role)
+def _token_headers(
+    username: str,
+    role: str = "patient",
+    user_id: int = 999999,
+    ):
+    token = create_access_token(
+        username=username,
+        role=role,
+        user_id=user_id,
+    )
     return {"Authorization": f"Bearer {token}"}
 
 

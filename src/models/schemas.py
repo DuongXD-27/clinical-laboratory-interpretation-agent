@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field
 
 IndicatorStatus = str
 
+SessionRole = Literal["patient", "doctor", "guest"]
+
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
 
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1)
@@ -14,62 +21,131 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     """Đăng ký tài khoản mới — luôn tạo role patient.
 
-    Doctor không tự đăng ký qua endpoint này (theo ma trận phân quyền:
-    tài khoản doctor được cấp sẵn bởi admin/seed), nên không có field role.
+    Client không được truyền `role`.
+
+    Tài khoản doctor phải được tạo bởi admin/script riêng, tránh việc client
+    tự nâng quyền thành doctor qua endpoint public.
     """
 
-    username: str = Field(..., min_length=1)
-    password: str = Field(..., min_length=8, description="Tối thiểu 8 ký tự")
+    username: str = Field(
+        ...,
+        min_length=1,
+    )
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Tối thiểu 8 ký tự",
+    )
 
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    role: Literal["patient", "doctor"]
+    role: SessionRole
     username: str
+
+
+class RegisterResponse(BaseModel):
+    id: int
+    username: str
+    role: Literal["patient"]
+
+
+class GuestSessionResponse(BaseModel):
+    """Phiên guest chỉ tồn tại trong token, không có row persistent trong DB."""
+
+    access_token: str
+    token_type: str = "bearer"
+
+    role: Literal["guest"] = "guest"
+    username: str
+    session_id: str
+    expires_in_seconds: int
+
+    can_save_history: bool = False
 
 
 class CurrentUserResponse(BaseModel):
     username: str
-    role: Literal["patient", "doctor"]
+    role: SessionRole
+    is_guest: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Analyze input
+# ---------------------------------------------------------------------------
 
 
 class IndicatorInputSchema(BaseModel):
-    """Một chỉ số thô trong phiếu xét nghiệm gửi lên từ client."""
+    """Một chỉ số thô trong phiếu xét nghiệm gửi từ client."""
 
-    name: str = Field(..., min_length=1, description="Tên chỉ số, vd. WBC, Glucose, LDL")
+    name: str = Field(
+        ...,
+        min_length=1,
+        description="Tên chỉ số, ví dụ WBC, Glucose, LDL",
+    )
+
     value: float = Field(
         ...,
         allow_inf_nan=False,
         description="Giá trị đo được; bắt buộc là số hữu hạn",
     )
-    unit: str = Field(..., min_length=1, description="Đơn vị đo, vd. mg/dL, mmol/L")
+
+    unit: str = Field(
+        ...,
+        min_length=1,
+        description="Đơn vị đo, ví dụ mg/dL, mmol/L",
+    )
 
 
 class AnalyzeRequest(BaseModel):
-    """Request phân tích một phiếu xét nghiệm mô phỏng (JSON)."""
+    """Request phân tích một phiếu xét nghiệm mô phỏng."""
 
-    # ge=0 để cho phép trẻ sơ sinh (0 tuổi) — logic tra khoảng tham chiếu theo
-    # tuổi/giới tính (reference-range checker) phải xử lý đúng trường hợp này,
-    # không dùng age làm mẫu số.
-    patient_age: int = Field(..., ge=0, le=120, description="Tuổi bệnh nhân")
+    # ge=0 cho phép trẻ sơ sinh.
+    patient_age: int = Field(
+        ...,
+        ge=0,
+        le=120,
+        description="Tuổi bệnh nhân",
+    )
+
     patient_gender: Literal["male", "female", "other"] = Field(
-        ..., description="Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
+        ...,
+        description=(
+            "Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
+        ),
     )
-    test_date: date = Field(..., description="Ngày xét nghiệm (YYYY-MM-DD)")
-    language: str = Field(default="vi", description="Ngôn ngữ giải thích mong muốn")
+
+    test_date: date = Field(
+        ...,
+        description="Ngày xét nghiệm (YYYY-MM-DD)",
+    )
+
+    language: str = Field(
+        default="vi",
+        description="Ngôn ngữ giải thích mong muốn",
+    )
+
     indicators: list[IndicatorInputSchema] = Field(
-        ..., min_length=1, description="Danh sách chỉ số xét nghiệm cần giải thích"
+        ...,
+        min_length=1,
+        description="Danh sách chỉ số xét nghiệm cần giải thích",
     )
+
+
+# ---------------------------------------------------------------------------
+# Analyze output
+# ---------------------------------------------------------------------------
 
 
 class IndicatorResultSchema(BaseModel):
     """Kết quả đối chiếu + giải thích cho một chỉ số.
 
-    from_attributes=True: cho phép dựng trực tiếp từ ORM row
-    (`ReportIndicator`, xem `src/models/db.py`) — model đó derive
-    is_abnormal/is_critical bằng @property từ `status`, không lưu cột
-    riêng, nên field ở đây vẫn đọc được bình thường qua getattr.
+    `ReportIndicator` không lưu riêng is_abnormal/is_critical.
+    Hai thuộc tính này được derive từ `status` bằng @property ở ORM model.
+
+    from_attributes=True cho phép Pydantic đọc trực tiếp từ ORM object.
     """
 
     name: str
@@ -83,13 +159,25 @@ class IndicatorResultSchema(BaseModel):
     canonical_unit: str | None = None
     reference_low: float | None = None
     reference_high: float | None = None
+
     status: IndicatorStatus
+
     is_abnormal: bool
     is_critical: bool
-    explanation: str = Field(default="", description="Giải thích ngôn ngữ dễ hiểu")
-    sources: list[str] = Field(default_factory=list, description="Nguồn tài liệu giáo dục y khoa")
 
-    model_config = {"from_attributes": True}
+    explanation: str = Field(
+        default="",
+        description="Giải thích bằng ngôn ngữ dễ hiểu",
+    )
+
+    sources: list[str] = Field(
+        default_factory=list,
+        description="Nguồn tài liệu giáo dục y khoa",
+    )
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class CriticalAlertSchema(BaseModel):
@@ -98,21 +186,33 @@ class CriticalAlertSchema(BaseModel):
     unit: str
     message: str
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class AnalyzeResponse(BaseModel):
-    """Response trả về sau khi agent phân tích phiếu xét nghiệm."""
+    """Response sau khi agent phân tích phiếu xét nghiệm."""
 
     indicators: list[IndicatorResultSchema]
-    critical_alerts: list[CriticalAlertSchema] = Field(default_factory=list)
+
+    critical_alerts: list[CriticalAlertSchema] = Field(
+        default_factory=list,
+    )
+
     has_critical_values: bool = False
-    questions_for_doctor: list[str] = Field(default_factory=list)
+
+    questions_for_doctor: list[str] = Field(
+        default_factory=list,
+    )
+
     summary: str = ""
+
     disclaimer: str = (
         "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. "
         "Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn."
     )
+
     guardrail_passed: bool = True
     out_of_scope_indicators: list[str] = Field(default_factory=list)
     saved: bool = False
@@ -120,17 +220,50 @@ class AnalyzeResponse(BaseModel):
     report_id: int | None = None
     existing_report_id: int | None = None
     error: str = ""
+
     is_placeholder: bool = Field(
         default=False,
         description=(
-            "True nếu response chưa qua logic phân tích thật (reference-range/RAG/"
-            "critical-value chưa cắm vào graph) — không được dùng để đánh giá lâm sàng."
+            "True nếu response chưa qua logic phân tích thật "
+            "(reference-range/RAG/critical-value chưa cắm vào graph) — "
+            "không được dùng để đánh giá lâm sàng."
+        ),
+    )
+
+    # Giữ từ TechDebt Duy.
+    #
+    # patient authenticated:
+    #   → ID report vừa persistence
+    #
+    # guest / doctor / không persistence:
+    #   → None
+    saved_report_id: int | None = Field(
+        default=None,
+        description=(
+            "ID phiếu đã lưu trong lịch sử bệnh nhân. "
+            "None nếu phiên hiện tại không được lưu lịch sử."
         ),
     )
 
 
+# ---------------------------------------------------------------------------
+# History
+# ---------------------------------------------------------------------------
+
+
 class LabReportSummarySchema(BaseModel):
-    """1 dòng trong danh sách lịch sử xét nghiệm — không kèm chi tiết chỉ số."""
+    """Một dòng trong danh sách lịch sử xét nghiệm.
+
+    Các field lõi map trực tiếp với LabReport của schema Vũ.
+
+    Các field patient_username / indicator_count / abnormal_count / source
+    là dữ liệu presentation của endpoint history và có thể được repository
+    tính thêm.
+
+    `source` KHÔNG phải cột DB:
+        ocr_source_filename != None -> "ocr"
+        otherwise                   -> "manual"
+    """
 
     id: int
     test_date: date
@@ -140,77 +273,173 @@ class LabReportSummarySchema(BaseModel):
     summary: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    # History repository của Duy có thể populate các field enrichment này.
+    # Optional để ORM LabReport của main vẫn có thể validate trực tiếp.
+    patient_username: str | None = None
+    indicator_count: int | None = None
+    abnormal_count: int | None = None
+
+    source: Literal["manual", "ocr"] | None = None
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class LabReportListResponse(BaseModel):
+    """Response của GET /api/v1/history."""
+
+    total: int
+
+    items: list[LabReportSummarySchema] = Field(
+        default_factory=list,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Report children
+# ---------------------------------------------------------------------------
 
 
 class ReportQuestionSchema(BaseModel):
-    """1 câu hỏi gợi ý hỏi bác sĩ, gắn với 1 chỉ số cụ thể."""
+    """Một câu hỏi gợi ý hỏi bác sĩ, gắn với một indicator cụ thể."""
 
     id: int
     indicator_id: int
     question_text: str
-    priority: Literal["critical", "abnormal"]
-    status: Literal["generated", "sent_to_doctor", "answered"]
+
+    priority: Literal[
+        "critical",
+        "abnormal",
+    ]
+
+    status: Literal[
+        "generated",
+        "sent_to_doctor",
+        "answered",
+    ]
+
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class OutOfScopeLogSchema(BaseModel):
-    """1 dòng log cho 1 chỉ số ngoài phạm vi hỗ trợ trong report."""
+    """Một chỉ số ngoài phạm vi thư viện hỗ trợ."""
 
     id: int
     raw_indicator_name: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Doctor HITL
+# ---------------------------------------------------------------------------
 
 
 class DoctorNoteSchema(BaseModel):
-    """Ghi chú của bác sĩ trên 1 chỉ số hoặc 1 câu hỏi (target_type/target_id)."""
+    """Ghi chú của doctor trên indicator hoặc report_question."""
 
     id: int
     doctor_id: int
-    target_type: Literal["indicator", "report_question"]
+
+    target_type: Literal[
+        "indicator",
+        "report_question",
+    ]
+
     target_id: int
     note_text: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class DoctorNoteCreateRequest(BaseModel):
-    """Request tạo ghi chú mới — doctor_id lấy từ token, không nhận từ body."""
+    """Request tạo doctor note.
 
-    target_type: Literal["indicator", "report_question"]
+    doctor_id lấy từ user/token authenticated, tuyệt đối không nhận từ body.
+    """
+
+    target_type: Literal[
+        "indicator",
+        "report_question",
+    ]
+
     target_id: int
-    note_text: str = Field(..., min_length=1)
+
+    note_text: str = Field(
+        ...,
+        min_length=1,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Full report detail
+# ---------------------------------------------------------------------------
 
 
 class LabReportDetailSchema(BaseModel):
-    """1 phiếu xét nghiệm đầy đủ, dùng khi xem chi tiết 1 record lịch sử."""
+    """Chi tiết đầy đủ một report lịch sử.
+
+    Field persistence sử dụng naming chuẩn từ schema Vũ:
+    - patient_id
+    - patient_age_at_test
+    - patient_gender_at_test
+    """
 
     id: int
     patient_id: int
+
     test_date: date
-    patient_age_at_test: int | None
-    patient_gender_at_test: str | None
+
+    patient_age_at_test: int | None = None
+    patient_gender_at_test: str | None = None
+
     language: str
     status: str = "NORMAL"
     result_count: int = 0
     summary: str
     has_critical_values: bool
     guardrail_passed: bool
+
     disclaimer: str
+
     created_at: datetime
-    indicators: list[IndicatorResultSchema]
-    critical_alerts: list[CriticalAlertSchema]
-    questions: list[ReportQuestionSchema]
-    out_of_scope_entries: list[OutOfScopeLogSchema]
 
-    model_config = {"from_attributes": True}
+    indicators: list[IndicatorResultSchema] = Field(
+        default_factory=list,
+    )
 
+    critical_alerts: list[CriticalAlertSchema] = Field(
+        default_factory=list,
+    )
 
+    questions: list[ReportQuestionSchema] = Field(
+        default_factory=list,
+    )
+
+    out_of_scope_entries: list[OutOfScopeLogSchema] = Field(
+        default_factory=list,
+    )
+
+    # Enrichment của history API, không phải DB columns.
+    patient_username: str | None = None
+    indicator_count: int | None = None
+    abnormal_count: int | None = None
+    source: Literal["manual", "ocr"] | None = None
+
+    model_config = {
+        "from_attributes": True,
+    }
 class PatientProfileSchema(BaseModel):
     patient_id: int
     username: str

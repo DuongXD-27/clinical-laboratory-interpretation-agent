@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from src.adapters.vision_adapter import close_vision_clients
 from src.api.auth_routes import router as auth_router
+from src.api.history_routes import router as history_router
 from src.api.ocr_routes import router as ocr_router
 from src.api.patient_routes import router as patient_router
 from src.api.routes import router
@@ -123,6 +124,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(ocr_router, prefix="/api/v1")
 app.include_router(patient_router, prefix="/api/v1")
+app.include_router(history_router, prefix="/api/v1")
 
 
 @app.get("/health")

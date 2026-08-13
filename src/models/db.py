@@ -1,35 +1,30 @@
-"""DB cho auth + lịch sử xét nghiệm bệnh nhân.
+"""DB cho authentication + lịch sử xét nghiệm bệnh nhân.
 
 SQLite, tạo bảng qua create_all() (không dùng Alembic — quy mô project
-này chưa cần versioned migration). Seed vài tài khoản demo lúc khởi động
-nếu bảng users đang trống, để hoạt động ổn định kể cả khi disk trên
-Render bị reset (free tier không có persistent disk).
+hiện tại chưa cần versioned migration). Seed vài tài khoản demo lúc khởi
+động nếu bảng users đang trống.
 
-users (1) --- (N) lab_reports (1) --- (N) report_indicators (N) --- (1) indicator_catalog
-                              (1) --- (N) report_critical_alerts
-                              (1) --- (N) report_questions (1) --- (N) doctor_notes*
-                              (1) --- (N) out_of_scope_log
+Quan hệ chính:
 
-* doctor_notes dùng polymorphic association (target_type/target_id) để trỏ
-  vào "indicator" (report_indicators.id) hoặc "report_question"
-  (report_questions.id) mà không cần 2 cột FK nullable riêng. Đánh đổi:
-  DB không tự ràng buộc target_id phải tồn tại — tầng ứng dụng chịu trách
-  nhiệm đảm bảo tính đúng đắn, không có FK constraint thật cho cột này.
+    users (1) --- (N) lab_reports
+                        |
+                        +--- (N) report_indicators --- (1) indicator_catalog
+                        +--- (N) report_critical_alerts
+                        +--- (N) report_questions
+                        +--- (N) out_of_scope_log
 
-  Hệ quả trực tiếp: xoá report/indicator/question qua cascade (CASCADE
-  từ lab_reports/report_indicators) KHÔNG kéo theo xoá doctor_notes trỏ
-  vào chúng — vì target_id không phải FK thật, DB không biết để cascade.
-  Note mồ côi (orphan) sẽ tồn tại vĩnh viễn, trỏ vào target_id không còn
-  tồn tại, trừ khi tầng ứng dụng tự dọn khi xoá report/question. Hướng
-  thay thế cho tương lai nếu cần ràng buộc chặt hơn: đổi sang 2 cột FK
-  nullable riêng (report_indicator_id, report_question_id) thay vì
-  target_type/target_id — đánh đổi ngược lại là schema cứng hơn, khó mở
-  rộng thêm loại target mới. Chưa đổi ở đây vì chưa có code nào ghi
-  doctor_notes thật, còn kịp quyết định khi cần.
+Guest không có row trong users và không có row lịch sử. Mọi lab_report
+persistent đều bắt buộc patient_id NOT NULL trỏ tới users.id thật.
 
-Guest (request không có JWT hợp lệ) không có row ở bất kỳ bảng nào —
-mọi bảng lịch sử đều bắt buộc patient_id NOT NULL trỏ vào users.id thật,
-nên guest tự động không lưu được gì mà không cần logic riêng.
+doctor_notes dùng polymorphic association target_type/target_id để trỏ
+tới indicator hoặc report_question. Vì target_id không phải FK thật,
+tầng ứng dụng chịu trách nhiệm đảm bảo target tồn tại và dọn orphan note
+nếu target bị xóa.
+
+LƯU Ý VẬN HÀNH:
+SQLite local phù hợp cho nghiệm thu/demo nhưng không nên dùng làm persistence
+production nếu Railway không gắn persistent Volume. Trước khi có dữ liệu
+người dùng thật cần chuyển sang PostgreSQL hoặc storage persistent tương đương.
 """
 
 from __future__ import annotations
@@ -61,14 +56,33 @@ settings = get_settings()
 
 _is_sqlite = settings.database_url.startswith("sqlite")
 _connect_args = {"check_same_thread": False} if _is_sqlite else {}
-engine = create_engine(settings.database_url, connect_args=_connect_args)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+engine = create_engine(
+    settings.database_url,
+    connect_args=_connect_args,
+)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
+
+
+ROLE_PATIENT = "patient"
+ROLE_DOCTOR = "doctor"
+PERSISTED_ROLES = (ROLE_PATIENT, ROLE_DOCTOR)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
 
 if _is_sqlite:
-    # SQLite bỏ qua ON DELETE CASCADE trừ khi bật pragma này cho từng
-    # connection — không bật thì các FK cascade khai báo ở dưới vô tác dụng.
+
     @event.listens_for(engine, "connect")
-    def _enable_sqlite_fk(dbapi_connection, _):
+    def _enable_sqlite_fk(dbapi_connection, _) -> None:
+        """Bật enforcement Foreign Key cho từng SQLite connection."""
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -79,6 +93,8 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
+    """Tài khoản persistent của patient hoặc doctor."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -89,19 +105,33 @@ class User(Base):
     date_of_birth = Column(Date, nullable=True)
     sex = Column(String, nullable=True)
     email = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+    created_at = Column(
+    DateTime(timezone=True),
+    nullable=False,
+    default=_utcnow,
+    )
+
     updated_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=_utcnow,
+        onupdate=_utcnow,
+    )
+
+    reports = relationship(
+        "LabReport",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+        order_by="LabReport.test_date.desc()",
     )
 
 
 class LabReport(Base):
-    """Một phiếu xét nghiệm đã phân tích, gắn với đúng 1 patient."""
+    """Một phiếu xét nghiệm đã phân tích, gắn với đúng một patient."""
 
     __tablename__ = "lab_reports"
+
     __table_args__ = (
         # Phục vụ đúng query lịch sử thật: WHERE patient_id=:X AND
         # test_date BETWEEN :A AND :B — composite (patient_id, test_date)
@@ -112,17 +142,23 @@ class LabReport(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    patient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    patient_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Ngày ghi trên phiếu, không phải thời điểm upload/phân tích.
     test_date = Column(Date, nullable=False, index=True)
-    # Snapshot tuổi/giới tính lúc xét nghiệm — users không lưu tuổi cố định
-    # và tuổi/giới tính khai báo có thể khác nhau giữa các lần xét nghiệm.
+
+    # Snapshot thông tin bệnh nhân tại thời điểm xét nghiệm.
     patient_age_at_test = Column(Integer, nullable=True)
     patient_gender_at_test = Column(String, nullable=True)
-    # Chỉ TÊN FILE (label hiển thị) nếu report tới từ luồng OCR, KHÔNG phải
-    # đường dẫn/ảnh thật — đúng field `source_image` đã có sẵn trong
-    # OCRReviewResponse, vốn đã trả về client rồi nên lưu lại không phát
-    # sinh rủi ro privacy mới. Nullable vì input JSON thủ công không có.
+
+    # Chỉ lưu tên file hiển thị từ OCR, không lưu ảnh gốc/path ảnh.
     ocr_source_filename = Column(String, nullable=True)
+
     language = Column(String, nullable=False, default="vi")
     status = Column(String, nullable=False, default="NORMAL")
     report_fingerprint = Column(String, nullable=True)
@@ -130,40 +166,73 @@ class LabReport(Base):
     has_critical_values = Column(Boolean, nullable=False, default=False)
     guardrail_passed = Column(Boolean, nullable=False, default=True)
     disclaimer = Column(Text, nullable=False, default="")
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
+
+    # Bổ sung counterpart cho User.reports(back_populates="patient").
+    patient = relationship(
+        "User",
+        back_populates="reports",
+    )
 
     indicators = relationship(
-        "ReportIndicator", back_populates="report", cascade="all, delete-orphan"
+        "ReportIndicator",
+        back_populates="report",
+        cascade="all, delete-orphan",
     )
+
     critical_alerts = relationship(
-        "ReportCriticalAlert", back_populates="report", cascade="all, delete-orphan"
+        "ReportCriticalAlert",
+        back_populates="report",
+        cascade="all, delete-orphan",
     )
-    # Thay cho 2 cột JSON questions_for_doctor/out_of_scope_indicators cũ —
-    # chuẩn hoá thành bảng riêng để mỗi câu hỏi/chỉ số ngoài phạm vi có PK
-    # thật, tránh 2 nguồn sự thật trùng lặp (JSON blob + bảng con).
+
     questions = relationship(
-        "ReportQuestion", back_populates="report", cascade="all, delete-orphan"
+        "ReportQuestion",
+        back_populates="report",
+        cascade="all, delete-orphan",
     )
+
     out_of_scope_entries = relationship(
-        "OutOfScopeLog", back_populates="report", cascade="all, delete-orphan"
+        "OutOfScopeLog",
+        back_populates="report",
+        cascade="all, delete-orphan",
     )
 
 
-_ABNORMAL_STATUSES = frozenset({"low", "high", "critical_low", "critical_high"})
-_CRITICAL_STATUSES = frozenset({"critical_low", "critical_high"})
+_ABNORMAL_STATUSES = frozenset(
+    {
+        "low",
+        "high",
+        "critical_low",
+        "critical_high",
+    }
+)
+
+_CRITICAL_STATUSES = frozenset(
+    {
+        "critical_low",
+        "critical_high",
+    }
+)
 
 
 class ReportIndicator(Base):
-    """Một chỉ số trong 1 phiếu — snapshot kết quả phân tích tại thời điểm lưu."""
+    """Snapshot một chỉ số của một phiếu xét nghiệm."""
 
     __tablename__ = "report_indicators"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
-    # Nullable: OCR/nhập tay có thể tạo ra tên chưa từng có trong catalog —
-    # không được chặn cứng việc lưu report chỉ vì 1 chỉ số chưa canonical hoá.
-    indicator_catalog_id = Column(
-        Integer, ForeignKey("indicator_catalog.id", ondelete="SET NULL"), nullable=True, index=True
+
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     analyte_raw = Column(String, nullable=True)
     analyte_canonical = Column(String, nullable=True, index=True)
@@ -171,136 +240,248 @@ class ReportIndicator(Base):
     raw_unit = Column(String, nullable=True)
     canonical_value = Column(Float, nullable=True)
     canonical_unit = Column(String, nullable=True)
+
+    # Nullable vì OCR/nhập tay có thể sinh tên chưa canonical hóa.
+    indicator_catalog_id = Column(
+        Integer,
+        ForeignKey("indicator_catalog.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     name = Column(String, nullable=False)
     value = Column(Float, nullable=False)
     unit = Column(String, nullable=False, default="")
+
     reference_low = Column(Float, nullable=True)
     reference_high = Column(Float, nullable=True)
+
+    # Nguồn sự thật duy nhất cho normal/abnormal/critical.
     status = Column(String, nullable=False, default="unknown")
+
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
-    # Provenance OCR — CHỈ metadata đã hiển thị cho người dùng ở UI_Review
-    # (confidence, text thô đọc được). TUYỆT ĐỐI không lưu ảnh/đường dẫn ảnh
-    # ở đây hay bất kỳ đâu khác — vi phạm cam kết "không lưu ảnh gốc" (V3),
-    # xem src/api/ocr_routes.py dòng gần "không ghi ra đĩa, không đưa vào DB".
-    # Nullable vì input nhập tay (JSON) không có OCR.
+
+    # Metadata OCR בלבד; không lưu ảnh gốc.
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
 
-    report = relationship("LabReport", back_populates="indicators")
-    catalog_entry = relationship("IndicatorCatalog", back_populates="indicators")
+    report = relationship(
+        "LabReport",
+        back_populates="indicators",
+    )
+
+    catalog_entry = relationship(
+        "IndicatorCatalog",
+        back_populates="indicators",
+    )
+
     questions = relationship(
-        "ReportQuestion", back_populates="indicator", cascade="all, delete-orphan"
+        "ReportQuestion",
+        back_populates="indicator",
+        cascade="all, delete-orphan",
     )
 
     @property
     def is_abnormal(self) -> bool:
-        """Derive từ `status` — KHÔNG lưu cột riêng để tránh 2 nguồn sự thật
-        có thể mâu thuẫn nhau (status="critical_high" nhưng is_abnormal=False
-        do bug tầng ứng dụng). `status` là nguồn sự thật duy nhất."""
+        """Derive từ status để tránh hai nguồn sự thật."""
         return self.status in _ABNORMAL_STATUSES
 
     @property
     def is_critical(self) -> bool:
-        """Derive từ `status`, cùng lý do với `is_abnormal` ở trên."""
+        """Derive từ status để tránh hai nguồn sự thật."""
         return self.status in _CRITICAL_STATUSES
 
 
 class ReportCriticalAlert(Base):
-    """Cảnh báo khẩn của 1 phiếu (0..N — thường rất ít)."""
+    """Cảnh báo giá trị nguy kịch của một report."""
 
     __tablename__ = "report_critical_alerts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     indicator_name = Column(String, nullable=False)
     value = Column(Float, nullable=False)
     unit = Column(String, nullable=False, default="")
     message = Column(Text, nullable=False, default="")
 
-    report = relationship("LabReport", back_populates="critical_alerts")
+    report = relationship(
+        "LabReport",
+        back_populates="critical_alerts",
+    )
 
 
 class IndicatorCatalog(Base):
-    """Danh mục chỉ số chuẩn hoá — resolve tên đọc được (OCR/nhập tay) về 1
-    canonical_name duy nhất, để trend (so sánh nhiều lần xét nghiệm) match
-    đúng theo thời gian thay vì string-match trực tiếp trên report_indicators.name
-    (dễ gãy âm thầm nếu OCR đọc "HbA1c" lần này, "Hemoglobin A1c" lần khác).
+    """Danh mục canonical của các chỉ số xét nghiệm.
+
+    Cho phép nhiều alias như HbA1c / Hemoglobin A1c cùng resolve về một
+    canonical indicator để theo dõi trend ổn định qua nhiều lần xét nghiệm.
     """
 
     __tablename__ = "indicator_catalog"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    canonical_name = Column(String, nullable=False, unique=True, index=True)
+
+    canonical_name = Column(
+        String,
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
     canonical_unit = Column(String, nullable=False)
-    aliases = Column(JSON, nullable=False, default=list)  # list[str]
-    unit_conversions = Column(JSON, nullable=False, default=dict)  # {"mg/dL": 0.0555, ...}
+
+    aliases = Column(
+        JSON,
+        nullable=False,
+        default=list,
+    )
+
+    unit_conversions = Column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
     max_gap_days_for_trend = Column(Integer, nullable=True)
 
-    indicators = relationship("ReportIndicator", back_populates="catalog_entry")
+    indicators = relationship(
+        "ReportIndicator",
+        back_populates="catalog_entry",
+    )
 
 
 class ReportQuestion(Base):
-    """1 câu hỏi gợi ý hỏi bác sĩ, gắn với đúng 1 chỉ số bất thường/nguy kịch
-    của 1 report. Thay cho JSON list[str] cũ (lab_reports.questions_for_doctor)
-    — cần PK thật để doctor_notes trỏ vào, và cần trạng thái riêng từng câu.
-    """
+    """Một câu hỏi gợi ý bệnh nhân hỏi bác sĩ."""
 
     __tablename__ = "report_questions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
-    indicator_id = Column(
-        Integer, ForeignKey("report_indicators.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    question_text = Column(Text, nullable=False)
-    priority = Column(String, nullable=False)  # "critical" | "abnormal"
-    status = Column(String, nullable=False, default="generated")  # "generated" | "sent_to_doctor" | "answered"
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
 
-    report = relationship("LabReport", back_populates="questions")
-    indicator = relationship("ReportIndicator", back_populates="questions")
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    indicator_id = Column(
+        Integer,
+        ForeignKey("report_indicators.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    question_text = Column(Text, nullable=False)
+
+    # "critical" | "abnormal"
+    priority = Column(String, nullable=False)
+
+    # "generated" | "sent_to_doctor" | "answered"
+    status = Column(
+        String,
+        nullable=False,
+        default="generated",
+    )
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
+
+    report = relationship(
+        "LabReport",
+        back_populates="questions",
+    )
+
+    indicator = relationship(
+        "ReportIndicator",
+        back_populates="questions",
+    )
 
 
 class DoctorNote(Base):
-    """Ghi chú diễn giải của bác sĩ (Human-in-the-loop) trên 1 chỉ số hoặc
-    1 câu hỏi cụ thể. target_type/target_id là polymorphic association —
-    xem docstring đầu file về đánh đổi (không có FK constraint thật)."""
+    """Ghi chú HITL của bác sĩ trên indicator hoặc report_question."""
 
     __tablename__ = "doctor_notes"
+
     __table_args__ = (
-        # Phục vụ query "lấy note cho đúng 1 indicator/question cụ thể"
-        # (target_type, target_id) — không phải FK thật (polymorphic) nên
-        # không tự có index qua FK như các cột khác, phải khai báo tay.
-        Index("ix_doctor_notes_target_type_target_id", "target_type", "target_id"),
+        Index(
+            "ix_doctor_notes_target_type_target_id",
+            "target_type",
+            "target_id",
+        ),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    doctor_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    target_type = Column(String, nullable=False)  # "indicator" | "report_question"
+
+    doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # "indicator" | "report_question"
+    target_type = Column(String, nullable=False)
     target_id = Column(Integer, nullable=False)
+
     note_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
 
 
 class OutOfScopeLog(Base):
-    """Log riêng cho từng chỉ số ngoài phạm vi hỗ trợ, tách khỏi JSON blob
-    trong lab_reports để truy vấn được "chỉ số nào out-of-scope nhiều nhất"
-    mà không cần parse JSON qua toàn bộ report."""
+    """Một chỉ số nằm ngoài phạm vi thư viện hỗ trợ."""
 
     __tablename__ = "out_of_scope_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    report_id = Column(Integer, ForeignKey("lab_reports.id", ondelete="CASCADE"), nullable=False, index=True)
-    raw_indicator_name = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
 
-    report = relationship("LabReport", back_populates="out_of_scope_entries")
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    raw_indicator_name = Column(String, nullable=False)
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
+
+    report = relationship(
+        "LabReport",
+        back_populates="out_of_scope_entries",
+    )
 
 
 DEMO_USERS = [
-    {"username": "benhnhan", "password": "benhnhan123", "role": "patient"},
-    {"username": "bacsi", "password": "bacsi123", "role": "doctor"},
+    {
+        "username": "benhnhan",
+        "password": "benhnhan123",
+        "role": ROLE_PATIENT,
+    },
+    {
+        "username": "bacsi",
+        "password": "bacsi123",
+        "role": ROLE_DOCTOR,
+    },
 ]
 
 
@@ -363,41 +544,104 @@ def _backfill_sqlite_defaults() -> None:
         conn.exec_driver_sql(
             "UPDATE lab_reports SET status = COALESCE(status, CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
         )
+def seed_demo_users(db: Session) -> None:
+    """Seed tài khoản demo nếu bảng users đang trống.
+
+    Chỉ seed khi bảng hoàn toàn rỗng. User đăng ký thật không bị ghi đè.
+    """
+    if db.query(User).count() != 0:
+        return
+
+    for user_data in DEMO_USERS:
+        db.add(
+            User(
+                username=user_data["username"],
+                password_hash=hash_password(user_data["password"]),
+                role=user_data["role"],
+            )
+        )
+
+    try:
+        db.commit()
+    except IntegrityError:
+        # Hai process có thể cùng kiểm tra count()==0 rồi cùng seed.
+        # Process đến sau rollback là đủ.
+        db.rollback()
+
+
+def _upgrade_sqlite_schema() -> None:
+    """Bản vá tối thiểu cho SQLite cũ thiếu users.created_at.
+
+    create_all() chỉ tạo bảng chưa tồn tại; nó không ALTER bảng cũ.
+    Khi project cần nhiều migration hơn nên chuyển sang migration tool thật.
+    """
+    if engine.dialect.name != "sqlite":
+        return
+
+    with engine.begin() as conn:
+        columns = {
+            row[1]
+            for row in conn.exec_driver_sql(
+                "PRAGMA table_info(users)"
+            )
+        }
+
+        # Bảng chưa tồn tại: để create_all() tạo mới.
+        if not columns:
+            return
+
+        if "created_at" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN created_at DATETIME"
+            )
+            conn.exec_driver_sql(
+                "UPDATE users "
+                "SET created_at = ? "
+                "WHERE created_at IS NULL",
+                (_utcnow().isoformat(sep=" "),),
+            )
 
 
 def init_db() -> None:
+    _upgrade_sqlite_schema()
+
     Base.metadata.create_all(bind=engine)
     _migrate_sqlite_schema()
     _backfill_sqlite_defaults()
     with SessionLocal() as db:
-        if db.query(User).count() == 0:
-            for u in DEMO_USERS:
-                db.add(
-                    User(
-                        username=u["username"],
-                        password_hash=hash_password(u["password"]),
-                        role=u["role"],
-                    )
-                )
-            try:
-                db.commit()
-            except IntegrityError:
-                # count()==0 không atomic giữa các process — nếu chạy nhiều
-                # worker, process khác có thể đã seed xong giữa lúc mình
-                # check và commit. Bỏ qua an toàn, không phải lỗi thật.
-                db.rollback()
+        seed_demo_users(db)
 
 
 def get_db() -> Session:
     db = SessionLocal()
+
     try:
         yield db
     finally:
         db.close()
 
 
-# Gọi ngay lúc import: đảm bảo bảng + seed tồn tại kể cả khi ASGI lifespan
-# không được kích hoạt (vd. httpx.ASGITransport trong test không luôn chạy
-# lifespan). init_db() idempotent (kiểm tra count()==0), gọi lại từ
-# main.py's lifespan vẫn an toàn.
+__all__ = [
+    "Base",
+    "DoctorNote",
+    "IndicatorCatalog",
+    "LabReport",
+    "OutOfScopeLog",
+    "PERSISTED_ROLES",
+    "ROLE_DOCTOR",
+    "ROLE_PATIENT",
+    "ReportCriticalAlert",
+    "ReportIndicator",
+    "ReportQuestion",
+    "SessionLocal",
+    "User",
+    "engine",
+    "get_db",
+    "init_db",
+    "seed_demo_users",
+]
+
+
+# Đảm bảo bảng + seed tồn tại kể cả khi ASGI lifespan không được kích hoạt
+# trong một số test transport. init_db() là idempotent.
 init_db()
