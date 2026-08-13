@@ -22,6 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from src.models.db import (
+    ROLE_PATIENT,
     LabReport,
     OutOfScopeLog,
     ReportCriticalAlert,
@@ -280,12 +281,13 @@ def resolve_patient_id(
     db: Session,
     username: str,
 ) -> int | None:
-    """Resolve username persistent thành users.id."""
+    """Resolve username của patient persistent thành users.id."""
 
     user = (
         db.execute(
             select(User).where(
-                User.username == username
+                User.username == username,
+                User.role == ROLE_PATIENT,
             )
         )
         .scalar_one_or_none()

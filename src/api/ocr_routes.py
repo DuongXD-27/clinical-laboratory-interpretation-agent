@@ -41,6 +41,7 @@ CONSENT_TEXT = (
 
 
 def _clean_source_filename(filename: str | None) -> str:
+    """Chỉ giữ tên file để persistence/display, không giữ client-side path."""
     if not filename:
         return "upload"
 

@@ -227,6 +227,16 @@ async def test_doctor_query_for_unknown_patient_returns_404(client):
     assert listing.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_doctor_query_for_doctor_username_returns_404(client):
+    doctor = await login_headers(client, "bacsi", "bacsi123")
+
+    listing = await client.get("/api/v1/history", headers=doctor, params={"patient_username": "bacsi"})
+
+    assert listing.status_code == 404
+
+
+
 # --- TC-05: khách không có persistence ---------------------------------------
 
 
