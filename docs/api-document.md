@@ -1,9 +1,13 @@
 # VMEC-05 — API Document
 
-**Tên đề tài:** AI Agent Giải Thích Kết Quả Xét Nghiệm Bằng Ngôn Ngữ Dễ Hiểu Cho Bệnh Nhân  
-**API version:** `v1`  
-**Ngày cập nhật:** 2026-08-12  
-**Định dạng:** REST/JSON, UTF-8  
+**Tên đề tài:** AI Agent Giải Thích Kết Quả Xét Nghiệm Bằng Ngôn Ngữ Dễ Hiểu Cho Bệnh Nhân
+
+**API version:** `v1`
+
+**Ngày cập nhật:** 2026-08-12
+
+**Định dạng:** REST/JSON, UTF-8
+
 **Trạng thái tài liệu:** Kết hợp API hiện hành và API đích cho các tính năng nâng cao
 
 ## 1. Mục đích và phạm vi

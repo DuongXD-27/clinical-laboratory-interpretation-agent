@@ -14,6 +14,25 @@ logger = logging.getLogger(__name__)
 DEFAULT_DISCLAIMER = load_templates().disclaimer
 
 
+def _visible_text_content(content: object) -> str:
+    """Return user-visible text without exposing provider metadata/reasoning."""
+    if isinstance(content, str):
+        return content.strip()
+
+    if not isinstance(content, list):
+        return ""
+
+    text_parts: list[str] = []
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "text":
+            continue
+        text = block.get("text")
+        if isinstance(text, str) and text.strip():
+            text_parts.append(text.strip())
+
+    return "\n".join(text_parts).strip()
+
+
 async def rewrite_with_llm(llm, original_text: str) -> str:
     """One bounded self-correction attempt before deterministic fallback."""
     if not llm or not original_text.strip():
@@ -49,7 +68,7 @@ Yêu cầu:
         outcome="success",
         target="text",
     )
-    return str(response.content).strip()
+    return _visible_text_content(response.content)
 
 
 async def rewrite_questions_with_llm(llm, questions: list[str]) -> list[str]:
@@ -68,9 +87,10 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
     started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
+        visible_content = _visible_text_content(response.content)
         rewritten = [
             line.strip().removeprefix("-").strip()
-            for line in str(response.content).splitlines()
+            for line in visible_content.splitlines()
             if line.strip()
         ]
     except Exception as exc:

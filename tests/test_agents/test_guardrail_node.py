@@ -51,8 +51,11 @@ async def test_guardrail_failed_with_diagnosis(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_guardrail_retries_once_then_accepts_safe_rewrite(monkeypatch):
-    class SafeResponse:
-        content = "Chỉ số này cần được bác sĩ giải thích thêm."
+    # Trả về AIMessage thật thay vì object chỉ có `.content`: stub quá đơn giản
+    # là lý do lỗi "đổ nguyên content block ra màn hình" từng lọt qua bộ test.
+    from langchain_core.messages import AIMessage
+
+    safe_text = "Chỉ số này cần được bác sĩ giải thích thêm."
 
     class FakeLLM:
         def __init__(self):
@@ -60,21 +63,20 @@ async def test_guardrail_retries_once_then_accepts_safe_rewrite(monkeypatch):
 
         async def ainvoke(self, _messages):
             self.calls += 1
-            return SafeResponse()
+            return AIMessage(content=safe_text)
 
     llm = FakeLLM()
     monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: llm)
     result = await guardrail_node({"summary": "Bạn nên uống thuốc này.", "disclaimer": ""})
 
     assert llm.calls == 1
-    assert result["summary"] == SafeResponse.content
+    assert result["summary"] == safe_text
     assert result["guardrail_passed"] is False
 
 
 @pytest.mark.asyncio
 async def test_blank_retry_uses_template_fallback(monkeypatch):
-    class BlankResponse:
-        content = "   "
+    from langchain_core.messages import AIMessage
 
     class FakeLLM:
         def __init__(self):
@@ -82,7 +84,7 @@ async def test_blank_retry_uses_template_fallback(monkeypatch):
 
         async def ainvoke(self, _messages):
             self.calls += 1
-            return BlankResponse()
+            return AIMessage(content="   ")
 
     llm = FakeLLM()
     templates = load_templates()
@@ -140,3 +142,79 @@ async def test_template_library_is_shared_with_question_fallback(monkeypatch):
     )
 
     assert result["questions_for_doctor"] == list(templates.doctor_questions_fallback)
+
+
+class _StubLLM:
+    """LLM giả trả về đúng shape content mà nhà cung cấp thật trả."""
+
+    def __init__(self, content):
+        self._content = content
+
+    async def ainvoke(self, _messages):
+        from langchain_core.messages import AIMessage
+
+        return AIMessage(content=self._content)
+
+
+# Gemini trả content dưới dạng danh sách content block. `str(content)` sẽ đổ cả
+# repr Python lẫn chữ ký nội bộ của model ra màn hình bệnh nhân — đã gặp thật ở
+# bản chạy local ngày 12/08/2026 với chỉ số Creatinine.
+GEMINI_CONTENT_BLOCKS = [
+    {
+        "type": "text",
+        "text": "Creatinine là sản phẩm thải từ quá trình phân hủy mô cơ.",
+        "extras": {"signature": "EtYwCtMwARFNMg+0tz777d+BJ9EBOsgF7"},
+    }
+]
+
+
+@pytest.mark.asyncio
+async def test_rewrite_reads_text_from_content_blocks():
+    from src.agents.nodes.guardrail_node import rewrite_with_llm
+
+    result = await rewrite_with_llm(_StubLLM(GEMINI_CONTENT_BLOCKS), "văn bản gốc")
+
+    assert result == "Creatinine là sản phẩm thải từ quá trình phân hủy mô cơ."
+    assert "signature" not in result
+    assert "'type'" not in result
+
+
+@pytest.mark.asyncio
+async def test_rewrite_still_reads_plain_string_content():
+    from src.agents.nodes.guardrail_node import rewrite_with_llm
+
+    result = await rewrite_with_llm(_StubLLM("  Đoạn văn đã biên tập.  "), "văn bản gốc")
+
+    assert result == "Đoạn văn đã biên tập."
+
+
+@pytest.mark.asyncio
+async def test_rewrite_drops_thinking_blocks():
+    """Block suy luận nội bộ của model không được lọt ra ngoài."""
+    from src.agents.nodes.guardrail_node import rewrite_with_llm
+
+    content = [
+        {"type": "thinking", "thinking": "Người dùng đang hỏi về creatinine..."},
+        {"type": "text", "text": "Phần hiển thị cho người dùng."},
+    ]
+
+    result = await rewrite_with_llm(_StubLLM(content), "văn bản gốc")
+
+    assert result == "Phần hiển thị cho người dùng."
+
+
+@pytest.mark.asyncio
+async def test_question_rewrite_reads_text_from_content_blocks():
+    from src.agents.nodes.guardrail_node import rewrite_questions_with_llm
+
+    content = [
+        {
+            "type": "text",
+            "text": "- Chỉ số này có ý nghĩa gì?\n- Tôi cần theo dõi thêm gì?",
+            "extras": {"signature": "abc123"},
+        }
+    ]
+
+    result = await rewrite_questions_with_llm(_StubLLM(content), ["câu hỏi gốc"])
+
+    assert result == ["Chỉ số này có ý nghĩa gì?", "Tôi cần theo dõi thêm gì?"]
