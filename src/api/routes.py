@@ -2,11 +2,14 @@ import logging
 import time
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from src.agents.graph import build_graph
 from src.api.deps import CurrentUser, get_current_user
+from src.models.db import get_db
 from src.models.ocr_schemas import OCRIndicatorDraft
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
+from src.services.lab_history_service import save_analyzed_report
 from src.services.request_timing import timing_span
 
 logger = logging.getLogger(__name__)
@@ -75,10 +78,23 @@ async def run_analysis(
 async def analyze(
     request: AnalyzeRequest,
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> AnalyzeResponse:
     """Nhận dữ liệu nhập tay/mô phỏng và trả kết quả giải thích.
 
     Dữ liệu có nguồn OCR phải dùng `/ocr/confirm`; endpoint này không nhận
     review token và không được frontend OCR gọi trực tiếp.
     """
-    return await run_analysis(request, username=current_user.username)
+    response = await run_analysis(request, username=current_user.username)
+    if current_user.role == "patient":
+        save_result = save_analyzed_report(
+            db,
+            username=current_user.username,
+            request=request,
+            analysis=response,
+        )
+        response.saved = save_result.saved
+        response.duplicate = save_result.duplicate
+        response.report_id = save_result.report_id
+        response.existing_report_id = save_result.existing_report_id
+    return response

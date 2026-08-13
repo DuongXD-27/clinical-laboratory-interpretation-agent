@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from src.adapters.vision_adapter import VisionAdapter, VisionAdapterError
 from src.api.deps import CurrentUser, get_current_user
 from src.config import get_settings
+from src.models.db import get_db
 from src.models.ocr_schemas import (
     OCRConfirmRequest,
     OCRReviewResponse,
@@ -19,6 +21,7 @@ from src.services.ocr_review_gate import (
 )
 from src.services.ocr_sample_library import get_sample, is_known_sample, load_samples
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
+from src.services.lab_history_service import save_analyzed_report
 from src.services.request_timing import timing_span
 
 router = APIRouter()
@@ -215,6 +218,7 @@ async def ocr_upload(
 async def ocr_confirm(
     request: OCRConfirmRequest,
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> AnalyzeResponse:
     """Server-side gate: rejects incomplete or forged OCR review evidence."""
     try:
@@ -255,4 +259,15 @@ async def ocr_confirm(
     response.out_of_scope_indicators = list(
         dict.fromkeys([*response.out_of_scope_indicators, *out_of_scope_indicators])
     )
+    if current_user.role == "patient":
+        save_result = save_analyzed_report(
+            db,
+            username=current_user.username,
+            request=analyze_request,
+            analysis=response,
+        )
+        response.saved = save_result.saved
+        response.duplicate = save_result.duplicate
+        response.report_id = save_result.report_id
+        response.existing_report_id = save_result.existing_report_id
     return response

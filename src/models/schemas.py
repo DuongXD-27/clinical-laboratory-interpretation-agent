@@ -75,6 +75,12 @@ class IndicatorResultSchema(BaseModel):
     name: str
     value: float
     unit: str
+    analyte_raw: str | None = None
+    analyte_canonical: str | None = None
+    raw_value: float | None = None
+    raw_unit: str | None = None
+    canonical_value: float | None = None
+    canonical_unit: str | None = None
     reference_low: float | None = None
     reference_high: float | None = None
     status: IndicatorStatus
@@ -109,6 +115,10 @@ class AnalyzeResponse(BaseModel):
     )
     guardrail_passed: bool = True
     out_of_scope_indicators: list[str] = Field(default_factory=list)
+    saved: bool = False
+    duplicate: bool = False
+    report_id: int | None = None
+    existing_report_id: int | None = None
     error: str = ""
     is_placeholder: bool = Field(
         default=False,
@@ -124,6 +134,8 @@ class LabReportSummarySchema(BaseModel):
 
     id: int
     test_date: date
+    result_count: int = 0
+    status: str = "NORMAL"
     has_critical_values: bool
     summary: str
     created_at: datetime
@@ -184,6 +196,8 @@ class LabReportDetailSchema(BaseModel):
     patient_age_at_test: int | None
     patient_gender_at_test: str | None
     language: str
+    status: str = "NORMAL"
+    result_count: int = 0
     summary: str
     has_critical_values: bool
     guardrail_passed: bool
@@ -195,3 +209,57 @@ class LabReportDetailSchema(BaseModel):
     out_of_scope_entries: list[OutOfScopeLogSchema]
 
     model_config = {"from_attributes": True}
+
+
+class PatientProfileSchema(BaseModel):
+    patient_id: int
+    username: str
+    full_name: str | None = None
+    date_of_birth: date | None = None
+    sex: str | None = None
+    email: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PatientProfileUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=200)
+    date_of_birth: date | None = None
+    sex: Literal["male", "female", "other"] | None = None
+    email: str | None = Field(default=None, max_length=320)
+
+
+class PatientDashboardReportSchema(BaseModel):
+    report_id: int
+    test_date: date
+    result_count: int
+    status: str
+    created_at: datetime
+
+
+class PatientDashboardSchema(BaseModel):
+    total_reports: int
+    latest_test_date: date | None = None
+    recent_reports: list[PatientDashboardReportSchema] = Field(default_factory=list)
+
+
+class PatientLabReportListResponse(BaseModel):
+    reports: list[PatientDashboardReportSchema] = Field(default_factory=list)
+
+
+class SaveReportRequest(BaseModel):
+    patient_age: int | None = Field(default=None, ge=0, le=120)
+    patient_gender: Literal["male", "female", "other"] | None = None
+    test_date: date | None = None
+    language: str = "vi"
+    source_image: str | None = None
+    analysis: AnalyzeResponse
+
+
+class SaveReportResponse(BaseModel):
+    saved: bool
+    duplicate: bool = False
+    report_id: int | None = None
+    existing_report_id: int | None = None
+    requires_date_confirmation: bool = False
+    message: str = ""

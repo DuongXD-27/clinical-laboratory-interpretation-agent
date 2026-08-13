@@ -8,9 +8,12 @@ from fastapi.responses import JSONResponse
 from src.adapters.vision_adapter import close_vision_clients
 from src.api.auth_routes import router as auth_router
 from src.api.ocr_routes import router as ocr_router
+from src.api.patient_routes import router as patient_router
 from src.api.routes import router
 from src.config import get_settings
 from src.models.db import init_db
+from src.models.db import SessionLocal
+from src.services.demo_patient_data import seed_demo_patient_reports
 from src.services.medical_knowledge_retriever import get_rag_readiness
 from src.services.request_timing import (
     RequestTiming,
@@ -26,6 +29,9 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
     init_db()
+    if settings.app_env == "development":
+        with SessionLocal() as db:
+            seed_demo_patient_reports(db)
     try:
         yield
     finally:
@@ -116,6 +122,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(ocr_router, prefix="/api/v1")
+app.include_router(patient_router, prefix="/api/v1")
 
 
 @app.get("/health")

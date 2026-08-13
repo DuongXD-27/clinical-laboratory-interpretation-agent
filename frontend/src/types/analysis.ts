@@ -25,6 +25,10 @@ export type AnalysisResult = {
   summary?: string;
   disclaimer?: string;
   out_of_scope_indicators?: string[];
+  saved?: boolean;
+  duplicate?: boolean;
+  report_id?: number | null;
+  existing_report_id?: number | null;
   patient_info?: {
     name?: string;
     age?: number;
