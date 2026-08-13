@@ -1,8 +1,13 @@
 export const MANUAL_ANALYTES = Object.freeze([
   { name: "WBC", label: "Bạch cầu (WBC)", unit: "10^9/L", category: "Huyết học" },
   { name: "RBC", label: "Hồng cầu (RBC)", unit: "10^12/L", category: "Huyết học" },
-  { name: "Glucose", label: "Đường huyết lúc đói", unit: "mmol/L", category: "Đường huyết" },
+  { name: "HGB", label: "Hemoglobin (HGB)", unit: "g/L", category: "Huyết học" },
+  { name: "Fasting plasma glucose", label: "Đường huyết lúc đói (Fasting plasma glucose)", unit: "mmol/L", category: "Đường huyết" },
+  { name: "HbA1c", label: "HbA1c", unit: "%", category: "Đường huyết" },
+  { name: "LDL-C", label: "LDL-C", unit: "mmol/L", category: "Mỡ máu" },
+  { name: "HDL-C", label: "HDL-C", unit: "mmol/L", category: "Mỡ máu" },
   { name: "Creatinine", label: "Creatinine", unit: "µmol/L", category: "Chức năng thận" },
+  { name: "Potassium", label: "Kali (Potassium)", unit: "mmol/L", category: "Điện giải" },
 ]);
 
 /**

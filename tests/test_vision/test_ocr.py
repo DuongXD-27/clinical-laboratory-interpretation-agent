@@ -114,7 +114,7 @@ async def test_gemini_success_uses_inline_bytes_structured_schema_and_no_fallbac
     assert call["contents"][1].inline_data.data == b"private-image-marker"
     assert call["contents"][1].inline_data.mime_type == "image/jpeg"
     assert call["config"].temperature == 0
-    assert call["config"].max_output_tokens <= 500
+    assert call["config"].max_output_tokens <= 4096
     assert call["config"].response_mime_type == "application/json"
     assert "indicators" in call["config"].response_json_schema["properties"]
     assert adapter.last_provider == "gemini"

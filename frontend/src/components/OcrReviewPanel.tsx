@@ -26,6 +26,8 @@ type ReviewRow = {
   included: boolean;
   reviewed: boolean;
   low_confidence_acknowledged: boolean;
+  supported: boolean;
+  unsupported_reason: string;
 };
 
 type Props = {
@@ -130,6 +132,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
 
       setReviewToken(String(data.review_token || ""));
       setRows(indicators.map((item: Record<string, unknown>) => ({
+        supported: item.supported !== false,
         draft_id: String(item.draft_id || ""),
         name: String(item.name || ""),
         value: Number(item.value),
@@ -137,8 +140,9 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
         confidence: Number(item.confidence),
         raw_text: String(item.raw_text || ""),
         needs_review: Boolean(item.needs_review),
-        included: true,
-        reviewed: false,
+        unsupported_reason: String(item.unsupported_reason || "Chỉ số này hiện tại chưa được hỗ trợ."),
+        included: item.supported !== false,
+        reviewed: item.supported === false,
         low_confidence_acknowledged: false,
       })));
     } catch (caught: unknown) {
@@ -225,8 +229,9 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
     }
   };
 
-  const includedRows = rows.filter((row) => row.included);
-  const excludedRows = rows.filter((row) => !row.included);
+  const includedRows = rows.filter((row) => row.supported && row.included);
+  const excludedRows = rows.filter((row) => row.supported && !row.included);
+  const unsupportedRows = rows.filter((row) => !row.supported);
   const uploadsAllowed = Boolean(policy?.upload_enabled && policy.custom_image_allowed);
   const uploadUnavailable = policyLoaded && !uploadsAllowed;
 
@@ -339,6 +344,19 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {unsupportedRows.length > 0 && (
+            <div className="info-message mt-4" role="status">
+              <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
+              <div className="mt-2 grid gap-1">
+                {unsupportedRows.map((row) => (
+                  <p key={row.draft_id}>
+                    {row.name}: {row.unsupported_reason}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
 
