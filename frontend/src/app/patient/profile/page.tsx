@@ -16,6 +16,11 @@ type PatientProfile = {
   updated_at: string;
 };
 
+function formatMoment(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("vi-VN");
+}
+
 export default function PatientProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<PatientProfile | null>(null);
@@ -32,7 +37,7 @@ export default function PatientProfilePage() {
       const response = await authFetch("/api/v1/patient/me/profile");
       if (response.status === 401) {
         clearSession();
-        router.replace("/");
+        router.replace("/login");
         return;
       }
       if (!response.ok) throw new Error("Chưa tải được hồ sơ cá nhân.");
@@ -53,7 +58,7 @@ export default function PatientProfilePage() {
 
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
-      router.replace("/");
+      router.replace("/login");
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch profile after client auth guard.
@@ -100,7 +105,7 @@ export default function PatientProfilePage() {
             <h1>Hồ sơ cá nhân</h1>
             <p>Thông tin bệnh nhân dùng cho các lần xét nghiệm đã lưu.</p>
           </div>
-          <Link href="/patient" className="secondary-button px-3 py-2.5">Dashboard</Link>
+          <Link href="/patient" className="secondary-button px-3 py-2.5">Tổng quan</Link>
         </header>
 
         <section className="patient-card p-5 sm:p-7">
@@ -110,16 +115,23 @@ export default function PatientProfilePage() {
             <div role="alert" className="error-message">{error}</div>
           ) : profile ? (
             <>
-              <div className="section-heading">
-                <span className="eyebrow">Patient Profile</span>
-                <h2>{profile.full_name || profile.username}</h2>
-                <p>Patient ID: {profile.patient_id}</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="section-heading">
+                  <span className="eyebrow">Hồ sơ bệnh nhân</span>
+                  <h2>{profile.full_name || profile.username}</h2>
+                  <p>Thông tin dùng để đối chiếu khi xem lại các phiếu đã lưu.</p>
+                </div>
+                {!editing && (
+                  <button type="button" onClick={() => setEditing(true)} className="primary-button w-full sm:w-auto">
+                    Chỉnh sửa
+                  </button>
+                )}
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="field-label">
                   Họ tên
-                  <input disabled={!editing} value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} className="form-control mt-2" />
+                  <input disabled={!editing} value={form.full_name} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} className="form-control mt-2" />
                 </label>
                 <label className="field-label">
                   Ngày sinh
@@ -135,36 +147,32 @@ export default function PatientProfilePage() {
                 </label>
                 <label className="field-label">
                   Email
-                  <input disabled={!editing} type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="form-control mt-2" />
+                  <input disabled={!editing} type="email" value={form.email} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="form-control mt-2" />
                 </label>
               </div>
 
-              <div className="mt-5 text-sm text-slate-500">
-                <p>Created: {new Date(profile.created_at).toLocaleString()}</p>
-                <p>Updated: {new Date(profile.updated_at).toLocaleString()}</p>
-              </div>
+              {editing && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <button type="button" onClick={save} disabled={saving} className="primary-button">
+                    {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                  </button>
+                  <button type="button" onClick={() => {
+                    setEditing(false);
+                    setForm({
+                      full_name: profile.full_name ?? "",
+                      date_of_birth: profile.date_of_birth ?? "",
+                      sex: profile.sex ?? "male",
+                      email: profile.email ?? "",
+                    });
+                  }} className="secondary-button">
+                    Hủy
+                  </button>
+                </div>
+              )}
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {editing ? (
-                  <>
-                    <button type="button" onClick={save} disabled={saving} className="primary-button">
-                      {saving ? "Đang lưu..." : "Save"}
-                    </button>
-                    <button type="button" onClick={() => {
-                      setEditing(false);
-                      setForm({
-                        full_name: profile.full_name ?? "",
-                        date_of_birth: profile.date_of_birth ?? "",
-                        sex: profile.sex ?? "male",
-                        email: profile.email ?? "",
-                      });
-                    }} className="secondary-button">
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <button type="button" onClick={() => setEditing(true)} className="primary-button">Edit</button>
-                )}
+              <div className="profile-meta mt-6">
+                <p>Tạo lúc: {formatMoment(profile.created_at)}</p>
+                <p>Cập nhật lúc: {formatMoment(profile.updated_at)}</p>
               </div>
             </>
           ) : (
