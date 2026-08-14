@@ -18,10 +18,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from src.api.deps import CurrentUser, require_roles
-from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, get_db
+from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport, get_db
 from src.models.schemas import (
+    DoctorNoteCreateRequest,
+    DoctorNoteSchema,
     LabReportDetailSchema,
     LabReportListResponse,
+    QuestionAnswerRequest,
+    QuestionSelectionRequest,
+    ReportQuestionSchema,
 )
 from src.services import history_repository as repo
 
@@ -34,6 +39,11 @@ _history_user = require_roles(
     ROLE_PATIENT,
     ROLE_DOCTOR,
 )
+
+# Hai chức năng dưới đây bất đối xứng theo role một cách có chủ đích: bệnh nhân
+# tick chọn câu hỏi, bác sĩ ghi chú và trả lời. Authentication không hàm ý quyền.
+_patient_only = require_roles(ROLE_PATIENT)
+_doctor_only = require_roles(ROLE_DOCTOR)
 
 
 @router.get(
@@ -160,3 +170,166 @@ async def get_history_detail(
         )
 
     return repo.to_detail(report)
+
+
+def _load_report_for(
+    db: Session,
+    report_id: int,
+    current_user: CurrentUser,
+) -> LabReport:
+    """Lấy phiếu, áp đúng scope theo role.
+
+    Dùng chung cho mọi endpoint con của một phiếu (câu hỏi, ghi chú, đánh dấu
+    đã xem) để không endpoint nào tự nghĩ ra luật quyền riêng.
+
+    Bệnh nhân chạm vào phiếu của người khác nhận 404 chứ không 403, giống
+    endpoint detail: 403 sẽ gián tiếp xác nhận phiếu đó tồn tại, đủ để dò id
+    phiếu của bệnh nhân khác.
+    """
+
+    report = repo.get_report(db, report_id)
+
+    not_found = HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Không tìm thấy phiếu xét nghiệm.",
+    )
+
+    if report is None:
+        raise not_found
+
+    if (
+        current_user.role == ROLE_PATIENT
+        and report.patient_id != current_user.user_id
+    ):
+        raise not_found
+
+    return report
+
+
+@router.post(
+    "/{report_id}/questions/selection",
+    response_model=list[ReportQuestionSchema],
+)
+async def select_report_questions(
+    report_id: int,
+    payload: QuestionSelectionRequest,
+    current_user: CurrentUser = Depends(_patient_only),
+    db: Session = Depends(get_db),
+) -> list[ReportQuestionSchema]:
+    """Bệnh nhân chốt những câu mình muốn mang đi khám.
+
+    Chỉ bệnh nhân sở hữu phiếu gọi được. Bác sĩ không tick hộ: danh sách này thể
+    hiện bệnh nhân thật sự quan tâm điều gì, bác sĩ tick hộ thì mất đúng thông
+    tin đó.
+    """
+
+    report = _load_report_for(db, report_id, current_user)
+
+    questions = repo.select_questions(
+        db,
+        report,
+        payload.question_ids,
+    )
+
+    return [repo.question_to_schema(question) for question in questions]
+
+
+@router.post(
+    "/{report_id}/questions/{question_id}/answer",
+    response_model=ReportQuestionSchema,
+)
+async def answer_report_question(
+    report_id: int,
+    question_id: int,
+    payload: QuestionAnswerRequest,
+    current_user: CurrentUser = Depends(_doctor_only),
+    db: Session = Depends(get_db),
+) -> ReportQuestionSchema:
+    """Bác sĩ trả lời một câu hỏi của phiếu.
+
+    Nội dung trả lời do người viết nên không đi qua guardrail. Frontend phải
+    hiển thị nó kèm tên bác sĩ, tách khỏi phần do hệ thống sinh.
+    """
+
+    report = _load_report_for(db, report_id, current_user)
+
+    question = repo.answer_question(
+        db,
+        report,
+        question_id,
+        doctor_id=current_user.user_id,
+        answer_text=payload.answer_text,
+    )
+
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy câu hỏi trong phiếu này.",
+        )
+
+    return repo.question_to_schema(question)
+
+
+@router.post(
+    "/{report_id}/notes",
+    response_model=DoctorNoteSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_doctor_note(
+    report_id: int,
+    payload: DoctorNoteCreateRequest,
+    current_user: CurrentUser = Depends(_doctor_only),
+    db: Session = Depends(get_db),
+) -> DoctorNoteSchema:
+    """Bác sĩ ghi nhận xét lên một phiếu.
+
+    Chỉ role doctor ghi được; bệnh nhân đọc được nhưng không viết được, vì giá
+    trị của ghi chú nằm ở chỗ nó do người có thẩm quyền y khoa viết.
+
+    Mỗi lần ghi tạo một bản ghi mới. Không có endpoint sửa hay xoá ghi chú.
+
+    Phiếu được ghi chú cũng được coi là đã xem, nên không cần bấm thêm nút đánh
+    dấu.
+    """
+
+    report = _load_report_for(db, report_id, current_user)
+
+    note = repo.add_doctor_note(
+        db,
+        report,
+        doctor_id=current_user.user_id,
+        note_text=payload.note_text,
+        target_type=payload.target_type,
+        target_id=payload.target_id,
+    )
+
+    return repo.note_to_schema(note)
+
+
+@router.post(
+    "/{report_id}/review",
+    response_model=LabReportDetailSchema,
+)
+async def mark_report_reviewed(
+    report_id: int,
+    current_user: CurrentUser = Depends(_doctor_only),
+    db: Session = Depends(get_db),
+) -> LabReportDetailSchema:
+    """Bác sĩ đánh dấu đã xem phiếu, không kèm ghi chú.
+
+    Hành động chủ động, không tự động theo lượt mở trang: bác sĩ lướt qua hoặc
+    click nhầm mà hệ thống tự đánh dấu sẽ khiến bệnh nhân nhận tín hiệu sai rằng
+    phiếu đã được xem kỹ.
+
+    Idempotent — bấm nhiều lần không sinh thêm dòng.
+    """
+
+    report = _load_report_for(db, report_id, current_user)
+
+    repo.mark_report_reviewed(
+        db,
+        report,
+        doctor_id=current_user.user_id,
+    )
+
+    return repo.to_detail(repo.get_report(db, report_id))

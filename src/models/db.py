@@ -42,6 +42,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
     event,
 )
@@ -186,6 +187,12 @@ class LabReport(Base):
 
     out_of_scope_entries = relationship(
         "OutOfScopeLog",
+        back_populates="report",
+        cascade="all, delete-orphan",
+    )
+
+    doctor_views = relationship(
+        "ReportDoctorView",
         back_populates="report",
         cascade="all, delete-orphan",
     )
@@ -353,24 +360,46 @@ class ReportQuestion(Base):
         index=True,
     )
 
+    # Nullable có chủ đích: một câu hỏi không phải lúc nào cũng thuộc về đúng
+    # một chỉ số. Bộ câu dự phòng của Template Library (khi guardrail chặn) và
+    # câu hỏi gộp nhóm nhiều chỉ số đều không có chỉ số duy nhất để trỏ vào.
     indicator_id = Column(
         Integer,
         ForeignKey("report_indicators.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 
     question_text = Column(Text, nullable=False)
 
-    # "critical" | "abnormal"
+    # "critical" | "abnormal" | "unknown" | "fallback"
     priority = Column(String, nullable=False)
 
-    # "generated" | "sent_to_doctor" | "answered"
+    # Giữ đúng thứ tự ưu tiên lúc sinh; không dựa vào id để sắp xếp.
+    display_order = Column(Integer, nullable=False, default=0)
+
+    # "generated" -> "sent_to_doctor" (bệnh nhân tick chọn) -> "answered"
     status = Column(
         String,
         nullable=False,
         default="generated",
     )
+
+    # Bệnh nhân tick chọn câu này để mang đi khám. Cả bộ câu vẫn được lưu, cờ
+    # này chỉ đánh dấu câu nào được chọn — mở lại phiếu cũ vẫn thấy đủ bộ.
+    is_selected = Column(Boolean, nullable=False, default=False)
+
+    # Bác sĩ trả lời từng câu. Nội dung do người viết, KHÔNG qua guardrail.
+    answer_text = Column(Text, nullable=True)
+
+    answered_by_doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    answered_at = Column(DateTime, nullable=True)
 
     created_at = Column(
         DateTime,
@@ -388,9 +417,26 @@ class ReportQuestion(Base):
         back_populates="questions",
     )
 
+    answered_by = relationship("User", foreign_keys=[answered_by_doctor_id])
+
 
 class DoctorNote(Base):
-    """Ghi chú HITL của bác sĩ trên indicator hoặc report_question."""
+    """Ghi chú HITL của bác sĩ, gắn vào report / indicator / report_question.
+
+    ``target_type="report"`` là dạng dùng thật hiện nay: nghiệp vụ quy định ghi
+    chú thuộc về một phiếu xét nghiệm cụ thể, không thuộc về bệnh nhân nói
+    chung. "Bác sĩ X nhận xét về phiếu ngày 05/08" khác "bác sĩ X nhận xét về
+    bệnh nhân Y" — gắn theo phiếu giữ được ngữ cảnh bộ số, và một ghi chú cũ
+    không bị đọc như đánh giá tình trạng hiện tại.
+
+    Hai target_type còn lại giữ nguyên cho ghi chú ở mức chi tiết hơn.
+
+    Nội dung ghi chú KHÔNG đi qua guardrail: bác sĩ có thẩm quyền nói đúng
+    những điều hệ thống bị cấm (nguyên nhân, hướng điều trị), nên áp guardrail
+    lên đây sẽ xoá mất lời chuyên môn hợp lệ. Đổi lại, mọi ghi chú phải hiển
+    thị kèm tên người viết và thời điểm, trong khối tách bạch khỏi nội dung do
+    hệ thống sinh.
+    """
 
     __tablename__ = "doctor_notes"
 
@@ -402,6 +448,10 @@ class DoctorNote(Base):
         ),
     )
 
+    TARGET_REPORT = "report"
+    TARGET_INDICATOR = "indicator"
+    TARGET_QUESTION = "report_question"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     doctor_id = Column(
@@ -411,7 +461,7 @@ class DoctorNote(Base):
         index=True,
     )
 
-    # "indicator" | "report_question"
+    # "report" | "indicator" | "report_question"
     target_type = Column(String, nullable=False)
     target_id = Column(Integer, nullable=False)
 
@@ -422,6 +472,62 @@ class DoctorNote(Base):
         nullable=False,
         default=_utcnow,
     )
+
+    doctor = relationship("User")
+
+
+class ReportDoctorView(Base):
+    """Một bác sĩ đã chủ động đánh dấu là đã xem một phiếu.
+
+    Tách khỏi "đã có ghi chú": bác sĩ đọc phiếu thấy mọi thứ bình thường vẫn
+    cần báo được cho bệnh nhân là đã có người xem, mà không phải viết một câu
+    vô nghĩa cho có.
+
+    Lưu dạng nhiều dòng thay vì một cờ boolean trên ``lab_reports``: nếu bác sĩ
+    A xem rồi bác sĩ B xem sau, một cờ chung sẽ mất thông tin bác sĩ B từng
+    xem — dữ liệu này có giá trị tương tự ghi chú vì nó là bằng chứng có người
+    xem. UNIQUE(report_id, doctor_id) để cùng một bác sĩ bấm nhiều lần không
+    sinh thêm dòng.
+
+    Đánh dấu bằng hành động chủ động (bấm nút), không tự động theo lượt mở
+    trang: một bác sĩ lướt qua hoặc click nhầm sẽ khiến bệnh nhân nhận tín hiệu
+    sai rằng phiếu đã được xem kỹ.
+    """
+
+    __tablename__ = "report_doctor_views"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "report_id",
+            "doctor_id",
+            name="uq_report_doctor_views_report_doctor",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    viewed_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
+
+    report = relationship("LabReport", back_populates="doctor_views")
+    doctor = relationship("User")
 
 
 class OutOfScopeLog(Base):
@@ -491,8 +597,15 @@ def seed_demo_users(db: Session) -> None:
         db.rollback()
 
 
+def _sqlite_columns(conn, table: str) -> set[str]:
+    return {
+        row[1]
+        for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")
+    }
+
+
 def _upgrade_sqlite_schema() -> None:
-    """Bản vá tối thiểu cho SQLite cũ thiếu users.created_at.
+    """Bản vá tối thiểu cho SQLite cũ thiếu cột mới thêm về sau.
 
     create_all() chỉ tạo bảng chưa tồn tại; nó không ALTER bảng cũ.
     Khi project cần nhiều migration hơn nên chuyển sang migration tool thật.
@@ -501,18 +614,10 @@ def _upgrade_sqlite_schema() -> None:
         return
 
     with engine.begin() as conn:
-        columns = {
-            row[1]
-            for row in conn.exec_driver_sql(
-                "PRAGMA table_info(users)"
-            )
-        }
+        user_columns = _sqlite_columns(conn, "users")
 
         # Bảng chưa tồn tại: để create_all() tạo mới.
-        if not columns:
-            return
-
-        if "created_at" not in columns:
+        if user_columns and "created_at" not in user_columns:
             conn.exec_driver_sql(
                 "ALTER TABLE users ADD COLUMN created_at DATETIME"
             )
@@ -522,6 +627,25 @@ def _upgrade_sqlite_schema() -> None:
                 "WHERE created_at IS NULL",
                 (_utcnow().isoformat(sep=" "),),
             )
+
+        # Câu hỏi gợi ý: cột thêm khi bổ sung phần bệnh nhân tick chọn và bác
+        # sĩ trả lời. indicator_id đổi từ NOT NULL sang nullable không cần
+        # ALTER — SQLite không enforce lại ràng buộc cũ trên dòng mới, và bảng
+        # này chưa từng có dữ liệu thật ở bất kỳ môi trường nào.
+        question_columns = _sqlite_columns(conn, "report_questions")
+
+        if question_columns:
+            for column, ddl in (
+                ("display_order", "INTEGER NOT NULL DEFAULT 0"),
+                ("is_selected", "BOOLEAN NOT NULL DEFAULT 0"),
+                ("answer_text", "TEXT"),
+                ("answered_by_doctor_id", "INTEGER"),
+                ("answered_at", "DATETIME"),
+            ):
+                if column not in question_columns:
+                    conn.exec_driver_sql(
+                        f"ALTER TABLE report_questions ADD COLUMN {column} {ddl}"
+                    )
 
 
 def init_db() -> None:
