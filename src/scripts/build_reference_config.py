@@ -19,8 +19,8 @@ DEFAULT_INPUT = "adult_outpatient_laboratory_reference_map.csv"
 DEFAULT_OUTPUT_DIR = "data/reference"
 DEFAULT_SUPPLEMENTAL = "data/reference/explanations.json"
 
-RUNTIME_CSV = "reference_ranges_v2.csv"
-RUNTIME_JSON = "reference_ranges_v2.json"
+RUNTIME_CSV = "reference_ranges.csv"
+RUNTIME_JSON = "reference_ranges.json"
 QUARANTINE_CSV = "quarantine_v2.csv"
 BUILD_REPORT_JSON = "reference_build_report.json"
 
@@ -41,11 +41,6 @@ SUPPLEMENTAL_FIELDS = [
 # Primary rules for these analytes are excluded from the final catalog (but still counted in runtime_accepted_rows).
 SUPPLEMENTAL_REPLACEMENT_ANALYTES: frozenset[str] = frozenset({"HDL-C"})
 
-QUALITY_REASON_ORDER = [
-    "range_flag_not_ok",
-    "confidence_not_high",
-    "unsupported_source_tier",
-]
 STRUCTURAL_REASON_ORDER = [
     "missing_analyte",
     "invalid_sex",
@@ -57,11 +52,9 @@ STRUCTURAL_REASON_ORDER = [
     "invalid_upper_bound",
     "lower_greater_than_upper",
 ]
-REASON_ORDER = QUALITY_REASON_ORDER + STRUCTURAL_REASON_ORDER
+REASON_ORDER = STRUCTURAL_REASON_ORDER
 
 NULL_TOKENS = {"", "NA", "N/A", "NULL", "NONE"}
-SUPPORTED_TIERS = {"T1", "T2"}
-
 SOURCE_REQUIRED_FIELDS = [
     "analyte_canonical",
     "sex",
@@ -73,7 +66,6 @@ SOURCE_REQUIRED_FIELDS = [
     "reference_type",
     "source_priority_tier",
     "confidence",
-    "range_flag",
 ]
 
 RUNTIME_FIELDS = [
@@ -95,7 +87,6 @@ RUNTIME_FIELDS = [
     "source_priority_tier",
     "source_url",
     "confidence",
-    "range_flag",
 ]
 
 
@@ -210,17 +201,6 @@ def rule_id_for(source_row_number: int) -> str:
     return f"RRV2-{source_row_number:04d}"
 
 
-def quality_reasons(row: dict[str, str]) -> list[str]:
-    reasons: list[str] = []
-    if normalize_for_compare(row.get("range_flag")) != "OK":
-        reasons.append("range_flag_not_ok")
-    if normalize_for_compare(row.get("confidence")) != "HIGH":
-        reasons.append("confidence_not_high")
-    if normalize_for_compare(row.get("source_priority_tier")) not in SUPPORTED_TIERS:
-        reasons.append("unsupported_source_tier")
-    return reasons
-
-
 def structural_result(row: dict[str, str]) -> tuple[list[str], dict[str, Any]]:
     reasons: list[str] = []
     normalized: dict[str, Any] = {}
@@ -306,7 +286,6 @@ def make_runtime_record(
         "source_priority_tier": normalize_for_compare(row.get("source_priority_tier")),
         "source_url": normalize_optional_source_value(row.get("source_url")),
         "confidence": normalize_for_compare(row.get("confidence")),
-        "range_flag": normalize_for_compare(row.get("range_flag")),
     }
 
 
@@ -387,22 +366,14 @@ def build_reference_config(
     accepted_working: list[tuple[dict[str, str], int, dict[str, Any]]] = []
     quarantined: list[dict[str, Any]] = []
     rejection_counts: Counter[str] = Counter()
-    strict_quality_eligible_rows = 0
-    md_analytes: set[str] = set()
+    structurally_eligible_rows = 0
 
     for index, row in enumerate(rows, start=2):
-        analyte = row.get("analyte_canonical", "")
-        if normalize_for_compare(row.get("range_flag")) == "MD" and analyte:
-            md_analytes.add(analyte)
-
-        reasons = quality_reasons(row)
+        reasons, normalized = structural_result(row)
         if not reasons:
-            strict_quality_eligible_rows += 1
-            structural_reasons, normalized = structural_result(row)
-            reasons.extend(structural_reasons)
-            if not reasons:
-                accepted_working.append((row, index, normalized))
-                continue
+            structurally_eligible_rows += 1
+            accepted_working.append((row, index, normalized))
+            continue
 
         ordered_reasons = [reason for reason in REASON_ORDER if reason in reasons]
         rejection_counts.update(ordered_reasons)
@@ -438,10 +409,8 @@ def build_reference_config(
     quarantined_rows = len(quarantined)
     if input_rows != runtime_accepted_rows + quarantined_rows:
         raise InvariantError("input row count does not equal accepted + quarantined")
-    if runtime_accepted_rows > strict_quality_eligible_rows:
-        raise InvariantError("runtime accepted rows exceed strict quality eligible rows")
-    if strict_quality_eligible_rows > input_rows:
-        raise InvariantError("strict quality eligible rows exceed input rows")
+    if runtime_accepted_rows != structurally_eligible_rows:
+        raise InvariantError("runtime accepted rows do not equal structurally eligible rows")
 
     runtime_csv_path = output_path / RUNTIME_CSV
     runtime_json_path = output_path / RUNTIME_JSON
@@ -461,11 +430,12 @@ def build_reference_config(
         supplemental_json, supplemental_warnings = extract_supplemental_rules(sup_file, primary_analytes)
 
     # --- Write output files ---
+    # Pre-compute catalog-accepted sets (exclude replacement analytes regardless of supplemental)
+    catalog_accepted_json = [r for r in accepted_json if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
+    catalog_accepted_csv = [r for r in accepted_csv if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
+
     if supplemental_json:
         catalog_fields = RUNTIME_FIELDS + SUPPLEMENTAL_FIELDS
-        # Exclude primary rules for replacement analytes — their supplemental counterparts take precedence
-        catalog_accepted_json = [r for r in accepted_json if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
-        catalog_accepted_csv = [r for r in accepted_csv if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
         combined_json = sorted(catalog_accepted_json + supplemental_json, key=sort_runtime_key)
         # Build CSV-compatible copies of supplemental records (lists → pipe strings)
         supplemental_csv: list[dict[str, Any]] = []
@@ -476,9 +446,11 @@ def build_reference_config(
         combined_csv = sorted(catalog_accepted_csv + supplemental_csv, key=sort_runtime_key)
         write_csv(runtime_csv_path, combined_csv, catalog_fields)
         write_json(runtime_json_path, combined_json)
+        catalog_rule_count = len(combined_json)
     else:
         write_csv(runtime_csv_path, accepted_csv, RUNTIME_FIELDS)
         write_json(runtime_json_path, accepted_json)
+        catalog_rule_count = len(accepted_json)
 
     write_csv(
         quarantine_csv_path,
@@ -514,21 +486,20 @@ def build_reference_config(
         "input_sha256_after": input_hash_after,
         "input_size_bytes": input_size,
         "input_rows": input_rows,
-        "strict_quality_eligible_rows": strict_quality_eligible_rows,
-        "strict_quality_rejected_rows": input_rows - strict_quality_eligible_rows,
+        "structurally_eligible_rows": structurally_eligible_rows,
+        "structurally_rejected_rows": input_rows - structurally_eligible_rows,
         "runtime_accepted_rows": runtime_accepted_rows,
         "quarantined_rows": quarantined_rows,
         "multiple_reason_rows": multiple_reason_rows,
         "rejection_reason_counts": {reason: rejection_counts[reason] for reason in REASON_ORDER if rejection_counts[reason]},
         "accepted_analytes": accepted_analytes,
         "quarantined_analytes": quarantined_analytes,
-        "md_analytes": sorted(md_analytes),
         "output_files": {
-            "reference_ranges_v2_csv": {
+            "reference_ranges_csv": {
                 "path": relative_path(runtime_csv_path, root),
                 "sha256": sha256_file(runtime_csv_path),
             },
-            "reference_ranges_v2_json": {
+            "reference_ranges_json": {
                 "path": relative_path(runtime_json_path, root),
                 "sha256": sha256_file(runtime_json_path),
             },
@@ -551,7 +522,7 @@ def build_reference_config(
             "boundary_warnings": supplemental_warnings,
         }
         report["catalog"] = {
-            "total_rules": len(catalog_accepted_json) + len(supplemental_json),
+            "total_rules": catalog_rule_count,
         }
 
     build_report_path.write_text(
@@ -563,7 +534,7 @@ def build_reference_config(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build V2 reference whitelist and quarantine files.")
+    parser = argparse.ArgumentParser(description="Build reference catalog and structural-rejection artifacts.")
     parser.add_argument("--input", default=DEFAULT_INPUT, help="Source CSV path, relative to repo root unless absolute.")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory, relative to repo root unless absolute.")
     return parser.parse_args(argv)
@@ -586,7 +557,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report = result.report
     print(f"Input rows: {report['input_rows']}")
-    print(f"Strict quality eligible: {report['strict_quality_eligible_rows']}")
+    print(f"Structurally eligible: {report['structurally_eligible_rows']}")
     print(f"Runtime accepted: {report['runtime_accepted_rows']}")
     print(f"Quarantined: {report['quarantined_rows']}")
     print("Source integrity: PASS")

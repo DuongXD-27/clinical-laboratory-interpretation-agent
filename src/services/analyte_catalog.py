@@ -86,22 +86,29 @@ class AnalyteCatalog:
 
         definitions: list[AnalyteDefinition] = []
         for index, item in enumerate(explanations):
-            if not isinstance(item, dict) or not item.get("id") or not item.get("indicator"):
+            # New schema: "name" is the indicator field; "id" is derived from it.
+            if not isinstance(item, dict) or not item.get("name"):
                 raise AnalyteCatalogError(
-                    f"analyte definition at index {index} requires id and indicator"
+                    f"analyte definition at index {index} requires 'name'"
                 )
+            indicator = str(item["name"]).strip()
+            # Derive a stable lowercase id from the name (e.g. "WBC" → "wbc")
+            analyte_id = indicator.lower().replace("-", "_").replace(" ", "_")
+            # "sources" is now a list of objects; extract the "url" field from each.
+            raw_sources = item.get("sources", [])
+            source_urls: tuple[str, ...] = tuple(
+                str(src["url"]).strip()
+                for src in raw_sources
+                if isinstance(src, dict) and str(src.get("url", "")).strip()
+            )
             definitions.append(
                 AnalyteDefinition(
-                    analyte_id=str(item["id"]).strip(),
-                    indicator=str(item["indicator"]).strip(),
-                    display_name=str(item.get("display_name", "")).strip(),
-                    vietnamese_name=str(item.get("vietnamese_name", "")).strip(),
-                    curated_explanation=str(item.get("simple_explanation", "")).strip(),
-                    sources=tuple(
-                        str(source).strip()
-                        for source in item.get("sources", [])
-                        if str(source).strip()
-                    ),
+                    analyte_id=analyte_id,
+                    indicator=indicator,
+                    display_name=indicator,
+                    vietnamese_name="",
+                    curated_explanation="",
+                    sources=source_urls,
                 )
             )
 

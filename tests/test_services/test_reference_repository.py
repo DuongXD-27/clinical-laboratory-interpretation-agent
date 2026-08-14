@@ -74,7 +74,6 @@ def make_rule(
         "source_priority_tier": "T1",
         "source_url": "https://example.test/source",
         "confidence": "HIGH",
-        "range_flag": "OK",
     }
 
 

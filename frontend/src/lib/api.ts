@@ -1,4 +1,9 @@
-import type { LabReportDetail, LabReportListResponse } from "@/types/history";
+import type {
+  DoctorNote,
+  LabReportDetail,
+  LabReportListResponse,
+  ReportQuestion,
+} from "@/types/history";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -145,6 +150,71 @@ export async function fetchHistoryDetail(reportId: number): Promise<LabReportDet
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không mở được phiếu xét nghiệm"));
+  }
+  return response.json();
+}
+
+/** Bệnh nhân chốt danh sách câu hỏi muốn mang đi khám. */
+export async function selectReportQuestions(
+  reportId: number,
+  questionIds: number[],
+): Promise<ReportQuestion[]> {
+  const response = await authFetch(`/api/v1/history/${reportId}/questions/selection`, {
+    method: "POST",
+    body: JSON.stringify({ question_ids: questionIds }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được lựa chọn câu hỏi"));
+  }
+  return response.json();
+}
+
+/** Bác sĩ trả lời một câu hỏi của phiếu. Nội dung không qua guardrail. */
+export async function answerReportQuestion(
+  reportId: number,
+  questionId: number,
+  answerText: string,
+): Promise<ReportQuestion> {
+  const response = await authFetch(
+    `/api/v1/history/${reportId}/questions/${questionId}/answer`,
+    { method: "POST", body: JSON.stringify({ answer_text: answerText }) },
+  );
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được câu trả lời"));
+  }
+  return response.json();
+}
+
+/** Bác sĩ ghi nhận xét lên một phiếu. Chỉ thêm mới, không sửa, không xoá. */
+export async function createDoctorNote(
+  reportId: number,
+  noteText: string,
+): Promise<DoctorNote> {
+  const response = await authFetch(`/api/v1/history/${reportId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ note_text: noteText }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được ghi chú"));
+  }
+  return response.json();
+}
+
+/** Bác sĩ đánh dấu đã xem phiếu mà không kèm ghi chú. Bấm nhiều lần vô hại. */
+export async function markReportReviewed(reportId: number): Promise<LabReportDetail> {
+  const response = await authFetch(`/api/v1/history/${reportId}/review`, {
+    method: "POST",
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không đánh dấu được đã xem"));
   }
   return response.json();
 }

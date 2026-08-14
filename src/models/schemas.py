@@ -281,6 +281,11 @@ class LabReportSummarySchema(BaseModel):
 
     source: Literal["manual", "ocr"] | None = None
 
+    # Danh sách lịch sử của cả hai phía thể hiện được phiếu nào đã có ý kiến bác
+    # sĩ và phiếu nào chưa, không cần mở từng phiếu ra xem.
+    reviewed_by_doctor: bool = False
+    has_doctor_notes: bool = False
+
     model_config = {
         "from_attributes": True,
     }
@@ -302,15 +307,21 @@ class LabReportListResponse(BaseModel):
 
 
 class ReportQuestionSchema(BaseModel):
-    """Một câu hỏi gợi ý hỏi bác sĩ, gắn với một indicator cụ thể."""
+    """Một câu hỏi gợi ý hỏi bác sĩ.
+
+    `indicator_id` nullable: câu dự phòng của Template Library (khi guardrail
+    chặn) và câu gộp nhiều chỉ số không có một chỉ số duy nhất để trỏ vào.
+    """
 
     id: int
-    indicator_id: int
+    indicator_id: int | None = None
     question_text: str
 
     priority: Literal[
         "critical",
         "abnormal",
+        "unknown",
+        "fallback",
     ]
 
     status: Literal[
@@ -319,11 +330,44 @@ class ReportQuestionSchema(BaseModel):
         "answered",
     ]
 
+    display_order: int = 0
+
+    # Bệnh nhân tick chọn câu này để mang đi khám.
+    is_selected: bool = False
+
+    # Câu trả lời của bác sĩ. Do người viết nên KHÔNG qua guardrail; frontend
+    # phải hiển thị kèm tên bác sĩ, tách khỏi nội dung do hệ thống sinh.
+    answer_text: str | None = None
+    answered_at: datetime | None = None
+
+    # Enrichment, không phải DB column.
+    answered_by_username: str | None = None
+
     created_at: datetime
 
     model_config = {
         "from_attributes": True,
     }
+
+
+class QuestionSelectionRequest(BaseModel):
+    """Bệnh nhân chốt danh sách câu hỏi mình muốn mang đi khám.
+
+    Gửi đủ id của những câu được chọn; câu không có trong danh sách bị bỏ chọn.
+    Danh sách rỗng là hợp lệ — nghĩa là bỏ chọn hết.
+    """
+
+    question_ids: list[int] = Field(default_factory=list)
+
+
+class QuestionAnswerRequest(BaseModel):
+    """Bác sĩ trả lời một câu hỏi cụ thể."""
+
+    answer_text: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+    )
 
 
 class OutOfScopeLogSchema(BaseModel):
@@ -344,12 +388,20 @@ class OutOfScopeLogSchema(BaseModel):
 
 
 class DoctorNoteSchema(BaseModel):
-    """Ghi chú của doctor trên indicator hoặc report_question."""
+    """Ghi chú của doctor trên report / indicator / report_question.
+
+    `doctor_username` là thứ bệnh nhân đọc: mọi ghi chú phải hiển thị kèm tên
+    người viết và thời điểm, trong khối tách bạch khỏi nội dung do hệ thống
+    sinh. Nội dung này KHÔNG qua guardrail và KHÔNG được dán khuyến cáo "đây
+    không phải chẩn đoán y khoa" — đây đúng là ý kiến chuyên môn của người có
+    thẩm quyền, dán vào sẽ tạo mâu thuẫn.
+    """
 
     id: int
     doctor_id: int
 
     target_type: Literal[
+        "report",
         "indicator",
         "report_question",
     ]
@@ -357,6 +409,9 @@ class DoctorNoteSchema(BaseModel):
     target_id: int
     note_text: str
     created_at: datetime
+
+    # Enrichment, không phải DB column.
+    doctor_username: str | None = None
 
     model_config = {
         "from_attributes": True,
@@ -367,19 +422,36 @@ class DoctorNoteCreateRequest(BaseModel):
     """Request tạo doctor note.
 
     doctor_id lấy từ user/token authenticated, tuyệt đối không nhận từ body.
+    Thời điểm ghi do máy chủ đặt, không nhận từ phía người dùng gửi lên.
     """
 
     target_type: Literal[
+        "report",
         "indicator",
         "report_question",
-    ]
+    ] = "report"
 
-    target_id: int
+    # None = ghi chú cho cả phiếu; id phiếu lấy từ URL.
+    target_id: int | None = None
 
     note_text: str = Field(
         ...,
         min_length=1,
+        max_length=4000,
     )
+
+
+class ReportDoctorViewSchema(BaseModel):
+    """Một bác sĩ đã chủ động đánh dấu đã xem phiếu."""
+
+    doctor_id: int
+    viewed_at: datetime
+
+    doctor_username: str | None = None
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -431,11 +503,28 @@ class LabReportDetailSchema(BaseModel):
         default_factory=list,
     )
 
+    # Ghi chú của bác sĩ, mới nhất nằm trên. Chỉ thêm mới, không sửa đè và
+    # không xoá: sửa một nhận xét bệnh nhân đã đọc và có thể đã làm theo mà
+    # không để lại dấu là thay đổi thứ người khác đã hành động dựa trên đó.
+    doctor_notes: list[DoctorNoteSchema] = Field(
+        default_factory=list,
+    )
+
+    doctor_views: list[ReportDoctorViewSchema] = Field(
+        default_factory=list,
+    )
+
     # Enrichment của history API, không phải DB columns.
     patient_username: str | None = None
     indicator_count: int | None = None
     abnormal_count: int | None = None
     source: Literal["manual", "ocr"] | None = None
+
+    # Hai trạng thái tách biệt, trả lời hai câu hỏi khác nhau của bệnh nhân.
+    # "Đã có ai xem phiếu của tôi chưa" thường quan trọng hơn cả nội dung nhận
+    # xét. Một phiếu có ghi chú thì hiển nhiên đã được xem; ngược lại thì không.
+    reviewed_by_doctor: bool = False
+    has_doctor_notes: bool = False
 
     model_config = {
         "from_attributes": True,

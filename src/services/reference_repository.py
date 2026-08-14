@@ -105,7 +105,7 @@ class ReferenceRepository:
         root = cls.default_repo_root()
         return cls.from_files(
             config_path=root / "data/reference/reference_checker_v2_config.json",
-            ranges_path=root / "data/reference/reference_ranges_v2.json",
+            ranges_path=root / "data/reference/reference_ranges.json",
             units_path=root / "data/reference/units_metric.csv",
         )
 

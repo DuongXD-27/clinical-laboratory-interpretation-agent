@@ -21,8 +21,11 @@ def metadata() -> dict:
 def project_source_urls() -> set[str]:
     urls: set[str] = set()
     for item in json.loads(Path("data/reference/explanations.json").read_text(encoding="utf-8")):
-        urls.update(url for url in item.get("sources", []) if url)
-    for item in json.loads(Path("data/reference/reference_ranges_v2.json").read_text(encoding="utf-8")):
+        for src in item.get("sources", []):
+            url = src.get("url") if isinstance(src, dict) else src
+            if url:
+                urls.add(str(url))
+    for item in json.loads(Path("data/reference/reference_ranges.json").read_text(encoding="utf-8")):
         if item.get("source_url"):
             urls.add(item["source_url"])
     with Path("data/reference/quarantine_v2.csv").open(encoding="utf-8-sig", newline="") as file:

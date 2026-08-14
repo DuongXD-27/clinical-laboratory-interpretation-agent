@@ -29,6 +29,10 @@ export type AnalysisResult = {
   duplicate?: boolean;
   report_id?: number | null;
   existing_report_id?: number | null;
+  /** Câu hỏi gợi ý mang đi hỏi bác sĩ. Rỗng khi mọi chỉ số đều bình thường. */
+  questions_for_doctor?: string[];
+  /** null với khách và bác sĩ — không có phiếu nào được lưu. */
+  saved_report_id?: number | null;
   patient_info?: {
     name?: string;
     age?: number;

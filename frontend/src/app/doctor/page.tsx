@@ -16,7 +16,6 @@ export default function DoctorPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [doctorNotes, setDoctorNotes] = useState("");
 
   useEffect(() => {
     if (!getToken() || getRole() !== "doctor") {
@@ -37,7 +36,6 @@ export default function DoctorPage() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setDoctorNotes("");
 
     const scenario = mockScenarios.find((s) => s.id === selectedScenario);
     if (!scenario) return;
@@ -124,7 +122,6 @@ export default function DoctorPage() {
           onResult={(data) => {
             setResult(data);
             setError(null);
-            setDoctorNotes("");
           }}
           onUnauthorized={() => {
             clearSession();
@@ -181,18 +178,24 @@ export default function DoctorPage() {
                 </div>
               )}
 
-              {/* HITL: Doctor Notes */}
-              <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col h-full min-h-[250px]">
-                <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4">Ghi chú lâm sàng (HITL)</h2>
-                <textarea 
-                  className="flex-1 w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  placeholder="Nhập ghi chú chẩn đoán, đánh giá lại cảnh báo của AI hoặc chỉ định thêm..."
-                  value={doctorNotes}
-                  onChange={(e) => setDoctorNotes(e.target.value)}
-                />
-                <button className="mt-4 w-full py-2 bg-zinc-800 dark:bg-zinc-700 text-white rounded-lg text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-600 transition-colors">
-                  Lưu Ghi Chú & Xác Nhận
-                </button>
+              {/* Ghi chú lâm sàng KHÔNG nằm ở đây.
+                  Màn này là phân tích thử trên dữ liệu mô phỏng và không sinh ra
+                  phiếu nào (phân tích của bác sĩ không được lưu thành lịch sử
+                  bệnh nhân), nên không có phiếu để gắn ghi chú vào. Ô nhập cũ ở
+                  đây là giao diện suông: gõ vào rồi rời trang là mất, và nó tạo
+                  ấn tượng sai rằng tính năng đã tồn tại.
+
+                  Ghi chú thật nằm trong "Lịch sử xét nghiệm của bệnh nhân" bên
+                  dưới: mở một phiếu cụ thể rồi ghi nhận xét vào đúng phiếu đó,
+                  đúng Luồng 1 của nghiệp vụ. */}
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">Ghi chú lâm sàng (HITL)</h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  Ghi chú được gắn vào một phiếu xét nghiệm cụ thể của bệnh nhân, không gắn vào
+                  phân tích thử ở màn này. Mở phần <strong>Lịch sử xét nghiệm của bệnh nhân</strong>{" "}
+                  bên dưới, chọn một phiếu, rồi ghi nhận xét vào đúng phiếu đó — bệnh nhân sở hữu
+                  phiếu sẽ đọc được.
+                </p>
               </div>
 
             </div>

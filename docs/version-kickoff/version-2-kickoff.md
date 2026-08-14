@@ -139,8 +139,8 @@ Mỗi luồng có DoD riêng, nhưng **guardrail và critical-value gate không
   làm dày lớp Validator).
 
 ### 4.3. Mở rộng 9 chỉ số + khởi động RAGAS (Tuấn)
-- Lọc trước: chỉ tích hợp dòng `range_flag = OK` + `confidence = HIGH`
-  + `source_priority_tier ∈ {T1, T2}` cho V2.
+- Tích hợp trực tiếp các record thuộc dataset canonical; chỉ kiểm tra cấu trúc,
+  đơn vị và điều kiện áp dụng cần thiết cho lookup.
 - Refactor `RuleCheck` + `IndicatorAssessment`: chuyển từ hardcode 3 chỉ
   số sang lookup theo `(analyte, sex, age_scope)` — cần Vũ duyệt vì đụng
   graph/state.
@@ -176,9 +176,8 @@ Mỗi luồng có DoD riêng, nhưng **guardrail và critical-value gate không
 - Không làm memory/trend theo dõi xu hướng qua nhiều lần xét nghiệm.
 - Không chuyển guardrail sang LLM-as-judge (ADR-004, Lựa chọn 3) — vẫn
   để dành đánh giá ở version sau.
-- Không merge 17 dòng chỉ số chất lượng thấp/chưa verify (`range_flag`
-  hoặc `confidence` không đạt, hoặc `source_priority_tier` ngoài T1/T2)
-  vào config chính — tách thành file/list riêng, chờ Dương review.
+- Không tự sửa giá trị reference; mọi thay đổi nguồn dữ liệu vẫn phải qua quy trình
+  curate/import hiện có.
 - Không hoàn thiện toàn bộ pipeline khử định danh PHI — V2 chỉ dừng ở
   migrate user tối thiểu `(id, role)` cho auth, **chưa phải** bước khử
   định danh PHI đầy đủ trước khi dữ liệu vào AI Engine (xem cảnh báo ở
@@ -231,7 +230,7 @@ Mỗi luồng có DoD riêng, nhưng **guardrail và critical-value gate không
 |---|---|---|---|
 | **Dương** | Là PO giữ Guardrail, muốn có retry + Template Library thay vì fallback tĩnh 1 lớp; là bệnh nhân, muốn xác nhận lại chỉ số do OCR đọc | Cổng an toàn cho OCR + nâng cấp Guardrail + cập nhật PRD/ADR | Thiết kế UI_Review; viết Gate riêng cho luồng OCR (độ tin cậy thấp → bắt buộc xác nhận); thêm retry trước Template Fallback; build TemplateLib; cập nhật PRD (OCR "Cơ bản" hay "Nâng cao làm sớm"); viết ADR mới; bổ sung công cụ kiểm tra ngoài regex |
 | **Vũ** | Là bệnh nhân, muốn tải ảnh chụp phiếu xét nghiệm | OCR qua Vision LLM Adapter | Chốt phương án Vision LLM (Gemini Vision/GPT-4V/Document AI...) → ghi ADR; xây `Adapter_Vision` đồng bộ schema với `Adapter_JSON`; đảm bảo OCR đi qua UI_Review, không ghi thẳng state chính; test ảnh mờ/nghiêng/thiếu sáng; duyệt code Tuấn nối 9 chỉ số vào graph (giữ vai trò chốt kiến trúc); phối hợp RAGAS với Tuấn |
-| **Tuấn** | Là bệnh nhân, muốn xem giải thích đủ 9 chỉ số; là PO, muốn biết RAG có "ảo giác" không | Mở rộng 9 chỉ số + khởi động RAGAS | Lọc dòng `range_flag=OK` + `confidence=HIGH` + `source_priority_tier∈{T1,T2}`; tách 17 dòng nghi vấn riêng; refactor `RuleCheck`/`IndicatorAssessment` sang lookup `(analyte, sex, age_scope)` (cần Vũ duyệt); map cột CSV → field chuẩn; test case tự động từng chỉ số; PRD ghi rõ chỉ Kali có mức "critical" |
+| **Tuấn** | Là bệnh nhân, muốn xem giải thích đủ 9 chỉ số; là PO, muốn biết RAG có "ảo giác" không | Mở rộng 9 chỉ số + khởi động RAGAS | Dùng record canonical trực tiếp; refactor `RuleCheck`/`IndicatorAssessment` sang lookup `(analyte, sex, age_scope)` (cần Vũ duyệt); map cột CSV → field chuẩn; test case tự động từng chỉ số; PRD ghi rõ chỉ Kali có mức "critical" |
 | **Duy** | Là bệnh nhân/bác sĩ, muốn truy cập qua URL thật và đăng nhập thật | Triển khai thật + Đăng nhập thật | Chọn nền tảng deploy (Vercel/Render/Railway/Fly.io); cấu hình env var an toàn; CORS đúng domain; chọn giải pháp auth (NextAuth/JWT); migrate user tối thiểu `(id, role)`; audit trường `error` không lộ ra UI; test end-to-end trên môi trường thật; log độ trễ ban đầu |
 
 *Quyết định phân công dựa theo tài liệu phân công V2 đã thảo luận với

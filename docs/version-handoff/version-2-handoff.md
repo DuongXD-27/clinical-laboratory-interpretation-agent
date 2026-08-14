@@ -5,7 +5,7 @@
 
 - Nâng cấp Guardrail: thêm 1 lượt retry bằng LLM rewrite trước khi rơi vào fallback tĩnh; xây dựng Template Library dùng chung cho cả 2 nhánh dự phòng; bổ sung công cụ kiểm tra ngoài regex (Dương).
 
-- Mở rộng từ 3 chỉ số lên 9 chỉ số theo danh sách đã lọc chất lượng (range_flag=OK, confidence=HIGH, source_priority_tier ∈ {T1,T2}); refactor RuleCheck sang lookup theo (analyte, sex, age_scope); viết test case tự động; tách 17 dòng nghi vấn riêng; khởi động RAGAS eval
+- Mở rộng từ 3 chỉ số lên 9 chỉ số; refactor RuleCheck sang lookup theo (analyte, sex, age_scope); viết test case tự động; khởi động RAGAS eval.
 
 - Triển khai backend lên Railway, frontend lên Vercel; xây dựng đăng nhập JWT thật cho 2 vai trò patient/doctor; đảm bảo CORS đúng domain production; không commit secret vào repo; ghi log latency làm baseline (Duy).
 
@@ -59,7 +59,7 @@
 
 - Guardrail nâng cấp sang Regex + Semantic Similarity + LLM Retry — giữ nguyên kiến trúc 3 lớp (Prompt-level + Validator + UI-level) từ ADR-004; bổ sung bên trong lớp Validator: thêm embedding similarity (BGE-M3) và LLM self-correction 1 vòng trước fallback tĩnh. Chưa chuyển sang LLM-as-judge (ADR-004 Lựa chọn 3) — để dành version sau, đúng quyết định đã ghi trong kickoff V2.
 
-- LDL-C, Potassium, HbA1c vào pending_analytes — reference_checker_v2_config.json: 3 chỉ số này quarantined trong build vì range_flag != OK (theo reference_build_report.json), không được đưa vào approved dù có trong explanations.json. Lý do quarantine ghi trong quarantine_v2.csv từng dòng.
+- Quy tắc quarantine theo nhãn chất lượng của LDL-C, Potassium và HbA1c đã được bãi bỏ; dữ liệu canonical được sử dụng trực tiếp.
 
 - JWT tự viết — src/services/auth.py dùng python-jose + bcrypt. Fail-fast trong production nếu dùng JWT_SECRET mặc định (ghi trong src/config.py _reject_insecure_jwt_secret_in_production).
 
@@ -91,7 +91,7 @@
 
 - RAG ChromaDB — kho dữ liệu y khoa thực tế — RAGAS đã chạy với curated fixtures (không phải retrieved contexts từ production graph), report.md ghi rõ: "Results are not production RAG validation." Dữ liệu thật trong ChromaDB vẫn chưa được xác nhận chất lượng.
 
-- LDL-C và Potassium (Kali) vẫn ở pending — 2 trong 3 chỉ số cốt lõi của V1 (LDL-Cholesterol, Kali) hiện bị quarantine và chưa vào được approved_analytes trong V2, vì range_flag != OK trong dữ liệu nguồn.
+- Ghi chú pending cũ của LDL-C và Potassium (Kali) đã được thay thế bằng assumption dùng trực tiếp dữ liệu canonical.
 
 
 
@@ -148,7 +148,7 @@ Chưa có (so với ADR-004 Lựa chọn 3): LLM-as-judge — chưa triển khai
 
 - Xác nhận URL production thật của Railway (backend) và Vercel (frontend) — commit/ghi lại trong `.env.example` hoặc `README.md` để cả team nắm thông tin, dù biến môi trường đã được set trực tiếp trên cloud.
 
-- Kiểm tra và xử lý file quarantine_v2.csv (Dương review theo phân công): quyết định số phận LDL-C và Potassium (Kali) — hoặc tìm nguồn dữ liệu mới range_flag=OK, hoặc chấp nhận để pending đến V4.
+- Kiểm tra LDL-C và Potassium (Kali) theo cấu trúc, đơn vị và điều kiện nhân khẩu học của dữ liệu canonical; không áp dụng lớp đánh giá chất lượng thứ hai.
 
 - Cập nhật PRD: ghi rõ OCR thuộc phạm vi "Cơ bản" hay "Nâng cao làm sớm", và ghi rõ mức phân loại (abnormal/critical) cho từng chỉ số mới theo cam kết V2.
 

@@ -7,6 +7,7 @@ from langgraph.graph import END, StateGraph
 from src.agents.nodes.analyzer_node import analyzer_node
 from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.guardrail_node import guardrail_node
+from src.agents.nodes.question_generator_node import question_generator_node
 from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.agents.state import AgentState
 from src.services.request_timing import timing_span
@@ -66,6 +67,10 @@ def build_graph() -> StateGraph:
         _timed_node("analysis-critical-detector", detect_critical_values_node),
     )
     graph.add_node("analyzer", _timed_node("analysis-analyzer", analyzer_node))
+    graph.add_node(
+        "generate_questions",
+        _timed_node("analysis-generate-questions", question_generator_node),
+    )
     graph.add_node("guardrail", _timed_node("analysis-guardrail", guardrail_node))
 
     # Đăng ký Gate node chờ review (HITL)
@@ -84,7 +89,12 @@ def build_graph() -> StateGraph:
     # Các cạnh thông thường
     graph.add_edge("reference_range_checker", "critical_detector")
     graph.add_edge("critical_detector", "analyzer")
-    graph.add_edge("analyzer", "guardrail")
+
+    # generate_questions nằm giữa analyzer và guardrail: câu hỏi phải được sinh
+    # trước khi kiểm duyệt, vì guardrail là lớp cuối cùng cho mọi nội dung hiển
+    # thị cho bệnh nhân (ADR-004).
+    graph.add_edge("analyzer", "generate_questions")
+    graph.add_edge("generate_questions", "guardrail")
     graph.add_edge("guardrail", END)
 
     # Khởi tạo Checkpointer trong bộ nhớ để lưu State khi pause đồ thị
