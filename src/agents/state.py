@@ -58,6 +58,17 @@ class IndicatorExplanation(TypedDict, total=False):
     sources: list[str]
 
 
+class DoctorQuestionMeta(TypedDict, total=False):
+    """Metadata của một câu hỏi gợi ý, đi song song với chuỗi câu hỏi."""
+
+    # "critical" | "abnormal" | "unknown" | "fallback"
+    priority: str
+    display_order: int
+    analyte_id: str | None
+    # Tên chỉ số đúng như bệnh nhân nhập, dùng để nối câu hỏi về đúng dòng.
+    indicator_name: str | None
+
+
 class CriticalAlert(TypedDict, total=False):
     """Cảnh báo khẩn khi một chỉ số ở mức nguy kịch (vd. Kali, Glucose cực đoan)."""
 
@@ -115,6 +126,12 @@ class AgentState(TypedDict, total=False):
     # --- Câu hỏi gợi ý cho bác sĩ (LLM) — SINH RA TRƯỚC guardrail_check,
     # để guardrail có thể kiểm duyệt cả nội dung này trước khi trả ra ngoài ---
     questions_for_doctor: list[str]
+
+    # Metadata song song với `questions_for_doctor`, cùng thứ tự và cùng độ dài.
+    # Tách khỏi danh sách chuỗi vì nhánh kiểm duyệt câu hỏi của guardrail nhận
+    # `list[str]` từ V2 và không nên phải đổi kiểu. Sau guardrail, hai danh sách
+    # được ghép lại bằng `reconcile_after_guardrail()`.
+    doctor_question_meta: list[DoctorQuestionMeta]
 
     # --- Guardrail: chống chẩn đoán / kê đơn / kết luận nguyên nhân.
     # Chạy SAU CÙNG, kiểm duyệt cả `explanations` lẫn `questions_for_doctor` ---

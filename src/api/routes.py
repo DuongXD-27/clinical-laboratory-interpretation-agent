@@ -15,6 +15,10 @@ from src.models.schemas import (
     IndicatorResultSchema,
 )
 from src.services import history_repository
+from src.services.question_templates import (
+    GeneratedQuestion,
+    reconcile_after_guardrail,
+)
 from src.services.request_timing import timing_span
 
 logger = logging.getLogger(__name__)
@@ -142,11 +146,29 @@ async def run_analysis(
         and current_user.role == ROLE_PATIENT
         and current_user.user_id is not None
     ):
+        # Ghép danh sách câu hỏi SAU guardrail trở lại metadata lúc sinh, để lưu
+        # được mức ưu tiên và nối câu hỏi về đúng dòng chỉ số. Guardrail có thể
+        # đã viết lại từng câu hoặc thay cả bộ bằng câu dự phòng.
+        questions = reconcile_after_guardrail(
+            response.questions_for_doctor,
+            [
+                GeneratedQuestion(
+                    text="",
+                    priority=str(meta.get("priority") or "abnormal"),
+                    display_order=int(meta.get("display_order") or 0),
+                    analyte_id=meta.get("analyte_id"),
+                    indicator_name=meta.get("indicator_name"),
+                )
+                for meta in final_state.get("doctor_question_meta", [])
+            ],
+        )
+
         saved_report = history_repository.save_report(
             db,
             patient_id=current_user.user_id,
             request=request,
             response=response,
+            questions=questions,
             ocr_drafts=ocr_drafts,
             ocr_source_filename=ocr_source_filename,
         )
