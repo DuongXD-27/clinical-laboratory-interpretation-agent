@@ -25,6 +25,10 @@ export type AnalysisResult = {
   summary?: string;
   disclaimer?: string;
   out_of_scope_indicators?: string[];
+  /** Câu hỏi gợi ý mang đi hỏi bác sĩ. Rỗng khi mọi chỉ số đều bình thường. */
+  questions_for_doctor?: string[];
+  /** null với khách và bác sĩ — không có phiếu nào được lưu. */
+  saved_report_id?: number | null;
   patient_info?: {
     name?: string;
     age?: number;

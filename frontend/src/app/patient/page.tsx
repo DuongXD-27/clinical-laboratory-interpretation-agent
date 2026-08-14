@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import HistoryPanel from "@/components/HistoryPanel";
 import MetricInput from "@/components/MetricInput";
 import MetricSelector, { type MetricDefinition } from "@/components/MetricSelector";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
+import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
@@ -35,14 +37,23 @@ export default function PatientPage() {
   const [manualValues, setManualValues] = useState<Record<string, string>>({});
   const [selectedManualMetrics, setSelectedManualMetrics] = useState<string[]>([]);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
+  // Tăng sau mỗi lần lưu phiếu để panel lịch sử nạp lại, không phải bấm Lọc.
+  const [historyRefresh, setHistoryRefresh] = useState(0);
 
   useEffect(() => {
-    if (!getToken() || getRole() !== "patient") {
+    const role = getRole();
+    // Khách dùng chung màn này với bệnh nhân (ma trận cho khách nhập chỉ số và
+    // tải ảnh); phần lịch sử mới là chỗ phân biệt. Nếu chỉ cho `patient` vào
+    // đây thì nút "Dùng thử với tư cách khách" ở trang đăng nhập thành vòng lặp
+    // chết: mở phiên khách rồi bị đá ngay về `/`.
+    if (!getToken() || (role !== "patient" && role !== "guest")) {
       router.replace("/");
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
     setUsername(getUsername());
+    setIsGuest(role === "guest");
     setCheckingAuth(false);
   }, [router]);
 
@@ -102,7 +113,9 @@ export default function PatientPage() {
           ? "Chưa thể phân tích kết quả lúc này. Vui lòng thử lại sau."
           : (detail ?? "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại."));
       }
-      setResult(await response.json());
+      const analysed: AnalysisResult = await response.json();
+      setResult(analysed);
+      if (analysed.saved_report_id) setHistoryRefresh((current) => current + 1);
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
@@ -149,7 +162,12 @@ export default function PatientPage() {
             <div className="brand-mark" aria-hidden="true">+</div>
             <div className="min-w-0">
               <h1>Phân Tích Sức Khỏe AI</h1>
-              <p className="truncate">Xin chào, <span className="font-medium text-slate-700">{username}</span></p>
+              <p className="truncate">
+                Xin chào,{" "}
+                <span className="font-medium text-slate-700">
+                  {isGuest ? "bạn đang dùng thử (phiên khách)" : username}
+                </span>
+              </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -157,10 +175,20 @@ export default function PatientPage() {
               Đặt lại
             </button>
             <button type="button" onClick={handleLogout} className="text-button px-2 py-2.5 sm:px-3">
-              Đăng xuất
+              {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
             </button>
           </div>
         </header>
+
+        {isGuest && (
+          <div className="info-message" role="status">
+            <p className="font-semibold text-slate-800">Bạn đang dùng thử với tư cách khách</p>
+            <p className="mt-1">
+              Kết quả phân tích <strong>không được lưu lại</strong> — thoát phiên là mất. Đăng ký
+              tài khoản nếu muốn xem lại lịch sử xét nghiệm của mình về sau.
+            </p>
+          </div>
+        )}
 
         <div className="intro-copy">
           <span className="eyebrow">Kết quả xét nghiệm của bạn</span>
@@ -287,6 +315,7 @@ export default function PatientPage() {
                 setResult(data);
                 setError(null);
                 setGate3Acknowledged(false);
+                if (data.saved_report_id) setHistoryRefresh((current) => current + 1);
               }}
               onUnauthorized={() => {
                 clearSession();
@@ -368,7 +397,36 @@ export default function PatientPage() {
                 <p className="mt-1">{result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}</p>
               </div>
             </div>
+
+            {/* Màn 6 — câu hỏi gợi ý, đứng sau màn kết quả.
+                Chỉ hiện khi cảnh báo nguy kịch đã được xác nhận (Gate 3): danh
+                sách câu hỏi phục vụ một cuộc hẹn khám trong tương lai, còn cảnh
+                báo nguy kịch yêu cầu hành động ngay, nên không được đặt ở vị trí
+                làm loãng cảnh báo. */}
+            {!showCriticalBanner && (
+              <QuestionsForDoctorPanel
+                questions={result.questions_for_doctor ?? []}
+                reportId={result.saved_report_id ?? null}
+                onUnauthorized={() => {
+                  clearSession();
+                  router.replace("/");
+                }}
+              />
+            )}
           </section>
+        )}
+
+        {/* Khách không thấy mục này vì `/history` trả 403 cho khách ở backend,
+            không phải vì giao diện giấu đi. */}
+        {!isGuest && (
+          <HistoryPanel
+            mode="patient"
+            refreshToken={historyRefresh}
+            onUnauthorized={() => {
+              clearSession();
+              router.replace("/");
+            }}
+          />
         )}
       </div>
 
