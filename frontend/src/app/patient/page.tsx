@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HistoryPanel from "@/components/HistoryPanel";
 import MetricInput from "@/components/MetricInput";
@@ -10,6 +11,20 @@ import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
+
+type DashboardReport = {
+  report_id: number;
+  test_date: string;
+  result_count: number;
+  status: string;
+  created_at: string;
+};
+
+type DashboardSummary = {
+  total_reports: number;
+  latest_test_date?: string | null;
+  recent_reports: DashboardReport[];
+};
 
 function sourceHostname(source: string) {
   try {
@@ -27,6 +42,8 @@ export default function PatientPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +73,28 @@ export default function PatientPage() {
     setIsGuest(role === "guest");
     setCheckingAuth(false);
   }, [router]);
+
+  const loadDashboard = async () => {
+    setDashboardError(null);
+    const response = await authFetch("/api/v1/patient/me/dashboard");
+    if (response.status === 401) {
+      clearSession();
+      router.replace("/");
+      return;
+    }
+    if (!response.ok) {
+      setDashboardError("Chưa tải được tổng quan hồ sơ.");
+      return;
+    }
+    setDashboard(await response.json());
+  };
+
+  useEffect(() => {
+    if (checkingAuth) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch dashboard after client auth gate.
+    void loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once after auth gate opens.
+  }, [checkingAuth]);
 
   function handleLogout() {
     clearSession();
@@ -115,7 +154,12 @@ export default function PatientPage() {
       }
       const analysed: AnalysisResult = await response.json();
       setResult(analysed);
-      if (analysed.saved_report_id) setHistoryRefresh((current) => current + 1);
+
+      void loadDashboard();
+
+      if (analysed.saved_report_id) {
+           setHistoryRefresh((current) => current + 1);
+      }
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
@@ -171,6 +215,12 @@ export default function PatientPage() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Link href="/patient/profile" className="secondary-button px-3 py-2.5 sm:px-4">
+              Hồ sơ
+            </Link>
+            <Link href="/patient/history" className="secondary-button px-3 py-2.5 sm:px-4">
+              Lịch sử
+            </Link>
             <button type="button" onClick={handleReset} className="secondary-button px-3 py-2.5 sm:px-4">
               Đặt lại
             </button>
@@ -195,6 +245,55 @@ export default function PatientPage() {
           <h2>Hiểu rõ hơn các chỉ số sức khỏe</h2>
           <p>Nhập kết quả hoặc tải ảnh phiếu xét nghiệm để nhận phần giải thích dễ hiểu.</p>
         </div>
+
+        <section className="patient-card p-5 sm:p-7" aria-labelledby="dashboard-title">
+          <div className="section-heading">
+            <span className="eyebrow">Tổng quan</span>
+            <h2 id="dashboard-title">Patient Dashboard</h2>
+            <p>Theo dõi số lần xét nghiệm đã lưu và truy cập nhanh hồ sơ của bạn.</p>
+          </div>
+          {dashboardError && <div role="alert" className="error-message mt-4">{dashboardError}</div>}
+          {!dashboard && !dashboardError ? (
+            <div className="loading-message mt-4" role="status">Đang tải tổng quan...</div>
+          ) : dashboard && (
+            <>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="summary-box">
+                  <p className="text-sm font-medium text-slate-500">Tổng số lần xét nghiệm</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-950">{dashboard.total_reports}</p>
+                </div>
+                <div className="summary-box">
+                  <p className="text-sm font-medium text-slate-500">Lần gần nhất</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-950">{dashboard.latest_test_date ?? "Chưa có"}</p>
+                </div>
+              </div>
+              {dashboard.recent_reports.length === 0 ? (
+                <div className="empty-metrics mt-5">
+                  <p className="font-medium text-slate-700">Bạn chưa có kết quả xét nghiệm nào được lưu.</p>
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-2">
+                  {dashboard.recent_reports.map((report) => (
+                    <Link key={report.report_id} href={`/patient/history/${report.report_id}`} className="result-card">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-950">{report.test_date}</p>
+                          <p className="mt-1 text-sm text-slate-500">{report.result_count} chỉ số</p>
+                        </div>
+                        <span className="status-badge status-normal">{report.status}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link href="/patient/history" className="text-button">Xem toàn bộ lịch sử</Link>
+                <Link href="/patient/profile" className="text-button">Hồ sơ cá nhân</Link>
+                <Link href="/patient/trends" className="text-button">Xu hướng chỉ số</Link>
+              </div>
+            </>
+          )}
+        </section>
 
         <div className="mode-tabs" role="tablist" aria-label="Cách nhập kết quả xét nghiệm">
           <button
@@ -315,6 +414,7 @@ export default function PatientPage() {
                 setResult(data);
                 setError(null);
                 setGate3Acknowledged(false);
+                void loadDashboard():
                 if (data.saved_report_id) setHistoryRefresh((current) => current + 1);
               }}
               onUnauthorized={() => {
@@ -359,6 +459,26 @@ export default function PatientPage() {
                   <p className="mt-1">
                     {result.out_of_scope_indicators?.join(", ")} hiện tại chưa được hỗ trợ, nên chưa được đưa vào phần phân tích.
                   </p>
+                </div>
+              )}
+
+              {result.duplicate && (
+                <div className="info-message mt-5" role="status">
+                  Kết quả xét nghiệm này có vẻ đã được lưu trước đó.
+                  {result.existing_report_id && (
+                    <Link href={`/patient/history/${result.existing_report_id}`} className="ml-2 text-blue-700 hover:underline">
+                      Xem kết quả đã lưu
+                    </Link>
+                  )}
+                </div>
+              )}
+
+              {result.saved && result.report_id && (
+                <div className="info-message mt-5" role="status">
+                  Kết quả đã được lưu vào lịch sử xét nghiệm.
+                  <Link href={`/patient/history/${result.report_id}`} className="ml-2 text-blue-700 hover:underline">
+                    Xem chi tiết
+                  </Link>
                 </div>
               )}
 

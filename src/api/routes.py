@@ -15,6 +15,7 @@ from src.models.schemas import (
     IndicatorResultSchema,
 )
 from src.services import history_repository
+from src.services.lab_history_service import save_analyzed_report
 from src.services.question_templates import (
     GeneratedQuestion,
     reconcile_after_guardrail,

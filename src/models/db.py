@@ -101,11 +101,23 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
-    role = Column(String, nullable=False)
+    role = Column(String, nullable=False)  # "patient" | "doctor"
+    full_name = Column(String, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    sex = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+
     created_at = Column(
+    DateTime(timezone=True),
+    nullable=False,
+    default=_utcnow,
+    )
+
+    updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         default=_utcnow,
+        onupdate=_utcnow,
     )
 
     reports = relationship(
@@ -122,13 +134,12 @@ class LabReport(Base):
     __tablename__ = "lab_reports"
 
     __table_args__ = (
-        # Query lịch sử chủ đạo:
-        # WHERE patient_id=:X AND test_date BETWEEN :A AND :B
-        Index(
-            "ix_lab_reports_patient_id_test_date",
-            "patient_id",
-            "test_date",
-        ),
+        # Phục vụ đúng query lịch sử thật: WHERE patient_id=:X AND
+        # test_date BETWEEN :A AND :B — composite (patient_id, test_date)
+        # tự cover luôn query chỉ lọc patient_id (leftmost prefix), nên
+        # bỏ index đơn ở patient_id bên dưới, tránh 2 index trùng công dụng.
+        Index("ix_lab_reports_patient_id_test_date", "patient_id", "test_date"),
+        Index("ix_lab_reports_patient_id_fingerprint", "patient_id", "report_fingerprint"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -150,6 +161,8 @@ class LabReport(Base):
     ocr_source_filename = Column(String, nullable=True)
 
     language = Column(String, nullable=False, default="vi")
+    status = Column(String, nullable=False, default="NORMAL")
+    report_fingerprint = Column(String, nullable=True)
     summary = Column(Text, nullable=False, default="")
     has_critical_values = Column(Boolean, nullable=False, default=False)
     guardrail_passed = Column(Boolean, nullable=False, default=True)
@@ -228,6 +241,12 @@ class ReportIndicator(Base):
         nullable=False,
         index=True,
     )
+    analyte_raw = Column(String, nullable=True)
+    analyte_canonical = Column(String, nullable=True, index=True)
+    raw_value = Column(Float, nullable=True)
+    raw_unit = Column(String, nullable=True)
+    canonical_value = Column(Float, nullable=True)
+    canonical_unit = Column(String, nullable=True)
 
     # Nullable vì OCR/nhập tay có thể sinh tên chưa canonical hóa.
     indicator_catalog_id = Column(
@@ -572,6 +591,65 @@ DEMO_USERS = [
 ]
 
 
+def _sqlite_table_columns(table_name: str) -> set[str]:
+    with engine.connect() as conn:
+        rows = conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _migrate_sqlite_schema() -> None:
+    """Small idempotent migration for the local create_all-based SQLite setup."""
+    if not _is_sqlite:
+        return
+
+    migrations = {
+        "users": {
+            "full_name": "VARCHAR",
+            "date_of_birth": "DATE",
+            "sex": "VARCHAR",
+            "email": "VARCHAR",
+            "created_at": "DATETIME",
+            "updated_at": "DATETIME",
+        },
+        "lab_reports": {
+            "status": "VARCHAR",
+            "report_fingerprint": "VARCHAR",
+        },
+        "report_indicators": {
+            "analyte_raw": "VARCHAR",
+            "analyte_canonical": "VARCHAR",
+            "raw_value": "FLOAT",
+            "raw_unit": "VARCHAR",
+            "canonical_value": "FLOAT",
+            "canonical_unit": "VARCHAR",
+        },
+    }
+
+    with engine.begin() as conn:
+        for table_name, columns in migrations.items():
+            existing = {
+                str(row[1])
+                for row in conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
+            }
+            for column_name, column_type in columns.items():
+                if column_name not in existing:
+                    conn.exec_driver_sql(
+                        f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
+                    )
+
+
+def _backfill_sqlite_defaults() -> None:
+    if not _is_sqlite:
+        return
+    now = datetime.now(UTC).replace(tzinfo=None)
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "UPDATE users SET created_at = COALESCE(created_at, ?), updated_at = COALESCE(updated_at, ?)",
+            (now, now),
+        )
+        conn.exec_driver_sql(
+            "UPDATE lab_reports SET status = COALESCE(status, CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+        )
 def seed_demo_users(db: Session) -> None:
     """Seed tài khoản demo nếu bảng users đang trống.
 
@@ -652,7 +730,8 @@ def init_db() -> None:
     _upgrade_sqlite_schema()
 
     Base.metadata.create_all(bind=engine)
-
+    _migrate_sqlite_schema()
+    _backfill_sqlite_defaults()
     with SessionLocal() as db:
         seed_demo_users(db)
 

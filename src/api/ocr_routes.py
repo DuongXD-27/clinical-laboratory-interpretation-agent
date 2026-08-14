@@ -26,15 +26,8 @@ from src.services.ocr_review_gate import (
     prepare_review,
     validate_review,
 )
-from src.services.ocr_sample_library import (
-    get_sample,
-    is_known_sample,
-    load_samples,
-)
-from src.services.reference_repository import (
-    ReferenceRepository,
-    ReferenceRepositoryError,
-)
+from src.services.ocr_sample_library import get_sample, is_known_sample, load_samples
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 from src.services.request_timing import timing_span
 
 router = APIRouter()
@@ -375,5 +368,4 @@ async def ocr_confirm(
             ]
         )
     )
-
     return response

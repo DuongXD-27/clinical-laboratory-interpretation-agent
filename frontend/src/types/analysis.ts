@@ -25,6 +25,10 @@ export type AnalysisResult = {
   summary?: string;
   disclaimer?: string;
   out_of_scope_indicators?: string[];
+  saved?: boolean;
+  duplicate?: boolean;
+  report_id?: number | null;
+  existing_report_id?: number | null;
   /** Câu hỏi gợi ý mang đi hỏi bác sĩ. Rỗng khi mọi chỉ số đều bình thường. */
   questions_for_doctor?: string[];
   /** null với khách và bác sĩ — không có phiếu nào được lưu. */
@@ -34,4 +38,38 @@ export type AnalysisResult = {
     age?: number;
     gender?: string;
   };
+};
+
+export type TrendFilter = "latest5" | "three_months";
+
+export type TrendAnalyteSummary = {
+  analyte_canonical: string;
+  display_name: string;
+  canonical_unit: string;
+  result_count: number;
+  trend_available: boolean;
+};
+
+export type TrendPoint = {
+  report_id: number;
+  test_date: string;
+  value: number;
+  assessment: string;
+};
+
+export type TrendResponse = {
+  analyte_canonical: string;
+  display_name: string;
+  canonical_unit: string;
+  filter: TrendFilter;
+  result_count: number;
+  trend_available: boolean;
+  points: TrendPoint[];
+  reason?: string | null;
+};
+
+export type TrendExplanationResponse = {
+  explanation: string;
+  fallback: boolean;
+  reason?: string | null;
 };
