@@ -28,27 +28,44 @@ def ingest():
     ids = []
 
     for item in data:
-        indicator_id = item["id"]
+        indicator = item.get("name", "")
+        # Derive stable id from name (matches analyte_catalog.py logic)
+        indicator_id = indicator.lower().replace("-", "_").replace(" ", "_")
 
         # Build text representation for embedding
-        text_parts = []
-        text_parts.append(f"Chỉ số: {item.get('display_name', '')} ({item.get('indicator', '')} - {item.get('vietnamese_name', '')})")
-        text_parts.append(f"Giải thích cơ bản: {item.get('simple_explanation', '')}")
+        text_parts = [f"Chỉ số: {indicator}"]
 
-        if "high_meaning" in item:
-            text_parts.append(f"Ý nghĩa khi tăng cao: {item.get('high_meaning')}")
-        if "low_meaning" in item:
-            text_parts.append(f"Ý nghĩa khi giảm thấp: {item.get('low_meaning')}")
+        # Collect high/low notes from all sources (new schema)
+        high_notes = [
+            src["high_note"]
+            for src in item.get("sources", [])
+            if isinstance(src, dict) and src.get("high_note")
+        ]
+        low_notes = [
+            src["low_note"]
+            for src in item.get("sources", [])
+            if isinstance(src, dict) and src.get("low_note")
+        ]
+
+        if high_notes:
+            text_parts.append(f"Ý nghĩa khi tăng cao: {high_notes[0]}")
+        if low_notes:
+            text_parts.append(f"Ý nghĩa khi giảm thấp: {low_notes[0]}")
 
         full_text = "\n".join(text_parts)
 
         # Metadata
+        source_urls = [
+            src["url"]
+            for src in item.get("sources", [])
+            if isinstance(src, dict) and src.get("url")
+        ]
         meta = {
-            "indicator": item.get("indicator", ""),
+            "indicator": indicator,
             "analyte_id": indicator_id,
         }
-        if "sources" in item:
-            meta["sources"] = json.dumps(item["sources"], ensure_ascii=False)
+        if source_urls:
+            meta["sources"] = json.dumps(source_urls, ensure_ascii=False)
 
         texts.append(full_text)
         metadatas.append(meta)

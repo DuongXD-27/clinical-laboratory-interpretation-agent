@@ -1,7 +1,7 @@
 """
 Data quality tests for the new reference data files.
 
-CRIT-01: No duplicate `name` within explanation_new.json
+CRIT-01: No duplicate `name` within explanations.json
 CRIT-02: Alias value consistency within critical_thresholds.json
 CRIT-03: All 9 approved analytes present in all 3 files (coverage + case consistency)
 CRIT-04: Metric/unit match with units_metric.csv
@@ -15,8 +15,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CRITICAL_PATH      = REPO_ROOT / "data/reference/critical_thresholds.json"
-EXPLANATION_PATH   = REPO_ROOT / "data/reference/explanation_new.json"
-REFERENCE_JSON_PATH = REPO_ROOT / "data/reference/reference_ranges_v2.json"
+EXPLANATION_PATH   = REPO_ROOT / "data/reference/explanations.json"
+REFERENCE_JSON_PATH = REPO_ROOT / "data/reference/reference_ranges.json"
 UNITS_CSV_PATH     = REPO_ROOT / "data/reference/units_metric.csv"
 
 # Canonical names as defined in reference_checker_v2_config.json
@@ -81,7 +81,7 @@ def _csv_units_by_canonical(units_csv: dict[str, str]) -> dict[str, str]:
 # ── CRIT-01 ──────────────────────────────────────────────────────────────────
 
 def test_crit_01_no_duplicate_names_in_explanation_new():
-    """Each analyte name must appear exactly once in explanation_new.json."""
+    """Each analyte name must appear exactly once in explanations.json."""
     entries = _load_explanation()
     seen: dict[str, int] = {}
     duplicates: list[str] = []
@@ -92,7 +92,7 @@ def test_crit_01_no_duplicate_names_in_explanation_new():
         else:
             seen[name] = i
     assert not duplicates, (
-        "Duplicate names in explanation_new.json:\n" + "\n".join(duplicates)
+        "Duplicate names in explanations.json:\n" + "\n".join(duplicates)
     )
 
 
@@ -135,10 +135,10 @@ def test_crit_02_alias_values_consistent_in_critical_thresholds():
 # ── CRIT-03 ──────────────────────────────────────────────────────────────────
 
 def test_crit_03a_approved_analytes_in_explanation_new():
-    """All 9 approved analytes must be present in explanation_new.json (case-insensitive)."""
+    """All 9 approved analytes must be present in explanations.json (case-insensitive)."""
     names_lower = {e["name"].lower() for e in _load_explanation()}
     missing = [a for a in sorted(APPROVED_ANALYTES) if a.lower() not in names_lower]
-    assert not missing, f"Missing from explanation_new.json: {missing}"
+    assert not missing, f"Missing from explanations.json: {missing}"
 
 
 def test_crit_03b_approved_analytes_in_critical_thresholds():
@@ -149,10 +149,10 @@ def test_crit_03b_approved_analytes_in_critical_thresholds():
 
 
 def test_crit_03c_approved_analytes_in_reference_ranges():
-    """All 9 approved analytes must be present in reference_ranges_v2.json (case-insensitive)."""
+    """All 9 approved analytes must be present in reference_ranges.json (case-insensitive)."""
     canonical_lower = {r["analyte_canonical"].lower() for r in _load_reference()}
     missing = [a for a in sorted(APPROVED_ANALYTES) if a.lower() not in canonical_lower]
-    assert not missing, f"Missing from reference_ranges_v2.json: {missing}"
+    assert not missing, f"Missing from reference_ranges.json: {missing}"
 
 
 def test_crit_03d_name_case_consistency_across_files():
@@ -189,7 +189,7 @@ def test_crit_03d_name_case_consistency_across_files():
 
 def test_crit_04a_explanation_new_metric_vs_units_csv():
     """
-    Each analyte's `metric` in explanation_new.json must match the
+    Each analyte's `metric` in explanations.json must match the
     standardized_unit in units_metric.csv (after alias resolution and µ normalization).
     """
     entries   = _load_explanation()
@@ -217,7 +217,7 @@ def test_crit_04a_explanation_new_metric_vs_units_csv():
 
     errors = not_in_csv + mismatches
     assert not errors, (
-        "Metric issues between explanation_new.json and units_metric.csv:\n"
+        "Metric issues between explanations.json and units_metric.csv:\n"
         + "\n".join(errors)
     )
 

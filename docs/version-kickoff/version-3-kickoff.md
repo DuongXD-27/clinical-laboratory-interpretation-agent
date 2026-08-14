@@ -96,12 +96,8 @@ cốt lõi từ đề bài gốc (Glucose, LDL-C, Kali).
   bảo vệ đúng 2 chỉ số nguy kịch cốt lõi của đề bài gốc.
 
 **4.2. P1 — Approve Kali + LDL-C ở Reference Checker (normal path)**
-- Kali: xử lý `normal_reference_not_approved` — tìm/duyệt nguồn dữ liệu đạt
-  `range_flag=OK`.
-- LDL-C: xử lý `md_not_approved`/`range_flag != OK` — tìm nguồn thay thế
-  hoặc đánh giá lại tiêu chí "strict quality" hiện tại có đang quá chặt
-  không chuẩn y khoa cần thiết không (nếu nới tiêu chí, bắt buộc ghi ADR +
-  Dương duyệt).
+- Kali và LDL-C: sử dụng trực tiếp record đã được curate/import vào dataset
+  canonical, đồng thời giữ nguyên kiểm tra unit và điều kiện áp dụng.
 - Đây là 2/9 chỉ số quan trọng nhất vì vừa thuộc bộ 3 core V1, vừa có
   critical protection — ưu tiên cao hơn hẳn nhóm 4.3.
 

@@ -170,7 +170,9 @@ async def test_api_01_source_serialization(client, monkeypatch):
     response = await post_analyze_with_graph_result(client, monkeypatch, final_state)
 
     assert response.status_code == 200
-    assert response.json()["indicators"][0]["sources"] == ["https://example.test/source"]
+    indicator = response.json()["indicators"][0]
+    assert indicator["sources"] == ["https://example.test/source"]
+    assert "range" + "_flag" not in indicator
 
 
 @pytest.mark.asyncio

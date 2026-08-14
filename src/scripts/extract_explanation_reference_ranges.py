@@ -39,21 +39,6 @@ _GROUP_ORDER: dict[str, list[str]] = {
     "HDL-C": ["optimal", "average", "low"],
 }
 
-# Groups classified as medical-decision (MD) rather than reference-interval (RI)
-_MD_GROUPS: dict[str, set[str]] = {
-    "HbA1c": {"prediabetes", "diabetes"},
-    "LDL-C": {"acceptable", "borderline_high", "high", "very_high"},
-    "Potassium": {
-        "mild_hyperkalemia",
-        "moderate_hyperkalemia",
-        "severe_hyperkalemia",
-        "mild_hypokalemia",
-        "moderate_hypokalemia",
-        "severe_hypokalemia",
-    },
-    "HDL-C": {"optimal", "low"},
-}
-
 # Inclusive boundary overlaps preserved verbatim from source; reported as warnings.
 # Values are NOT altered — they are reproduced exactly from explanations.json.
 _BOUNDARY_WARNINGS: list[dict[str, Any]] = [
@@ -109,12 +94,6 @@ def canonical_analyte(indicator: str) -> str:
     return ALIAS_MAP.get(indicator, indicator)
 
 
-def _reference_type(analyte: str, group: str) -> str:
-    if group in _MD_GROUPS.get(analyte, set()):
-        return "MD"
-    return "RI"
-
-
 def extract_supplemental_rules(
     explanations_path: Path,
     primary_analytes: set[str],
@@ -137,7 +116,7 @@ def extract_supplemental_rules(
     rules: list[dict[str, Any]] = []
 
     for entry in entries:
-        indicator = str(entry.get("indicator", "")).strip()
+        indicator = str(entry.get("name", "")).strip()
         analyte = canonical_analyte(indicator)
 
         if analyte in primary_analytes:
@@ -147,9 +126,14 @@ def extract_supplemental_rules(
         if prefix is None:
             continue
 
-        sources: list[str] = [str(s) for s in entry.get("sources", [])]
+        # New schema: sources is a list of objects with a "url" field
+        raw_sources = entry.get("sources", [])
+        sources: list[str] = [
+            str(src["url"]) for src in raw_sources if isinstance(src, dict) and src.get("url")
+        ]
         primary_source_url = sources[0] if sources else None
-        entry_id = str(entry.get("id", ""))
+        # No "id" field in new schema; derive from name
+        entry_id = indicator.lower().replace("-", "_").replace(" ", "_")
 
         group_order = _GROUP_ORDER.get(analyte, [])
         sorted_ranges = sorted(
@@ -204,11 +188,10 @@ def extract_supplemental_rules(
                 "value_type": None,
                 "range_lower": range_lower,
                 "range_upper": range_upper,
-                "reference_type": _reference_type(analyte, group),
+                "reference_type": rng.get("reference_type"),
                 "source_priority_tier": None,
                 "source_url": primary_source_url,
                 "confidence": "CURATED",
-                "range_flag": "OK",
                 "source_origin": "explanations.json",
                 "source_entry_id": entry_id,
                 "range_group": group,
