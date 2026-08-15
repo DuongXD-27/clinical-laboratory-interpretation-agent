@@ -59,13 +59,13 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
     // huống này đi ngược mục tiêu — người có kết quả bình thường không nên rời
     // ứng dụng với cảm giác có điều gì cần lo lắng.
     return (
-      <div className="patient-card mt-5 p-5 sm:p-7">
+      <div className="questions-empty-state mt-5">
         <div className="section-heading">
           <span className="eyebrow">Câu hỏi gợi ý</span>
           <h2>Chuẩn bị cho buổi khám</h2>
         </div>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          Lần này không có chỉ số nào cần hỏi thêm.
+          Không có câu hỏi bổ sung được đề xuất cho phiếu này.
         </p>
       </div>
     );
