@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login, register, startGuestSession } from "@/lib/api";
 
@@ -43,7 +44,7 @@ export default function LoginPage() {
     if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
       return "Tên đăng nhập chỉ được dùng chữ, số và các ký tự _ . -";
     }
-    if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự.";
+    if (password.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự.";
     if (password !== confirmPassword) return "Hai lần nhập mật khẩu chưa khớp.";
     return null;
   }
@@ -103,6 +104,9 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-600">
           Đăng nhập, đăng ký, hoặc dùng thử ngay không cần tài khoản
         </p>
+        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-blue-700 hover:underline">
+          ← Về trang giới thiệu
+        </Link>
       </div>
 
       <div className="flex min-h-[438px] w-full max-w-sm flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(28,55,91,0.08)]">
@@ -156,7 +160,7 @@ export default function LoginPage() {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
             />
-            {mode === "register" && <p className="text-xs leading-5 text-slate-600">Ít nhất 6 ký tự.</p>}
+            {mode === "register" && <p className="text-xs leading-5 text-slate-600">Ít nhất 8 ký tự.</p>}
           </div>
 
           {mode === "register" && (

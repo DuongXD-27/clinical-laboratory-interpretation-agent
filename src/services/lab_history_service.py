@@ -41,6 +41,20 @@ class SaveReportResult:
     requires_date_confirmation: bool = False
 
 
+_CANONICAL_ANALYTE_FALLBACKS = {
+    "glucose": "Fasting plasma glucose",
+}
+
+
+def _resolve_canonical_analyte(repository: ReferenceRepository, analyte: str | None) -> str | None:
+    if not analyte:
+        return None
+    resolved = repository.resolve_analyte(analyte)
+    if resolved:
+        return resolved
+    return _CANONICAL_ANALYTE_FALLBACKS.get(analyte.strip().casefold())
+
+
 def _report_status(indicators: Iterable[object]) -> str:
     has_abnormal = False
     for indicator in indicators:
@@ -52,9 +66,10 @@ def _report_status(indicators: Iterable[object]) -> str:
             status = str(getattr(indicator, "status", ""))
             is_abnormal = bool(getattr(indicator, "is_abnormal", False))
             is_critical = bool(getattr(indicator, "is_critical", False))
-        if is_critical or status in {"critical_low", "critical_high"}:
+        normalized_status = status.casefold()
+        if is_critical or normalized_status in {"critical_low", "critical_high"}:
             return "CRITICAL"
-        if is_abnormal or status in {"low", "high"}:
+        if is_abnormal or normalized_status in {"low", "high"}:
             has_abnormal = True
     return "ABNORMAL" if has_abnormal else "NORMAL"
 
@@ -104,8 +119,9 @@ def _canonical_result_rows(
         raw_name = raw_input.name if raw_input is not None else indicator.name
         raw_value = raw_input.value if raw_input is not None else indicator.value
         raw_unit = raw_input.unit if raw_input is not None else indicator.unit
-        canonical = repository.resolve_analyte(indicator.analyte_canonical or raw_name or indicator.name)
-        canonical_name = canonical or indicator.analyte_canonical or indicator.name
+        canonical_source = indicator.analyte_canonical or raw_name or indicator.name
+        canonical = _resolve_canonical_analyte(repository, canonical_source)
+        canonical_name = canonical or indicator.analyte_canonical or raw_name or indicator.name
         canonical_unit = repository.normalize_unit(indicator.canonical_unit or raw_unit or indicator.unit)
         rows.append(
             {
@@ -294,10 +310,11 @@ def delete_report(db: Session, *, username: str, report_id: int) -> None:
 
 
 def _summary_row(report: LabReport) -> dict:
+    status = _report_status(report.indicators)
     return {
         "report_id": report.id,
         "test_date": report.test_date,
         "result_count": len(report.indicators),
-        "status": report.status,
+        "status": status,
         "created_at": report.created_at,
     }

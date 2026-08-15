@@ -290,6 +290,27 @@ async def test_report_status_priority(isolated_client):
 
 
 @pytest.mark.asyncio
+async def test_dashboard_summary_derives_status_from_indicators(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    saved = _save(
+        session_local,
+        "benhnhan",
+        "2026-08-11",
+        [{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "HIGH", "is_abnormal": True}],
+    )
+    with session_local() as session:
+        report = session.get(db_module.LabReport, saved.report_id)
+        report.status = "NORMAL"
+        session.commit()
+
+    response = await client.get("/api/v1/patient/me/dashboard", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["recent_reports"][0]["status"] == "ABNORMAL"
+
+
+@pytest.mark.asyncio
 async def test_delete_removes_report_and_decreases_count(isolated_client):
     client, session_local = isolated_client
     headers = await _auth_headers(client)

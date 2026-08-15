@@ -42,7 +42,7 @@ export default function PatientTrendsPage() {
 
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
-      router.replace("/");
+      router.replace("/login");
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage auth gate is client-only.
@@ -58,7 +58,7 @@ export default function PatientTrendsPage() {
         const response = await authFetch("/api/v1/patient/me/trends/analytes");
         if (response.status === 401) {
           clearSession();
-          router.replace("/");
+          router.replace("/login");
           return;
         }
         if (!response.ok) throw new Error("Chưa tải được danh sách chỉ số.");
@@ -94,7 +94,7 @@ export default function PatientTrendsPage() {
         );
         if (response.status === 401) {
           clearSession();
-          router.replace("/");
+          router.replace("/login");
           return;
         }
         if (!response.ok) throw new Error("Chưa tải được dữ liệu xu hướng.");
@@ -120,7 +120,7 @@ export default function PatientTrendsPage() {
         );
         if (response.status === 401) {
           clearSession();
-          router.replace("/");
+          router.replace("/login");
           return;
         }
         if (!response.ok) throw new Error("Phần giải thích xu hướng hiện chưa khả dụng.");
@@ -216,6 +216,9 @@ export default function PatientTrendsPage() {
               {eligibleCount === 0 ? (
                 <div className="empty-metrics mt-5">
                   <p className="font-medium text-slate-700">Xu hướng chỉ được hiển thị đối với các chỉ số có từ 3 kết quả trở lên.</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Hãy lưu ít nhất 3 phiếu khác nhau cho cùng một chỉ số; các phiếu trùng ngày và cùng bộ kết quả có thể được nhận diện là trùng lặp.
+                  </p>
                 </div>
               ) : trendLoading ? (
                 <div className="loading-message mt-5" role="status">
