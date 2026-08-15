@@ -190,6 +190,10 @@ async def test_generic_glucose_label_gets_the_unknown_question(monkeypatch):
     Chốt hành vi mong đợi sau chính sách fail-closed: hệ thống không đoán đó là
     mẫu đói, nên nói thẳng với bệnh nhân là chưa đối chiếu được và nhờ bác sĩ đọc
     giúp — thay vì im lặng bỏ qua dòng đó trên phiếu.
+
+    Nhãn ở đây PHẢI là `Glucose` trần. Đổi sang nhãn ghi rõ lúc đói là test mất
+    hết ý nghĩa: nó sẽ resolve bình thường, ra `status="normal"` và không sinh
+    câu hỏi nào.
     """
 
     monkeypatch.setattr("src.agents.nodes.analyzer_node.get_llm", lambda: None)
@@ -201,7 +205,7 @@ async def test_generic_glucose_label_gets_the_unknown_question(monkeypatch):
             "test_date": "2026-08-13",
             "language": "vi",
             "raw_indicators": [
-                {"name": "Fasting plasma glucose", "value": 5.0, "unit": "mmol/L"},
+                {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
             ],
         },
         {"configurable": {"thread_id": "test-questions-generic-glucose"}},
