@@ -26,7 +26,13 @@ export function formatMoment(value) {
       });
 }
 
-export function indicatorStatusText(status) {
+export function indicatorStatusText(status, critical_status) {
+  if (critical_status) {
+    const critNormalized = String(critical_status).toUpperCase();
+    if (critNormalized === "CRITICAL_HIGH") return "Nguy kịch – cao";
+    if (critNormalized === "CRITICAL_LOW") return "Nguy kịch – thấp";
+    if (critNormalized === "CRITICAL") return "Nguy kịch";
+  }
   const labels = {
     NORMAL: "Bình thường",
     LOW: "Thấp",

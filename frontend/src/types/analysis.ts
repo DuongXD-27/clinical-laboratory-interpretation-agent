@@ -12,6 +12,7 @@ export type IndicatorResult = {
   reference_low?: number | null;
   reference_high?: number | null;
   status: string;
+  critical_status?: "critical_low" | "critical_high" | null;
   is_abnormal: boolean;
   is_critical: boolean;
   explanation?: string;

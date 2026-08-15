@@ -26,6 +26,7 @@ class IndicatorAssessment(TypedDict, total=False):
     reference_low: float | None
     reference_high: float | None
     status: IndicatorStatus
+    critical_status: Literal["critical_low", "critical_high"] | None
     # Nhãn phân loại chi tiết, riêng theo từng chỉ số — vd "borderline_high",
     # "fasting_prediabetes", "critical_high". `status` ở trên chỉ là cờ THÔ
     # (dùng để tô màu badge / kích hoạt Gate 3), `category` mới là nhãn hiển
@@ -51,6 +52,7 @@ class IndicatorExplanation(TypedDict, total=False):
 
     indicator_name: str
     status: IndicatorStatus
+    critical_status: Literal["critical_low", "critical_high"] | None
     category: str  # đồng bộ với IndicatorAssessment.category, hiển thị lên UI
     is_abnormal: bool
     is_critical: bool

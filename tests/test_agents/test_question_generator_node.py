@@ -201,7 +201,7 @@ async def test_generic_glucose_label_gets_the_unknown_question(monkeypatch):
             "test_date": "2026-08-13",
             "language": "vi",
             "raw_indicators": [
-                {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
+                {"name": "Fasting plasma glucose", "value": 5.0, "unit": "mmol/L"},
             ],
         },
         {"configurable": {"thread_id": "test-questions-generic-glucose"}},

@@ -215,7 +215,7 @@ def _sort_key(indicator: Mapping[str, Any]) -> tuple:
     """
 
     status = str(indicator.get("status") or "")
-    is_critical = status in _CRITICAL_STATUSES
+    is_critical = bool(indicator.get("is_critical")) or (status in _CRITICAL_STATUSES)
 
     return (
         0 if is_critical else 1,
@@ -273,8 +273,10 @@ def generate_questions(
 
     for indicator in indicators:
         status = str(indicator.get("status") or "")
+        is_critical = bool(indicator.get("is_critical", False))
+        is_abnormal = bool(indicator.get("is_abnormal", False))
 
-        if status in _CRITICAL_STATUSES or status in _ABNORMAL_STATUSES:
+        if is_critical or is_abnormal or status in _CRITICAL_STATUSES or status in _ABNORMAL_STATUSES:
             needs_question.append(indicator)
         elif status == "unknown":
             unknown_indicators.append(indicator)
@@ -284,7 +286,13 @@ def generate_questions(
 
     for indicator in sorted(needs_question, key=_sort_key)[:MAX_QUESTIONS]:
         status = str(indicator.get("status") or "")
-        template = library.template_for(indicator.get("analyte_id"), status)
+        is_critical = bool(indicator.get("is_critical", False))
+        critical_status = str(indicator.get("critical_status") or "")
+        effective_status = critical_status if (is_critical and critical_status) else status
+
+        template = library.template_for(indicator.get("analyte_id"), effective_status)
+        if not template and effective_status != status:
+            template = library.template_for(indicator.get("analyte_id"), status)
 
         if not template:
             continue
@@ -294,7 +302,7 @@ def generate_questions(
                 text=_render(template, indicator),
                 priority=(
                     PRIORITY_CRITICAL
-                    if status in _CRITICAL_STATUSES
+                    if is_critical or status in _CRITICAL_STATUSES
                     else PRIORITY_ABNORMAL
                 ),
                 display_order=order,

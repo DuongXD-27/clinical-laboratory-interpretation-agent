@@ -198,9 +198,10 @@ async def test_api_03_critical_serialization(client, monkeypatch):
                     "name": "Potassium",
                     "value": 6.5,
                     "unit": "mmol/L",
-                    "reference_low": None,
-                    "reference_high": None,
-                    "status": "critical_high",
+                    "reference_low": 3.5,
+                    "reference_high": 5.0,
+                    "status": "high",
+                    "critical_status": "critical_high",
                     "is_abnormal": True,
                     "is_critical": True,
                     "explanation": "",
@@ -222,7 +223,8 @@ async def test_api_03_critical_serialization(client, monkeypatch):
     data = response.json()
     assert response.status_code == 200
     assert data["has_critical_values"] is True
-    assert data["indicators"][0]["status"] == "critical_high"
+    assert data["indicators"][0]["status"] == "high"
+    assert data["indicators"][0]["critical_status"] == "critical_high"
     assert data["critical_alerts"][0]["indicator_name"] == "Potassium"
 
 

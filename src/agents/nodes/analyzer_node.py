@@ -15,6 +15,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.agents.state import AgentState, IndicatorExplanation, RetrievedChunk
 from src.config import get_settings
+from src.services.analyte_catalog import get_analyte_catalog
 from src.services.llm import get_llm
 from src.services.medical_knowledge_retriever import (
     MedicalKnowledgeRetriever,
@@ -51,16 +52,22 @@ def _normalized_text(value: str) -> str:
     return "".join(character for character in decomposed if not unicodedata.combining(character))
 
 
-def ensure_reference_qualification(explanation: str, status: str) -> str:
+def ensure_reference_qualification(
+    explanation: str,
+    status: str,
+    critical_status: str | None = None,
+    is_critical: bool = False,
+) -> str:
     """Guarantee a generic status boundary without replacing generated content."""
-    qualifier = _STATUS_QUALIFIERS.get(status)
+    effective_status = critical_status if (is_critical and critical_status) else status
+    qualifier = _STATUS_QUALIFIERS.get(effective_status)
     if not qualifier:
         return explanation
 
     normalized = _normalized_text(explanation)
     is_qualified = (
         "khoang tham chieu" in normalized
-        if status in {"normal", "low", "high"}
+        if effective_status in {"normal", "low", "high"}
         else "nguong canh bao nguy kich" in normalized
     )
     return explanation if is_qualified else f"{qualifier} {explanation}".strip()
@@ -164,7 +171,31 @@ async def process_single_indicator(
     value = indicator.get("value")
     unit = str(indicator.get("unit", ""))
     status = str(indicator.get("status", "unknown"))
-    curated_explanation = str(indicator.get("explanation", "")).strip()
+
+    catalog = None
+    try:
+        catalog = get_analyte_catalog()
+    except Exception:
+        pass
+    definition = catalog.resolve(name) if catalog else None
+    if definition is None and catalog and analyte_id:
+        definition = catalog.get(analyte_id)
+
+    is_critical = bool(indicator.get("is_critical", False))
+    critical_status = indicator.get("critical_status")
+    if not critical_status and is_critical:
+        critical_status = "critical_high" if status == "high" else "critical_low" if status == "low" else "critical_high"
+
+    raw_explanation = str(indicator.get("explanation", "")).strip()
+    if definition is not None:
+        catalog_explanation = definition.explanation_for_status(status, critical_status=critical_status)
+        if raw_explanation and raw_explanation != definition.curated_explanation:
+            curated_explanation = raw_explanation
+        else:
+            curated_explanation = catalog_explanation or raw_explanation
+    else:
+        curated_explanation = raw_explanation
+
     fallback_explanation = curated_explanation or load_templates().fallback_explanation
 
     chunks = await _retrieve_optional_context(
@@ -175,6 +206,8 @@ async def process_single_indicator(
         status=status,
     )
     known_sources = _known_sources(indicator, chunks)
+    if definition and not known_sources:
+        known_sources = list(definition.sources)
     rag_context = "\n\n".join(chunk.get("text", "") for chunk in chunks if chunk.get("text"))
     context = rag_context or curated_explanation
 
@@ -239,14 +272,20 @@ async def process_single_indicator(
         except Exception as exc:
             logger.error("LLM explanation failed for %s; using curated fallback: %s", name, exc)
 
-    explanation_text = ensure_reference_qualification(explanation_text, status)
+    explanation_text = ensure_reference_qualification(
+        explanation_text,
+        status,
+        critical_status=critical_status,
+        is_critical=is_critical,
+    )
 
     explanation: IndicatorExplanation = {
         "indicator_name": name,
         "status": status,
+        "critical_status": critical_status,
         "category": indicator.get("category", "unknown"),
         "is_abnormal": indicator.get("is_abnormal", False),
-        "is_critical": indicator.get("is_critical", False),
+        "is_critical": is_critical,
         "explanation": explanation_text,
         # Never trust model-generated URLs. Only return sources supplied by the
         # authoritative catalog or retrieved document metadata.
