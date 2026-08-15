@@ -354,6 +354,9 @@ def list_reports(
             stmt.options(
                 selectinload(LabReport.indicators),
                 selectinload(LabReport.patient),
+                # doctor_views nạp sẵn để `_is_reviewed()` không lazy-load từng
+                # dòng — cùng lý do với `_report_ids_with_notes()` bên dưới.
+                selectinload(LabReport.doctor_views),
             )
             .order_by(
                 LabReport.test_date.desc(),
@@ -366,8 +369,11 @@ def list_reports(
         .all()
     )
 
+    # Một truy vấn cho cả trang, thay vì hai truy vấn mỗi phiếu.
+    with_notes = _report_ids_with_notes(db, [report.id for report in rows])
+
     return total, [
-        _to_summary(report)
+        _to_summary(report, has_notes=report.id in with_notes)
         for report in rows
     ]
 
@@ -460,14 +466,45 @@ def _notes_for_report(report: LabReport) -> list[DoctorNote]:
     )
 
 
-def _is_reviewed(report: LabReport) -> bool:
+def _report_ids_with_notes(
+    db: Session,
+    report_ids: Sequence[int],
+) -> set[int]:
+    """Trong một truy vấn, trả về những phiếu nào đang có ghi chú.
+
+    Dùng cho màn danh sách. Trước đây `_to_summary()` gọi `_notes_for_report()`
+    hai lần cho mỗi phiếu (một lần trực tiếp, một lần qua `_is_reviewed()`), tức
+    danh sách 20 phiếu bắn 40 truy vấn phụ. Với SQLite trên cùng đĩa thì không ai
+    thấy; với Postgres đặt ngoài mạng thì mỗi truy vấn là một lượt round trip và
+    màn lịch sử phình theo số phiếu.
+
+    Chỉ cần biết CÓ hay KHÔNG nên select đúng `target_id`, không lấy nội dung.
+    """
+
+    if not report_ids:
+        return set()
+
+    return set(
+        db.scalars(
+            select(DoctorNote.target_id).where(
+                DoctorNote.target_type == DoctorNote.TARGET_REPORT,
+                DoctorNote.target_id.in_(report_ids),
+            )
+        )
+    )
+
+
+def _is_reviewed(report: LabReport, *, has_notes: bool) -> bool:
     """Đã xem HOẶC đã có ghi chú.
 
     Một phiếu có ghi chú thì hiển nhiên đã được xem, kể cả khi bác sĩ không bấm
     nút đánh dấu.
+
+    `has_notes` truyền vào thay vì tự truy vấn, để caller quyết định nạp theo lô
+    (màn danh sách) hay nạp lẻ (màn chi tiết).
     """
 
-    return bool(report.doctor_views) or bool(_notes_for_report(report))
+    return bool(report.doctor_views) or has_notes
 
 
 def question_to_schema(question: ReportQuestion) -> ReportQuestionSchema:
@@ -506,8 +543,14 @@ def note_to_schema(note: DoctorNote) -> DoctorNoteSchema:
 
 def _to_summary(
     report: LabReport,
+    *,
+    has_notes: bool,
 ) -> LabReportSummarySchema:
-    """Convert ORM report thành history-list item."""
+    """Convert ORM report thành history-list item.
+
+    `has_notes` do caller nạp theo lô bằng `_report_ids_with_notes()`, để hàm này
+    không sinh truy vấn phụ nào cho mỗi dòng.
+    """
 
     return LabReportSummarySchema(
         id=report.id,
@@ -527,8 +570,8 @@ def _to_summary(
         has_critical_values=report.has_critical_values,
         source=_derive_source(report),
         summary=report.summary,
-        reviewed_by_doctor=_is_reviewed(report),
-        has_doctor_notes=bool(_notes_for_report(report)),
+        reviewed_by_doctor=_is_reviewed(report, has_notes=has_notes),
+        has_doctor_notes=has_notes,
     )
 
 
@@ -536,6 +579,10 @@ def to_detail(
     report: LabReport,
 ) -> LabReportDetailSchema:
     """Convert ORM report thành response detail đầy đủ."""
+
+    # Nạp một lần rồi dùng lại cho cả ba chỗ (danh sách ghi chú, cờ đã xem, cờ có
+    # ghi chú). Trước đây mỗi chỗ tự truy vấn lại cùng một thứ.
+    notes = _notes_for_report(report)
 
     return LabReportDetailSchema(
         id=report.id,
@@ -605,7 +652,7 @@ def to_detail(
 
         doctor_notes=[
             note_to_schema(note)
-            for note in _notes_for_report(report)
+            for note in notes
         ],
 
         doctor_views=[
@@ -622,8 +669,8 @@ def to_detail(
             )
         ],
 
-        reviewed_by_doctor=_is_reviewed(report),
-        has_doctor_notes=bool(_notes_for_report(report)),
+        reviewed_by_doctor=_is_reviewed(report, has_notes=bool(notes)),
+        has_doctor_notes=bool(notes),
     )
 
 

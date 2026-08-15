@@ -179,9 +179,61 @@ kiểm từng chuỗi.
 Điều cần nói với Dương: **bản gộp `main` chưa ai chạy thử trên trình duyệt.** Suite
 387 test xanh không phát hiện được cả ba lỗi này.
 
-## 8. Rủi ro và điểm cần chốt còn lại
+## 8. Production đã chuyển sang Postgres (15/08)
 
-1. **Chưa phát hành được lên production.** Tài liệu nghiệp vụ ghi rõ chức năng ghi chú không nên phát hành trước khi dữ liệu được lưu bền vững. SQLite trên Railway không có Volume, mỗi lần redeploy là mất sạch — mất ghi chú của bác sĩ nghiêm trọng hơn mất một bản giải thích tự động vốn tạo lại được. Cần Postgres trước.
+Rủi ro số 1 ở mục dưới đã được xử lý. Tài liệu nghiệp vụ yêu cầu không phát hành
+chức năng ghi chú trước khi dữ liệu được lưu bền vững; điều kiện đó giờ đã đạt.
+
+`DATABASE_URL` trên Railway trỏ sang **Neon Postgres, region AWS Europe Central 1
+(Frankfurt)**. Chọn Postgres ngoài thay vì Postgres của Railway vì hai lý do: nó
+không ăn vào credit Railway đang cạn, và dữ liệu sống độc lập với host — nếu phải
+đổi host thì chỉ trỏ host mới vào cùng `DATABASE_URL`.
+
+**Không sửa dòng code nào.** Toàn bộ phần SQLite-only đã nằm sau `_is_sqlite`
+guard (`PRAGMA foreign_keys`, `connect_args`, `_migrate_sqlite_schema()`), và
+`psycopg2-binary` đã có trong `requirements.txt` từ trước. `create_all()` tạo đủ 9
+bảng, `seed_demo_users()` chạy đúng trên Postgres.
+
+Lưu ý cho người đọc code: `src/config.py` vẫn mặc định
+`sqlite:///./data/app.db`. Đó chỉ là giá trị fallback cho máy dev — **production
+không dùng SQLite nữa**.
+
+### TC-02 lần đầu chạy thật trên production
+
+Trước đây TC-02 chỉ pass ở local bằng `TestDatabase.restart()`, còn trên Railway
+thì chắc chắn fail vì không có Volume. Đã kiểm bằng dữ liệu thật:
+
+```
+Tạo      đăng ký duy_pg_798176, phiếu #1, tick 1 câu hỏi,
+         ghi chú bác sĩ, đánh dấu đã xem
+Redeploy 55f978a9  BUILDING -> DEPLOYING -> SUCCESS
+Sau đó   login lại 200
+         1 phiếu còn nguyên, reviewed_by_doctor=True, has_doctor_notes=True
+         2 câu hỏi, 1 câu vẫn được tick
+         ghi chú còn đủ tên "bacsi" và mốc 2026-08-15T12:49:40
+```
+
+Với SQLite thì lần redeploy đó sẽ xoá sạch cả ba thứ trên.
+
+### Hai điều về vận hành Railway
+
+Credit còn **"20 days or $3.78"**. Đây là lý do build kích từ git push bị dừng ở
+`NEEDS_APPROVAL` và phải bấm duyệt tay trên dashboard — hành vi mới, các bản
+trước 12/08 vẫn tự chạy.
+
+Redeploy kích từ CLI **không** đi qua cửa duyệt đó:
+
+```bash
+railway deployment redeploy -s vmec-05-api -e production -y
+# thêm --from-source nếu muốn lấy commit mới nhất thay vì redeploy commit đang chạy
+```
+
+Dữ liệu giờ nằm ngoài Railway nên khi credit hết sẽ không mất gì, nhưng app vẫn
+tắt. Việc xin credit thuộc BTC.
+
+## 9. Rủi ro và điểm cần chốt còn lại
+
+1. ~~**Chưa phát hành được lên production.**~~ **Đã xử lý 15/08, xem mục 8.** Production dùng Neon Postgres (Frankfurt), TC-02 đã chứng minh tài khoản, câu hỏi đã tick và ghi chú bác sĩ sống qua redeploy. Rủi ro còn lại không phải mất dữ liệu mà là credit Railway cạn.
 2. **Xoá phiếu: hai tài liệu chốt ngược nhau.** Tài liệu câu hỏi nói cascade, tài liệu ghi chú nói có thể phải chặn xoá với phiếu đã có ghi chú. Hiện **chưa có endpoint xoá phiếu nào** nên chưa phải chọn. Hành vi thật của DB đã được ghi lại bằng test: câu hỏi cascade theo phiếu, còn ghi chú thì không (vì `target_id` không phải FK thật) nên sẽ thành mồ côi. Cần Dương chốt khi làm chức năng xoá.
 3. **Sửa phiếu chưa xử lý.** Nếu sau này cho sửa giá trị (ví dụ sửa lỗi OCR làm đổi trạng thái), bộ câu hỏi cũ sẽ không còn khớp. Chưa có luật nào cho việc sinh lại.
 4. **Chưa gộp nhóm chỉ số liên quan lâm sàng.** LDL, HDL và Cholesterol toàn phần cùng lệch sẽ sinh ba câu riêng, chiếm ba suất trong năm. Luật gộp cần đầu vào chuyên môn, thuộc miền của Dương.
