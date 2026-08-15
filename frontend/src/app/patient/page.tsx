@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import HistoryPanel from "@/components/HistoryPanel";
-import MetricInput from "@/components/MetricInput";
-import MetricSelector, { type MetricDefinition } from "@/components/MetricSelector";
-import OcrReviewPanel from "@/components/OcrReviewPanel";
-import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
-import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
-import type { AnalysisResult } from "@/types/analysis";
+import { formatDate, formatMoment, reportStatusText, reportTone } from "@/lib/patientUi.mjs";
 
 type DashboardReport = {
   report_id: number;
@@ -26,589 +20,156 @@ type DashboardSummary = {
   recent_reports: DashboardReport[];
 };
 
-function sourceHostname(source: string) {
-  try {
-    return new URL(source).hostname;
-  } catch {
-    return source;
-  }
-}
-
-function metricInputId(name: string) {
-  return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
-}
-
-function reportTone(status: string) {
-  if (status === "CRITICAL") return "critical";
-  if (status === "ABNORMAL") return "abnormal";
-  return "normal";
-}
-
-function reportStatusText(status: string) {
-  if (status === "CRITICAL") return "Có chỉ số nguy kịch";
-  if (status === "ABNORMAL") return "Có chỉ số bất thường";
-  return "Bình thường";
-}
-
-function indicatorStatusText(status: string) {
-  if (status === "HIGH") return "Cao";
-  if (status === "LOW") return "Thấp";
-  if (status === "NORMAL") return "Bình thường";
-  return status;
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "Chưa có";
-  const [year, month, day] = value.split("-");
-  return day && month && year ? `${day}/${month}/${year}` : value;
-}
-
-function formatMoment(value: string) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-}
-
-export default function PatientPage() {
+export default function PatientDashboardPage() {
   const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gate3Acknowledged, setGate3Acknowledged] = useState(false);
-  const [inputMode, setInputMode] = useState<"manual" | "ocr">("manual");
-  const [ocrPanelKey, setOcrPanelKey] = useState(0);
-  const [manualMeta, setManualMeta] = useState({ age: "35", gender: "male", date: "" });
-  const [manualValues, setManualValues] = useState<Record<string, string>>({});
-  const [selectedManualMetrics, setSelectedManualMetrics] = useState<string[]>([]);
-  const [selectorOpen, setSelectorOpen] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
-  // Tăng sau mỗi lần lưu phiếu để panel lịch sử nạp lại, không phải bấm Lọc.
-  const [historyRefresh, setHistoryRefresh] = useState(0);
 
-  useEffect(() => {
-    const role = getRole();
-    // Khách dùng chung màn này với bệnh nhân (ma trận cho khách nhập chỉ số và
-    // tải ảnh); phần lịch sử mới là chỗ phân biệt. Nếu chỉ cho `patient` vào
-    // đây thì nút "Dùng thử với tư cách khách" ở trang đăng nhập thành vòng lặp
-    // chết: mở phiên khách rồi bị đá ngay về `/`.
-    if (!getToken() || (role !== "patient" && role !== "guest")) {
-      router.replace("/login");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is client-only.
-    setUsername(getUsername());
-    setIsGuest(role === "guest");
-    setCheckingAuth(false);
-  }, [router]);
-
-  const loadDashboard = async () => {
-    setDashboardError(null);
-    const response = await authFetch("/api/v1/patient/me/dashboard");
-    if (response.status === 401) {
-      clearSession();
-      router.replace("/login");
-      return;
-    }
-    if (!response.ok) {
-      setDashboardError("Chưa tải được tổng quan hồ sơ.");
-      return;
-    }
-    setDashboard(await response.json());
-  };
-
-  useEffect(() => {
-    if (checkingAuth) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch dashboard after client auth gate.
-    void loadDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once after auth gate opens.
-  }, [checkingAuth]);
-
-  function handleLogout() {
-    clearSession();
-    router.replace("/login");
-  }
-
-  function handleReset() {
-    setResult(null);
-    setError(null);
-    setGate3Acknowledged(false);
-    if (inputMode === "manual") {
-      setManualValues({});
-      setSelectedManualMetrics([]);
-      setSelectorOpen(false);
-    } else {
-      setOcrPanelKey((current) => current + 1);
-    }
-  }
-
-  function addManualMetric(metric: MetricDefinition) {
-    setSelectedManualMetrics((current) => current.includes(metric.name) ? current : [...current, metric.name]);
-  }
-
-  function removeManualMetric(name: string) {
-    setSelectedManualMetrics((current) => current.filter((item) => item !== name));
-    setManualValues((current) => {
-      const next = { ...current };
-      delete next[name];
-      return next;
-    });
-  }
-
-  const runAnalyze = async (body: unknown) => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setResult(null);
-    setGate3Acknowledged(false);
     try {
-      const response = await authFetch("/api/v1/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
+      const response = await authFetch("/api/v1/patient/me/dashboard");
       if (response.status === 401) {
         clearSession();
         router.replace("/login");
         return;
       }
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        const detail = typeof payload?.detail === "string" ? payload.detail : null;
-        throw new Error(response.status >= 500
-          ? "Chưa thể phân tích kết quả lúc này. Vui lòng thử lại sau."
-          : (detail ?? "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại."));
-      }
-      const analysed: AnalysisResult = await response.json();
-      setResult(analysed);
-
-      void loadDashboard();
-
-      if (analysed.saved_report_id) {
-           setHistoryRefresh((current) => current + 1);
-      }
+      if (!response.ok) throw new Error("Chưa tải được tổng quan kết quả xét nghiệm.");
+      setDashboard(await response.json());
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "Đã xảy ra lỗi. Vui lòng thử lại.");
+      setError(caught instanceof Error ? caught.message : "Chưa tải được tổng quan kết quả xét nghiệm.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const handleManualAnalyze = async () => {
-    const age = Number(manualMeta.age);
-    if (!Number.isInteger(age) || age < 18 || age > 60) {
-      setError("Dữ liệu tham chiếu hiện hỗ trợ người từ 18 đến 60 tuổi.");
+  useEffect(() => {
+    const role = getRole();
+    if (!getToken() || (role !== "patient" && role !== "guest")) {
+      router.replace("/login");
       return;
     }
-    if (!manualMeta.date) {
-      setError("Hãy chọn ngày xét nghiệm.");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage session values are client-only.
+    setUsername(getUsername());
+    setIsGuest(role === "guest");
+    if (role === "guest") {
+      setLoading(false);
       return;
     }
+    void loadDashboard();
+  }, [loadDashboard, router]);
 
-    try {
-      const indicators = buildManualIndicators(manualValues);
-      await runAnalyze({
-        patient_age: age,
-        patient_gender: manualMeta.gender,
-        test_date: manualMeta.date,
-        language: "vi",
-        indicators,
-      });
-    } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "Dữ liệu nhập tay không hợp lệ.");
-    }
-  };
-
-  if (checkingAuth) return null;
-
-  const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
-  const hasCritical = (result?.critical_alerts.length ?? 0) > 0;
-  const showCriticalBanner = hasCritical && !gate3Acknowledged;
   const latestReport = dashboard?.recent_reports[0] ?? null;
-  const latestTone = latestReport ? reportTone(latestReport.status) : "normal";
 
   return (
-    <main className="patient-shell">
-      <div className="patient-container">
-        <header className="patient-header">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <div className="brand-mark" aria-hidden="true">+</div>
-            <div className="min-w-0">
-              <h1>Phân Tích Sức Khỏe AI</h1>
-              <p className="truncate">
-                Xin chào,{" "}
-                <span className="font-medium text-slate-700">
-                  {isGuest ? "bạn đang dùng thử (phiên khách)" : username}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="patient-header-actions">
-            <Link href="/patient/profile" className="secondary-button px-3 py-2.5 sm:px-4">
-              Hồ sơ
-            </Link>
-            <Link href="/patient/history" className="secondary-button px-3 py-2.5 sm:px-4">
-              Lịch sử
-            </Link>
-            <button type="button" onClick={handleLogout} className="text-button px-2 py-2.5 sm:px-3">
-              {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
-            </button>
-          </div>
-        </header>
-
-        {isGuest && (
-          <div className="info-message" role="status">
-            <p className="font-semibold text-slate-800">Bạn đang dùng thử với tư cách khách</p>
-            <p className="mt-1">
-              Kết quả phân tích <strong>không được lưu lại</strong> — thoát phiên là mất. Đăng ký
-              tài khoản nếu muốn xem lại lịch sử xét nghiệm của mình về sau.
-            </p>
-          </div>
-        )}
-
-        <div className="intro-copy">
-          <span className="eyebrow">Kết quả xét nghiệm của bạn</span>
-          <h2>Hiểu rõ hơn các chỉ số sức khỏe</h2>
+    <div className="dashboard-layout">
+      <section className="dashboard-welcome">
+        <div>
+          <span className="eyebrow">Tổng quan sức khỏe</span>
+          <h2>Xin chào, {isGuest ? "bạn" : username || "bạn"}</h2>
+          <p>Tổng quan kết quả xét nghiệm của bạn</p>
         </div>
+        <Link href="/patient/analysis" className="primary-button dashboard-primary-cta">
+          <span aria-hidden="true">+</span> Phân tích kết quả mới
+        </Link>
+      </section>
 
-        <section className="patient-card p-5 sm:p-7" aria-labelledby="dashboard-title">
-          <div className="section-heading">
-            <h2 id="dashboard-title">Tổng quan sức khỏe</h2>
-            <p>Theo dõi số lần xét nghiệm đã lưu và truy cập nhanh hồ sơ của bạn.</p>
+      {isGuest ? (
+        <section className="patient-card p-5 sm:p-7">
+          <div className="guest-dashboard-state">
+            <div className="guest-dashboard-icon" aria-hidden="true">+</div>
+            <div>
+              <h3>Bạn đang dùng thử với tư cách khách</h3>
+              <p>Kết quả phân tích không được lưu sau khi thoát phiên. Bạn vẫn có thể nhập tay hoặc tải ảnh phiếu xét nghiệm để trải nghiệm.</p>
+            </div>
+            <Link href="/patient/analysis" className="secondary-button">Bắt đầu phân tích</Link>
           </div>
-          {dashboardError && <div role="alert" className="error-message mt-4">{dashboardError}</div>}
-          {!dashboard && !dashboardError ? (
-            <div className="loading-message mt-4" role="status">Đang tải tổng quan...</div>
-          ) : dashboard && (
-            <>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="summary-box">
-                  <p className="text-sm font-medium text-slate-500">Tổng số lần xét nghiệm</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-950">{dashboard.total_reports}</p>
-                </div>
-                <div className="summary-box">
-                  <p className="text-sm font-medium text-slate-500">Lần gần nhất</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-950">{formatDate(dashboard.latest_test_date)}</p>
-                </div>
-                <div className="summary-box">
-                  <p className="text-sm font-medium text-slate-500">Tình trạng phiếu mới nhất</p>
-                  <p className="mt-2 text-base font-bold text-slate-950">
-                    {latestReport ? reportStatusText(latestReport.status) : "Chưa có dữ liệu"}
-                  </p>
-                </div>
-              </div>
-              {latestReport ? (
-                <div className={`result-card result-card-${latestTone} mt-5`}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">Phiếu xét nghiệm mới nhất</p>
-                      <h3 className="mt-1 text-lg font-semibold text-slate-950">{formatDate(latestReport.test_date)}</h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {latestReport.result_count} chỉ số{formatMoment(latestReport.created_at) ? ` · tạo lúc ${formatMoment(latestReport.created_at)}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`status-badge status-${latestTone}`}>{reportStatusText(latestReport.status)}</span>
-                      <Link href={`/patient/history/${latestReport.report_id}`} className="secondary-button px-3 py-2">
-                        Xem chi tiết
-                      </Link>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm leading-6 text-slate-600">
-                    Mở phiếu mới nhất để xem từng chỉ số, nguồn tham khảo và các câu hỏi gợi ý mang đi khám.
-                  </p>
-                </div>
-              ) : (
-                <div className="empty-metrics mt-5">
-                  <p className="font-medium text-slate-700">Bạn chưa có kết quả xét nghiệm nào được lưu.</p>
-                </div>
-              )}
-              <div className="quick-links mt-5">
-                <a href="#patient-history" className="text-button">Xem toàn bộ lịch sử</a>
-                <Link href="/patient/profile" className="text-button">Hồ sơ cá nhân</Link>
-                <Link href="/patient/trends" className="text-button">Xu hướng chỉ số</Link>
-              </div>
-            </>
-          )}
         </section>
+      ) : loading ? (
+        <section className="patient-card p-5 sm:p-7">
+          <div className="loading-message" role="status">Đang tải tổng quan...</div>
+        </section>
+      ) : error ? (
+        <section className="patient-card p-5 sm:p-7">
+          <div className="error-message" role="alert">{error}</div>
+          <button type="button" onClick={() => void loadDashboard()} className="secondary-button mt-4">Thử lại</button>
+        </section>
+      ) : dashboard ? (
+        <>
+          <section className="dashboard-summary-grid" aria-label="Tóm tắt kết quả xét nghiệm">
+            <article className="dashboard-summary-card">
+              <span className="dashboard-summary-icon" aria-hidden="true">▤</span>
+              <div><p>Tổng số lần xét nghiệm</p><strong>{dashboard.total_reports}</strong></div>
+            </article>
+            <article className="dashboard-summary-card">
+              <span className="dashboard-summary-icon" aria-hidden="true">◷</span>
+              <div><p>Lần gần nhất</p><strong>{formatDate(dashboard.latest_test_date)}</strong></div>
+            </article>
+            <article className="dashboard-summary-card">
+              <span className="dashboard-summary-icon" aria-hidden="true">✓</span>
+              <div><p>Tình trạng phiếu gần nhất</p><strong className="dashboard-status-text">{latestReport ? reportStatusText(latestReport.status) : "Chưa có dữ liệu"}</strong></div>
+            </article>
+          </section>
 
-        {!isGuest && (
-          <div className="mt-6">
-            <HistoryPanel
-              id="patient-history"
-              mode="patient"
-              pageSize={5}
-              refreshToken={historyRefresh}
-              onUnauthorized={() => {
-                clearSession();
-                router.replace("/login");
-              }}
-            />
-          </div>
-        )}
-
-        <div className="input-workspace">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-base font-semibold text-slate-950">Nhập kết quả xét nghiệm</h2>
-            <button type="button" onClick={handleReset} className="secondary-button w-full sm:w-auto">
-              Xóa dữ liệu đang nhập
-            </button>
-          </div>
-
-          <div className="mode-tabs" role="tablist" aria-label="Cách nhập kết quả xét nghiệm">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={inputMode === "manual"}
-              aria-controls="manual-panel"
-              onClick={() => setInputMode("manual")}
-              className={inputMode === "manual" ? "active" : ""}
-            >
-              Nhập tay
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={inputMode === "ocr"}
-              aria-controls="upload-panel"
-              onClick={() => setInputMode("ocr")}
-              className={inputMode === "ocr" ? "active" : ""}
-            >
-              Tải ảnh phiếu
-            </button>
-          </div>
-
-          {inputMode === "manual" && (
-            <section id="manual-panel" role="tabpanel" className="patient-card p-5 sm:p-7" aria-labelledby="manual-title">
-            <div className="section-heading">
-              <span className="eyebrow">Nhập kết quả</span>
-              <h2 id="manual-title">Thông tin xét nghiệm</h2>
-              <p>Điền thông tin chung, sau đó chỉ thêm những chỉ số bạn muốn phân tích.</p>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <label className="field-label" htmlFor="manual-age">
-                Tuổi
-                <input
-                  id="manual-age"
-                  type="number"
-                  min="18"
-                  max="60"
-                  value={manualMeta.age}
-                  onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))}
-                  className="form-control mt-2"
-                />
-              </label>
-              <label className="field-label" htmlFor="manual-gender">
-                Giới tính
-                <select
-                  id="manual-gender"
-                  value={manualMeta.gender}
-                  onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))}
-                  className="form-control mt-2"
-                >
-                  <option value="male">Nam</option>
-                  <option value="female">Nữ</option>
-                </select>
-              </label>
-              <label className="field-label" htmlFor="manual-date">
-                Ngày xét nghiệm
-                <input
-                  id="manual-date"
-                  type="date"
-                  value={manualMeta.date}
-                  onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))}
-                  className="form-control mt-2"
-                />
-              </label>
-            </div>
-
-            <div className="mt-8 border-t border-slate-100 pt-7">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-950">Chỉ số xét nghiệm</h3>
-                  <p className="mt-1 text-sm text-slate-500">Chọn các chỉ số có trên phiếu của bạn.</p>
-                </div>
-                <button type="button" onClick={() => setSelectorOpen(true)} className="secondary-button w-full sm:w-auto">
-                  <span aria-hidden="true">+</span> Thêm chỉ số
-                </button>
-              </div>
-
-              {selectedMetrics.length === 0 ? (
-                <div className="empty-metrics mt-5">
-                  <div className="empty-metrics-icon" aria-hidden="true">+</div>
-                  <p className="font-medium text-slate-700">Bạn chưa thêm chỉ số xét nghiệm.</p>
-                  <button type="button" onClick={() => setSelectorOpen(true)} className="text-button mt-2">
-                    Thêm chỉ số đầu tiên
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {selectedMetrics.map((metric) => (
-                    <MetricInput
-                      key={metric.name}
-                      id={`manual-${metricInputId(metric.name)}`}
-                      name={metric.name}
-                      label={metric.label}
-                      unit={metric.unit}
-                      value={manualValues[metric.name] ?? ""}
-                      onValueChange={(value) => setManualValues((current) => ({ ...current, [metric.name]: value }))}
-                      onRemove={() => removeManualMetric(metric.name)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button type="button" onClick={handleManualAnalyze} disabled={loading} className="primary-button mt-6 w-full">
-              {loading ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
-            </button>
-            </section>
-          )}
-
-          {inputMode === "ocr" && (
-            <div id="upload-panel" role="tabpanel">
-              <OcrReviewPanel
-                key={ocrPanelKey}
-                onResult={(data) => {
-                  setResult(data);
-                  setError(null);
-                  setGate3Acknowledged(false);
-                  void loadDashboard();
-                  if (data.saved_report_id) setHistoryRefresh((current) => current + 1);
-                }}
-                onUnauthorized={() => {
-                  clearSession();
-                  router.replace("/login");
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {error && <div role="alert" className="error-message">{error}</div>}
-
-        {result && (
-          <section className="results-section" aria-labelledby="result-title">
-            {showCriticalBanner && (
-              <div className="critical-banner" role="alert">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-100">Cần chú ý ngay</p>
-                  <h2 className="mt-1 text-xl font-bold">Cảnh báo sức khỏe nghiêm trọng</h2>
-                  <div className="mt-2 space-y-1 text-sm leading-6 text-red-50">
-                    {result.critical_alerts.map((alert, index) => <p key={index}>{alert.message}</p>)}
-                  </div>
-                </div>
-                <button type="button" onClick={() => setGate3Acknowledged(true)} className="critical-button">
-                  Tôi sẽ liên hệ bác sĩ
-                </button>
-              </div>
-            )}
-
-            <div className="patient-card p-5 sm:p-7">
-              <div className="section-heading">
-                <span className="eyebrow">Kết quả phân tích</span>
-                <h2 id="result-title">Chi tiết các chỉ số</h2>
-                <p>Hệ thống đã phân tích {result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.</p>
-              </div>
-
-              {result.summary && <div className="summary-box mt-5">{result.summary}</div>}
-
-              {(result.out_of_scope_indicators?.length ?? 0) > 0 && (
-                <div className="info-message mt-5" role="status">
-                  <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
-                  <p className="mt-1">
-                    {result.out_of_scope_indicators?.join(", ")} hiện tại chưa được hỗ trợ, nên chưa được đưa vào phần phân tích.
-                  </p>
-                </div>
-              )}
-
-              {result.duplicate && (
-                <div className="info-message mt-5" role="status">
-                  Kết quả xét nghiệm này có vẻ đã được lưu trước đó.
-                  {result.existing_report_id && (
-                    <Link href={`/patient/history/${result.existing_report_id}`} className="ml-2 text-blue-700 hover:underline">
-                      Xem kết quả đã lưu
-                    </Link>
-                  )}
-                </div>
-              )}
-
-              {result.saved && result.report_id && (
-                <div className="info-message mt-5" role="status">
-                  Kết quả đã được lưu vào lịch sử xét nghiệm.
-                  <Link href={`/patient/history/${result.report_id}`} className="ml-2 text-blue-700 hover:underline">
-                    Xem chi tiết
-                  </Link>
-                </div>
-              )}
-
-              <div className="mt-5 grid gap-3">
-                {result.indicators?.map((indicator, index) => {
-                  const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
-                  return (
-                    <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h3 className="font-semibold text-slate-950">{indicator.name}</h3>
-                          <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-                            {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
-                          </p>
-                        </div>
-                        <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status)}</span>
-                      </div>
-                      {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
-                      {indicator.sources && indicator.sources.length > 0 && (
-                        <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                          <span className="mr-2">Nguồn tham khảo:</span>
-                          {indicator.sources.map((source, sourceIndex) => (
-                            <a key={sourceIndex} href={source} target="_blank" rel="noopener noreferrer" className="mr-3 text-blue-700 hover:underline">
-                              [{sourceIndex + 1}] {sourceHostname(source)}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div className="disclaimer-box mt-6">
-                <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
-                <p className="mt-1">{result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}</p>
+          <section className="patient-card p-5 sm:p-7" aria-labelledby="latest-report-title">
+            <div className="page-section-heading compact">
+              <div>
+                <span className="eyebrow">Phiếu gần nhất</span>
+                <h2 id="latest-report-title">Kết quả mới nhất</h2>
               </div>
             </div>
-
-            {/* Màn 6 — câu hỏi gợi ý, đứng sau màn kết quả.
-                Chỉ hiện khi cảnh báo nguy kịch đã được xác nhận (Gate 3): danh
-                sách câu hỏi phục vụ một cuộc hẹn khám trong tương lai, còn cảnh
-                báo nguy kịch yêu cầu hành động ngay, nên không được đặt ở vị trí
-                làm loãng cảnh báo. */}
-            {!showCriticalBanner && (
-              <QuestionsForDoctorPanel
-                questions={result.questions_for_doctor ?? []}
-                reportId={result.saved_report_id ?? null}
-                onUnauthorized={() => {
-                  clearSession();
-                  router.replace("/login");
-                }}
-              />
+            {latestReport ? (
+              <article className={`recent-report-feature result-card-${reportTone(latestReport.status)}`}>
+                <div className="recent-report-date">
+                  <span>Ngày xét nghiệm</span>
+                  <strong>{formatDate(latestReport.test_date)}</strong>
+                </div>
+                <div className="recent-report-meta">
+                  <div><strong>{latestReport.result_count}</strong><span>chỉ số</span></div>
+                  <div><strong>{formatMoment(latestReport.created_at)}</strong><span>thời gian tạo</span></div>
+                </div>
+                <span className={`status-badge status-${reportTone(latestReport.status)}`}>{reportStatusText(latestReport.status)}</span>
+                <Link href={`/patient/reports/${latestReport.report_id}`} className="secondary-button">Xem chi tiết</Link>
+              </article>
+            ) : (
+              <div className="compact-empty-state">
+                <p>Bạn chưa có kết quả xét nghiệm nào.</p>
+                <Link href="/patient/analysis" className="text-button">Phân tích kết quả đầu tiên →</Link>
+              </div>
             )}
           </section>
-        )}
 
-      </div>
-
-      <MetricSelector
-        open={selectorOpen}
-        catalog={MANUAL_ANALYTES}
-        selectedNames={selectedManualMetrics}
-        onAdd={addManualMetric}
-        onClose={() => setSelectorOpen(false)}
-      />
-    </main>
+          <section className="patient-card p-5 sm:p-7" aria-labelledby="recent-history-title">
+            <div className="page-section-heading compact">
+              <div>
+                <span className="eyebrow">Lịch sử gần đây</span>
+                <h2 id="recent-history-title">Các phiếu gần nhất</h2>
+              </div>
+              <Link href="/patient/history" className="text-button">Xem toàn bộ lịch sử →</Link>
+            </div>
+            {dashboard.recent_reports.length > 0 ? (
+              <div className="dashboard-recent-list">
+                {dashboard.recent_reports.slice(0, 3).map((report) => (
+                  <article key={report.report_id}>
+                    <div>
+                      <strong>{formatDate(report.test_date)}</strong>
+                      <span>{report.result_count} chỉ số · tạo {formatMoment(report.created_at)}</span>
+                    </div>
+                    <span className={`status-badge status-${reportTone(report.status)}`}>{reportStatusText(report.status)}</span>
+                    <Link href={`/patient/reports/${report.report_id}`} aria-label={`Xem phiếu ngày ${formatDate(report.test_date)}`}>Xem chi tiết</Link>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="compact-empty-state">Chưa có phiếu xét nghiệm đã lưu.</div>
+            )}
+          </section>
+        </>
+      ) : null}
+    </div>
   );
 }

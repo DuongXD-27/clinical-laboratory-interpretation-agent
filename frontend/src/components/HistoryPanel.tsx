@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   answerReportQuestion,
   createDoctorNote,
@@ -11,6 +12,7 @@ import {
   UnauthorizedError,
 } from "@/lib/api";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
+import { formatDate, formatMoment, indicatorStatusText } from "@/lib/patientUi.mjs";
 
 type Props = {
   /** "patient" chỉ xem của mình; "doctor" tra được theo tên bệnh nhân. */
@@ -27,19 +29,6 @@ const ACCENT = {
   blue: { button: "bg-blue-600 hover:bg-blue-700", text: "text-blue-600" },
   indigo: { button: "bg-indigo-600 hover:bg-indigo-700", text: "text-indigo-600" },
 };
-
-function formatDate(value: string) {
-  // Ngày xét nghiệm là chuỗi YYYY-MM-DD; tách tay thay vì new Date() để không
-  // bị lệch một ngày do trình duyệt quy về UTC.
-  const [year, month, day] = value.split("-");
-  return day && month && year ? `${day}/${month}/${year}` : value;
-}
-
-function formatMoment(value: string) {
-  // created_at là ISO có giờ, hiển thị theo múi giờ máy người dùng.
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("vi-VN");
-}
 
 /** Nhãn trạng thái phiếu cho cả hai phía.
  *
@@ -377,6 +366,11 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               Xóa lọc
             </button>
           )}
+          {mode === "patient" && !fromDate && !toDate && (
+            <Link href="/patient/analysis" className="primary-button mt-4 inline-flex items-center">
+              Phân tích kết quả đầu tiên
+            </Link>
+          )}
         </div>
       )}
 
@@ -392,11 +386,13 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
 
               return (
                 <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => void toggleDetail(item.id)}
-                    className="history-row"
-                  >
+                  <div className="history-row-actions">
+                    <button
+                      type="button"
+                      onClick={() => void toggleDetail(item.id)}
+                      className="history-row"
+                      aria-expanded={expandedId === item.id}
+                    >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="font-medium text-slate-950">
@@ -420,11 +416,17 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                           {badge.label}
                         </span>
                         <span className={`text-xs font-medium ${theme.text}`}>
-                          {expandedId === item.id ? "Thu gọn" : "Xem chi tiết"} ›
+                          {expandedId === item.id ? "Thu gọn" : mode === "patient" ? "Mở nhanh" : "Xem chi tiết"} ›
                         </span>
                       </div>
                     </div>
-                  </button>
+                    </button>
+                    {mode === "patient" && (
+                      <Link href={`/patient/reports/${item.id}`} className="history-detail-link">
+                        Xem trang chi tiết
+                      </Link>
+                    )}
+                  </div>
 
                   {expandedId === item.id && (
                     <div className="bg-slate-50/70 px-6 pb-5">
@@ -461,7 +463,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                                 </div>
                                 <div className="mt-1 text-xs text-slate-500">
                                   Khoảng tham chiếu: {indicator.reference_low ?? "-"} –{" "}
-                                  {indicator.reference_high ?? "-"} · {indicator.status}
+                                  {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status)}
                                 </div>
                                 {indicator.explanation && (
                                   <p className="mt-2 text-sm leading-relaxed text-slate-700">

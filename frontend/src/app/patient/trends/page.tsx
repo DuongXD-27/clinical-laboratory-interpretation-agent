@@ -143,24 +143,19 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <main className="patient-shell">
-      <div className="patient-container">
-        <header className="patient-header">
-          <div>
-            <h1>Xu hướng chỉ số</h1>
-            <p>Theo dõi một chỉ số xét nghiệm qua các lần xét nghiệm đã lưu.</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link href="/patient/history" className="secondary-button px-3 py-2.5">Lịch sử</Link>
-            <Link href="/patient" className="secondary-button px-3 py-2.5">Dashboard</Link>
-          </div>
-        </header>
-
-        <section className="patient-card mt-6 p-5 sm:p-7">
+    <div className="trend-page-layout">
+      <div className="page-section-heading">
+        <div>
+          <span className="eyebrow">Theo dõi theo thời gian</span>
+          <h2>Xu hướng chỉ số</h2>
+          <p>Chọn một chỉ số để xem biến động qua các lần xét nghiệm đã lưu.</p>
+        </div>
+      </div>
+      <section className="patient-card p-5 sm:p-7">
           <div className="section-heading">
-            <span className="eyebrow">Indicator Trend</span>
+            <span className="eyebrow">Phân tích xu hướng</span>
             <h2>Xu hướng chỉ số xét nghiệm</h2>
-            <p>Chọn một chỉ số đã có trong Laboratory History và phạm vi dữ liệu cần xem.</p>
+            <p>Chọn một chỉ số đã có trong lịch sử xét nghiệm và phạm vi dữ liệu cần xem.</p>
           </div>
 
           {catalogLoading ? (
@@ -173,7 +168,7 @@ export default function PatientTrendsPage() {
           ) : analytes.length === 0 ? (
             <div className="empty-metrics mt-5">
               <p className="font-medium text-slate-700">Bạn chưa có dữ liệu xét nghiệm để theo dõi xu hướng.</p>
-              <Link href="/patient" className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
+              <Link href="/patient/analysis" className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
             </div>
           ) : (
             <>
@@ -269,8 +264,7 @@ export default function PatientTrendsPage() {
             <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
             <p className="mt-1">{TREND_DISCLAIMER}</p>
           </div>
-        </section>
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }

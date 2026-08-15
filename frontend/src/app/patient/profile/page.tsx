@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
+import { formatMoment } from "@/lib/patientUi.mjs";
 
 type PatientProfile = {
   patient_id: number;
@@ -15,11 +15,6 @@ type PatientProfile = {
   created_at: string;
   updated_at: string;
 };
-
-function formatMoment(value: string) {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("vi-VN");
-}
 
 export default function PatientProfilePage() {
   const router = useRouter();
@@ -98,17 +93,15 @@ export default function PatientProfilePage() {
   };
 
   return (
-    <main className="patient-shell">
-      <div className="patient-container">
-        <header className="patient-header">
-          <div>
-            <h1>Hồ sơ cá nhân</h1>
-            <p>Thông tin bệnh nhân dùng cho các lần xét nghiệm đã lưu.</p>
-          </div>
-          <Link href="/patient" className="secondary-button px-3 py-2.5">Tổng quan</Link>
-        </header>
-
-        <section className="patient-card p-5 sm:p-7">
+    <div className="profile-page-layout">
+      <div className="page-section-heading">
+        <div>
+          <span className="eyebrow">Tài khoản bệnh nhân</span>
+          <h2>Thông tin cá nhân</h2>
+          <p>Quản lý thông tin dùng để đối chiếu khi xem các phiếu đã lưu.</p>
+        </div>
+      </div>
+      <section className="patient-card p-5 sm:p-7">
           {loading ? (
             <div className="loading-message" role="status">Đang tải hồ sơ...</div>
           ) : error ? (
@@ -178,8 +171,7 @@ export default function PatientProfilePage() {
           ) : (
             <div className="empty-metrics">Không tìm thấy hồ sơ bệnh nhân.</div>
           )}
-        </section>
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }

@@ -234,6 +234,8 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   const unsupportedRows = rows.filter((row) => !row.supported);
   const uploadsAllowed = Boolean(policy?.upload_enabled && policy.custom_image_allowed);
   const uploadUnavailable = policyLoaded && !uploadsAllowed;
+  const currentStep = busyAction === "confirm" ? 3 : rows.length > 0 ? 2 : 1;
+  const workflowSteps = ["Tải phiếu", "Kiểm tra dữ liệu", "Phân tích", "Xem kết quả"];
 
   return (
     <section className="patient-card p-5 sm:p-7" aria-labelledby="upload-title">
@@ -242,6 +244,20 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
         <h2 id="upload-title">Tải ảnh phiếu xét nghiệm</h2>
         <p>Tải ảnh phiếu xét nghiệm để hệ thống đọc các chỉ số giúp bạn.</p>
       </div>
+
+      <ol className="ocr-stepper" aria-label="Quy trình phân tích ảnh phiếu xét nghiệm">
+        {workflowSteps.map((label, index) => {
+          const step = index + 1;
+          const complete = step < currentStep;
+          const active = step === currentStep;
+          return (
+            <li key={label} className={complete ? "complete" : active ? "active" : ""} aria-current={active ? "step" : undefined}>
+              <span aria-hidden="true">{complete ? "✓" : step}</span>
+              <strong>{label}</strong>
+            </li>
+          );
+        })}
+      </ol>
 
       <div className="mt-6">
         <UploadDropzone
@@ -284,7 +300,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
           <div className="section-heading">
             <span className="eyebrow">Bước kiểm tra</span>
             <h2>Kiểm tra các chỉ số</h2>
-            <p>Đối chiếu với ảnh, chỉnh lại nếu cần rồi xác nhận từng chỉ số.</p>
+            <p>AI đã đọc các thông tin dưới đây từ ảnh. Hãy đối chiếu với phiếu gốc trước khi tiếp tục.</p>
           </div>
 
           <div className="mt-5 grid gap-3">
