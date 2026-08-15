@@ -1,0 +1,104 @@
+{
+  "captured_at": "2026-08-15T05:44:43.116573+00:00",
+  "source_file": "data/reference/explanations.json",
+  "source_sha256": "1286D65A1CB0763EE43E1B8F96899CEB06A78BE8CD09BD26B15F8D1A7586854A",
+  "embedding_provider": "openai",
+  "embedding_model": "text-embedding-3-small",
+  "embedding_dimension": 1536,
+  "embedding_api_items_generated": 9,
+  "embedding_failures": 0,
+  "expected_ids": [
+    "wbc",
+    "rbc",
+    "hgb",
+    "fasting_plasma_glucose",
+    "hba1c",
+    "ldl_c",
+    "hdl_c",
+    "creatinine",
+    "potassium"
+  ],
+  "backup_collection": "medical_kb_v1__pre_canonical_fix_backup",
+  "state": {
+    "collection": "medical_kb_v1",
+    "document_count": 9,
+    "collection_metadata": {
+      "corpus_version": "medical-kb-v1",
+      "embedding_model": "text-embedding-3-small",
+      "hnsw:space": "cosine",
+      "embedding_dimension": 1536,
+      "embedding_provider": "openai",
+      "schema_version": "1"
+    },
+    "inspected_embedding_dimension": 1536,
+    "ids": [
+      "wbc",
+      "rbc",
+      "hgb",
+      "fasting_plasma_glucose",
+      "hba1c",
+      "ldl_c",
+      "hdl_c",
+      "creatinine",
+      "potassium"
+    ],
+    "metadatas": [
+      {
+        "sources": "[\"https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi\", \"https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi\", \"https://miraihealthcare.vn/xet-nghiem-wbc/\"]",
+        "indicator": "WBC",
+        "analyte_id": "wbc"
+      },
+      {
+        "analyte_id": "rbc",
+        "indicator": "RBC",
+        "sources": "[\"https://medlatec.vn/tin-tuc/chi-so-rbc-trong-xet-nghiem-mau-la-gi-nen-xet-nghiem-rbc-o-dau-s58-n27586\", \"https://nhathuoclongchau.com.vn/bai-viet/rbc-trong-xet-nghiem-mau-la-gi-nguyen-nhan-khien-chi-so-nay-tang-giam-64304.html\"]"
+      },
+      {
+        "analyte_id": "hgb",
+        "sources": "[\"https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html\", \"https://medlatec.vn/tin-tuc/hgb-trong-xet-nghiem-mau-la-gi-cach-kiem-soat-chi-so-hgb-tai-nha\", \"https://miraihealthcare.vn/xet-nghiem-hgb/\"]",
+        "indicator": "HGB"
+      },
+      {
+        "analyte_id": "fasting_plasma_glucose",
+        "indicator": "Fasting plasma glucose",
+        "sources": "[\"https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi\", \"https://diag.vn/blog/glycemic/xet-nghiem-duong-huyet-luc-doi/\", \"https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar\"]"
+      },
+      {
+        "indicator": "HbA1c",
+        "sources": "[\"https://nhathuoclongchau.com.vn/bai-viet/chi-so-hb-a1c-binh-thuong-la-bao-nhieu-khi-nao-nen-lam-xet-nghiem-hb-a1-c.html\", \"https://medlatec.vn/tin-tuc/xet-nghiem-hba1c-la-gi-khi-nao-can-thuc-hien\", \"https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-hba1c-trong-kiem-soat-glucose-o-benh-nhan-dai-thao-duong-va-tam-soat-som-benh-dai-thao-duong-vi\", \"https://nhathuoclongchau.com.vn/bai-viet/chi-so-hb-a1c-bao-nhieu-la-nguy-hiem.html\"]",
+        "analyte_id": "hba1c"
+      },
+      {
+        "analyte_id": "ldl_c",
+        "indicator": "LDL-C",
+        "sources": "[\"https://medlatec.vn/tin-tuc/xet-nghiem-ldl-la-gi-chi-so-ldl-nhu-the-nao-an-toan-s58-n16614\", \"https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi\"]"
+      },
+      {
+        "analyte_id": "hdl_c",
+        "indicator": "HDL-C",
+        "sources": "[\"https://tiemchunglongchau.com.vn/kien-thuc-tiem-chung/xet-nghiem-hdl-c-ket-qua-hdl-cholesterol-co-y-nghia-gi\", \"https://medlatec.vn/tin-tuc/hdl-cholesterol-la-gi-va-nhung-canh-bao-doi-voi-suc-khoe-tim-mach-s63-n21358\"]"
+      },
+      {
+        "analyte_id": "creatinine",
+        "indicator": "Creatinine",
+        "sources": "[\"https://medlatec.vn/tin-tuc/gia-tri-xet-nghiem-creatinin-mau-bao-nhieu-la-mac-benh-suy-than-s159-n18192\", \"https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-xet-nghiem-creatinine-trong-chan-doan-suy-vi\", \"https://nhathuoclongchau.com.vn/bai-viet/nhung-dieu-can-biet-ve-xet-nghiem-creatinine-mau.html\"]"
+      },
+      {
+        "sources": "[\"https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi\", \"https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html\"]",
+        "indicator": "Potassium",
+        "analyte_id": "potassium"
+      }
+    ],
+    "documents": [
+      "Chỉ số: WBC\nÝ nghĩa khi tăng cao: WBC cao hơn khoảng bình thường tương ứng với tình trạng tăng bạch cầu. Nguyên nhân có thể là viêm nhiễm, máu ác tính hoặc các bệnh về bạch cầu; ngoài ra thuốc nhóm corticosteroid và hút thuốc lá cũng có thể làm chỉ số này tăng.\nÝ nghĩa khi giảm thấp: WBC thấp hơn ngưỡng bình thường tương ứng với tình trạng giảm bạch cầu. Tình trạng này có thể gặp khi nhiễm virus, suy tủy xương, thiếu vitamin B12 hoặc folate, bệnh gan và lá lách, tổn thương tủy do nhiễm khuẩn nặng hoặc khi đang dùng thuốc điều trị ung thư.",
+      "Chỉ số: RBC\nÝ nghĩa khi tăng cao: Chỉ số RBC tăng cao thường gặp ở người mất nước, nôn và đi ngoài nhiều, rối loạn tuần hoàn tim hoặc phổi, thiếu oxy trong máu, hoặc người sống ở vùng núi cao. Khi tăng hồng cầu, người bệnh có thể đau đầu, chóng mặt, da môi và cổ đỏ hơn khi trời lạnh, lá lách to.\nÝ nghĩa khi giảm thấp: Chỉ số RBC giảm thường gặp ở người thiếu máu, mất máu, thiếu sắt, thiếu vitamin B12 hoặc ăn uống không đủ dưỡng chất, cũng như ở phụ nữ mang thai, bệnh nhân suy tủy, bệnh thận hoặc ung thư. Khi giảm đáng kể, người bệnh có thể khó tập trung, đau đầu, mệt mỏi và thay đổi tâm lý thất thường.",
+      "Chỉ số: HGB\nÝ nghĩa khi tăng cao: HGB tăng xảy ra khi lượng hồng cầu vượt mức bình thường hoặc khi máu bị cô đặc. Nguyên nhân thường gặp gồm sống ở vùng núi cao thiếu oxy, mất nước nhiều làm tăng giả, rối loạn tủy xương hoặc bệnh lý tăng sinh dòng hồng cầu, và việc sử dụng steroid hay thuốc kích thích tạo máu.\nÝ nghĩa khi giảm thấp: HGB thấp thường là biểu hiện của thiếu máu, hay gặp ở phụ nữ, người cao tuổi hoặc người có bệnh nền. Nguyên nhân gồm thiếu sắt, vitamin B12 hoặc folate, mất máu, bệnh mạn tính như suy thận, rối loạn tủy xương; người bệnh có thể mệt mỏi, hoa mắt, khó thở, tim đập nhanh và giảm tập trung.",
+      "Chỉ số: Fasting plasma glucose\nÝ nghĩa khi tăng cao: Khi kết quả glucose huyết tương lúc đói vượt trên ngưỡng bình thường, bài viết cho biết người đó có thể đang ở tình trạng suy giảm mức đường huyết lúc đói nhưng chưa hẳn mắc tiểu đường. Nếu chỉ số tăng cao hơn nữa và kèm các xét nghiệm máu khác bất thường thì có thể được chẩn đoán là mắc bệnh tiểu đường.\nÝ nghĩa khi giảm thấp: Đường huyết lúc đói dưới 70 mg/dL được xem là đường huyết thấp đối với người mắc bệnh tiểu đường, nhưng mức này có thể vẫn bình thường ở một số người không mắc tiểu đường. Khi có kết quả thấp, bác sĩ có thể đánh giá các triệu chứng hạ đường huyết như run rẩy và thực hiện thêm xét nghiệm để xác định liệu tình trạng đường huyết thấp có lặp lại hay không.",
+      "Chỉ số: HbA1c\nÝ nghĩa khi tăng cao: HbA1c tăng khi nồng độ glucose máu tăng kéo dài và đường huyết không được kiểm soát tốt, thường gặp ở người mới chẩn đoán hoặc đang điều trị đái tháo đường nhưng kiểm soát kém. Bài viết cũng nêu suy thận mạn, thiếu máu hoặc thiếu sắt, nghiện rượu kéo dài và ngộ độc chì có thể làm chỉ số này tăng.\nÝ nghĩa khi giảm thấp: HbA1c có thể giảm trong thiếu máu mạn tính, hoặc khi đời sống hồng cầu ngắn như thiếu máu tan máu, hồng cầu hình liềm và thalassemia. Các tình huống sau truyền máu, sau cắt lách, dùng liều cao vitamin C hoặc vitamin E và thai kỳ cũng có thể làm kết quả giảm và không phản ánh đúng đường huyết thực tế.",
+      "Chỉ số: LDL-C\nÝ nghĩa khi tăng cao: LDL-C tăng cao là một dấu hiệu xấu, có thể làm tăng nguy cơ xơ vữa động mạch và các bệnh lý về tim mạch, huyết áp, đặc biệt là bệnh mạch vành.",
+      "Chỉ số: HDL-C\nÝ nghĩa khi tăng cao: HDL-C cao thường được xem là yếu tố có lợi cho sức khỏe tim mạch. Tuy nhiên, HDL-C quá cao không đồng nghĩa với việc loại bỏ hoàn toàn nguy cơ bệnh tim mạch, đặc biệt khi các chỉ số lipid khác vẫn ở mức cao.\nÝ nghĩa khi giảm thấp: HDL-C thấp làm suy giảm khả năng loại bỏ cholesterol dư thừa khỏi mạch máu, từ đó làm tăng nguy cơ tích tụ mảng xơ vữa và dẫn đến các biến cố tim mạch.",
+      "Chỉ số: Creatinine\nÝ nghĩa khi tăng cao: Creatinin máu tăng cao có thể phản ánh chức năng thận bị suy giảm và làm tăng nguy cơ suy thận. Tình trạng này có thể liên quan đến suy thận do giảm tuần hoàn đến thận, tổn thương cầu thận, tổn thương ống thận hoặc các nguyên nhân gây cản trở đường bài xuất nước tiểu.\nÝ nghĩa khi giảm thấp: Creatinin máu giảm có thể gặp khi máu bị hòa loãng, trong tình trạng suy dinh dưỡng nặng hoặc ở phụ nữ mang thai.",
+      "Chỉ số: Potassium\nÝ nghĩa khi tăng cao: Kali máu tăng có thể gây vô cảm, tê các đầu ngón, giảm phản xạ gân xương và ảnh hưởng đến hoạt động điện của tim, làm xuất hiện các rối loạn dẫn truyền và nhịp tim bất thường.\nÝ nghĩa khi giảm thấp: Kali máu giảm có thể gây mệt mỏi, rã rời cơ thần kinh, táo bón dai dẳng và chướng bụng do ảnh hưởng đến hoạt động bình thường của cơ và hệ thần kinh."
+    ]
+  }
+}

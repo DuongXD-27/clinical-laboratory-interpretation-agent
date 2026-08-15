@@ -29,6 +29,20 @@ RESTRICTED_PATTERNS = (
     r"do ảnh hưởng của",
 )
 
+# Narrow, accent-insensitive inference patterns derived from actual unsafe
+# patient explanations. These intentionally target conclusions, not source
+# context or deterministic critical-warning language.
+INFERENCE_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("Loại trừ bệnh lý từ kết quả xét nghiệm", r"\bkhong co dau hieu\b"),
+    ("Loại trừ viêm/nhiễm/vấn đề y khoa", r"\bkhong co (?:viem nhiem|nhiem trung|van de)\b"),
+    ("Khẳng định không triệu chứng từ kết quả xét nghiệm", r"\bkhong (?:gay|co)(?: [a-z0-9]+){0,3} trieu chung\b"),
+    ("Khẳng định không ảnh hưởng từ kết quả xét nghiệm", r"\bkhong (?:gay|co)(?: [a-z0-9]+){0,5} anh huong\b"),
+    ("Khẳng định miễn dịch ổn định", r"\bmien dich(?: [a-z0-9]+){0,6} on dinh\b"),
+    ("Khẳng định chức năng bình thường", r"\bchuc nang(?: [a-z0-9]+){0,6} binh thuong\b"),
+    ("Khẳng định sinh lý bình thường", r"\bdam bao(?: [a-z0-9]+){0,10} binh thuong\b"),
+    ("Khẳng định mức tối ưu", r"\bmuc toi uu\b"),
+)
+
 
 @dataclass(frozen=True)
 class SafetyViolation:
@@ -42,6 +56,7 @@ class SafetyViolation:
 def _normalize(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     without_accents = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    without_accents = without_accents.replace("đ", "d")
     return " ".join(re.findall(r"[a-z0-9]+", without_accents))
 
 
@@ -83,6 +98,12 @@ class MedicalSafetyValidator:
         for label, phrase in self._intent_phrases:
             if _contains_phrase(tokens, phrase):
                 violations.append(SafetyViolation(f"Kiểm tra ý định tại chỗ ({label})", " ".join(phrase)))
+
+        normalized = " ".join(tokens)
+        for label, pattern in INFERENCE_PATTERNS:
+            match = re.search(pattern, normalized)
+            if match:
+                violations.append(SafetyViolation(f"Kiểm tra suy luận tại chỗ ({label})", match.group(0)))
 
         # Preserve order while avoiding duplicate evidence from overlapping checks.
         return list(dict.fromkeys(violations))

@@ -1,0 +1,50 @@
+{
+  "condition": "lowlight",
+  "timestamp": "2026-08-15T05:00:31.874397+00:00",
+  "image": "data/ocr_samples/lowlight/report.png",
+  "status_code": 200,
+  "request_id": "aec76bd65a9541c4a371626097598a55",
+  "latency_ms": 2372.4,
+  "actual_response": {
+    "source_image": "lowlight_report.png",
+    "model_used": "gemini-3.5-flash-lite",
+    "low_confidence_threshold": 0.7,
+    "expires_in_seconds": 900,
+    "metadata_hint": {},
+    "indicators": [
+      {
+        "draft_id": "4c3860762d4b414399c3088a6d330c16",
+        "name": "Glucose",
+        "value": 5.2,
+        "unit": "mmol/L",
+        "confidence": 0.99,
+        "raw_text": "Glucose 5.2 mmol/L Bình thường",
+        "needs_review": false,
+        "supported": false,
+        "unsupported_reason": "Chỉ số này hiện tại chưa được hỗ trợ."
+      },
+      {
+        "draft_id": "2bbf38f8d6584b69bafc94ccf2b6c49c",
+        "name": "LDL-Cholesterol",
+        "value": 2.2,
+        "unit": "mmol/L",
+        "confidence": 0.99,
+        "raw_text": "LDL-Cholesterol 2.2 mmol/L Bình thường",
+        "needs_review": false,
+        "supported": true,
+        "unsupported_reason": ""
+      },
+      {
+        "draft_id": "891463eae6bd4fb3829dbd62e72ba338",
+        "name": "Kali",
+        "value": 4.0,
+        "unit": "mmol/L",
+        "confidence": 0.99,
+        "raw_text": "Kali 4.0 mmol/L Bình thường",
+        "needs_review": false,
+        "supported": true,
+        "unsupported_reason": ""
+      }
+    ]
+  }
+}

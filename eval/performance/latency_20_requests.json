@@ -1,0 +1,280 @@
+{
+  "generated_at": "2026-08-15T04:58:54.680652+00:00",
+  "configuration": {
+    "input": {
+      "patient_age": 35,
+      "patient_gender": "male",
+      "test_date": "2026-08-15",
+      "language": "vi",
+      "indicators": [
+        {
+          "name": "WBC",
+          "value": 7.0,
+          "unit": "10^9/L"
+        }
+      ]
+    },
+    "real_llm": true,
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "rag_enabled": true
+  },
+  "N": 20,
+  "successful_N": 20,
+  "http_total": {
+    "mean_ms": 1956.764,
+    "p50_ms": 1953.976,
+    "p95_ms": 2470.609,
+    "min_ms": 1452.12,
+    "max_ms": 2680.074
+  },
+  "llm_explanation_call": {
+    "mean_ms": 1581.658,
+    "p50_ms": 1571.875,
+    "p95_ms": 2021.77,
+    "min_ms": 1135.647,
+    "max_ms": 2276.888
+  },
+  "requests": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-08-15T04:58:17.191183+00:00",
+      "request_id": "a78576da87604453b86e11d1caf1c821",
+      "http_total_ms": 2157.079,
+      "llm_explanation_call_ms": 1716.664,
+      "rag_call_ms": 423.579,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1716.664
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-08-15T04:58:19.694311+00:00",
+      "request_id": "69ef3326962a4bb3827a1c3870264ab9",
+      "http_total_ms": 2470.609,
+      "llm_explanation_call_ms": 2021.77,
+      "rag_call_ms": 430.287,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 2021.77
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-08-15T04:58:21.756531+00:00",
+      "request_id": "9f1b9d3d3a9745f3b8b61de44c96ff3e",
+      "http_total_ms": 2033.454,
+      "llm_explanation_call_ms": 1574.435,
+      "rag_call_ms": 441.934,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1574.435
+    },
+    {
+      "sequence": 4,
+      "timestamp": "2026-08-15T04:58:23.385085+00:00",
+      "request_id": "8c9e73a7ada5428fb1a00cacdabbec2b",
+      "http_total_ms": 1610.067,
+      "llm_explanation_call_ms": 1227.875,
+      "rag_call_ms": 364.605,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1227.875
+    },
+    {
+      "sequence": 5,
+      "timestamp": "2026-08-15T04:58:25.375301+00:00",
+      "request_id": "ba2fb31fbc174009bb22e39a4571e517",
+      "http_total_ms": 1964.652,
+      "llm_explanation_call_ms": 1544.359,
+      "rag_call_ms": 406.3,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1544.359
+    },
+    {
+      "sequence": 6,
+      "timestamp": "2026-08-15T04:58:27.367739+00:00",
+      "request_id": "1dba3d95f76c478d87f4137d366ad9f6",
+      "http_total_ms": 1975.99,
+      "llm_explanation_call_ms": 1643.091,
+      "rag_call_ms": 317.674,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1643.091
+    },
+    {
+      "sequence": 7,
+      "timestamp": "2026-08-15T04:58:28.889215+00:00",
+      "request_id": "57a72c0824ce44f48f5435b9ac3d37d4",
+      "http_total_ms": 1494.761,
+      "llm_explanation_call_ms": 1182.268,
+      "rag_call_ms": 297.27,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1182.268
+    },
+    {
+      "sequence": 8,
+      "timestamp": "2026-08-15T04:58:31.590038+00:00",
+      "request_id": "99d88b4cff8d4aeb9565613fdb417a80",
+      "http_total_ms": 2680.074,
+      "llm_explanation_call_ms": 2276.888,
+      "rag_call_ms": 380.19,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 2276.888
+    },
+    {
+      "sequence": 9,
+      "timestamp": "2026-08-15T04:58:33.555299+00:00",
+      "request_id": "96f3a92a9f344b70ba3a5cfee92bac95",
+      "http_total_ms": 1943.301,
+      "llm_explanation_call_ms": 1620.228,
+      "rag_call_ms": 303.888,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1620.228
+    },
+    {
+      "sequence": 10,
+      "timestamp": "2026-08-15T04:58:35.606065+00:00",
+      "request_id": "9f97d0c3e04345bd81bee9b6a8d83a78",
+      "http_total_ms": 2022.467,
+      "llm_explanation_call_ms": 1689.259,
+      "rag_call_ms": 316.846,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1689.259
+    },
+    {
+      "sequence": 11,
+      "timestamp": "2026-08-15T04:58:37.748053+00:00",
+      "request_id": "390fa99fe6974bf59b077b90cd2a9188",
+      "http_total_ms": 2112.178,
+      "llm_explanation_call_ms": 1657.386,
+      "rag_call_ms": 432.023,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1657.386
+    },
+    {
+      "sequence": 12,
+      "timestamp": "2026-08-15T04:58:39.645116+00:00",
+      "request_id": "ad9ee6bc21db4c259316fd7ffe40a555",
+      "http_total_ms": 1869.505,
+      "llm_explanation_call_ms": 1534.516,
+      "rag_call_ms": 313.681,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1534.516
+    },
+    {
+      "sequence": 13,
+      "timestamp": "2026-08-15T04:58:41.127351+00:00",
+      "request_id": "268f6058403d4478bd3c2a0529d267b4",
+      "http_total_ms": 1452.12,
+      "llm_explanation_call_ms": 1135.647,
+      "rag_call_ms": 296.581,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1135.647
+    },
+    {
+      "sequence": 14,
+      "timestamp": "2026-08-15T04:58:43.086178+00:00",
+      "request_id": "ed31f5a90b704a5ca7b0f74fe1ef8bdb",
+      "http_total_ms": 1930.426,
+      "llm_explanation_call_ms": 1569.315,
+      "rag_call_ms": 340.144,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1569.315
+    },
+    {
+      "sequence": 15,
+      "timestamp": "2026-08-15T04:58:45.189706+00:00",
+      "request_id": "98ad43fb013841379f577f81b1afee48",
+      "http_total_ms": 2076.474,
+      "llm_explanation_call_ms": 1721.439,
+      "rag_call_ms": 335.516,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1721.439
+    },
+    {
+      "sequence": 16,
+      "timestamp": "2026-08-15T04:58:47.122699+00:00",
+      "request_id": "8160c9f967f24b4885487da5a0023467",
+      "http_total_ms": 1904.777,
+      "llm_explanation_call_ms": 1397.941,
+      "rag_call_ms": 484.036,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1397.941
+    },
+    {
+      "sequence": 17,
+      "timestamp": "2026-08-15T04:58:48.785899+00:00",
+      "request_id": "648b08d77e3b4a48ae533c2b254619f4",
+      "http_total_ms": 1634.405,
+      "llm_explanation_call_ms": 1312.769,
+      "rag_call_ms": 299.983,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1312.769
+    },
+    {
+      "sequence": 18,
+      "timestamp": "2026-08-15T04:58:50.506030+00:00",
+      "request_id": "154ff47a65644fd985ebc201b4557ffc",
+      "http_total_ms": 1685.589,
+      "llm_explanation_call_ms": 1380.372,
+      "rag_call_ms": 281.347,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1380.372
+    },
+    {
+      "sequence": 19,
+      "timestamp": "2026-08-15T04:58:52.394905+00:00",
+      "request_id": "ee8df032e06442178bdc2215264b07cf",
+      "http_total_ms": 1859.938,
+      "llm_explanation_call_ms": 1519.395,
+      "rag_call_ms": 318.829,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1519.395
+    },
+    {
+      "sequence": 20,
+      "timestamp": "2026-08-15T04:58:54.679666+00:00",
+      "request_id": "5be1e1a81d174eefb49869caf32da4b6",
+      "http_total_ms": 2257.409,
+      "llm_explanation_call_ms": 1907.536,
+      "rag_call_ms": 329.253,
+      "guardrail_rewrite_ms": null,
+      "status_code": 200,
+      "success": true,
+      "llm_call_ms": 1907.536
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "timestamp": "2026-08-15T06:58:16.347875+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 7.0,
+        "unit": "10^9/L"
+      }
+    ]
+  },
+  "status_code": 200,
+  "request_id": "e8566f3d5c944a8a97999c530524b5f2",
+  "server_timing_header": "analysis-reference-range;dur=5.089, analysis-critical-detector;dur=0.032, analysis-analyzer;dur=4834.459, analysis-generate-questions;dur=0.511, analysis-guardrail;dur=1.425, analysis-graph-total;dur=4851.392, analysis-response-map;dur=0.034, http-total;dur=4856.097",
+  "http_total_ms": 4858.622,
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 7.0,
+        "unit": "10^9/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 4.72,
+        "reference_high": 11.3,
+        "status": "normal",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Chỉ số WBC (bạch cầu) của bệnh nhân là 7.0 10^9/L, với trạng thái là normal. Điều này có nghĩa là giá trị nằm trong khoảng tham chiếu được hệ thống sử dụng. Không thể suy ra tình trạng sức khỏe hay cơ thể từ kết quả xét nghiệm này.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+          "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+          "https://miraihealthcare.vn/xet-nghiem-wbc/"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "timing_record": {
+    "request_id": "e8566f3d5c944a8a97999c530524b5f2",
+    "method": "POST",
+    "path": "/api/v1/analyze",
+    "status_code": 200,
+    "metrics_ms": {
+      "analysis-reference-range": 5.089,
+      "analysis-critical-detector": 0.032,
+      "analysis-analyzer": 4834.459,
+      "analysis-generate-questions": 0.511,
+      "analysis-guardrail": 1.425,
+      "analysis-graph-total": 4851.392,
+      "analysis-response-map": 0.034,
+      "http-total": 4856.097
+    },
+    "events": [
+      {
+        "name": "rag-semaphore-wait",
+        "duration_ms": 0.006,
+        "analyte_id": "wbc"
+      },
+      {
+        "name": "rag-call",
+        "duration_ms": 1191.159,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      },
+      {
+        "name": "llm-semaphore-wait",
+        "duration_ms": 0.006,
+        "analyte_id": "wbc"
+      },
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 1743.007,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      }
+    ]
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": true,
+    "call_success": true,
+    "fallback_used": false,
+    "successful_call_count": 1,
+    "indicator_count": 1,
+    "request_id": "e8566f3d5c944a8a97999c530524b5f2",
+    "events": [
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 1743.007,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      }
+    ]
+  }
+}

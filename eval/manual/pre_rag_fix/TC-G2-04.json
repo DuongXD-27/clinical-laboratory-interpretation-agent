@@ -1,0 +1,89 @@
+{
+  "test_id": "TC-G2-04",
+  "purpose": "Critical low fasting plasma glucose",
+  "timestamp": "2026-08-15T05:13:35.050330+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "low",
+    "response_status": "critical_low",
+    "critical": true,
+    "critical_direction": "low"
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 4.1,
+        "reference_high": 6.1,
+        "status": "critical_low",
+        "is_abnormal": true,
+        "is_critical": true,
+        "explanation": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi",
+          "https://diag.vn/blog/glycemic/xet-nghiem-duong-huyet-luc-doi/",
+          "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar"
+        ]
+      }
+    ],
+    "critical_alerts": [
+      {
+        "indicator_name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L",
+        "message": "CẢNH BÁO: Fasting plasma glucose giảm tới ngưỡng nguy kịch (54.9475495 < 55 mg/dL). Yêu cầu can thiệp y tế."
+      }
+    ],
+    "has_critical_values": true,
+    "questions_for_doctor": [
+      "Chỉ số Fasting plasma glucose của tôi là 3.05 mmol/L, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": "418db32a72764069ad2c7c65ae79239a",
+    "events": []
+  },
+  "latency_ms": 361.544,
+  "request_id": "418db32a72764069ad2c7c65ae79239a",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.169, analysis-critical-detector;dur=0.116, analysis-analyzer;dur=343.264, analysis-generate-questions;dur=0.598, analysis-guardrail;dur=0.973, analysis-graph-total;dur=354.237, analysis-response-map;dur=0.077, http-total;dur=357.766",
+  "verdict": "FAIL"
+}

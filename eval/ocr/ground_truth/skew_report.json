@@ -1,0 +1,10 @@
+{
+  "image": "data/ocr_samples/skew/report.png",
+  "image_sha256": "34E5AF9E895ED1C622577D5E259E0065AD82F9C2C5DF7BA493C898AAC5DD4B0D",
+  "ground_truth_source": "Deterministic source fixture src/scripts/generate_ocr_samples.py SAMPLE_ROWS (lines 22-25); skew transform is defined at line 73 and selected at line 90.",
+  "indicators": [
+    {"name": "Glucose", "value": 5.2, "unit": "mmol/L"},
+    {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+    {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+  ]
+}

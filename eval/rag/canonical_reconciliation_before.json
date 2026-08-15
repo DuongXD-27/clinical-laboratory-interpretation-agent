@@ -1,0 +1,80 @@
+{
+  "captured_at": "2026-08-15T05:44:41.430065+00:00",
+  "source_file": "data/reference/explanations.json",
+  "source_sha256": "1286D65A1CB0763EE43E1B8F96899CEB06A78BE8CD09BD26B15F8D1A7586854A",
+  "configured_embedding_provider": "openai",
+  "configured_embedding_model": "text-embedding-3-small",
+  "configured_embedding_dimension": 1536,
+  "openai_api_key_available": true,
+  "state": {
+    "collection": "medical_kb_v1",
+    "document_count": 9,
+    "collection_metadata": {
+      "corpus_version": "medical-kb-v1",
+      "schema_version": "1",
+      "embedding_provider": "openai",
+      "embedding_dimension": 1536,
+      "embedding_model": "text-embedding-3-small",
+      "hnsw:space": "cosine"
+    },
+    "inspected_embedding_dimension": 1536,
+    "ids": [
+      "wbc",
+      "rbc",
+      "hgb",
+      "glucose",
+      "hba1c",
+      "ldl_cholesterol",
+      "hdl_cholesterol",
+      "creatinine",
+      "kali"
+    ],
+    "metadatas": [
+      {
+        "sources": "[\"https://medlineplus.gov/lab-tests/white-blood-count-wbc/\", \"https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919\", \"https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500\"]",
+        "analyte_id": "wbc",
+        "indicator": "WBC"
+      },
+      {
+        "analyte_id": "rbc",
+        "indicator": "RBC",
+        "sources": "[\"https://medlineplus.gov/lab-tests/red-blood-cell-rbc-count/\", \"https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919\", \"https://www.vinmec.com/vie/bai-viet/so-luong-hong-cau-trong-co-la-bao-nhieu-vi\", \"https://benhvienthucuc.vn/song-khoe/xet-nghiem/rbc-la-gi-chi-so-rbc-tang-hay-giam-co-anh-huong-den-suc-khoe\"]"
+      },
+      {
+        "sources": "[\"https://medlineplus.gov/lab-tests/hemoglobin-test/\", \"https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919\", \"https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html\", \"https://www.vinmec.com/vie/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-gi-vi\"]",
+        "analyte_id": "hgb",
+        "indicator": "HGB"
+      },
+      {
+        "analyte_id": "glucose",
+        "indicator": "Glucose",
+        "sources": "[\"https://diabetes.org/about-diabetes/a1c\", \"https://www.cdc.gov/diabetes/diagnosis/index.html\", \"https://www.vinmec.com/vie/bai-viet/duong-huyet-luc-doi-binh-thuong-vi\", \"https://www.vinmec.com/vie/bai-viet/chi-so-glucose-trong-mau-o-muc-bao-nhieu-la-mac-benh-tieu-duong-vi\", \"https://nhathuoclongchau.com.vn/bai-viet/glucose-trong-mau-binh-thuong-la-bao-nhieu-bao-nhieu-la-tieu-duong.html\", \"https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/\"]"
+      },
+      {
+        "indicator": "HbA1c",
+        "sources": "[\"https://diabetes.org/about-diabetes/a1c\", \"https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html\", \"https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/\"]",
+        "analyte_id": "hba1c"
+      },
+      {
+        "sources": "[\"https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides\", \"https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html\", \"https://www.cdc.gov/cholesterol/about/index.html\", \"https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi\", \"https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503\", \"https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html\"]",
+        "indicator": "LDL-Cholesterol",
+        "analyte_id": "ldl_cholesterol"
+      },
+      {
+        "sources": "[\"https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides\", \"https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html\", \"https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/\", \"https://tamanhhospital.vn\"]",
+        "indicator": "HDL-Cholesterol",
+        "analyte_id": "hdl_cholesterol"
+      },
+      {
+        "analyte_id": "creatinine",
+        "indicator": "Creatinine",
+        "sources": "[\"https://medlineplus.gov/lab-tests/creatinine-test/\", \"https://www.kidney.org/kidney-topics/creatinine\", \"https://tamanhhospital.vn\"]"
+      },
+      {
+        "analyte_id": "kali",
+        "indicator": "Kali",
+        "sources": "[\"https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi\", \"https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html\", \"https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce\", \"https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia\", \"https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf\", \"https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi\"]"
+      }
+    ]
+  }
+}

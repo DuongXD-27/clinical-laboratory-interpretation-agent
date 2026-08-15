@@ -1,0 +1,127 @@
+{
+  "path": "/api/v1/analyze",
+  "operation": {
+    "summary": "Analyze",
+    "description": "Phân tích dữ liệu xét nghiệm nhập tay/mô phỏng.\n\nDữ liệu từ OCR phải đi qua `/ocr/confirm`; endpoint này không nhận\nreview token và frontend OCR không được gọi trực tiếp endpoint này.",
+    "operationId": "analyze_api_v1_analyze_post",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AnalyzeRequest"
+          }
+        }
+      },
+      "required": true
+    },
+    "responses": {
+      "200": {
+        "description": "Successful Response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AnalyzeResponse"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Validation Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HTTPValidationError"
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "HTTPBearer": []
+      }
+    ]
+  },
+  "schemas": {
+    "AnalyzeRequest": {
+      "properties": {
+        "patient_age": {
+          "type": "integer",
+          "maximum": 120.0,
+          "minimum": 0.0,
+          "title": "Patient Age",
+          "description": "Tuổi bệnh nhân"
+        },
+        "patient_gender": {
+          "type": "string",
+          "enum": [
+            "male",
+            "female",
+            "other"
+          ],
+          "title": "Patient Gender",
+          "description": "Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
+        },
+        "test_date": {
+          "type": "string",
+          "format": "date",
+          "title": "Test Date",
+          "description": "Ngày xét nghiệm (YYYY-MM-DD)"
+        },
+        "language": {
+          "type": "string",
+          "title": "Language",
+          "description": "Ngôn ngữ giải thích mong muốn",
+          "default": "vi"
+        },
+        "indicators": {
+          "items": {
+            "$ref": "#/components/schemas/IndicatorInputSchema"
+          },
+          "type": "array",
+          "minItems": 1,
+          "title": "Indicators",
+          "description": "Danh sách chỉ số xét nghiệm cần giải thích"
+        }
+      },
+      "type": "object",
+      "required": [
+        "patient_age",
+        "patient_gender",
+        "test_date",
+        "indicators"
+      ],
+      "title": "AnalyzeRequest",
+      "description": "Request phân tích một phiếu xét nghiệm mô phỏng."
+    },
+    "IndicatorInputSchema": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Name",
+          "description": "Tên chỉ số, ví dụ WBC, Glucose, LDL"
+        },
+        "value": {
+          "type": "number",
+          "title": "Value",
+          "description": "Giá trị đo được; bắt buộc là số hữu hạn"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Unit",
+          "description": "Đơn vị đo, ví dụ mg/dL, mmol/L"
+        }
+      },
+      "type": "object",
+      "required": [
+        "name",
+        "value",
+        "unit"
+      ],
+      "title": "IndicatorInputSchema",
+      "description": "Một chỉ số thô trong phiếu xét nghiệm gửi từ client."
+    }
+  }
+}
