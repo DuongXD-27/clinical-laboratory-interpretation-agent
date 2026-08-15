@@ -70,9 +70,12 @@ def test_sync_01_input_inventory():
 
 
 # ---------------------------------------------------------------------------
-# SYNC-02: Alias resolution
+# SYNC-02: Build-time alias resolution
 # ---------------------------------------------------------------------------
-def test_sync_02_alias_resolution():
+def test_sync_02_build_time_alias_resolution():
+    # BUILD_TIME_ALIAS: used only while extracting supplemental explanation
+    # ranges. This is intentionally separate from the RUNTIME_REFERENCE_ALIAS
+    # contract in reference_checker_v2_config.json.
     assert canonical_analyte("Glucose") == "Fasting plasma glucose"
     assert canonical_analyte("HDL-Cholesterol") == "HDL-C"
     assert canonical_analyte("LDL-Cholesterol") == "LDL-C"
@@ -83,7 +86,9 @@ def test_sync_02_alias_resolution():
     assert canonical_analyte("Creatinine") == "Creatinine"
 
 
-def test_sync_02_alias_map_completeness():
+def test_sync_02_build_time_alias_map_completeness():
+    # BUILD_TIME_ALIAS, not RUNTIME_REFERENCE_ALIAS. Generic Glucose must stay
+    # absent from the runtime ReferenceRepository configuration.
     assert ALIAS_MAP["Glucose"] == "Fasting plasma glucose"
     assert ALIAS_MAP["LDL-Cholesterol"] == "LDL-C"
     assert ALIAS_MAP["HDL-Cholesterol"] == "HDL-C"
@@ -306,20 +311,20 @@ def test_sync_15_approved_ri_rules_match():
 
 
 # ---------------------------------------------------------------------------
-# SYNC-16: Critical separation — Potassium/Kali critical detection unchanged
+# SYNC-16: Critical separation — canonical production registry
 # ---------------------------------------------------------------------------
 def test_sync_16_critical_separation():
     from pathlib import Path as _Path
     critical_path = _Path(__file__).resolve().parents[2] / "data/reference/critical_thresholds.json"
     critical = json.loads(critical_path.read_text(encoding="utf-8"))
 
-    keys_lower = {k.lower() for k in critical}
-    assert "potassium" in keys_lower or "kali" in keys_lower, "Potassium/Kali not in critical thresholds"
+    assert "Potassium" in critical
+    assert "Kali" not in critical
 
     # Verify the file was not modified
     import hashlib
     digest = hashlib.sha256(critical_path.read_bytes()).hexdigest().upper()
-    # File must be loadable and contain Potassium/Kali — no other assertion needed
+    # File must be loadable and contain only the canonical Potassium key.
     # (protected-file diff check is in Phase 15 of the TIP)
     assert digest, "critical_thresholds.json hash should be computable"
 

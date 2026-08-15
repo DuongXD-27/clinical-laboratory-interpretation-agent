@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 
 from src.agents.nodes.critical_detector_node import detect_critical_values_node
@@ -8,6 +10,7 @@ from src.agents.nodes.reference_range_checker_node import (
     reference_range_checker_node,
 )
 from src.agents.state import AgentState
+from src.services.measurement_conversion import glucose_mmol_l_to_mg_dl
 
 
 async def run_reference_pipeline(
@@ -136,6 +139,62 @@ async def test_e2e_04b_ocr_vietnamese_labels_use_the_same_reference_rules():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("generic_name", ["Glucose", "Đường huyết"])
+async def test_e2e_04c_generic_glucose_does_not_receive_fasting_ri(generic_name):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": generic_name, "value": 5.2, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    assert_unknown(only_indicator(checker_result))
+    assert_unknown(only_indicator(critical_result))
+    assert critical_result["critical_alerts"] == []
+    assert critical_result["has_critical_values"] is False
+
+
+@pytest.mark.asyncio
+async def test_e2e_04d_generic_glucose_low_value_preserves_unknown_status():
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": "Glucose", "value": 3.0, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    assert_unknown(only_indicator(checker_result))
+    assert_unknown(only_indicator(critical_result))
+    assert critical_result["critical_alerts"] == []
+    assert critical_result["has_critical_values"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "explicit_fasting_name",
+    ["Fasting plasma glucose", "Đường huyết lúc đói"],
+)
+async def test_e2e_04e_explicit_fasting_glucose_reaches_arup_critical_low(
+    explicit_fasting_name,
+):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": explicit_fasting_name, "value": 3.0, "unit": "mmol/L"}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    assert checked["status"] == "low"
+    assert checked["reference_low"] == 4.1
+    assert checked["reference_high"] == 6.1
+    assert glucose_mmol_l_to_mg_dl(Decimal("3.0")) == Decimal("54.04677")
+
+    critical = only_indicator(critical_result)
+    assert critical["status"] == "critical_low"
+    assert critical["is_critical"] is True
+    assert critical_result["has_critical_values"] is True
+    assert len(critical_result["critical_alerts"]) == 1
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("patient_age", "expected_status", "expected_low", "expected_high"),
     [
@@ -258,9 +317,9 @@ async def test_e2e_11_potassium_critical_high():
 
 @pytest.mark.asyncio
 async def test_e2e_12_kali_critical_low_alias_boundary():
-    # After BONUS-TIP-010: Kali alias resolves to Potassium; 2.5 < RI lower 3.5 → low, then critical_low
+    # Kali alias resolves to Potassium; 2.99 satisfies the strict ARUP <3.0 rule.
     checker_result, critical_result = await run_reference_pipeline(
-        [{"name": "Kali", "value": 2.5, "unit": "mmol/L"}],
+        [{"name": "Kali", "value": 2.99, "unit": "mmol/L"}],
         patient_age=30,
         patient_gender="male",
     )
@@ -491,3 +550,38 @@ async def test_e2e_21_hdl_c_female_ri_boundaries(value, expected_status):
     assert checked["reference_low"] == 1.30
     assert checked["reference_high"] == 1.53
     assert only_indicator(critical_result)["is_critical"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("name", "value", "unit", "expected_ri_status"),
+    [
+        ("WBC", 35.0, "10^9/L", "high"),
+        ("HGB", 200.0, "g/L", "high"),
+        ("LDL-C", 5.3, "mmol/L", "high"),
+        ("HbA1c", 10.0, "%", "high"),
+        ("HDL-C", 0.5, "mmol/L", "low"),
+        ("Creatinine", 400.0, "umol/L", "high"),
+        ("RBC", 100.0, "10^12/L", "high"),
+    ],
+)
+async def test_e2e_22_inactive_critical_rules_preserve_ri_status(
+    name,
+    value,
+    unit,
+    expected_ri_status,
+):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": name, "value": value, "unit": unit}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    critical = only_indicator(critical_result)
+
+    assert checked["status"] == expected_ri_status
+    assert critical["status"] == expected_ri_status
+    assert critical["is_critical"] is False
+    assert critical_result["has_critical_values"] is False
+    assert critical_result["critical_alerts"] == []

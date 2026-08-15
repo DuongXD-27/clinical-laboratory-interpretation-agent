@@ -21,8 +21,10 @@ def make_config(
     aliases = {
         "WBC": "WBC",
         "RBC": "RBC",
-        "Glucose": "Fasting plasma glucose",
         "Fasting plasma glucose": "Fasting plasma glucose",
+        "Fasting Blood Glucose": "Fasting plasma glucose",
+        "Đường huyết lúc đói": "Fasting plasma glucose",
+        "Glucose máu lúc đói": "Fasting plasma glucose",
         "HDL-Cholesterol": "HDL-C",
         "HDL-C": "HDL-C",
         "Creatinine": "Creatinine",
@@ -158,7 +160,7 @@ def test_r04_invalid_json(tmp_path: Path):
 
 @pytest.mark.parametrize(
     ("alias", "canonical"),
-    [("Glucose", "Fasting plasma glucose"), ("HDL-Cholesterol", "HDL-C"), ("Kali", "Potassium")],
+    [("HDL-Cholesterol", "HDL-C"), ("Kali", "Potassium")],
 )
 def test_r05_alias_resolution(repository, alias, canonical):
     assert repository.resolve_analyte(alias) == canonical
@@ -466,7 +468,7 @@ def test_a05_unknown_age_text():
 
 def test_t01_ri_preferred_over_cdl(repository):
     result = repository.select_rule(
-        analyte="Glucose",
+        analyte="Fasting plasma glucose",
         unit="mmol/L",
         patient_gender="male",
         patient_age=35,
@@ -502,6 +504,30 @@ def test_u02_default_repository_resolves_ocr_labels(ocr_label, canonical):
     repo = ReferenceRepository.from_default_files()
 
     assert repo.resolve_analyte(ocr_label) == canonical
+
+
+@pytest.mark.parametrize("generic_name", ["Glucose", "Đường huyết"])
+def test_u02a_default_repository_rejects_generic_glucose_names(generic_name):
+    repo = ReferenceRepository.from_default_files()
+
+    assert repo.resolve_analyte(generic_name) is None
+
+
+@pytest.mark.parametrize(
+    "explicit_fasting_name",
+    [
+        "Fasting plasma glucose",
+        "Fasting Blood Glucose",
+        "Đường huyết lúc đói",
+        "Glucose máu lúc đói",
+    ],
+)
+def test_u02b_default_repository_preserves_explicit_fasting_glucose_aliases(
+    explicit_fasting_name,
+):
+    repo = ReferenceRepository.from_default_files()
+
+    assert repo.resolve_analyte(explicit_fasting_name) == "Fasting plasma glucose"
 
 
 def test_u03_unit_conflict_isolation():

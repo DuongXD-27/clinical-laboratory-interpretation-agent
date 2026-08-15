@@ -151,7 +151,13 @@ async def test_guest_can_complete_the_ocr_flow_without_persistence(client, test_
             from src.models.ocr_schemas import OCRIndicatorDraft
 
             return [
-                OCRIndicatorDraft(name="Glucose", value=5.2, unit="mmol/L", confidence=0.95, raw_text="Glucose 5.2")
+                OCRIndicatorDraft(
+                    name="Fasting Blood Glucose",
+                    value=5.2,
+                    unit="mmol/L",
+                    confidence=0.95,
+                    raw_text="Fasting Blood Glucose 5.2",
+                )
             ]
 
     from src.services.image_processor import ImageProcessor
@@ -182,7 +188,7 @@ async def test_guest_can_complete_the_ocr_flow_without_persistence(client, test_
             "indicators": [
                 {
                     "draft_id": draft["draft_id"],
-                    "name": "Glucose",
+                    "name": "Fasting Blood Glucose",
                     "value": 5.2,
                     "unit": "mmol/L",
                     "included": True,

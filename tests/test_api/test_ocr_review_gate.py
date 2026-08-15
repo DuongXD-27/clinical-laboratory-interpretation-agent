@@ -24,11 +24,11 @@ def _review_payload(*, acknowledged: bool, reviewed: bool = True):
     drafts, token = prepare_review(
         [
             OCRIndicatorDraft(
-                name="Glucose",
+                name="Fasting Blood Glucose",
                 value=5.2,
                 unit="mmol/L",
                 confidence=0.4,
-                raw_text="Glucose 5.2 mmol/L",
+                raw_text="Fasting Blood Glucose 5.2 mmol/L",
             )
         ],
         username="benhnhan",
@@ -42,7 +42,7 @@ def _review_payload(*, acknowledged: bool, reviewed: bool = True):
         "indicators": [
             {
                 "draft_id": drafts[0].draft_id,
-                "name": "Glucose",
+                "name": "Fasting Blood Glucose",
                 "value": 5.2,
                 "unit": "mmol/L",
                 "included": True,
@@ -76,6 +76,32 @@ def _review_payload(*, acknowledged: bool, reviewed: bool = True):
 def test_non_finite_lab_values_are_rejected(schema, payload, invalid_value):
     with pytest.raises(ValidationError):
         schema(**payload, value=invalid_value)
+
+
+def test_fix2_ocr_generic_glucose_is_unsupported_but_explicit_fasting_is_supported():
+    drafts, _token = prepare_review(
+        [
+            OCRIndicatorDraft(
+                name="Glucose",
+                value=5.2,
+                unit="mmol/L",
+                confidence=0.95,
+            ),
+            OCRIndicatorDraft(
+                name="Fasting Blood Glucose",
+                value=5.2,
+                unit="mmol/L",
+                confidence=0.95,
+            ),
+        ],
+        username="benhnhan",
+    )
+
+    generic, explicit_fasting = drafts
+    assert generic.supported is False
+    assert generic.unsupported_reason
+    assert explicit_fasting.supported is True
+    assert explicit_fasting.unsupported_reason == ""
 
 
 @pytest.mark.asyncio
@@ -162,7 +188,7 @@ async def test_ocr_upload_marks_low_confidence_and_issues_token(client, monkeypa
         async def extract(self, _image_bytes, _mime_type):
             return [
                 OCRIndicatorDraft(
-                    name="Glucose",
+                    name="Fasting Blood Glucose",
                     value=5.2,
                     unit="mmol/L",
                     confidence=0.4,
@@ -274,7 +300,7 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
     final_state = {
         "indicators": [
             {
-                "name": "Glucose",
+                "name": "Fasting Blood Glucose",
                 "value": 5.2,
                 "unit": "mmol/L",
                 "reference_low": 3.9,
