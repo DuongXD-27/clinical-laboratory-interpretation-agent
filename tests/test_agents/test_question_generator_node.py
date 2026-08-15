@@ -156,6 +156,42 @@ async def test_full_graph_produces_questions_for_an_abnormal_report(monkeypatch)
 
 @pytest.mark.asyncio
 async def test_full_graph_produces_no_questions_when_everything_is_normal(monkeypatch):
+    """Nhãn phải ghi rõ lúc đói mới resolve được.
+
+    `Glucose` trần cố tình KHÔNG resolve theo chính sách fail-closed đã phê duyệt
+    (`FIX2_POLICY_A`, xem `docs/version-handoff/fix2-generic-glucose-fasting-alias-evidence.md`):
+    một mẫu glucose không rõ đói/không đói thì không được nhận khoảng tham chiếu
+    của mẫu đói. Dùng nhãn trần ở đây sẽ ra `status="unknown"` và sinh câu hỏi,
+    tức là test sai chứ không phải app sai.
+    """
+
+    monkeypatch.setattr("src.agents.nodes.analyzer_node.get_llm", lambda: None)
+
+    result = await agent.ainvoke(
+        {
+            "patient_age": 30,
+            "patient_gender": "male",
+            "test_date": "2026-08-13",
+            "language": "vi",
+            "raw_indicators": [
+                {"name": "Đường huyết lúc đói", "value": 5.0, "unit": "mmol/L"},
+            ],
+        },
+        {"configurable": {"thread_id": "test-questions-normal-only"}},
+    )
+
+    assert result["questions_for_doctor"] == []
+
+
+@pytest.mark.asyncio
+async def test_generic_glucose_label_gets_the_unknown_question(monkeypatch):
+    """Nhãn glucose chung chung nhận đúng một câu trung tính có nêu tên.
+
+    Chốt hành vi mong đợi sau chính sách fail-closed: hệ thống không đoán đó là
+    mẫu đói, nên nói thẳng với bệnh nhân là chưa đối chiếu được và nhờ bác sĩ đọc
+    giúp — thay vì im lặng bỏ qua dòng đó trên phiếu.
+    """
+
     monkeypatch.setattr("src.agents.nodes.analyzer_node.get_llm", lambda: None)
 
     result = await agent.ainvoke(
@@ -168,7 +204,9 @@ async def test_full_graph_produces_no_questions_when_everything_is_normal(monkey
                 {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
             ],
         },
-        {"configurable": {"thread_id": "test-questions-normal-only"}},
+        {"configurable": {"thread_id": "test-questions-generic-glucose"}},
     )
 
-    assert result["questions_for_doctor"] == []
+    assert len(result["questions_for_doctor"]) == 1
+    assert result["doctor_question_meta"][0]["priority"] == "unknown"
+    assert "Glucose" in result["questions_for_doctor"][0]

@@ -36,7 +36,7 @@
       "critical_low": "Huyết sắc tố của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
       "critical_high": "Huyết sắc tố của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
     },
-    "glucose": {
+    "fasting_plasma_glucose": {
       "low": "Đường huyết của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tôi, và lúc lấy máu tôi có cần lưu ý gì về việc ăn uống trước đó không ạ?",
       "high": "Đường huyết của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi, và bao lâu nữa tôi nên xét nghiệm lại ạ?",
       "critical_low": "Đường huyết của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
@@ -48,13 +48,13 @@
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
       "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
     },
-    "ldl_cholesterol": {
+    "ldl_c": {
       "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi ạ?",
       "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tôi, và tôi nên thay đổi gì trong ăn uống và sinh hoạt ạ?",
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
       "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
     },
-    "hdl_cholesterol": {
+    "hdl_c": {
       "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tôi, và tôi nên thay đổi gì trong sinh hoạt ạ?",
       "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi ạ?",
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
@@ -66,7 +66,7 @@
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
       "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
     },
-    "kali": {
+    "potassium": {
       "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi, và tôi nên lưu ý gì trong ăn uống ạ?",
       "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tôi, và tôi nên lưu ý gì trong ăn uống ạ?",
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
