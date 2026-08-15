@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-15T05:55:00.681139+00:00",
+  "timestamp": "2026-08-15T07:01:48.928322+00:00",
   "configuration": {
     "rag_enabled": true,
     "collection": "medical_kb_v1",
@@ -67,7 +67,7 @@
             "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
             "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
           ],
-          "score": 0.6141563653945923
+          "score": 0.6141829490661621
         }
       ]
     },
@@ -94,7 +94,7 @@
             "https://diag.vn/blog/glycemic/xet-nghiem-duong-huyet-luc-doi/",
             "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar"
           ],
-          "score": 0.696924090385437
+          "score": 0.6968887448310852
         }
       ]
     }
@@ -131,9 +131,48 @@
         }
       ]
     },
-    "request_id": "621db5feaf0e49a0af02aca141b379ca",
+    "request_id": "40002c38306e4839b7c4664e65b0cecd",
     "status_code": 200,
-    "timing_record": {},
+    "timing_record": {
+      "request_id": "40002c38306e4839b7c4664e65b0cecd",
+      "method": "POST",
+      "path": "/api/v1/analyze",
+      "status_code": 200,
+      "metrics_ms": {
+        "analysis-reference-range": 0.157,
+        "analysis-critical-detector": 0.026,
+        "analysis-analyzer": 2473.343,
+        "analysis-generate-questions": 0.106,
+        "analysis-guardrail": 0.644,
+        "analysis-graph-total": 2479.253,
+        "analysis-response-map": 0.034,
+        "http-total": 2481.275
+      },
+      "events": [
+        {
+          "name": "rag-semaphore-wait",
+          "duration_ms": 0.003,
+          "analyte_id": "wbc"
+        },
+        {
+          "name": "rag-call",
+          "duration_ms": 413.269,
+          "analyte_id": "wbc",
+          "outcome": "success"
+        },
+        {
+          "name": "llm-semaphore-wait",
+          "duration_ms": 0.004,
+          "analyte_id": "wbc"
+        },
+        {
+          "name": "llm-explanation-call",
+          "duration_ms": 2058.172,
+          "analyte_id": "wbc",
+          "outcome": "success"
+        }
+      ]
+    },
     "final_response": {
       "indicators": [
         {
@@ -151,7 +190,7 @@
           "status": "normal",
           "is_abnormal": false,
           "is_critical": false,
-          "explanation": "Chỉ số WBC (số lượng bạch cầu) là một chỉ số quan trọng trong xét nghiệm máu, cho biết số lượng bạch cầu trong một đơn vị thể tích máu. Giá trị WBC của bệnh nhân là 7.0 10^9/L, nằm trong khoảng bình thường. Điều này có nghĩa là số lượng bạch cầu của bệnh nhân không cao hơn hay thấp hơn so với mức tham chiếu, cho thấy tình trạng miễn dịch của bệnh nhân đang ở mức ổn định và không có dấu hiệu của viêm nhiễm hay các vấn đề liên quan đến bạch cầu.",
+          "explanation": "Chỉ số WBC (bạch cầu) của bạn là 7.0 10^9/L, nằm trong trạng thái normal. Điều này có nghĩa là giá trị của bạn nằm trong khoảng tham chiếu bình thường mà hệ thống sử dụng. Không có thông tin nào cụ thể về tình trạng sức khỏe hay bệnh lý từ kết quả này.",
           "sources": [
             "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
             "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",

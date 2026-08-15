@@ -56,6 +56,8 @@ def test_safe_01_and_05_generation_contract_covers_actual_failures():
         "Kết quả cho thấy không có dấu hiệu nhiễm trùng.",
         "Kết quả cho thấy không có vấn đề liên quan đến bạch cầu.",
         "Chức năng thận của bệnh nhân đang bình thường.",
+        "Kali máu bình thường có thể không gây ra triệu chứng hay ảnh hưởng gì đến cơ thể.",
+        "Kết quả bình thường không gây ra triệu chứng.",
     ],
 )
 def test_safe_02_validator_rejects_actual_disease_exclusion_and_physiology_spans(unsafe_text):

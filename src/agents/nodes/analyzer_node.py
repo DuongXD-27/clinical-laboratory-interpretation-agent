@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 GENERATION_SAFETY_CONTRACT = """\
 Hợp đồng an toàn bắt buộc:
 - NORMAL chỉ có nghĩa là giá trị nằm trong khoảng tham chiếu được hệ thống sử dụng. Không được suy ra cơ thể/sức khỏe/chức năng cơ quan bình thường, miễn dịch ổn định, không có bệnh, viêm, nhiễm trùng hoặc vấn đề y khoa.
+- Khi trạng thái là NORMAL: TUYỆT ĐỐI KHÔNG suy diễn rằng "bình thường thì không gây triệu chứng/không ảnh hưởng gì", và KHÔNG liệt kê rủi ro khi tăng/giảm nếu context không nói rõ về trạng thái bình thường. Nếu context chỉ mô tả khi tăng cao/giảm thấp mà không có nội dung trực tiếp về mức bình thường, lời giải thích CHỈ ĐƯỢC nêu giá trị, đơn vị và xác nhận giá trị nằm trong khoảng tham chiếu được hệ thống sử dụng; bỏ toàn bộ phần tăng/giảm.
 - LOW/HIGH chỉ có nghĩa là giá trị thấp/cao so với khoảng tham chiếu được hệ thống sử dụng; đây không phải chẩn đoán.
 - CRITICAL_LOW/CRITICAL_HIGH chỉ có nghĩa là giá trị vượt ngưỡng cảnh báo nguy kịch được hệ thống cấu hình; cảnh báo xác định của hệ thống là có thẩm quyền và đây không phải chẩn đoán.
 - Không gọi giá trị là "mức tối ưu" và không khẳng định tim, gan, thận, miễn dịch hay chức năng khác hoạt động bình thường từ một kết quả xét nghiệm đơn lẻ.
-- Ngoài giá trị, đơn vị, trạng thái xác định, khoảng tham chiếu và cảnh báo xác định: mọi triệu chứng, ảnh hưởng, liên hệ hoặc nội dung y khoa phải được nêu trực tiếp trong context. Context không nêu thì phải bỏ, không dùng kiến thức sẵn có của mô hình để bổ sung.
+- Ngoài giá trị, đơn vị, trạng thái xác định, khoảng tham chiếu và cảnh báo xác định: mọi triệu chứng, ảnh hưởng, liên hệ hoặc nội dung y khoa phải được nêu trực tiếp trong context cho đúng trạng thái đó. Context không nêu thì phải bỏ, không dùng kiến thức sẵn có của mô hình để bổ sung hay suy diễn ngược từ trạng thái khác.
 - Giữ nguyên ngôn ngữ điều kiện của context như "có thể" hoặc "có thể gặp"; không đổi thành khẳng định về bệnh nhân như "bệnh nhân đang", "điều này cho thấy" hoặc "điều này chứng minh".
-- Khi context không đủ, ưu tiên lời giải thích ngắn và có căn cứ hơn lời giải thích dài nhưng suy diễn.
+- Khi context không đủ hoặc không trực tiếp hỗ trợ cho trạng thái hiện tại, ưu tiên lời giải thích tối giản (chỉ nêu giá trị, đơn vị và xác nhận giá trị nằm trong khoảng tham chiếu) thay vì suy diễn.
 """
 
 _STATUS_QUALIFIERS = {

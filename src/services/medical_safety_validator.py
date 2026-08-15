@@ -35,6 +35,8 @@ RESTRICTED_PATTERNS = (
 INFERENCE_PATTERNS: tuple[tuple[str, str], ...] = (
     ("Loại trừ bệnh lý từ kết quả xét nghiệm", r"\bkhong co dau hieu\b"),
     ("Loại trừ viêm/nhiễm/vấn đề y khoa", r"\bkhong co (?:viem nhiem|nhiem trung|van de)\b"),
+    ("Khẳng định không triệu chứng từ kết quả xét nghiệm", r"\bkhong (?:gay|co)(?: [a-z0-9]+){0,3} trieu chung\b"),
+    ("Khẳng định không ảnh hưởng từ kết quả xét nghiệm", r"\bkhong (?:gay|co)(?: [a-z0-9]+){0,5} anh huong\b"),
     ("Khẳng định miễn dịch ổn định", r"\bmien dich(?: [a-z0-9]+){0,6} on dinh\b"),
     ("Khẳng định chức năng bình thường", r"\bchuc nang(?: [a-z0-9]+){0,6} binh thuong\b"),
     ("Khẳng định sinh lý bình thường", r"\bdam bao(?: [a-z0-9]+){0,10} binh thuong\b"),

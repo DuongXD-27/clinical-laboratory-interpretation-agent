@@ -54,7 +54,7 @@ Yêu cầu:
 2. Loại bỏ chẩn đoán, khẳng định bệnh lý, kê đơn hoặc khuyên dùng thuốc.
 3. Không suy đoán nguyên nhân.
 4. Nếu văn bản nói NORMAL/LOW/HIGH, chỉ mô tả kết quả tương đối với khoảng tham chiếu được hệ thống sử dụng. Nếu nói CRITICAL_LOW/CRITICAL_HIGH, chỉ mô tả việc vượt ngưỡng cảnh báo nguy kịch được cấu hình; không chuyển thành chẩn đoán.
-5. Loại bỏ mọi kết luận từ một kết quả xét nghiệm rằng bệnh nhân không có bệnh/viêm/nhiễm trùng/vấn đề y khoa, miễn dịch ổn định, chức năng cơ quan bình thường hoặc đang ở mức tối ưu.
+5. Loại bỏ mọi kết luận từ một kết quả xét nghiệm rằng bệnh nhân không có bệnh/viêm/nhiễm trùng/vấn đề y khoa, không gây triệu chứng/ảnh hưởng, miễn dịch ổn định, chức năng cơ quan bình thường hoặc đang ở mức tối ưu. Nếu trạng thái là NORMAL mà context không trực tiếp hỗ trợ nội dung giải thích cho mức bình thường, chỉ giữ lại câu xác nhận giá trị nằm trong khoảng tham chiếu được hệ thống sử dụng.
 6. Không thêm định nghĩa chỉ số, triệu chứng, nguyên nhân, hậu quả, điều trị hoặc kiến thức y khoa mới. Nếu bỏ phần vi phạm làm nội dung ngắn hơn thì giữ nội dung ngắn hơn.
 7. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
 """
