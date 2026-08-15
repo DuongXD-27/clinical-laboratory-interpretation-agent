@@ -78,11 +78,13 @@ async def test_detect_critical_values_node_legacy_mock():
     assert len(indicators) == 4
 
     kali = next(ind for ind in indicators if ind["name"] == "Kali")
-    assert kali["status"] == "critical_low"
+    assert kali["critical_status"] == "critical_low"
+    assert kali["status"] not in {"critical_low", "critical_high"}
     assert kali["is_critical"] is True
 
     glucose = next(ind for ind in indicators if ind["name"] == "Fasting plasma glucose")
-    assert glucose["status"] == "critical_high"
+    assert glucose["critical_status"] == "critical_high"
+    assert glucose["status"] not in {"critical_low", "critical_high"}
     assert glucose["is_critical"] is True
 
     ldl = next(ind for ind in indicators if ind["name"] == "LDL-C")
@@ -119,7 +121,8 @@ async def test_kali_approved_checker_high_critical_detector_escalates():
 
     critical_state = await detect_critical_values_node({**initial_state, **checked_state})
     critical_kali = critical_state["indicators"][0]
-    assert critical_kali["status"] == "critical_high"
+    assert critical_kali["status"] == "high"
+    assert critical_kali["critical_status"] == "critical_high"
     assert critical_kali["is_critical"] is True
     assert critical_state["has_critical_values"] is True
 
@@ -148,10 +151,12 @@ async def test_potassium_exact_critical_boundaries_software_execution(value, exp
     potassium = result["indicators"][0]
     if expected_status is None:
         assert potassium["status"] not in {"critical_low", "critical_high"}
+        assert potassium.get("critical_status") is None
         assert potassium["is_critical"] is False
         assert result["critical_alerts"] == []
     else:
-        assert potassium["status"] == expected_status
+        assert potassium["status"] not in {"critical_low", "critical_high"}
+        assert potassium["critical_status"] == expected_status
         assert potassium["is_critical"] is True
 
 
@@ -212,7 +217,8 @@ async def test_null_low_side_is_inactive_while_high_side_still_executes(monkeypa
     assert low_result["critical_alerts"] == []
 
     high_result = await detect_critical_values_node(_potassium_state(6.11))
-    assert high_result["indicators"][0]["status"] == "critical_high"
+    assert high_result["indicators"][0]["critical_status"] == "critical_high"
+    assert high_result["indicators"][0]["status"] not in {"critical_low", "critical_high"}
     assert high_result["indicators"][0]["is_critical"] is True
     assert len(high_result["critical_alerts"]) == 1
 
@@ -247,9 +253,9 @@ async def test_legacy_migration_compatibility_missing_operators_defaults_inclusi
     low_result = await detect_critical_values_node(_potassium_state(3.0))
     high_result = await detect_critical_values_node(_potassium_state(6.1))
 
-    assert low_result["indicators"][0]["status"] == "critical_low"
+    assert low_result["indicators"][0]["critical_status"] == "critical_low"
     assert "3.0 <= 3.0 mmol/L" in low_result["critical_alerts"][0]["message"]
-    assert high_result["indicators"][0]["status"] == "critical_high"
+    assert high_result["indicators"][0]["critical_status"] == "critical_high"
     assert "6.1 >= 6.1 mmol/L" in high_result["critical_alerts"][0]["message"]
 
 
@@ -288,7 +294,8 @@ async def test_future_provenance_fields_load_and_execute(tmp_path, monkeypatch):
     monkeypatch.setattr(critical_detector, "CRITICAL_THRESHOLDS", loaded)
     result = await detect_critical_values_node(_potassium_state(2.99))
 
-    assert result["indicators"][0]["status"] == "critical_low"
+    assert result["indicators"][0]["critical_status"] == "critical_low"
+    assert result["indicators"][0]["status"] not in {"critical_low", "critical_high"}
     assert result["indicators"][0]["is_critical"] is True
 
 
@@ -359,10 +366,12 @@ async def test_production_glucose_source_unit_direct_strict_boundaries(
 
     if expected_status is None:
         assert indicator["status"] not in {"critical_low", "critical_high"}
+        assert indicator.get("critical_status") is None
         assert indicator["is_critical"] is False
         assert result["critical_alerts"] == []
     else:
-        assert indicator["status"] == expected_status
+        assert indicator["status"] not in {"critical_low", "critical_high"}
+        assert indicator["critical_status"] == expected_status
         assert indicator["is_critical"] is True
 
 
@@ -400,10 +409,12 @@ async def test_production_glucose_mmol_l_conversion_strict_boundaries_use_decima
     assert all(isinstance(threshold, Decimal) for _, threshold, _ in compared_operands)
     if expected_status is None:
         assert indicator["status"] not in {"critical_low", "critical_high"}
+        assert indicator.get("critical_status") is None
         assert indicator["is_critical"] is False
         assert result["critical_alerts"] == []
     else:
-        assert indicator["status"] == expected_status
+        assert indicator["status"] not in {"critical_low", "critical_high"}
+        assert indicator["critical_status"] == expected_status
         assert indicator["is_critical"] is True
 
 
@@ -555,7 +566,8 @@ async def test_production_glucose_mmol_l_pipeline_can_escalate_non_unknown():
 
     result = await detect_critical_values_node({**state, **ri_state})
 
-    assert result["indicators"][0]["status"] == "critical_low"
+    assert result["indicators"][0]["status"] == "low"
+    assert result["indicators"][0]["critical_status"] == "critical_low"
     assert result["indicators"][0]["is_critical"] is True
 
 
@@ -606,7 +618,8 @@ async def test_existing_fpg_aliases_reach_one_production_canonical_rule(name):
 
     result = await detect_critical_values_node(state)
 
-    assert result["indicators"][0]["status"] == "critical_low"
+    assert result["indicators"][0]["critical_status"] == "critical_low"
+    assert result["indicators"][0]["status"] not in {"critical_low", "critical_high"}
     assert result["indicators"][0]["is_critical"] is True
 
 
@@ -630,8 +643,10 @@ async def test_canonical_analyte_equivalence_potassium_and_kali():
     ind_p = res_potassium["indicators"][0]
     ind_k = res_kali["indicators"][0]
 
-    assert ind_p["status"] == "critical_low"
-    assert ind_k["status"] == "critical_low"
+    assert ind_p["critical_status"] == "critical_low"
+    assert ind_k["critical_status"] == "critical_low"
+    assert ind_p["status"] not in {"critical_low", "critical_high"}
+    assert ind_k["status"] not in {"critical_low", "critical_high"}
     assert ind_p["is_critical"] is True
     assert ind_k["is_critical"] is True
 
@@ -832,11 +847,11 @@ async def test_shared_unit_normalizer_aliases_execute_correctly(monkeypatch):
     result = await detect_critical_values_node(state)
     inds = result["indicators"]
 
-    assert inds[0]["status"] == "critical_high"
+    assert inds[0]["critical_status"] == "critical_high"
     assert inds[0]["is_critical"] is True
-    assert inds[1]["status"] == "critical_high"
+    assert inds[1]["critical_status"] == "critical_high"
     assert inds[1]["is_critical"] is True
-    assert inds[2]["status"] == "critical_high"
+    assert inds[2]["critical_status"] == "critical_high"
     assert inds[2]["is_critical"] is True
 
 
@@ -884,7 +899,8 @@ async def test_production_registry_only_active_analytes_execute():
     result = await detect_critical_values_node(state)
     inds = {i["name"]: i for i in result["indicators"]}
 
-    assert inds["Potassium"]["status"] == "critical_high"
+    assert inds["Potassium"]["critical_status"] == "critical_high"
+    assert inds["Potassium"]["status"] not in {"critical_low", "critical_high"}
     assert inds["HGB"]["status"] == "unknown"
     assert inds["HGB"]["is_critical"] is False
     assert inds["WBC"]["status"] == "unknown"
@@ -962,5 +978,42 @@ async def test_non_critical_high_ri_status_not_escalated_if_below_critical_thres
     potassium = critical_state["indicators"][0]
 
     assert potassium["status"] == "high"
+    assert potassium["critical_status"] is None
     assert potassium["is_critical"] is False
     assert critical_state["has_critical_values"] is False
+
+
+@pytest.mark.asyncio
+async def test_status_and_critical_status_contract_separation():
+    """Explicit contract tests:
+    - Potassium 4.5 -> status=normal, critical_status=None, is_critical=False
+    - Potassium 5.8 -> status=high, critical_status=None, is_critical=False
+    - Potassium 6.5 -> status=high, critical_status=critical_high, is_critical=True
+    - Fasting plasma glucose 3.05 -> status=low, critical_status=critical_low, is_critical=True
+    - Generic Glucose 5.2 -> status=unknown, critical_status=None, is_critical=False
+
+    Invariant: status NEVER equals 'critical_low' or 'critical_high'.
+    """
+    probes = [
+        ({"name": "Potassium", "value": 4.5, "unit": "mmol/L"}, "normal", None, False),
+        ({"name": "Potassium", "value": 5.8, "unit": "mmol/L"}, "high", None, False),
+        ({"name": "Potassium", "value": 6.5, "unit": "mmol/L"}, "high", "critical_high", True),
+        ({"name": "Fasting plasma glucose", "value": 3.05, "unit": "mmol/L"}, "low", "critical_low", True),
+        ({"name": "Glucose", "value": 5.2, "unit": "mmol/L"}, "unknown", None, False),
+    ]
+
+    for raw_ind, exp_status, exp_crit_status, exp_is_crit in probes:
+        state = {
+            "patient_age": 35,
+            "patient_gender": "male",
+            "test_date": "2026-08-16",
+            "raw_indicators": [raw_ind],
+        }
+        checked_state = await reference_range_checker_node(state)
+        crit_state = await detect_critical_values_node({**state, **checked_state})
+        ind = crit_state["indicators"][0]
+
+        assert ind["status"] == exp_status
+        assert ind.get("critical_status") == exp_crit_status
+        assert ind.get("is_critical") is exp_is_crit
+        assert ind["status"] not in {"critical_low", "critical_high"}

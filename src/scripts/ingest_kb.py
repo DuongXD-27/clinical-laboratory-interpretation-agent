@@ -35,7 +35,12 @@ def ingest():
         # Build text representation for embedding
         text_parts = [f"Chỉ số: {indicator}"]
 
-        # Collect high/low notes from all sources (new schema)
+        # Collect descriptions, high/low notes from all sources (new schema)
+        descriptions = [
+            src["description"]
+            for src in item.get("sources", [])
+            if isinstance(src, dict) and src.get("description")
+        ]
         high_notes = [
             src["high_note"]
             for src in item.get("sources", [])
@@ -47,6 +52,8 @@ def ingest():
             if isinstance(src, dict) and src.get("low_note")
         ]
 
+        if descriptions:
+            text_parts.append(f"Giải thích cơ bản: {descriptions[0]}")
         if high_notes:
             text_parts.append(f"Ý nghĩa khi tăng cao: {high_notes[0]}")
         if low_notes:

@@ -294,9 +294,9 @@ async def detect_critical_values_node(state: AgentState) -> dict:
         # without preventing the valid opposite side from being evaluated.
         if low_side is not None and _compare_critical(comparison_value, low_side[0], low_side[1]):
             low_val, low_operator = low_side
-            new_ind["status"] = "critical_low"
             new_ind["is_abnormal"] = True
             new_ind["is_critical"] = True
+            new_ind["critical_status"] = "critical_low"
             has_critical = True
             # Chống trùng lặp (nếu đồ thị chạy lại / retry)
             if not any(a.get("indicator_name") == name for a in critical_alerts):
@@ -308,9 +308,9 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                 })
         elif high_side is not None and _compare_critical(comparison_value, high_side[0], high_side[1]):
             high_val, high_operator = high_side
-            new_ind["status"] = "critical_high"
             new_ind["is_abnormal"] = True
             new_ind["is_critical"] = True
+            new_ind["critical_status"] = "critical_high"
             has_critical = True
             # Chống trùng lặp
             if not any(a.get("indicator_name") == name for a in critical_alerts):
@@ -320,6 +320,9 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                     "unit": input_unit,
                     "message": f"CẢNH BÁO: {name} tăng tới ngưỡng nguy kịch ({comparison_value} {high_operator} {high_val} {comparison_unit}). Yêu cầu can thiệp y tế.",
                 })
+        else:
+            new_ind["is_critical"] = False
+            new_ind["critical_status"] = None
 
         # Giữ lại indicator đã xử lý
         updated_indicators.append(new_ind)

@@ -188,7 +188,8 @@ async def test_e2e_04e_explicit_fasting_glucose_reaches_arup_critical_low(
     assert glucose_mmol_l_to_mg_dl(Decimal("3.0")) == Decimal("54.04677")
 
     critical = only_indicator(critical_result)
-    assert critical["status"] == "critical_low"
+    assert critical["status"] == "low"
+    assert critical["critical_status"] == "critical_low"
     assert critical["is_critical"] is True
     assert critical_result["has_critical_values"] is True
     assert len(critical_result["critical_alerts"]) == 1
@@ -310,7 +311,8 @@ async def test_e2e_11_potassium_critical_high():
     assert checked["is_critical"] is False
 
     critical = only_indicator(critical_result)
-    assert critical["status"] == "critical_high"
+    assert critical["status"] == "high"
+    assert critical["critical_status"] == "critical_high"
     assert critical["is_critical"] is True
     assert critical_result["has_critical_values"] is True
 
@@ -329,7 +331,8 @@ async def test_e2e_12_kali_critical_low_alias_boundary():
     assert checked["reference_low"] == 3.5
     assert checked["reference_high"] == 5.0
     critical = only_indicator(critical_result)
-    assert critical["status"] == "critical_low"
+    assert critical["status"] == "low"
+    assert critical["critical_status"] == "critical_low"
     assert critical["is_critical"] is True
 
 
@@ -356,12 +359,18 @@ async def test_e2e_13_multiple_indicator_order():
         "Potassium",
         "Creatinine",
     ]
-    # After BONUS-TIP-010: HGB approved (140 g/L male → normal); Potassium approved (6.5 → critical_high)
+    # After BONUS-TIP-010: HGB approved (140 g/L male → normal); Potassium approved (6.5 → high + critical_high)
     assert [indicator["status"] for indicator in critical_result["indicators"]] == [
         "normal",
         "normal",
-        "critical_high",
+        "high",
         "normal",
+    ]
+    assert [indicator.get("critical_status") for indicator in critical_result["indicators"]] == [
+        None,
+        None,
+        "critical_high",
+        None,
     ]
     assert critical_result["has_critical_values"] is True
 

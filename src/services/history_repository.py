@@ -168,6 +168,7 @@ def save_report(
                 reference_low=indicator.reference_low,
                 reference_high=indicator.reference_high,
                 status=indicator.status,
+                critical_status=getattr(indicator, "critical_status", None),
                 explanation=indicator.explanation or "",
                 sources=list(indicator.sources or []),
                 # indicator_catalog_id hiện để NULL nếu chưa có bước
