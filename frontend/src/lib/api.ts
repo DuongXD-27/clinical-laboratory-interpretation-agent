@@ -126,6 +126,8 @@ export type HistoryQuery = {
   from?: string;
   to?: string;
   patientUsername?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export async function fetchHistory(query: HistoryQuery = {}): Promise<LabReportListResponse> {
@@ -133,6 +135,8 @@ export async function fetchHistory(query: HistoryQuery = {}): Promise<LabReportL
   if (query.from) params.set("from", query.from);
   if (query.to) params.set("to", query.to);
   if (query.patientUsername) params.set("patient_username", query.patientUsername);
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const response = await authFetch(`/api/v1/history${suffix}`);

@@ -43,6 +43,30 @@ function sourceHostname(source: string) {
   }
 }
 
+function reportTone(status: string) {
+  if (status === "CRITICAL") return "critical";
+  if (status === "ABNORMAL") return "abnormal";
+  return "normal";
+}
+
+function reportStatusText(status: string) {
+  if (status === "CRITICAL") return "Có chỉ số nguy kịch";
+  if (status === "ABNORMAL") return "Có chỉ số bất thường";
+  return "Bình thường";
+}
+
+function indicatorStatusText(status: string) {
+  if (status === "HIGH") return "Cao";
+  if (status === "LOW") return "Thấp";
+  if (status === "NORMAL") return "Bình thường";
+  return status;
+}
+
+function formatDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : value;
+}
+
 export default function PatientReportDetailPage() {
   const router = useRouter();
   const params = useParams<{ reportId: string }>();
@@ -53,7 +77,7 @@ export default function PatientReportDetailPage() {
 
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
-      router.replace("/");
+      router.replace("/login");
       return;
     }
     const load = async () => {
@@ -63,7 +87,7 @@ export default function PatientReportDetailPage() {
         const response = await authFetch(`/api/v1/patient/me/lab-reports/${params.reportId}`);
         if (response.status === 401) {
           clearSession();
-          router.replace("/");
+          router.replace("/login");
           return;
         }
         if (!response.ok) throw new Error("Không tìm thấy phiếu xét nghiệm.");
@@ -99,10 +123,10 @@ export default function PatientReportDetailPage() {
             <h1>Chi tiết phiếu xét nghiệm</h1>
             <p>Xem lại dữ liệu đã lưu, không chỉnh sửa kết quả sau khi lưu.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Link href="/patient/history" className="secondary-button px-3 py-2.5">Lịch sử</Link>
             {report && (
-              <button type="button" onClick={deleteReport} disabled={deleting} className="danger-button px-3 py-2.5">
+              <button type="button" onClick={deleteReport} disabled={deleting} className="text-danger-button">
                 {deleting ? "Đang xóa..." : "Xóa"}
               </button>
             )}
@@ -120,9 +144,14 @@ export default function PatientReportDetailPage() {
         ) : report ? (
           <section className="patient-card p-5 sm:p-7">
             <div className="section-heading">
-              <span className="eyebrow">Test Detail</span>
-              <h2>{report.test_date}</h2>
-              <p>{report.result_count} chỉ số · {report.status}</p>
+              <span className="eyebrow">Chi tiết phiếu</span>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h2>{formatDate(report.test_date)}</h2>
+                <span className={`status-badge status-${reportTone(report.status)}`}>
+                  {reportStatusText(report.status)}
+                </span>
+              </div>
+              <p>{report.result_count} chỉ số đã lưu trong phiếu xét nghiệm này.</p>
             </div>
 
             {report.summary && <div className="summary-box mt-5">{report.summary}</div>}
@@ -154,7 +183,7 @@ export default function PatientReportDetailPage() {
                           </p>
                         )}
                       </div>
-                      <span className={`status-badge status-${tone}`}>{indicator.status}</span>
+                      <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status)}</span>
                     </div>
                     {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
                     {indicator.sources && indicator.sources.length > 0 && (
