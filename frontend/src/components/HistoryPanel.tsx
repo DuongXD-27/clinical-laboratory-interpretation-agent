@@ -463,7 +463,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                                 </div>
                                 <div className="mt-1 text-xs text-slate-500">
                                   Khoảng tham chiếu: {indicator.reference_low ?? "-"} –{" "}
-                                  {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status)}
+                                  {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status, indicator.critical_status)}
                                 </div>
                                 {indicator.explanation && (
                                   <p className="mt-2 text-sm leading-relaxed text-slate-700">

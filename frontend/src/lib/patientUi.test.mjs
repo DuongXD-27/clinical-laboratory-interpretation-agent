@@ -33,6 +33,8 @@ test("maps backend statuses only at the presentation layer", () => {
   assert.equal(indicatorStatusText("NORMAL"), "Bình thường");
   assert.equal(indicatorStatusText("LOW"), "Thấp");
   assert.equal(indicatorStatusText("HIGH"), "Cao");
+  assert.equal(indicatorStatusText("HIGH", "critical_high"), "Nguy kịch – cao");
+  assert.equal(indicatorStatusText("LOW", "critical_low"), "Nguy kịch – thấp");
   assert.equal(indicatorStatusText("CRITICAL"), "Nguy kịch");
   assert.equal(indicatorStatusText("critical_high"), "Nguy kịch – cao");
   assert.equal(indicatorStatusText("critical_low"), "Nguy kịch – thấp");

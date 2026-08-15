@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Iterable
 
 from sqlalchemy.orm import Session, selectinload
 
@@ -60,14 +60,17 @@ def _report_status(indicators: Iterable[object]) -> str:
     for indicator in indicators:
         if isinstance(indicator, dict):
             status = str(indicator.get("status", ""))
+            critical_status = str(indicator.get("critical_status") or "")
             is_abnormal = bool(indicator.get("is_abnormal"))
             is_critical = bool(indicator.get("is_critical"))
         else:
             status = str(getattr(indicator, "status", ""))
+            critical_status = str(getattr(indicator, "critical_status", None) or "")
             is_abnormal = bool(getattr(indicator, "is_abnormal", False))
             is_critical = bool(getattr(indicator, "is_critical", False))
         normalized_status = status.casefold()
-        if is_critical or normalized_status in {"critical_low", "critical_high"}:
+        normalized_crit = critical_status.casefold()
+        if is_critical or normalized_status in {"critical_low", "critical_high"} or normalized_crit in {"critical_low", "critical_high"}:
             return "CRITICAL"
         if is_abnormal or normalized_status in {"low", "high"}:
             has_abnormal = True
@@ -137,6 +140,7 @@ def _canonical_result_rows(
                 "reference_low": indicator.reference_low,
                 "reference_high": indicator.reference_high,
                 "status": indicator.status,
+                "critical_status": indicator.critical_status,
                 "explanation": indicator.explanation or "",
                 "sources": indicator.sources or [],
             }

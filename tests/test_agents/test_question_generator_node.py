@@ -165,7 +165,7 @@ async def test_full_graph_produces_no_questions_when_everything_is_normal(monkey
             "test_date": "2026-08-13",
             "language": "vi",
             "raw_indicators": [
-                {"name": "Glucose", "value": 5.0, "unit": "mmol/L"},
+                {"name": "Fasting plasma glucose", "value": 5.0, "unit": "mmol/L"},
             ],
         },
         {"configurable": {"thread_id": "test-questions-normal-only"}},

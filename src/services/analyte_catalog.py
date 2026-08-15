@@ -28,6 +28,43 @@ class AnalyteDefinition:
     vietnamese_name: str
     curated_explanation: str
     sources: tuple[str, ...]
+    high_note: str = ""
+    low_note: str = ""
+    critical_high_note: str = ""
+    critical_low_note: str = ""
+
+    @property
+    def description(self) -> str:
+        return self.curated_explanation
+
+    def explanation_for_status(
+        self,
+        status: str,
+        critical_status: str | None = None,
+    ) -> str:
+        """Deterministic status-aware explanation selection.
+
+        Selection policy:
+        CRITICAL_HIGH: critical_high_note -> high_note -> description
+        CRITICAL_LOW: critical_low_note -> low_note -> description
+        HIGH: high_note -> description
+        LOW: low_note -> description
+        NORMAL / UNKNOWN / other: neutral description
+        """
+        normalized_status = (status or "").lower().strip()
+        normalized_critical = (critical_status or "").lower().strip()
+        effective_status = normalized_critical or normalized_status
+
+        if effective_status == "critical_high":
+            return self.critical_high_note or self.high_note or self.curated_explanation
+        if effective_status == "critical_low":
+            return self.critical_low_note or self.low_note or self.curated_explanation
+        if effective_status == "high":
+            return self.high_note or self.curated_explanation
+        if effective_status == "low":
+            return self.low_note or self.curated_explanation
+        # normal, unknown, etc. return neutral description only
+        return self.curated_explanation
 
 
 def _lookup_key(value: Any) -> str:
@@ -94,21 +131,49 @@ class AnalyteCatalog:
             indicator = str(item["name"]).strip()
             # Derive a stable lowercase id from the name (e.g. "WBC" → "wbc")
             analyte_id = indicator.lower().replace("-", "_").replace(" ", "_")
-            # "sources" is now a list of objects; extract the "url" field from each.
+            # "sources" is a list of objects; extract URLs and notes.
             raw_sources = item.get("sources", [])
-            source_urls: tuple[str, ...] = tuple(
-                str(src["url"]).strip()
-                for src in raw_sources
-                if isinstance(src, dict) and str(src.get("url", "")).strip()
-            )
+            source_urls: list[str] = []
+            descriptions: list[str] = []
+            high_notes: list[str] = []
+            low_notes: list[str] = []
+            crit_high_notes: list[str] = []
+            crit_low_notes: list[str] = []
+
+            for src in raw_sources:
+                if not isinstance(src, dict):
+                    continue
+                url = str(src.get("url", "")).strip()
+                if url:
+                    source_urls.append(url)
+                desc = str(src.get("description") or "").strip()
+                if desc:
+                    descriptions.append(desc)
+                hn = str(src.get("high_note") or "").strip()
+                if hn:
+                    high_notes.append(hn)
+                ln = str(src.get("low_note") or "").strip()
+                if ln:
+                    low_notes.append(ln)
+                chn = str(src.get("critical_high_note") or "").strip()
+                if chn:
+                    crit_high_notes.append(chn)
+                cln = str(src.get("critical_low_note") or "").strip()
+                if cln:
+                    crit_low_notes.append(cln)
+
             definitions.append(
                 AnalyteDefinition(
                     analyte_id=analyte_id,
                     indicator=indicator,
                     display_name=indicator,
                     vietnamese_name="",
-                    curated_explanation="",
-                    sources=source_urls,
+                    curated_explanation=descriptions[0] if descriptions else "",
+                    sources=tuple(source_urls),
+                    high_note=high_notes[0] if high_notes else "",
+                    low_note=low_notes[0] if low_notes else "",
+                    critical_high_note=crit_high_notes[0] if crit_high_notes else "",
+                    critical_low_note=crit_low_notes[0] if crit_low_notes else "",
                 )
             )
 

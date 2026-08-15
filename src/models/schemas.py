@@ -161,6 +161,7 @@ class IndicatorResultSchema(BaseModel):
     reference_high: float | None = None
 
     status: IndicatorStatus
+    critical_status: str | None = None
 
     is_abnormal: bool
     is_critical: bool

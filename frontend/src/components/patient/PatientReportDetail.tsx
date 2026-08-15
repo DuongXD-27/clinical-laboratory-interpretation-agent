@@ -153,7 +153,7 @@ export default function PatientReportDetail() {
                       </p>
                     )}
                   </div>
-                  <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status)}</span>
+                  <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status, indicator.critical_status)}</span>
                 </div>
                 {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
                 <SourcesDisclosure sources={indicator.sources} />
