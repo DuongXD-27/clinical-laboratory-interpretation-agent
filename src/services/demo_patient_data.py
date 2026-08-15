@@ -4,7 +4,7 @@ import datetime
 
 from sqlalchemy.orm import Session
 
-from src.models.db import LabReport, User
+from src.models.db import User
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse
 from src.services.lab_history_service import save_analyzed_report
 
@@ -109,6 +109,9 @@ def seed_demo_patient_reports(db: Session) -> int:
         raw_names = report.get("raw_names", {})
         for canonical, (value, status) in report["values"].items():
             meta = APPROVED_ANALYTE_META[canonical]
+            is_critical = status in {"critical_low", "critical_high"}
+            critical_status = status if is_critical else None
+            effective_status = "high" if status == "critical_high" else "low" if status == "critical_low" else status
             rows.append(
                 {
                     "canonical": canonical,
@@ -117,9 +120,10 @@ def seed_demo_patient_reports(db: Session) -> int:
                     "unit": meta["unit"],
                     "reference_low": meta["reference_low"],
                     "reference_high": meta["reference_high"],
-                    "status": status,
-                    "is_abnormal": status in {"low", "high", "critical_low", "critical_high"},
-                    "is_critical": status in {"critical_low", "critical_high"},
+                    "status": effective_status,
+                    "critical_status": critical_status,
+                    "is_abnormal": is_critical or effective_status in {"low", "high"},
+                    "is_critical": is_critical,
                     "explanation": f"{canonical} là chỉ số mẫu phục vụ kiểm thử lịch sử xét nghiệm.",
                 }
             )
@@ -133,6 +137,7 @@ def seed_demo_patient_reports(db: Session) -> int:
                     "reference_low": row["reference_low"],
                     "reference_high": row["reference_high"],
                     "status": row["status"],
+                    "critical_status": row["critical_status"],
                     "is_abnormal": row["is_abnormal"],
                     "is_critical": row["is_critical"],
                     "explanation": row["explanation"],

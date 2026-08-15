@@ -26,7 +26,31 @@
         "low_note": "WBC thấp hơn mức bình thường được gọi là giảm bạch cầu, làm giảm khả năng bảo vệ của hệ miễn dịch và có thể làm tăng nguy cơ nhiễm trùng. Một số nguyên nhân gồm nhiễm virus, nhiễm trùng nặng, bệnh tự miễn, tổn thương tủy xương do hóa trị, xạ trị hoặc một số ung thư, thiếu vitamin B12 hoặc folate và tác dụng phụ của một số thuốc.",
         "critical_high_note": null,
         "critical_low_note": null
-     }
+      },
+      {
+        "url": "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      }
     ]
   },
   {
@@ -46,6 +70,38 @@
         "description": "RBC trong xét nghiệm máu là chỉ số đo số lượng hồng cầu (Red Blood Cell) có trong một lít máu, nằm trong xét nghiệm công thức máu toàn phần. Chỉ số này giúp đánh giá khả năng vận chuyển oxy, chức năng tủy xương và tình trạng sức khỏe tổng quát.",
         "high_note": "Khi RBC cao hơn mức bình thường, tình trạng này được gọi là đa hồng cầu, khiến máu đặc và lưu thông kém. Nguyên nhân thường gặp gồm thiếu oxy mạn tính, hút thuốc lá, bệnh tim bẩm sinh hoặc suy tim, mất nước và rối loạn tủy xương; biểu hiện có thể là đau đầu, chóng mặt kéo dài, da mặt ửng đỏ, tê hoặc ngứa đầu ngón tay chân.",
         "low_note": "Khi RBC thấp hơn bình thường, đây có thể là dấu hiệu thiếu máu do thiếu sắt, thiếu vitamin B12 hoặc acid folic, mất máu cấp hoặc mạn tính, bệnh lý mạn tính và rối loạn tủy xương. Người bệnh thường mệt mỏi kéo dài, hoa mắt, chóng mặt, da nhợt nhạt, nhịp tim nhanh và lạnh tay chân.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlineplus.gov/lab-tests/red-blood-cell-rbc-count/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/so-luong-hong-cau-trong-co-la-bao-nhieu-vi",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://benhvienthucuc.vn/song-khoe/xet-nghiem/rbc-la-gi-chi-so-rbc-tang-hay-giam-co-anh-huong-den-suc-khoe",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
         "critical_high_note": null,
         "critical_low_note": null
       }
@@ -78,6 +134,30 @@
         "low_note": "HGB thấp thường là dấu hiệu của thiếu máu, làm giảm lượng oxy cung cấp cho các tế bào và có thể gây mệt mỏi, chóng mặt, da xanh, tim đập nhanh hoặc khó thở. Các nguyên nhân thường gặp gồm thiếu sắt, vitamin B12 hoặc acid folic, mất máu do chấn thương, phẫu thuật, rong kinh hoặc xuất huyết tiêu hóa, bệnh mạn tính như suy thận, viêm kéo dài hoặc ung thư, và các rối loạn tủy xương hoặc bệnh lý về máu.",
         "critical_high_note": null,
         "critical_low_note": null
+      },
+      {
+        "url": "https://medlineplus.gov/lab-tests/hemoglobin-test/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-gi-vi",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   },
@@ -102,12 +182,60 @@
         "critical_low_note": null
       },
       {
-       "url": "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar",
-       "description": "Xét nghiệm đường huyết lúc đói đo lượng glucose trong máu sau một khoảng thời gian không ăn hoặc uống, thường cần nhịn ăn từ 8 đến 12 giờ. Đây là xét nghiệm máu phổ biến được sử dụng để sàng lọc tiền tiểu đường, tiểu đường và tiểu đường thai kỳ.",
-       "high_note": "Đường huyết lúc đói từ 100 đến 125 mg/dL (5.6 đến 6.9 mmol/L) thường cho thấy tiền tiểu đường, nghĩa là mức đường huyết cao hơn bình thường nhưng chưa đủ để được phân loại là tiểu đường. Mức từ 126 mg/dL (7.0 mmol/L) trở lên cho thấy đường huyết cao và là dấu hiệu chính của bệnh tiểu đường. Khi kết quả đường huyết lúc đói cao, bác sĩ có thể yêu cầu xét nghiệm lại để xác nhận vì không nên chẩn đoán tiểu đường chỉ dựa trên một kết quả bất thường.",
-       "low_note": "Đường huyết lúc đói dưới 70 mg/dL được xem là đường huyết thấp đối với người mắc bệnh tiểu đường, nhưng mức này có thể vẫn bình thường ở một số người không mắc tiểu đường. Khi có kết quả thấp, bác sĩ có thể đánh giá các triệu chứng hạ đường huyết như run rẩy và thực hiện thêm xét nghiệm để xác định liệu tình trạng đường huyết thấp có lặp lại hay không.",
-       "critical_high_note": null,
-       "critical_low_note": null
+        "url": "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar",
+        "description": "Xét nghiệm đường huyết lúc đói đo lượng glucose trong máu sau một khoảng thời gian không ăn hoặc uống, thường cần nhịn ăn từ 8 đến 12 giờ. Đây là xét nghiệm máu phổ biến được sử dụng để sàng lọc tiền tiểu đường, tiểu đường và tiểu đường thai kỳ.",
+        "high_note": "Đường huyết lúc đói từ 100 đến 125 mg/dL (5.6 đến 6.9 mmol/L) thường cho thấy tiền tiểu đường, nghĩa là mức đường huyết cao hơn bình thường nhưng chưa đủ để được phân loại là tiểu đường. Mức từ 126 mg/dL (7.0 mmol/L) trở lên cho thấy đường huyết cao và là dấu hiệu chính của bệnh tiểu đường. Khi kết quả đường huyết lúc đói cao, bác sĩ có thể yêu cầu xét nghiệm lại để xác nhận vì không nên chẩn đoán tiểu đường chỉ dựa trên một kết quả bất thường.",
+        "low_note": "Đường huyết lúc đói dưới 70 mg/dL được xem là đường huyết thấp đối với người mắc bệnh tiểu đường, nhưng mức này có thể vẫn bình thường ở một số người không mắc tiểu đường. Khi có kết quả thấp, bác sĩ có thể đánh giá các triệu chứng hạ đường huyết như run rẩy và thực hiện thêm xét nghiệm để xác định liệu tình trạng đường huyết thấp có lặp lại hay không.",
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://diabetes.org/about-diabetes/a1c",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.cdc.gov/diabetes/diagnosis/index.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/duong-huyet-luc-doi-binh-thuong-vi",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-glucose-trong-mau-o-muc-bao-nhieu-la-mac-benh-tieu-duong-vi",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/glucose-trong-mau-binh-thuong-la-bao-nhieu-bao-nhieu-la-tieu-duong.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   },
@@ -146,6 +274,30 @@
         "low_note": "HbA1c dưới 4% có thể liên quan đến thiếu máu, thiếu sắt, mang thai, mới truyền máu hoặc sử dụng quá liều vitamin E hoặc vitamin C.",
         "critical_high_note": "HbA1c từ 9% trở lên được bài viết mô tả là mức báo động về sức khỏe, với nguy cơ cao gặp các biến chứng tiểu đường nghiêm trọng như bệnh võng mạc, giảm hoặc mất thị lực, tổn thương mạch máu nuôi dây thần kinh, mất cảm giác ở tay chân, suy tim, suy thận và đột quỵ.",
         "critical_low_note": null
+      },
+      {
+        "url": "https://diabetes.org/about-diabetes/a1c",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://diag.vn/blog/diabetes/bang-chi-so-tieu-duong/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   },
@@ -153,44 +305,115 @@
     "name": "LDL-C",
     "metric": "mmol/L",
     "sources": [
-
-     {
-       "url": "https://medlatec.vn/tin-tuc/xet-nghiem-ldl-la-gi-chi-so-ldl-nhu-the-nao-an-toan-s58-n16614",
-       "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, là một loại lipoprotein cholesterol tỷ trọng thấp có nhiệm vụ vận chuyển cholesterol từ máu đến các mô trong cơ thể để sử dụng. LDL thường được gọi là cholesterol xấu vì khi nồng độ trong máu tăng cao có thể gây ảnh hưởng không tốt đến sức khỏe tim mạch.",
-       "high_note": "LDL-C tăng cao là một dấu hiệu xấu, có thể làm tăng nguy cơ xơ vữa động mạch và các bệnh lý về tim mạch, huyết áp, đặc biệt là bệnh mạch vành.",
-       "low_note": null,
-      "critical_high_note": "LDL-C tăng ở mức rất cao có thể làm nguy cơ xơ vữa động mạch và các bệnh lý tim mạch nghiêm trọng trở nên rõ rệt hơn, đặc biệt là nguy cơ mắc bệnh mạch vành.",
-       "critical_low_note": null
+      {
+        "url": "https://medlatec.vn/tin-tuc/xet-nghiem-ldl-la-gi-chi-so-ldl-nhu-the-nao-an-toan-s58-n16614",
+        "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, là một loại lipoprotein cholesterol tỷ trọng thấp có nhiệm vụ vận chuyển cholesterol từ máu đến các mô trong cơ thể để sử dụng. LDL thường được gọi là cholesterol xấu vì khi nồng độ trong máu tăng cao có thể gây ảnh hưởng không tốt đến sức khỏe tim mạch.",
+        "high_note": "LDL-C tăng cao là một dấu hiệu xấu, có thể làm tăng nguy cơ xơ vữa động mạch và các bệnh lý về tim mạch, huyết áp, đặc biệt là bệnh mạch vành.",
+        "low_note": null,
+        "critical_high_note": "LDL-C tăng ở mức rất cao có thể làm nguy cơ xơ vữa động mạch và các bệnh lý tim mạch nghiêm trọng trở nên rõ rệt hơn, đặc biệt là nguy cơ mắc bệnh mạch vành.",
+        "critical_low_note": null
       },
       {
-         "url": "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
-         "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, tức lipoprotein cholesterol tỷ trọng thấp. LDL thường được gọi là cholesterol xấu vì khi tích tụ trong cơ thể có thể góp phần gây xơ vữa động mạch và làm tăng nguy cơ mắc các bệnh tim mạch.",
-         "high_note": "LDL-C tăng cao có thể thúc đẩy tình trạng xơ vữa động mạch, làm tăng nguy cơ mắc các bệnh tim mạch nghiêm trọng như nhồi máu cơ tim và đột quỵ.",
-         "low_note": null,
-         "critical_high_note": "LDL-C ở mức rất cao có thể làm gia tăng nghiêm trọng nguy cơ xơ vữa động mạch và các biến cố tim mạch đe dọa tính mạng như nhồi máu cơ tim và đột quỵ.",
-         "critical_low_note": null
-       }
+        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
+        "description": "LDL là viết tắt của Low Density Lipoprotein Cholesterol, tức lipoprotein cholesterol tỷ trọng thấp. LDL thường được gọi là cholesterol xấu vì khi tích tụ trong cơ thể có thể góp phần gây xơ vữa động mạch và làm tăng nguy cơ mắc các bệnh tim mạch.",
+        "high_note": "LDL-C tăng cao có thể thúc đẩy tình trạng xơ vữa động mạch, làm tăng nguy cơ mắc các bệnh tim mạch nghiêm trọng như nhồi máu cơ tim và đột quỵ.",
+        "low_note": null,
+        "critical_high_note": "LDL-C ở mức rất cao có thể làm gia tăng nghiêm trọng nguy cơ xơ vữa động mạch và các biến cố tim mạch đe dọa tính mạng như nhồi máu cơ tim và đột quỵ.",
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.cdc.gov/cholesterol/about/index.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tin-tuc/hoi-dap-ldl-cholesterol-la-gi-trong-xet-nghiem-mo-mau-s195-n21503",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://bookingcare.vn/cam-nang/xet-nghiem-ldl-cholesterol-va-nhung-luu-y-can-thiet-p4360.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      }
     ]
   },
-   {
+  {
     "name": "HDL-C",
     "metric": "mmol/L",
     "sources": [
       {
-         "url": "https://tiemchunglongchau.com.vn/kien-thuc-tiem-chung/xet-nghiem-hdl-c-ket-qua-hdl-cholesterol-co-y-nghia-gi",
-         "description": "HDL-C là viết tắt của High-Density Lipoprotein Cholesterol, tức cholesterol lipoprotein tỷ trọng cao. HDL-C có chức năng thu gom cholesterol dư thừa từ máu và thành mạch, sau đó vận chuyển về gan để xử lý và đào thải ra khỏi cơ thể. Chỉ số này thường được gọi là cholesterol tốt vì có vai trò bảo vệ thành mạch và giúp đánh giá nguy cơ xơ vữa động mạch cũng như các bệnh tim mạch liên quan.",
-         "high_note": "HDL-C cao thường được xem là yếu tố có lợi cho sức khỏe tim mạch. Tuy nhiên, HDL-C quá cao không đồng nghĩa với việc loại bỏ hoàn toàn nguy cơ bệnh tim mạch, đặc biệt khi các chỉ số lipid khác vẫn ở mức cao.",
-         "low_note": "HDL-C thấp làm suy giảm khả năng loại bỏ cholesterol dư thừa khỏi mạch máu, từ đó làm tăng nguy cơ tích tụ mảng xơ vữa và dẫn đến các biến cố tim mạch.",
-         "critical_high_note": null,
-         "critical_low_note": null
+        "url": "https://tiemchunglongchau.com.vn/kien-thuc-tiem-chung/xet-nghiem-hdl-c-ket-qua-hdl-cholesterol-co-y-nghia-gi",
+        "description": "HDL-C là viết tắt của High-Density Lipoprotein Cholesterol, tức cholesterol lipoprotein tỷ trọng cao. HDL-C có chức năng thu gom cholesterol dư thừa từ máu và thành mạch, sau đó vận chuyển về gan để xử lý và đào thải ra khỏi cơ thể. Chỉ số này thường được gọi là cholesterol tốt vì có vai trò bảo vệ thành mạch và giúp đánh giá nguy cơ xơ vữa động mạch cũng như các bệnh tim mạch liên quan.",
+        "high_note": "HDL-C cao thường được xem là yếu tố có lợi cho sức khỏe tim mạch. Tuy nhiên, HDL-C quá cao không đồng nghĩa với việc loại bỏ hoàn toàn nguy cơ bệnh tim mạch, đặc biệt khi các chỉ số lipid khác vẫn ở mức cao.",
+        "low_note": "HDL-C thấp làm suy giảm khả năng loại bỏ cholesterol dư thừa khỏi mạch máu, từ đó làm tăng nguy cơ tích tụ mảng xơ vữa và dẫn đến các biến cố tim mạch.",
+        "critical_high_note": null,
+        "critical_low_note": null
       },
       {
-         "url": "https://medlatec.vn/tin-tuc/hdl-cholesterol-la-gi-va-nhung-canh-bao-doi-voi-suc-khoe-tim-mach-s63-n21358",
-         "description": "HDL-C là lipoprotein tỷ trọng cao, thường được gọi là cholesterol tốt. HDL-C giúp di chuyển LDL cholesterol ra khỏi cơ thể bằng cách liên kết với cholesterol trong máu và mang về gan để xử lý, đồng thời có thể góp phần làm giảm viêm. Xét nghiệm HDL-C giúp đánh giá tình trạng rối loạn lipoprotein trong máu và nguy cơ hình thành xơ vữa động mạch.",
-         "high_note": "HDL-C cao thường có liên quan đến nguy cơ mắc bệnh tim mạch thấp hơn, tuy nhiên khi HDL-C tăng quá cao thì có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
-         "low_note": "HDL-C thấp có thể làm giảm khả năng đưa cholesterol xấu ra khỏi cơ thể, từ đó làm tăng nguy cơ tích tụ cholesterol, hình thành xơ vữa động mạch và ảnh hưởng bất lợi đến sức khỏe tim mạch.",
-         "critical_high_note": "HDL-C ở mức quá cao có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
-         "critical_low_note": null
+        "url": "https://medlatec.vn/tin-tuc/hdl-cholesterol-la-gi-va-nhung-canh-bao-doi-voi-suc-khoe-tim-mach-s63-n21358",
+        "description": "HDL-C là lipoprotein tỷ trọng cao, thường được gọi là cholesterol tốt. HDL-C giúp di chuyển LDL cholesterol ra khỏi cơ thể bằng cách liên kết với cholesterol trong máu và mang về gan để xử lý, đồng thời có thể góp phần làm giảm viêm. Xét nghiệm HDL-C giúp đánh giá tình trạng rối loạn lipoprotein trong máu và nguy cơ hình thành xơ vữa động mạch.",
+        "high_note": "HDL-C cao thường có liên quan đến nguy cơ mắc bệnh tim mạch thấp hơn, tuy nhiên khi HDL-C tăng quá cao thì có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
+        "low_note": "HDL-C thấp có thể làm giảm khả năng đưa cholesterol xấu ra khỏi cơ thể, từ đó làm tăng nguy cơ tích tụ cholesterol, hình thành xơ vữa động mạch và ảnh hưởng bất lợi đến sức khỏe tim mạch.",
+        "critical_high_note": "HDL-C ở mức quá cao có thể liên hệ với nguy cơ mắc các bệnh truyền nhiễm cao hơn.",
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlineplus.gov/cholesterollevelswhatyouneedtoknow.html",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://diag.vn/blog/lipid/chi-so-cholesterol-bao-nhieu-la-binh-thuong/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://tamanhhospital.vn",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   },
@@ -199,28 +422,52 @@
     "metric": "µmol/L",
     "sources": [
       {
-         "url": "https://medlatec.vn/tin-tuc/gia-tri-xet-nghiem-creatinin-mau-bao-nhieu-la-mac-benh-suy-than-s159-n18192",
-         "description": "Creatinin là sản phẩm của quá trình phân hủy creatin, được đưa vào máu và thải trừ qua thận. Creatinin được lọc qua cầu thận và không được ống thận tái hấp thu, vì vậy xét nghiệm creatinin máu có giá trị quan trọng trong đánh giá chức năng thận, chẩn đoán và theo dõi các bệnh lý về thận.",
-         "high_note": "Creatinin máu tăng cao có thể phản ánh chức năng thận bị suy giảm và làm tăng nguy cơ suy thận. Tình trạng này có thể liên quan đến suy thận do giảm tuần hoàn đến thận, tổn thương cầu thận, tổn thương ống thận hoặc các nguyên nhân gây cản trở đường bài xuất nước tiểu.",
-         "low_note": "Creatinin máu giảm có thể gặp khi máu bị hòa loãng, trong tình trạng suy dinh dưỡng nặng hoặc ở phụ nữ mang thai.",
-         "critical_high_note": "Creatinin tăng ở mức nghiêm trọng có thể phản ánh tình trạng suy thận tiến triển, làm suy giảm khả năng lọc và bài tiết của thận, gây ứ dịch và tích tụ các chất thừa, chất độc trong cơ thể. Tình trạng này có thể đi kèm phù, mệt mỏi, buồn nôn, ngứa, khó thở và nhiều ảnh hưởng nghiêm trọng đến sức khỏe.",
-         "critical_low_note": null
+        "url": "https://medlatec.vn/tin-tuc/gia-tri-xet-nghiem-creatinin-mau-bao-nhieu-la-mac-benh-suy-than-s159-n18192",
+        "description": "Creatinin là sản phẩm của quá trình phân hủy creatin, được đưa vào máu và thải trừ qua thận. Creatinin được lọc qua cầu thận và không được ống thận tái hấp thu, vì vậy xét nghiệm creatinin máu có giá trị quan trọng trong đánh giá chức năng thận, chẩn đoán và theo dõi các bệnh lý về thận.",
+        "high_note": "Creatinin máu tăng cao có thể phản ánh chức năng thận bị suy giảm và làm tăng nguy cơ suy thận. Tình trạng này có thể liên quan đến suy thận do giảm tuần hoàn đến thận, tổn thương cầu thận, tổn thương ống thận hoặc các nguyên nhân gây cản trở đường bài xuất nước tiểu.",
+        "low_note": "Creatinin máu giảm có thể gặp khi máu bị hòa loãng, trong tình trạng suy dinh dưỡng nặng hoặc ở phụ nữ mang thai.",
+        "critical_high_note": "Creatinin tăng ở mức nghiêm trọng có thể phản ánh tình trạng suy thận tiến triển, làm suy giảm khả năng lọc và bài tiết của thận, gây ứ dịch và tích tụ các chất thừa, chất độc trong cơ thể. Tình trạng này có thể đi kèm phù, mệt mỏi, buồn nôn, ngứa, khó thở và nhiều ảnh hưởng nghiêm trọng đến sức khỏe.",
+        "critical_low_note": null
       },
       {
-         "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-xet-nghiem-creatinine-trong-chan-doan-suy-vi",
-         "description": "Creatinine là sản phẩm của sự thoái hóa creatin trong cơ, được đào thải qua thận và lọc qua cầu thận. Nồng độ creatinine máu là chỉ số quan trọng giúp phản ánh chức năng lọc của thận và hỗ trợ đánh giá tình trạng rối loạn chức năng thận.",
-         "high_note": "Creatinine tăng cao có thể phản ánh rối loạn chức năng thận do khả năng lọc creatinine của thận bị suy giảm. Tình trạng này có thể liên quan đến suy thận do giảm tưới máu đến thận, tổn thương cầu thận, tổn thương ống thận hoặc tắc nghẽn đường tiết niệu.",
-         "low_note": "Creatinine thấp có thể gặp ở người có khối lượng cơ giảm, suy dinh dưỡng nặng, sụt cân nghiêm trọng hoặc mắc các bệnh mạn tính kéo dài làm khối lượng cơ giảm dần theo thời gian.",
-         "critical_high_note": "Creatinine tăng ở mức nghiêm trọng có thể đi kèm suy thận rất nặng, với các biểu hiện như mệt mỏi, phù, khó thở, thiếu máu, tăng huyết áp, đái ít, buồn nôn, nôn và da khô. Khi suy thận tiến triển nặng, chức năng thận có thể suy giảm nghiêm trọng và người bệnh có thể phải điều trị thay thế thận.",
-         "critical_low_note": null
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-xet-nghiem-creatinine-trong-chan-doan-suy-vi",
+        "description": "Creatinine là sản phẩm của sự thoái hóa creatin trong cơ, được đào thải qua thận và lọc qua cầu thận. Nồng độ creatinine máu là chỉ số quan trọng giúp phản ánh chức năng lọc của thận và hỗ trợ đánh giá tình trạng rối loạn chức năng thận.",
+        "high_note": "Creatinine tăng cao có thể phản ánh rối loạn chức năng thận do khả năng lọc creatinine của thận bị suy giảm. Tình trạng này có thể liên quan đến suy thận do giảm tưới máu đến thận, tổn thương cầu thận, tổn thương ống thận hoặc tắc nghẽn đường tiết niệu.",
+        "low_note": "Creatinine thấp có thể gặp ở người có khối lượng cơ giảm, suy dinh dưỡng nặng, sụt cân nghiêm trọng hoặc mắc các bệnh mạn tính kéo dài làm khối lượng cơ giảm dần theo thời gian.",
+        "critical_high_note": "Creatinine tăng ở mức nghiêm trọng có thể đi kèm suy thận rất nặng, với các biểu hiện như mệt mỏi, phù, khó thở, thiếu máu, tăng huyết áp, đái ít, buồn nôn, nôn và da khô. Khi suy thận tiến triển nặng, chức năng thận có thể suy giảm nghiêm trọng và người bệnh có thể phải điều trị thay thế thận.",
+        "critical_low_note": null
       },
       {
-         "url": "https://nhathuoclongchau.com.vn/bai-viet/nhung-dieu-can-biet-ve-xet-nghiem-creatinine-mau.html",
-         "description": "Creatinine là sản phẩm của quá trình phân hủy creatin trong cơ thể, được đưa vào máu, lọc qua cầu thận và loại bỏ qua đường tiểu. Nồng độ creatinine trong máu được sử dụng như một chỉ số quan trọng để đánh giá chức năng thận, hỗ trợ phát hiện rối loạn chức năng thận cũng như chẩn đoán và đánh giá mức độ suy thận.",
-         "high_note": "Creatinine máu tăng cao có thể là dấu hiệu cho thấy thận hoạt động không hiệu quả hoặc bị tổn thương, do khả năng loại bỏ creatinine khỏi cơ thể bị suy giảm. Tình trạng này có thể liên quan đến rối loạn chức năng thận hoặc bệnh lý suy thận và cần được đánh giá để xác định nguyên nhân.",
-         "low_note": null,
-         "critical_high_note": "Creatinine tăng nghiêm trọng có thể đi kèm tình trạng suy giảm chức năng lọc và bài tiết của thận, khiến chất lỏng, chất thừa và độc tố tích tụ trong cơ thể. Người bệnh có thể xuất hiện phù, mệt mỏi, buồn nôn, nôn, ngứa, khó thở, thay đổi bất thường về tiểu tiện và các biểu hiện nghiêm trọng có thể ảnh hưởng đến tính mạng nếu không được phát hiện và điều trị kịp thời.",
-         "critical_low_note": null
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/nhung-dieu-can-biet-ve-xet-nghiem-creatinine-mau.html",
+        "description": "Creatinine là sản phẩm của quá trình phân hủy creatin trong cơ thể, được đưa vào máu, lọc qua cầu thận và loại bỏ qua đường tiểu. Nồng độ creatinine trong máu được sử dụng như một chỉ số quan trọng để đánh giá chức năng thận, hỗ trợ phát hiện rối loạn chức năng thận cũng như chẩn đoán và đánh giá mức độ suy thận.",
+        "high_note": "Creatinine máu tăng cao có thể là dấu hiệu cho thấy thận hoạt động không hiệu quả hoặc bị tổn thương, do khả năng loại bỏ creatinine khỏi cơ thể bị suy giảm. Tình trạng này có thể liên quan đến rối loạn chức năng thận hoặc bệnh lý suy thận và cần được đánh giá để xác định nguyên nhân.",
+        "low_note": null,
+        "critical_high_note": "Creatinine tăng nghiêm trọng có thể đi kèm tình trạng suy giảm chức năng lọc và bài tiết của thận, khiến chất lỏng, chất thừa và độc tố tích tụ trong cơ thể. Người bệnh có thể xuất hiện phù, mệt mỏi, buồn nôn, nôn, ngứa, khó thở, thay đổi bất thường về tiểu tiện và các biểu hiện nghiêm trọng có thể ảnh hưởng đến tính mạng nếu không được phát hiện và điều trị kịp thời.",
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlineplus.gov/lab-tests/creatinine-test/",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.kidney.org/kidney-topics/creatinine",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://tamanhhospital.vn",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   },
@@ -229,20 +476,52 @@
     "metric": "mmol/L",
     "sources": [
       {
-         "url": "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
-         "description": "Kali là một cation chủ lực trong các chất điện giải của tế bào, có vai trò thiết yếu đối với hoạt động thần kinh - cơ và giúp duy trì chức năng bình thường của cơ vân, cơ trơn và cơ tim.",
-         "high_note": "Kali máu tăng có thể gây vô cảm, tê các đầu ngón, giảm phản xạ gân xương và ảnh hưởng đến hoạt động điện của tim, làm xuất hiện các rối loạn dẫn truyền và nhịp tim bất thường.",
-         "low_note": "Kali máu giảm có thể gây mệt mỏi, rã rời cơ thần kinh, táo bón dai dẳng và chướng bụng do ảnh hưởng đến hoạt động bình thường của cơ và hệ thần kinh.",
-         "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây rối loạn hoạt động điện của tim, tiến triển thành nhịp nhanh thất, rung thất, ngừng tim và tử vong.",
-         "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây rối loạn nhịp tim, nhịp nhanh thất, rung thất và dẫn tới tử vong."
+        "url": "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+        "description": "Kali là một cation chủ lực trong các chất điện giải của tế bào, có vai trò thiết yếu đối với hoạt động thần kinh - cơ và giúp duy trì chức năng bình thường của cơ vân, cơ trơn và cơ tim.",
+        "high_note": "Kali máu tăng có thể gây vô cảm, tê các đầu ngón, giảm phản xạ gân xương và ảnh hưởng đến hoạt động điện của tim, làm xuất hiện các rối loạn dẫn truyền và nhịp tim bất thường.",
+        "low_note": "Kali máu giảm có thể gây mệt mỏi, rã rời cơ thần kinh, táo bón dai dẳng và chướng bụng do ảnh hưởng đến hoạt động bình thường của cơ và hệ thần kinh.",
+        "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây rối loạn hoạt động điện của tim, tiến triển thành nhịp nhanh thất, rung thất, ngừng tim và tử vong.",
+        "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây rối loạn nhịp tim, nhịp nhanh thất, rung thất và dẫn tới tử vong."
       },
       {
-         "url": "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
-         "description": "Kali là một cation chủ lực trong tế bào, đóng vai trò quan trọng trong việc điều hòa cân bằng nước và điện giải, duy trì hiệu thế màng và tính chịu kích thích của các tế bào thần kinh - cơ. Kali cần thiết cho hoạt động bình thường của cơ bắp, hệ tiêu hóa, tiết niệu và tim mạch.",
-         "high_note": "Kali máu tăng có thể gây buồn nôn, đầy hơi, tiêu chảy, tê các đầu ngón tay và chân, đồng thời làm nhịp tim trở nên bất thường và ảnh hưởng đến hoạt động bình thường của tim.",
-         "low_note": "Kali máu giảm có thể gây mệt mỏi, đau nhức cơ bắp, đau mỏi ở các chi, khó ngủ, trầm cảm và rối loạn tiêu hóa. Tình trạng thiếu Kali kéo dài còn có thể gây các vấn đề nghiêm trọng cho hệ tim mạch và thần kinh.",
-         "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây tổn thương trầm trọng chức năng tim, dẫn đến ngừng tim và tử vong.",
-         "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây nhịp tim không đều, hỗn loạn tâm trí, mất tập trung, phản xạ chậm, liệt cơ và trở thành tình trạng nguy hiểm đến tính mạng."
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
+        "description": "Kali là một cation chủ lực trong tế bào, đóng vai trò quan trọng trong việc điều hòa cân bằng nước và điện giải, duy trì hiệu thế màng và tính chịu kích thích của các tế bào thần kinh - cơ. Kali cần thiết cho hoạt động bình thường của cơ bắp, hệ tiêu hóa, tiết niệu và tim mạch.",
+        "high_note": "Kali máu tăng có thể gây buồn nôn, đầy hơi, tiêu chảy, tê các đầu ngón tay và chân, đồng thời làm nhịp tim trở nên bất thường và ảnh hưởng đến hoạt động bình thường của tim.",
+        "low_note": "Kali máu giảm có thể gây mệt mỏi, đau nhức cơ bắp, đau mỏi ở các chi, khó ngủ, trầm cảm và rối loạn tiêu hóa. Tình trạng thiếu Kali kéo dài còn có thể gây các vấn đề nghiêm trọng cho hệ tim mạch và thần kinh.",
+        "critical_high_note": "Kali máu tăng nghiêm trọng có thể gây tổn thương trầm trọng chức năng tim, dẫn đến ngừng tim và tử vong.",
+        "critical_low_note": "Kali máu giảm nghiêm trọng có thể gây nhịp tim không đều, hỗn loạn tâm trí, mất tập trung, phản xạ chậm, liệt cơ và trở thành tình trạng nguy hiểm đến tính mạng."
+      },
+      {
+        "url": "https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://vuna.com.vn/upload/file/chuyen_de_-_tai_lieu/2026/2_Hoi-Khuyen_cao_chan_doan_va_dieu_tri_tang_kali_mau_2026-04-20_Final.pdf",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
+      },
+      {
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi",
+        "description": null,
+        "high_note": null,
+        "low_note": null,
+        "critical_high_note": null,
+        "critical_low_note": null
       }
     ]
   }

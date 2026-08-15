@@ -263,8 +263,10 @@ class ReportIndicator(Base):
     reference_low = Column(Float, nullable=True)
     reference_high = Column(Float, nullable=True)
 
-    # Nguồn sự thật duy nhất cho normal/abnormal/critical.
+    # Nguồn sự thật cho normal/abnormal (low/high/normal/unknown).
     status = Column(String, nullable=False, default="unknown")
+    # Biểu diễn riêng biệt cho critical state ("critical_low" / "critical_high" / None).
+    critical_status = Column(String, nullable=True, default=None)
 
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
@@ -291,13 +293,13 @@ class ReportIndicator(Base):
 
     @property
     def is_abnormal(self) -> bool:
-        """Derive từ status để tránh hai nguồn sự thật."""
-        return self.status in _ABNORMAL_STATUSES
+        """Derive từ status/critical_status để tránh hai nguồn sự thật."""
+        return self.status in _ABNORMAL_STATUSES or bool(self.critical_status)
 
     @property
     def is_critical(self) -> bool:
-        """Derive từ status để tránh hai nguồn sự thật."""
-        return self.status in _CRITICAL_STATUSES
+        """Derive từ status/critical_status để tránh hai nguồn sự thật."""
+        return bool(self.critical_status) or self.status in _CRITICAL_STATUSES
 
 
 class ReportCriticalAlert(Base):
@@ -622,6 +624,7 @@ def _migrate_sqlite_schema() -> None:
             "raw_unit": "VARCHAR",
             "canonical_value": "FLOAT",
             "canonical_unit": "VARCHAR",
+            "critical_status": "VARCHAR",
         },
     }
 
@@ -649,6 +652,9 @@ def _backfill_sqlite_defaults() -> None:
         )
         conn.exec_driver_sql(
             "UPDATE lab_reports SET status = COALESCE(status, CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+        )
+        conn.exec_driver_sql(
+            "UPDATE report_indicators SET critical_status = status WHERE critical_status IS NULL AND status IN ('critical_low', 'critical_high')"
         )
 def seed_demo_users(db: Session) -> None:
     """Seed tài khoản demo nếu bảng users đang trống.
