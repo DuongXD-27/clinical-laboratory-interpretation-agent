@@ -1,0 +1,24 @@
+{
+  "captured_at": "2026-08-15T12:51:37.2921351+07:00",
+  "direct_repository_resolution": {
+    "Glucose": null,
+    "Đường huyết": null
+  },
+  "api_case": {
+    "test_id": "TC-G2-05",
+    "status": "unknown",
+    "reference_low": null,
+    "reference_high": null,
+    "is_critical": false,
+    "critical_alert_count": 0,
+    "llm_call_attempted": false,
+    "request_id": "34a4e5db82ee40ba82be6254e5a3d9cf",
+    "verdict": "PASS"
+  },
+  "targeted_pytest": {
+    "passed": 7,
+    "failed": 0,
+    "evidence": "eval/rag/post_rag_fix/fix2_regression_pytest.txt"
+  },
+  "generic_glucose_fix2_behavior_preserved": true
+}

@@ -1,0 +1,79 @@
+{
+  "test_id": "TC-G2-02",
+  "purpose": "Abnormal, non-critical",
+  "timestamp": "2026-08-15T05:13:34.345298+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 5.8,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "high",
+    "critical": false
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 5.8,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.0,
+        "status": "high",
+        "is_abnormal": true,
+        "is_critical": false,
+        "explanation": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [
+      "Chỉ số Potassium của tôi là 5.8 mmol/L, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": "ed0071939fe54457bcd27a9dd71bafd8",
+    "events": []
+  },
+  "latency_ms": 359.756,
+  "request_id": "ed0071939fe54457bcd27a9dd71bafd8",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.209, analysis-critical-detector;dur=0.066, analysis-analyzer;dur=338.975, analysis-generate-questions;dur=0.711, analysis-guardrail;dur=1.011, analysis-graph-total;dur=351.682, analysis-response-map;dur=0.085, http-total;dur=355.628",
+  "verdict": "FAIL"
+}

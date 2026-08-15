@@ -33,7 +33,7 @@ def _visible_text_content(content: object) -> str:
     return "\n".join(text_parts).strip()
 
 
-async def rewrite_with_llm(llm, original_text: str) -> str:
+async def rewrite_with_llm(llm, original_text: str, grounding_context: str = "") -> str:
     """One bounded self-correction attempt before deterministic fallback."""
     if not llm or not original_text.strip():
         return original_text
@@ -44,11 +44,19 @@ Nhiệm vụ của bạn là biên tập lại đoạn văn bản sau sao cho an
 Văn bản gốc:
 "{original_text}"
 
+Ngữ cảnh y khoa duy nhất được phép dùng:
+<context>
+{grounding_context}
+</context>
+
 Yêu cầu:
-1. Giữ lại thông tin giải thích giáo dục hữu ích.
+1. Giữ lại thông tin giải thích giáo dục hữu ích chỉ khi thông tin đó xuất hiện trong context. Nếu context trống hoặc không hỗ trợ một thông tin y khoa thì xóa thông tin đó.
 2. Loại bỏ chẩn đoán, khẳng định bệnh lý, kê đơn hoặc khuyên dùng thuốc.
 3. Không suy đoán nguyên nhân.
-4. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
+4. Nếu văn bản nói NORMAL/LOW/HIGH, chỉ mô tả kết quả tương đối với khoảng tham chiếu được hệ thống sử dụng. Nếu nói CRITICAL_LOW/CRITICAL_HIGH, chỉ mô tả việc vượt ngưỡng cảnh báo nguy kịch được cấu hình; không chuyển thành chẩn đoán.
+5. Loại bỏ mọi kết luận từ một kết quả xét nghiệm rằng bệnh nhân không có bệnh/viêm/nhiễm trùng/vấn đề y khoa, miễn dịch ổn định, chức năng cơ quan bình thường hoặc đang ở mức tối ưu.
+6. Không thêm định nghĩa chỉ số, triệu chứng, nguyên nhân, hậu quả, điều trị hoặc kiến thức y khoa mới. Nếu bỏ phần vi phạm làm nội dung ngắn hơn thì giữ nội dung ngắn hơn.
+7. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
 """
     started_at = time.perf_counter()
     try:
@@ -126,6 +134,7 @@ async def guardrail_node(state: AgentState) -> dict:
     summary = state.get("summary", "")
     disclaimer = state.get("disclaimer", "")
     questions_for_doctor = list(state.get("questions_for_doctor", []))
+    retrieved_contexts = list(state.get("retrieved_contexts", []))
 
     flags: list[str] = []
     violation_detected = False
@@ -146,6 +155,15 @@ async def guardrail_node(state: AgentState) -> dict:
             return True
         return violations_for(text, context)
 
+    def grounding_context_for(indicator_name: str) -> str:
+        normalized_name = indicator_name.strip().casefold()
+        return "\n\n".join(
+            str(chunk.get("text", "")).strip()
+            for chunk in retrieved_contexts
+            if str(chunk.get("indicator_name", "")).strip().casefold() == normalized_name
+            and str(chunk.get("text", "")).strip()
+        )
+
     llm = None
     llm_loaded = False
 
@@ -163,7 +181,16 @@ async def guardrail_node(state: AgentState) -> dict:
 
     if violations_for(summary, "summary"):
         active_llm = retry_llm()
-        rewritten = await rewrite_with_llm(active_llm, summary) if active_llm else summary
+        summary_context = "\n\n".join(
+            str(chunk.get("text", "")).strip()
+            for chunk in retrieved_contexts
+            if str(chunk.get("text", "")).strip()
+        )
+        rewritten = (
+            await rewrite_with_llm(active_llm, summary, summary_context)
+            if active_llm
+            else summary
+        )
         summary = (
             templates.fallback_summary
             if rewrite_requires_fallback(rewritten, "summary sau retry")
@@ -177,7 +204,15 @@ async def guardrail_node(state: AgentState) -> dict:
             explanation["indicator_name"] = "Chỉ số cần bác sĩ kiểm tra"
         if violations_for(text, f"explanation {indicator_name}"):
             active_llm = retry_llm()
-            rewritten = await rewrite_with_llm(active_llm, text) if active_llm else text
+            rewritten = (
+                await rewrite_with_llm(
+                    active_llm,
+                    text,
+                    grounding_context_for(indicator_name),
+                )
+                if active_llm
+                else text
+            )
             explanation["explanation"] = (
                 templates.fallback_explanation
                 if rewrite_requires_fallback(
@@ -193,7 +228,15 @@ async def guardrail_node(state: AgentState) -> dict:
             indicator["name"] = "Chỉ số cần bác sĩ kiểm tra"
         if violations_for(text, f"indicator {indicator_name}"):
             active_llm = retry_llm()
-            rewritten = await rewrite_with_llm(active_llm, text) if active_llm else text
+            rewritten = (
+                await rewrite_with_llm(
+                    active_llm,
+                    text,
+                    grounding_context_for(indicator_name),
+                )
+                if active_llm
+                else text
+            )
             indicator["explanation"] = (
                 templates.fallback_explanation
                 if rewrite_requires_fallback(

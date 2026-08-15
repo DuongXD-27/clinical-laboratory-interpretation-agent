@@ -1,0 +1,10 @@
+{
+  "image": "data/ocr_samples/lowlight/report.png",
+  "image_sha256": "49CE1F0395AD00AF73AE1DBC5CC55D1C856BC4E32A77F4E49F1725BE29BAB107",
+  "ground_truth_source": "Deterministic source fixture src/scripts/generate_ocr_samples.py SAMPLE_ROWS (lines 22-25); lowlight transform is defined at line 77 and selected at line 91.",
+  "indicators": [
+    {"name": "Glucose", "value": 5.2, "unit": "mmol/L"},
+    {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+    {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "policy": "Only explicitly parameterized production boundary tests with an expected_status field are counted.",
+  "evidence_file": "eval/deterministic/critical_detector_pytest.txt",
+  "groups": [
+    {
+      "test": "test_potassium_exact_critical_boundaries_software_execution",
+      "cases": [
+        {"value": 2.99, "unit": "mmol/L", "expected": "critical_low", "passed": true},
+        {"value": 3.0, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 3.01, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 6.09, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 6.1, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 6.11, "unit": "mmol/L", "expected": "critical_high", "passed": true}
+      ]
+    },
+    {
+      "test": "test_production_glucose_source_unit_direct_strict_boundaries",
+      "cases": [
+        {"value": 54.99, "unit": "mg/dL", "expected": "critical_low", "passed": true},
+        {"value": 55.0, "unit": "mg/dL", "expected": "not_critical", "passed": true},
+        {"value": 55.01, "unit": "mg/dL", "expected": "not_critical", "passed": true},
+        {"value": 449.99, "unit": "mg/dL", "expected": "not_critical", "passed": true},
+        {"value": 450.0, "unit": "mg/dL", "expected": "not_critical", "passed": true},
+        {"value": 450.01, "unit": "mg/dL", "expected": "critical_high", "passed": true}
+      ]
+    },
+    {
+      "test": "test_production_glucose_mmol_l_conversion_strict_boundaries_use_decimal",
+      "cases": [
+        {"value": 3.05, "unit": "mmol/L", "expected": "critical_low", "passed": true},
+        {"value": 3.053, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 3.054, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 3.055, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 24.97, "unit": "mmol/L", "expected": "not_critical", "passed": true},
+        {"value": 24.99, "unit": "mmol/L", "expected": "critical_high", "passed": true}
+      ]
+    }
+  ],
+  "total": 18,
+  "correct": 18,
+  "accuracy_percent": 100.0
+}

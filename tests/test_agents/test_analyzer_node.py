@@ -35,7 +35,8 @@ async def test_analyzer_uses_curated_fallback_when_llm_and_rag_are_unavailable(m
 
     result = await analyzer_node({"indicators": [indicator()], "patient_gender": "male"})
 
-    assert result["indicators"][0]["explanation"].startswith("Bạch cầu")
+    assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
+    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])
     assert result["retrieved_contexts"] == []
 
 
@@ -55,7 +56,8 @@ async def test_retrieval_failure_does_not_fail_analysis(monkeypatch):
     result = await analyzer_node({"indicators": [indicator()], "patient_age": 0})
 
     assert result["indicators"][0]["status"] == "normal"
-    assert result["indicators"][0]["explanation"].startswith("Bạch cầu")
+    assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
+    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])
     assert result["retrieved_contexts"] == []
 
 
@@ -126,4 +128,5 @@ async def test_slow_llm_times_out_and_uses_curated_fallback(monkeypatch):
         timeout=0.5,
     )
 
-    assert result["indicators"][0]["explanation"] == indicator()["explanation"]
+    assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
+    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])

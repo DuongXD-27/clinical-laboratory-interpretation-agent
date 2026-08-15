@@ -1,0 +1,77 @@
+{
+  "test_id": "TC-G2-01",
+  "purpose": "Normal supported flow",
+  "timestamp": "2026-08-15T05:13:33.958577+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "normal",
+    "critical": false
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.0,
+        "status": "normal",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": "178e9bc0a64a41a6845b7e0c3ee1286e",
+    "events": []
+  },
+  "latency_ms": 687.35,
+  "request_id": "178e9bc0a64a41a6845b7e0c3ee1286e",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.957, analysis-critical-detector;dur=0.079, analysis-analyzer;dur=664.241, analysis-generate-questions;dur=0.656, analysis-guardrail;dur=0.945, analysis-graph-total;dur=678.875, analysis-response-map;dur=0.077, http-total;dur=683.327",
+  "verdict": "FAIL"
+}

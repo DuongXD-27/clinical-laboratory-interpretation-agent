@@ -1,0 +1,84 @@
+{
+  "test_id": "TC-G2-01",
+  "purpose": "Normal supported flow",
+  "timestamp": "2026-08-15T05:48:25.647017+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "normal",
+    "critical": false
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.0,
+        "status": "normal",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Chỉ số Potassium (Kali) là một chất điện giải quan trọng trong cơ thể, có vai trò chính trong việc duy trì cân bằng điện giải và hoạt động của các tế bào. Giá trị Potassium của bệnh nhân là 4.5 mmol/L, nằm trong khoảng bình thường. Điều này có nghĩa là nồng độ kali trong máu đang ở mức tối ưu, không cao cũng không thấp. Mức kali bình thường giúp duy trì chức năng của cơ và hệ thần kinh, đảm bảo hoạt động điện của tim diễn ra bình thường.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": true,
+    "call_success": true,
+    "fallback_used": false,
+    "successful_call_count": 1,
+    "indicator_count": 1,
+    "request_id": "143a8d03236346c6965b4b0293b4d2f9",
+    "events": [
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 1982.441,
+        "analyte_id": "potassium",
+        "outcome": "success"
+      }
+    ]
+  },
+  "latency_ms": 2707.634,
+  "request_id": "143a8d03236346c6965b4b0293b4d2f9",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.218, analysis-critical-detector;dur=0.109, analysis-analyzer;dur=2690.747, analysis-generate-questions;dur=0.708, analysis-guardrail;dur=1.364, analysis-graph-total;dur=2700.402, analysis-response-map;dur=0.074, http-total;dur=2703.516",
+  "verdict": "PASS"
+}

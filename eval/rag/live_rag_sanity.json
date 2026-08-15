@@ -1,0 +1,185 @@
+{
+  "timestamp": "2026-08-15T05:55:00.681139+00:00",
+  "configuration": {
+    "rag_enabled": true,
+    "collection": "medical_kb_v1",
+    "corpus_version": "medical-kb-v1",
+    "embedding_provider": "openai",
+    "embedding_model": "text-embedding-3-small"
+  },
+  "readiness": {
+    "status": "ready",
+    "collection": "medical_kb_v1",
+    "document_count": 9,
+    "embedding_provider": "openai",
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimension": 1536,
+    "corpus_version": "medical-kb-v1",
+    "required": false
+  },
+  "retrievals": [
+    {
+      "analyte": "WBC",
+      "analyte_id": "wbc",
+      "query": "Ý nghĩa xét nghiệm WBC khi kết quả ở mức normal",
+      "chunk_count": 1,
+      "stored_document_ids": [
+        "wbc"
+      ],
+      "stored_analyte_ids": [
+        "wbc"
+      ],
+      "stored_indicators": [
+        "WBC"
+      ],
+      "chunks": [
+        {
+          "text_excerpt": "Chỉ số: WBC\nÝ nghĩa khi tăng cao: WBC cao hơn khoảng bình thường tương ứng với tình trạng tăng bạch cầu. Nguyên nhân có thể là viêm nhiễm, máu ác tính hoặc các bệnh về bạch cầu; ngoài ra thuốc nhóm corticosteroid và hút thuốc lá cũng có thể làm chỉ số này tăng.\nÝ nghĩa khi giảm thấp: WBC thấp hơn ngưỡng bình thường tương ứng với tình trạng giảm bạch cầu. Tình trạng này có thể gặp khi nhiễm virus, suy tủy xương, thiếu vitamin B12 hoặc folate, bệnh gan và lá lách, tổn thương tủy do nhiễm khuẩn nặng hoặc khi đang dùng thuốc điều trị ung thư.",
+          "source": "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+          "sources": [
+            "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+            "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+            "https://miraihealthcare.vn/xet-nghiem-wbc/"
+          ],
+          "score": 0.6554112434387207
+        }
+      ]
+    },
+    {
+      "analyte": "Potassium",
+      "analyte_id": "potassium",
+      "query": "Ý nghĩa xét nghiệm Potassium khi kết quả ở mức normal",
+      "chunk_count": 1,
+      "stored_document_ids": [
+        "potassium"
+      ],
+      "stored_analyte_ids": [
+        "potassium"
+      ],
+      "stored_indicators": [
+        "Potassium"
+      ],
+      "chunks": [
+        {
+          "text_excerpt": "Chỉ số: Potassium\nÝ nghĩa khi tăng cao: Kali máu tăng có thể gây vô cảm, tê các đầu ngón, giảm phản xạ gân xương và ảnh hưởng đến hoạt động điện của tim, làm xuất hiện các rối loạn dẫn truyền và nhịp tim bất thường.\nÝ nghĩa khi giảm thấp: Kali máu giảm có thể gây mệt mỏi, rã rời cơ thần kinh, táo bón dai dẳng và chướng bụng do ảnh hưởng đến hoạt động bình thường của cơ và hệ thần kinh.",
+          "source": "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "sources": [
+            "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+            "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
+          ],
+          "score": 0.6141563653945923
+        }
+      ]
+    },
+    {
+      "analyte": "Fasting plasma glucose",
+      "analyte_id": "fasting_plasma_glucose",
+      "query": "Ý nghĩa xét nghiệm Fasting plasma glucose khi kết quả ở mức low",
+      "chunk_count": 1,
+      "stored_document_ids": [
+        "fasting_plasma_glucose"
+      ],
+      "stored_analyte_ids": [
+        "fasting_plasma_glucose"
+      ],
+      "stored_indicators": [
+        "Fasting plasma glucose"
+      ],
+      "chunks": [
+        {
+          "text_excerpt": "Chỉ số: Fasting plasma glucose\nÝ nghĩa khi tăng cao: Khi kết quả glucose huyết tương lúc đói vượt trên ngưỡng bình thường, bài viết cho biết người đó có thể đang ở tình trạng suy giảm mức đường huyết lúc đói nhưng chưa hẳn mắc tiểu đường. Nếu chỉ số tăng cao hơn nữa và kèm các xét nghiệm máu khác bất thường thì có thể được chẩn đoán là mắc bệnh tiểu đường.\nÝ nghĩa khi giảm thấp: Đường huyết lúc đói dưới 70 mg/dL được xem là đường huyết thấp đối với người mắc bệnh tiểu đường, nhưng mức này có thể vẫn bình thường ở một số người không mắc tiểu đường. Khi có kết quả thấp, bác sĩ có thể đánh giá cá",
+          "source": "https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi",
+          "sources": [
+            "https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi",
+            "https://diag.vn/blog/glycemic/xet-nghiem-duong-huyet-luc-doi/",
+            "https://my.clevelandclinic.org/health/diagnostics/21952-fasting-blood-sugar"
+          ],
+          "score": 0.696924090385437
+        }
+      ]
+    }
+  ],
+  "negative_retrievals": [
+    {
+      "analyte_id": "glucose",
+      "chunk_count": 0,
+      "returned_analyte_ids": []
+    },
+    {
+      "analyte_id": "kali",
+      "chunk_count": 0,
+      "returned_analyte_ids": []
+    },
+    {
+      "analyte_id": "unknown_analyte",
+      "chunk_count": 0,
+      "returned_analyte_ids": []
+    }
+  ],
+  "api_probe": {
+    "endpoint": "http://127.0.0.1:8000/api/v1/analyze",
+    "request": {
+      "patient_age": 35,
+      "patient_gender": "male",
+      "test_date": "2026-08-15",
+      "language": "vi",
+      "indicators": [
+        {
+          "name": "WBC",
+          "value": 7.0,
+          "unit": "10^9/L"
+        }
+      ]
+    },
+    "request_id": "621db5feaf0e49a0af02aca141b379ca",
+    "status_code": 200,
+    "timing_record": {},
+    "final_response": {
+      "indicators": [
+        {
+          "name": "WBC",
+          "value": 7.0,
+          "unit": "10^9/L",
+          "analyte_raw": null,
+          "analyte_canonical": null,
+          "raw_value": null,
+          "raw_unit": null,
+          "canonical_value": null,
+          "canonical_unit": null,
+          "reference_low": 4.72,
+          "reference_high": 11.3,
+          "status": "normal",
+          "is_abnormal": false,
+          "is_critical": false,
+          "explanation": "Chỉ số WBC (số lượng bạch cầu) là một chỉ số quan trọng trong xét nghiệm máu, cho biết số lượng bạch cầu trong một đơn vị thể tích máu. Giá trị WBC của bệnh nhân là 7.0 10^9/L, nằm trong khoảng bình thường. Điều này có nghĩa là số lượng bạch cầu của bệnh nhân không cao hơn hay thấp hơn so với mức tham chiếu, cho thấy tình trạng miễn dịch của bệnh nhân đang ở mức ổn định và không có dấu hiệu của viêm nhiễm hay các vấn đề liên quan đến bạch cầu.",
+          "sources": [
+            "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+            "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+            "https://miraihealthcare.vn/xet-nghiem-wbc/"
+          ]
+        }
+      ],
+      "critical_alerts": [],
+      "has_critical_values": false,
+      "questions_for_doctor": [],
+      "summary": "",
+      "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+      "guardrail_passed": true,
+      "out_of_scope_indicators": [],
+      "saved": false,
+      "duplicate": false,
+      "report_id": null,
+      "existing_report_id": null,
+      "error": "",
+      "is_placeholder": false,
+      "saved_report_id": null
+    },
+    "response_schema_exposes_retrieved_contexts": false
+  },
+  "live_retrieval_verified": true,
+  "limitations": [
+    "AnalyzeResponse does not expose the internal retrieved_contexts field.",
+    "This sanity artifact verifies one filtered live retrieval per selected analyte; it is not a relevance benchmark.",
+    "No RAG_ENABLED=false API A/B run was performed; this artifact is a live retrieval sanity check, not a RAGAS score."
+  ]
+}

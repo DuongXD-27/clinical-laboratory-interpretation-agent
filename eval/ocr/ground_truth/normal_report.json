@@ -1,0 +1,10 @@
+{
+  "image": "data/ocr_samples/normal/report.png",
+  "image_sha256": "CDBD80A7E5F1B2A90543336BB3553CEFF7D56CAC4E307F648310D57344037B08",
+  "ground_truth_source": "Deterministic source fixture src/scripts/generate_ocr_samples.py SAMPLE_ROWS (lines 22-25); normal transform is identity (line 88).",
+  "indicators": [
+    {"name": "Glucose", "value": 5.2, "unit": "mmol/L"},
+    {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+    {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+  ]
+}

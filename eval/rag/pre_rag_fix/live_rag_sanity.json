@@ -1,0 +1,162 @@
+{
+  "timestamp": "2026-08-15T05:16:39.140809+00:00",
+  "configuration": {
+    "rag_enabled": true,
+    "collection": "medical_kb_v1",
+    "corpus_version": "medical-kb-v1",
+    "embedding_provider": "openai",
+    "embedding_model": "text-embedding-3-small"
+  },
+  "readiness": {
+    "status": "ready",
+    "collection": "medical_kb_v1",
+    "document_count": 9,
+    "embedding_provider": "openai",
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimension": 1536,
+    "corpus_version": "medical-kb-v1",
+    "required": false
+  },
+  "retrievals": [
+    {
+      "analyte": "WBC",
+      "analyte_id": "wbc",
+      "query": "Ý nghĩa xét nghiệm WBC khi kết quả ở mức normal",
+      "chunk_count": 1,
+      "chunks": [
+        {
+          "text_excerpt": "Chỉ số: White Blood Cell Count (WBC - Số lượng bạch cầu)\nGiải thích cơ bản: Bạch cầu là các tế bào máu giúp cơ thể chống lại nhiễm trùng và viêm.\nÝ nghĩa khi tăng cao: Thường gặp khi cơ thể đang phản ứng với nhiễm trùng, viêm, stress, hoặc sau khi vận động mạnh. Cũng có thể do một số thuốc (ví dụ corticosteroid) hoặc tình trạng khác.\nÝ nghĩa khi giảm thấp: Có thể liên quan đến nhiễm virus, một số bệnh lý tủy xương, tác dụng phụ của thuốc, hoặc hệ miễn dịch suy giảm.",
+          "source": "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+          "sources": [
+            "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+            "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500"
+          ],
+          "score": 0.613823652267456
+        }
+      ]
+    },
+    {
+      "analyte": "Potassium",
+      "analyte_id": "potassium",
+      "query": "Ý nghĩa xét nghiệm Potassium khi kết quả ở mức normal",
+      "chunk_count": 0,
+      "chunks": []
+    },
+    {
+      "analyte": "Fasting plasma glucose",
+      "analyte_id": "fasting_plasma_glucose",
+      "query": "Ý nghĩa xét nghiệm Fasting plasma glucose khi kết quả ở mức low",
+      "chunk_count": 0,
+      "chunks": []
+    }
+  ],
+  "api_probe": {
+    "endpoint": "http://127.0.0.1:8000/api/v1/analyze",
+    "request": {
+      "patient_age": 35,
+      "patient_gender": "male",
+      "test_date": "2026-08-15",
+      "language": "vi",
+      "indicators": [
+        {
+          "name": "WBC",
+          "value": 7.0,
+          "unit": "10^9/L"
+        }
+      ]
+    },
+    "request_id": "05b8db25ea7349df80d43b37e69a0d9e",
+    "status_code": 200,
+    "timing_record": {
+      "request_id": "05b8db25ea7349df80d43b37e69a0d9e",
+      "method": "POST",
+      "path": "/api/v1/analyze",
+      "status_code": 200,
+      "metrics_ms": {
+        "analysis-reference-range": 0.165,
+        "analysis-critical-detector": 0.044,
+        "analysis-analyzer": 2096.71,
+        "analysis-generate-questions": 0.603,
+        "analysis-guardrail": 0.788,
+        "analysis-graph-total": 2106.1,
+        "analysis-response-map": 0.071,
+        "http-total": 2109.029
+      },
+      "events": [
+        {
+          "name": "rag-semaphore-wait",
+          "duration_ms": 0.009,
+          "analyte_id": "wbc"
+        },
+        {
+          "name": "rag-call",
+          "duration_ms": 395.759,
+          "analyte_id": "wbc",
+          "outcome": "success"
+        },
+        {
+          "name": "llm-semaphore-wait",
+          "duration_ms": 0.012,
+          "analyte_id": "wbc"
+        },
+        {
+          "name": "llm-explanation-call",
+          "duration_ms": 1697.675,
+          "analyte_id": "wbc",
+          "outcome": "success"
+        }
+      ]
+    },
+    "final_response": {
+      "indicators": [
+        {
+          "name": "WBC",
+          "value": 7.0,
+          "unit": "10^9/L",
+          "analyte_raw": null,
+          "analyte_canonical": null,
+          "raw_value": null,
+          "raw_unit": null,
+          "canonical_value": null,
+          "canonical_unit": null,
+          "reference_low": 4.72,
+          "reference_high": 11.3,
+          "status": "normal",
+          "is_abnormal": false,
+          "is_critical": false,
+          "explanation": "Chỉ số WBC (Số lượng bạch cầu) đo lượng bạch cầu trong máu, với giá trị là 7.0 10^9/L. Giá trị này nằm trong khoảng bình thường (normal), cho thấy cơ thể đang có khả năng miễn dịch tốt và không có dấu hiệu nhiễm trùng hay viêm nghiêm trọng.",
+          "sources": [
+            "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+            "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+            "https://miraihealthcare.vn/xet-nghiem-wbc/",
+            "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+            "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+            "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500"
+          ]
+        }
+      ],
+      "critical_alerts": [],
+      "has_critical_values": false,
+      "questions_for_doctor": [],
+      "summary": "",
+      "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+      "guardrail_passed": true,
+      "out_of_scope_indicators": [],
+      "saved": false,
+      "duplicate": false,
+      "report_id": null,
+      "existing_report_id": null,
+      "error": "",
+      "is_placeholder": false,
+      "saved_report_id": null
+    },
+    "response_schema_exposes_retrieved_contexts": false
+  },
+  "live_retrieval_verified": true,
+  "limitations": [
+    "AnalyzeResponse does not expose the internal retrieved_contexts field.",
+    "Potassium and Fasting plasma glucose current catalog IDs do not match legacy IDs in the populated collection.",
+    "No RAG_ENABLED=false API A/B run was performed; this artifact is a live retrieval sanity check, not a RAGAS score."
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "timestamp": "2026-08-15T05:13:23.753169+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 7.0,
+        "unit": "10^9/L"
+      }
+    ]
+  },
+  "status_code": 200,
+  "request_id": "82349fb9ab3b4826b700508aa266c6f5",
+  "server_timing_header": "analysis-reference-range;dur=7.108, analysis-critical-detector;dur=0.039, analysis-analyzer;dur=6060.089, analysis-generate-questions;dur=1.505, analysis-guardrail;dur=1.634, analysis-graph-total;dur=6085.550, analysis-response-map;dur=0.068, http-total;dur=6090.168",
+  "http_total_ms": 6094.209,
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "WBC",
+        "value": 7.0,
+        "unit": "10^9/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 4.72,
+        "reference_high": 11.3,
+        "status": "normal",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Chỉ số WBC (Số lượng bạch cầu) đo lường số lượng tế bào bạch cầu trong máu. Giá trị 7.0 10^9/L là trong khoảng bình thường, cho thấy hệ thống miễn dịch của cơ thể đang hoạt động bình thường và không có dấu hiệu của nhiễm trùng hoặc viêm nghiêm trọng.",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/te-bao-mau-wbc-la-gi-va-y-nghia-cua-chi-so-xet-nghiem-wbc-vi",
+          "https://medlatec.vn/tin-tuc/wbc-trong-xet-nghiem-mau-la-gi-chi-so-wbc-tang-giam-canh-bao-benh-gi",
+          "https://miraihealthcare.vn/xet-nghiem-wbc/",
+          "https://medlineplus.gov/lab-tests/white-blood-count-wbc/",
+          "https://www.mayoclinic.org/tests-procedures/complete-blood-count/about/pac-20384919",
+          "https://medlatec.vn/tin-tuc/chi-so-bach-cau-binh-thuong-la-bao-nhieu-khi-nao-la-bat-thuong-s195-n31500"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "timing_record": {
+    "request_id": "82349fb9ab3b4826b700508aa266c6f5",
+    "method": "POST",
+    "path": "/api/v1/analyze",
+    "status_code": 200,
+    "metrics_ms": {
+      "analysis-reference-range": 7.108,
+      "analysis-critical-detector": 0.039,
+      "analysis-analyzer": 6060.089,
+      "analysis-generate-questions": 1.505,
+      "analysis-guardrail": 1.634,
+      "analysis-graph-total": 6085.55,
+      "analysis-response-map": 0.068,
+      "http-total": 6090.168
+    },
+    "events": [
+      {
+        "name": "rag-semaphore-wait",
+        "duration_ms": 0.007,
+        "analyte_id": "wbc"
+      },
+      {
+        "name": "rag-call",
+        "duration_ms": 1404.021,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      },
+      {
+        "name": "llm-semaphore-wait",
+        "duration_ms": 0.009,
+        "analyte_id": "wbc"
+      },
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 2115.047,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      }
+    ]
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": true,
+    "call_success": true,
+    "fallback_used": false,
+    "successful_call_count": 1,
+    "indicator_count": 1,
+    "request_id": "82349fb9ab3b4826b700508aa266c6f5",
+    "events": [
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 2115.047,
+        "analyte_id": "wbc",
+        "outcome": "success"
+      }
+    ]
+  }
+}

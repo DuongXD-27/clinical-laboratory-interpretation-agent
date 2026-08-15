@@ -1,0 +1,10 @@
+{
+  "image": "data/ocr_samples/blur/report.png",
+  "image_sha256": "6D9AF747EBC7E9C5E37A1C4FD2296A69A96C16F1E81571C1A3BD2E1D836AE5A2",
+  "ground_truth_source": "Deterministic source fixture src/scripts/generate_ocr_samples.py SAMPLE_ROWS (lines 22-25); blur transform is defined at line 69 and selected at line 89.",
+  "indicators": [
+    {"name": "Glucose", "value": 5.2, "unit": "mmol/L"},
+    {"name": "LDL-Cholesterol", "value": 2.2, "unit": "mmol/L"},
+    {"name": "Kali", "value": 4.0, "unit": "mmol/L"}
+  ]
+}
