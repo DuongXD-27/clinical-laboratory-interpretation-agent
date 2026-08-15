@@ -12,9 +12,9 @@ from src.api.ocr_routes import router as ocr_router
 from src.api.patient_routes import router as patient_router
 from src.api.routes import router
 from src.config import get_settings
-from src.models.db import init_db
-from src.models.db import SessionLocal
+from src.models.db import SessionLocal, init_db
 from src.services.demo_patient_data import seed_demo_patient_reports
+from src.services.logging_config import configure_logging
 from src.services.medical_knowledge_retriever import get_rag_readiness
 from src.services.request_timing import (
     RequestTiming,
@@ -22,13 +22,26 @@ from src.services.request_timing import (
     set_current_timing,
 )
 
+# Áp trước khi tạo logger nào, nếu không thì mọi logger.info() của app bị nuốt:
+# uvicorn chỉ cấu hình logger của riêng nó, `src.*` rơi về mặc định WARNING.
+_log_level = configure_logging()
+
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    print(f"Starting {settings.app_name} in {settings.app_env} mode")
+    logger.info(
+        "startup",
+        extra={
+            "app_name": settings.app_name,
+            "app_env": settings.app_env,
+            "log_level": _log_level,
+            # Chỉ ghi loại DB, tuyệt đối không ghi DATABASE_URL vì nó chứa mật khẩu.
+            "db_dialect": settings.database_url.split("://", 1)[0],
+        },
+    )
     init_db()
     if settings.app_env == "development":
         with SessionLocal() as db:
@@ -37,7 +50,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await close_vision_clients()
-        print("Shutting down...")
+        logger.info("shutdown")
 
 
 app = FastAPI(
@@ -97,8 +110,8 @@ async def request_timing_middleware(request: Request, call_next):
             if origin in _cors_origins:
                 response.headers["Timing-Allow-Origin"] = origin
         logger.info(
-            "request_timing %s",
-            timing.as_log_payload(
+            "request_timing",
+            extra=timing.as_log_fields(
                 method=request.method,
                 path=request.url.path,
                 status_code=status_code,
@@ -112,11 +125,33 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     """Chặn rò rỉ chi tiết lỗi nội bộ ra client (đã lộ ở V1 — xem state.py).
 
     Log đầy đủ nội bộ, chỉ trả thông điệp chung ra ngoài.
+
+    Trả kèm `request_id` vì đó là thứ duy nhất nối được lời người dùng ("bấm vào
+    bị lỗi") với dòng log tương ứng. Id này là ngẫu nhiên, không mang thông tin
+    gì về người dùng hay dữ liệu, nên lộ ra ngoài là vô hại — trong khi thiếu nó
+    thì mọi báo lỗi từ người dùng đều không tra được.
     """
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+
+    timing = getattr(request.state, "timing", None)
+    request_id = timing.request_id if timing is not None else None
+
+    logger.exception(
+        "unhandled_exception",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "exception_type": type(exc).__name__,
+        },
+    )
+
     return JSONResponse(
         status_code=500,
-        content={"detail": "Hệ thống đang bận, vui lòng thử lại."},
+        content={
+            "detail": "Hệ thống đang bận, vui lòng thử lại.",
+            "request_id": request_id,
+        },
+        headers={"X-Request-ID": request_id} if request_id else None,
     )
 
 

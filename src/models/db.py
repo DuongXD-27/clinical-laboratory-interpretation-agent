@@ -37,6 +37,7 @@ chỉ THÊM được cột; đổi tên, đổi kiểu, xoá cột thì cần Al
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC, datetime
 
 from sqlalchemy import (
@@ -56,6 +57,7 @@ from sqlalchemy import (
     inspect,
     text,
 )
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 from sqlalchemy.schema import CreateColumn
@@ -63,6 +65,7 @@ from sqlalchemy.types import JSON
 
 from src.config import get_settings
 from src.services.auth import hash_password
+from src.services.request_timing import get_current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -740,6 +743,38 @@ def init_db() -> None:
 
     with SessionLocal() as db:
         seed_demo_users(db)
+
+
+# Gắn vào lớp Engine chứ không phải instance `engine` ở trên: test dựng engine
+# riêng trên file tạm, và code sau này có thể tạo thêm engine. Đo theo lớp thì
+# mọi truy vấn đều được tính, không phụ thuộc ai tạo engine.
+@event.listens_for(Engine, "before_cursor_execute")
+def _db_query_started(conn, cursor, statement, parameters, context, executemany) -> None:
+    context._vmec_started_at = time.perf_counter()
+
+
+@event.listens_for(Engine, "after_cursor_execute")
+def _db_query_finished(conn, cursor, statement, parameters, context, executemany) -> None:
+    """Cộng dồn thời gian và số truy vấn của mỗi request.
+
+    Ghi ở mức tổng chứ không mỗi truy vấn một event: một request lịch sử có thể
+    bắn hàng chục câu, log từng câu sẽ chìm mất dòng trace. Số đếm mới là thứ
+    phát hiện N+1 — đúng loại lỗi vừa gặp ở `_to_summary()`, vô hình khi DB nằm
+    cùng đĩa và thành vài giây khi DB ra ngoài mạng.
+
+    Tuyệt đối không ghi `statement` hay `parameters`: tham số chứa giá trị xét
+    nghiệm và username của bệnh nhân.
+    """
+
+    started_at = getattr(context, "_vmec_started_at", None)
+    if started_at is None:
+        return
+
+    timing = get_current_timing()
+    if timing is None:
+        return
+
+    timing.accumulate("db-query", (time.perf_counter() - started_at) * 1000)
 
 
 def get_db() -> Session:
