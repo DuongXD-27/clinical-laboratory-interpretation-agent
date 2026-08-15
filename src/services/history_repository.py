@@ -47,6 +47,7 @@ from src.models.schemas import (
     ReportQuestionSchema,
 )
 from src.services.question_templates import GeneratedQuestion
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
 def _normalize_indicator_name(name: str) -> str:
@@ -76,6 +77,40 @@ def _find_ocr_metadata(
     return None, None
 
 
+def _reference_repository() -> ReferenceRepository | None:
+    try:
+        return ReferenceRepository.from_default_files()
+    except ReferenceRepositoryError:
+        return None
+
+
+def _canonical_indicator_snapshot(
+    *,
+    repository: ReferenceRepository | None,
+    indicator: IndicatorResultSchema,
+    raw_name: str,
+    raw_value: float,
+    raw_unit: str,
+) -> dict[str, object]:
+    canonical_source = indicator.analyte_canonical or raw_name or indicator.name
+    resolved_analyte = repository.resolve_analyte(canonical_source) if repository is not None else None
+    canonical_unit_source = indicator.canonical_unit or raw_unit or indicator.unit
+    canonical_unit = (
+        repository.normalize_unit(canonical_unit_source)
+        if repository is not None
+        else canonical_unit_source
+    )
+
+    return {
+        "analyte_raw": raw_name,
+        "analyte_canonical": resolved_analyte or indicator.analyte_canonical,
+        "raw_value": raw_value,
+        "raw_unit": raw_unit,
+        "canonical_value": indicator.canonical_value if indicator.canonical_value is not None else raw_value,
+        "canonical_unit": canonical_unit,
+    }
+
+
 def save_report(
     db: Session,
     *,
@@ -100,15 +135,33 @@ def save_report(
     """
 
     report_indicators: list[ReportIndicator] = []
+    repository = _reference_repository()
 
-    for indicator in response.indicators:
+    for index, indicator in enumerate(response.indicators):
+        raw_input = request.indicators[index] if index < len(request.indicators) else None
+        raw_name = raw_input.name if raw_input is not None else indicator.name
+        raw_value = raw_input.value if raw_input is not None else indicator.value
+        raw_unit = raw_input.unit if raw_input is not None else indicator.unit
         ocr_confidence, ocr_raw_text = _find_ocr_metadata(
             indicator.name,
             ocr_drafts,
         )
+        canonical_snapshot = _canonical_indicator_snapshot(
+            repository=repository,
+            indicator=indicator,
+            raw_name=raw_name,
+            raw_value=raw_value,
+            raw_unit=raw_unit,
+        )
 
         report_indicators.append(
             ReportIndicator(
+                analyte_raw=canonical_snapshot["analyte_raw"],
+                analyte_canonical=canonical_snapshot["analyte_canonical"],
+                raw_value=canonical_snapshot["raw_value"],
+                raw_unit=canonical_snapshot["raw_unit"],
+                canonical_value=canonical_snapshot["canonical_value"],
+                canonical_unit=canonical_snapshot["canonical_unit"],
                 name=indicator.name,
                 value=indicator.value,
                 unit=indicator.unit,
@@ -517,6 +570,12 @@ def to_detail(
                 name=indicator.name,
                 value=indicator.value,
                 unit=indicator.unit,
+                analyte_raw=indicator.analyte_raw,
+                analyte_canonical=indicator.analyte_canonical,
+                raw_value=indicator.raw_value,
+                raw_unit=indicator.raw_unit,
+                canonical_value=indicator.canonical_value,
+                canonical_unit=indicator.canonical_unit,
                 reference_low=indicator.reference_low,
                 reference_high=indicator.reference_high,
                 status=indicator.status,

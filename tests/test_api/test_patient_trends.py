@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+from src.api import routes
 from src.main import app
 from src.models import db as db_module
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, TrendResponse
@@ -190,6 +191,97 @@ async def test_latest5_returns_five_newest_analyte_results_oldest_to_newest(isol
         "2026-08-12",
     ]
     assert [point["value"] for point in payload["points"]] == [2.2, 2.3, 2.4, 2.5, 2.6]
+
+
+@pytest.mark.asyncio
+async def test_wbc_trend_available_after_three_saved_reports(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for date_text, value in [("2026-08-01", 7.0), ("2026-08-02", 12.0), ("2026-08-03", 10.5)]:
+        _save(session_local, "benhnhan", date_text, [{"name": "WBC", "value": value, "unit": "10^9/L"}])
+
+    catalog = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
+    trend = await client.get(_trend_url("WBC"), headers=headers)
+
+    assert catalog.status_code == 200, catalog.text
+    analytes = {item["analyte_canonical"]: item for item in catalog.json()["analytes"]}
+    assert analytes["WBC"]["result_count"] == 3
+    assert analytes["WBC"]["trend_available"] is True
+    assert trend.status_code == 200, trend.text
+    assert trend.json()["trend_available"] is True
+    assert [point["value"] for point in trend.json()["points"]] == [7.0, 12.0, 10.5]
+
+
+@pytest.mark.asyncio
+async def test_analyze_persistence_writes_canonical_fields_for_wbc_trends(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    async def fake_ainvoke(initial_state, config):
+        raw = initial_state["raw_indicators"][0]
+        return {
+            "indicators": [
+                {
+                    "name": raw["name"],
+                    "value": raw["value"],
+                    "unit": raw["unit"],
+                    "reference_low": 4.72,
+                    "reference_high": 11.3,
+                    "status": "normal",
+                    "is_abnormal": False,
+                    "is_critical": False,
+                    "explanation": "",
+                    "sources": [],
+                }
+            ],
+            "has_critical_values": False,
+            "critical_alerts": [],
+            "guardrail_passed": True,
+            "disclaimer": "Test disclaimer",
+            "questions_for_doctor": [],
+            "out_of_scope_indicators": [],
+            "summary": "",
+        }
+
+    monkeypatch.setattr(routes.agent, "ainvoke", fake_ainvoke)
+
+    for date_text, value in [("2026-08-01", 7.0), ("2026-08-02", 12.0), ("2026-08-03", 10.5)]:
+        response = await client.post(
+            "/api/v1/analyze",
+            headers=headers,
+            json={
+                "patient_age": 35,
+                "patient_gender": "male",
+                "test_date": date_text,
+                "indicators": [{"name": "WBC", "value": value, "unit": "10^9/L"}],
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["saved_report_id"] is not None
+
+    with session_local() as session:
+        indicators = (
+            session.query(db_module.ReportIndicator)
+            .join(db_module.LabReport)
+            .filter(db_module.LabReport.patient_id == 1)
+            .filter(db_module.ReportIndicator.name == "WBC")
+            .order_by(db_module.LabReport.test_date)
+            .all()
+        )
+        assert [item.analyte_canonical for item in indicators] == ["WBC", "WBC", "WBC"]
+        assert [item.canonical_value for item in indicators] == [7.0, 12.0, 10.5]
+        assert [item.canonical_unit for item in indicators] == ["10^9/L", "10^9/L", "10^9/L"]
+
+    catalog = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
+    trend = await client.get(_trend_url("WBC"), headers=headers)
+
+    assert catalog.status_code == 200, catalog.text
+    analytes = {item["analyte_canonical"]: item for item in catalog.json()["analytes"]}
+    assert analytes["WBC"]["result_count"] == 3
+    assert analytes["WBC"]["trend_available"] is True
+    assert trend.status_code == 200, trend.text
+    assert trend.json()["trend_available"] is True
+    assert [point["value"] for point in trend.json()["points"]] == [7.0, 12.0, 10.5]
 
 
 @pytest.mark.asyncio
