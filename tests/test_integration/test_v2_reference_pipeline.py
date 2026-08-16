@@ -594,3 +594,35 @@ async def test_e2e_22_inactive_critical_rules_preserve_ri_status(
     assert critical["is_critical"] is False
     assert critical_result["has_critical_values"] is False
     assert critical_result["critical_alerts"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("alias_name", "value", "unit", "expected_status", "expected_is_critical"),
+    [
+        ("K+", 4.2, "mmol/l", "normal", False),
+        ("K+", 6.5, "mmol/L", "high", True),
+        ("Creatinin", 80.0, "µmol/l", "normal", False),
+        ("HDL-cho.", 1.4, "mmol/L", "normal", False),
+        ("LDL-cho.", 2.0, "mmol/L", "normal", False),
+        ("Glucose", 5.2, "mmol/L", "unknown", False),
+    ],
+)
+async def test_e2e_23_verified_ocr_aliases_end_to_end(
+    alias_name,
+    value,
+    unit,
+    expected_status,
+    expected_is_critical,
+):
+    checker_result, critical_result = await run_reference_pipeline(
+        [{"name": alias_name, "value": value, "unit": unit}],
+        patient_age=30,
+        patient_gender="male",
+    )
+
+    checked = only_indicator(checker_result)
+    critical = only_indicator(critical_result)
+
+    assert checked["status"] == expected_status
+    assert critical["is_critical"] == expected_is_critical

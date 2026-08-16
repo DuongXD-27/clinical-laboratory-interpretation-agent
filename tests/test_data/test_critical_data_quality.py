@@ -35,14 +35,6 @@ _FORBIDDEN_CRITICAL_ALIASES = frozenset({
     "Hemoglobin",
 })
 
-# Canonical analyte → test_name in units_metric.csv (from unit_map_aliases in config)
-_CANONICAL_TO_CSV_NAME: dict[str, str] = {
-    "Fasting plasma glucose": "Fasting Blood Glucose",
-    "LDL-C":                  "LDL-Cholesterol",
-    "HDL-C":                  "HDL-Cholesterol",
-    "Potassium":              "Potassium (K+)",
-}
-
 _CRITICAL_OPERATORS = frozenset({"<", "<=", ">", ">="})
 _FINAL_PROVENANCE_KEYS = frozenset({
     "source_id",
@@ -117,14 +109,7 @@ def _normalize_unit(unit: str) -> str:
 
 def _csv_units_by_canonical(units_csv: dict[str, str]) -> dict[str, str]:
     """Build {canonical_lower: normalized_unit} from units_metric.csv."""
-    result: dict[str, str] = {}
-    for test_name, unit in units_csv.items():
-        canonical = next(
-            (c for c, t in _CANONICAL_TO_CSV_NAME.items() if t == test_name),
-            test_name,
-        )
-        result[canonical.lower()] = _normalize_unit(unit)
-    return result
+    return {test_name.lower(): _normalize_unit(unit) for test_name, unit in units_csv.items()}
 
 
 def _validate_side_pair(

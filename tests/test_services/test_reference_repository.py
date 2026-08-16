@@ -27,12 +27,17 @@ def make_config(
         "Glucose máu lúc đói": "Fasting plasma glucose",
         "HDL-Cholesterol": "HDL-C",
         "HDL-C": "HDL-C",
+        "HDL-cho.": "HDL-C",
         "Creatinine": "Creatinine",
+        "Creatinin": "Creatinine",
         "HbA1c": "HbA1c",
         "LDL-C": "LDL-C",
         "LDL-Cholesterol": "LDL-C",
+        "LDL-cho.": "LDL-C",
         "Kali": "Potassium",
         "Potassium": "Potassium",
+        "Potassium (K+)": "Potassium",
+        "K+": "Potassium",
     }
     for analyte in approved + pending:
         aliases.setdefault(analyte, analyte)
@@ -43,7 +48,6 @@ def make_config(
         "pending_analytes": pending,
         "analyte_aliases": aliases,
         "age_scope_aliases": {"Adult": {"min_age": 18, "max_age": 60}},
-        "unit_map_aliases": {"Fasting plasma glucose": "Fasting Blood Glucose"},
     }
 
 
@@ -84,9 +88,9 @@ def make_unit_rows(*, hgb_unit="g/L"):
         {"test_name": "WBC", "standardized_unit": "10^9/L"},
         {"test_name": "RBC", "standardized_unit": "10^12/L"},
         {"test_name": "HGB", "standardized_unit": hgb_unit},
-        {"test_name": "Fasting Blood Glucose", "standardized_unit": "mmol/L"},
+        {"test_name": "Fasting plasma glucose", "standardized_unit": "mmol/L"},
         {"test_name": "Creatinine", "standardized_unit": "µmol/L"},
-        {"test_name": "HDL-Cholesterol", "standardized_unit": "mmol/L"},
+        {"test_name": "HDL-C", "standardized_unit": "mmol/L"},
     ]
 
 
@@ -160,11 +164,51 @@ def test_r04_invalid_json(tmp_path: Path):
 
 @pytest.mark.parametrize(
     ("alias", "canonical"),
-    [("HDL-Cholesterol", "HDL-C"), ("Kali", "Potassium")],
+    [
+        ("K+", "Potassium"),
+        ("Kali", "Potassium"),
+        ("Potassium", "Potassium"),
+        ("Potassium (K+)", "Potassium"),
+        ("Creatinin", "Creatinine"),
+        ("Creatinine", "Creatinine"),
+        ("HDL-cho.", "HDL-C"),
+        ("HDL-C", "HDL-C"),
+        ("HDL-Cholesterol", "HDL-C"),
+        ("LDL-cho.", "LDL-C"),
+        ("LDL-C", "LDL-C"),
+        ("LDL-Cholesterol", "LDL-C"),
+    ],
 )
 def test_r05_alias_resolution(repository, alias, canonical):
     assert repository.resolve_analyte(alias) == canonical
     assert repository.resolve_analyte(f"  {alias.lower()}  ") == canonical
+
+
+@pytest.mark.parametrize(
+    "invalid_analyte",
+    ["Glucose", "Đường huyết", "Unknown", "Unknown Analyte", "", "   ", None],
+)
+def test_r05b_unsafe_or_unknown_alias_rejected(repository, invalid_analyte):
+    assert repository.resolve_analyte(invalid_analyte) is None
+
+
+@pytest.mark.parametrize(
+    ("raw_unit", "expected_normalized"),
+    [
+        ("mmol/L", "mmol/L"),
+        ("mmol/l", "mmol/L"),
+        ("µmol/L", "umol/L"),
+        ("µmol/l", "umol/L"),
+        ("μmol/l", "umol/L"),
+        ("umol/l", "umol/L"),
+        ("umol/L", "umol/L"),
+        ("U/L", "U/L"),
+        ("u/l", "U/L"),
+        ("U/l", "U/L"),
+    ],
+)
+def test_r05c_unit_normalization_equivalences(raw_unit, expected_normalized):
+    assert ReferenceRepository.normalize_unit(raw_unit) == expected_normalized
 
 
 @pytest.mark.parametrize("analyte", ["HbA1c", "LDL-C", "Potassium", "HDL-C"])
@@ -542,3 +586,66 @@ def test_u03_unit_conflict_isolation():
 
     assert hgb.reason == "unit_data_conflict"
     assert wbc.matched is True
+
+
+def test_u04_direct_canonical_unit_lookup_all_approved():
+    """Verify that default repository activates all 9 approved analytes using direct canonical names."""
+    repo = ReferenceRepository.from_default_files()
+    expected_approved = {
+        "WBC",
+        "RBC",
+        "HGB",
+        "Fasting plasma glucose",
+        "HbA1c",
+        "LDL-C",
+        "HDL-C",
+        "Creatinine",
+        "Potassium",
+    }
+    assert repo.approved_analytes == expected_approved
+    assert repo.unit_conflict_analytes == frozenset()
+    assert repo.pending_analytes == frozenset()
+
+
+def test_u05_unit_conflict_demotes_to_pending():
+    """Inject incompatible unit in unit_rows -> Potassium must be demoted to pending."""
+    repo = ReferenceRepository(
+        config=make_config(approved=["WBC", "Potassium"], pending=[]),
+        rules=[
+            make_rule("WBC", unit="10^9/L"),
+            make_rule("Potassium", unit="mmol/L"),
+        ],
+        unit_rows=[
+            {"test_name": "WBC", "standardized_unit": "10^9/L"},
+            {"test_name": "Potassium", "standardized_unit": "mg/dL"},  # Incompatible unit
+        ],
+    )
+    assert "Potassium" not in repo.approved_analytes
+    assert "Potassium" in repo.pending_analytes
+    assert "Potassium" in repo.unit_conflict_analytes
+
+    result = repo.select_rule(analyte="Potassium", unit="mmol/L", patient_gender="male", patient_age=35)
+    assert result.matched is False
+    assert result.reason == "unit_data_conflict"
+
+
+def test_u06_missing_unit_row_demotes_to_pending():
+    """If unit row for declared-approved analyte is missing -> fail-closed to pending."""
+    repo = ReferenceRepository(
+        config=make_config(approved=["WBC", "Potassium"], pending=[]),
+        rules=[
+            make_rule("WBC", unit="10^9/L"),
+            make_rule("Potassium", unit="mmol/L"),
+        ],
+        unit_rows=[
+            {"test_name": "WBC", "standardized_unit": "10^9/L"},
+            # Potassium row omitted
+        ],
+    )
+    assert "Potassium" not in repo.approved_analytes
+    assert "Potassium" in repo.pending_analytes
+    assert "Potassium" in repo.unit_conflict_analytes
+
+    result = repo.select_rule(analyte="Potassium", unit="mmol/L", patient_gender="male", patient_age=35)
+    assert result.matched is False
+    assert result.reason == "unit_data_conflict"
