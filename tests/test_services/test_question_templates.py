@@ -282,24 +282,41 @@ def test_no_shipped_template_contains_forbidden_content():
             assert forbidden not in lowered, f"{forbidden!r} xuất hiện trong: {text}"
 
 
-def test_every_approved_analyte_has_a_template_for_every_abnormal_status():
-    library = load_question_templates()
+def test_template_keys_match_the_real_analyte_catalog():
+    """Key trong bộ mẫu phải khớp analyte_id thật, không được lệch âm thầm.
 
-    analyte_ids = (
-        "wbc",
-        "rbc",
-        "hgb",
-        "glucose",
-        "hba1c",
-        "ldl_cholesterol",
-        "hdl_cholesterol",
-        "creatinine",
-        "kali",
+    Bản đầu của test này gọi ``template_for()`` với danh sách id viết cứng. Vì
+    ``template_for()`` thoái lui về mẫu chung khi không có mẫu riêng, nó pass kể
+    cả khi mọi key đều sai — và đúng là đã pass rỗng suốt đợt audit reference
+    range đổi 4 mã chỉ số (`glucose` -> `fasting_plasma_glucose`,
+    `ldl_cholesterol` -> `ldl_c`, `hdl_cholesterol` -> `hdl_c`,
+    `kali` -> `potassium`). Test giờ đối chiếu thẳng với catalog.
+    """
+
+    from src.services.analyte_catalog import get_analyte_catalog
+
+    catalog_ids = {
+        definition.analyte_id
+        for definition in get_analyte_catalog()._by_id.values()
+    }
+    template_ids = set(load_question_templates().analytes)
+
+    assert template_ids <= catalog_ids, (
+        f"key không còn trong catalog: {sorted(template_ids - catalog_ids)}"
+    )
+    assert catalog_ids <= template_ids, (
+        f"chỉ số chưa có mẫu câu riêng: {sorted(catalog_ids - template_ids)}"
     )
 
-    for analyte_id in analyte_ids:
+
+def test_every_analyte_has_a_dedicated_template_for_every_abnormal_status():
+    """Mẫu riêng, không tính mẫu chung — đó là điểm khác với test cũ."""
+
+    library = load_question_templates()
+
+    for analyte_id, per_status in library.analytes.items():
         for status in ("low", "high", "critical_low", "critical_high"):
-            assert library.template_for(analyte_id, status), (analyte_id, status)
+            assert per_status.get(status), (analyte_id, status)
 
 
 def test_unknown_analyte_falls_back_to_the_generic_template():
