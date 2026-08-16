@@ -31,6 +31,8 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 
 ## 3. MVP Architecture
 
+> Xem tài liệu đặc tả kiến trúc toàn diện và sơ đồ chi tiết tại [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ### Luồng xử lý Pipeline
 
 ```text

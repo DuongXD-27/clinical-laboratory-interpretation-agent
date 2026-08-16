@@ -2,113 +2,255 @@
 
 ## System Overview
 
-[Tóm tắt 2-3 câu về kiến trúc hệ thống]
+Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại trú bằng ngôn ngữ dễ hiểu cho bệnh nhân (VMEC-05). Hệ thống kết hợp phân loại khoảng tham chiếu và phát hiện giá trị nguy kịch tất định (Deterministic Rule-based), tra cứu tri thức y khoa có kiểm chứng (RAG từ ChromaDB), sinh giải thích thân thiện (LLM) và kiểm duyệt an toàn y tế nghiêm ngặt (Medical Guardrails).
 
 ## Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph Frontend
-        UI[React/Next.js UI]
+flowchart LR
+
+    %% =========================
+    %% USER / FRONTEND
+    %% =========================
+    subgraph FE["Frontend — Next.js"]
+        USER["Patient / Guest"]
+        INPUT["Lab Result Input<br/>Manual / JSON / Image"]
+        REVIEW["OCR Review UI<br/>Confirm extracted values"]
+        RESULT["Result Screen<br/>Status · Explanation<br/>Critical Warning · Disclaimer"]
     end
 
-    subgraph Backend[FastAPI Backend]
-        API[API Routes]
-        Agent[LangGraph Agent]
-        LLM[LLM Service]
-        Tools[Agent Tools]
+    %% =========================
+    %% API
+    %% =========================
+    subgraph API["Backend — FastAPI"]
+        ENDPOINT["Analysis API"]
+        OCR["OCR / Vision Service"]
+        OCR_GATE["OCR Review Gate"]
+        SCHEMA["Standard Lab Result Schema"]
     end
 
-    subgraph Data[Data Layer]
-        DB[(Database)]
-        Vector[Vector Store]
+    %% =========================
+    %% LANGGRAPH
+    %% =========================
+    subgraph AGENT["AI Workflow — LangGraph"]
+        REF["Reference Range Checker<br/>Deterministic<br/>LOW / NORMAL / HIGH"]
+
+        CRIT["Critical Detector<br/>Deterministic<br/>CRITICAL_LOW / CRITICAL_HIGH"]
+
+        RETRIEVE["RAG Retriever"]
+
+        ANALYZER["LLM Analyzer<br/>Patient-friendly Explanation"]
+
+        GUARD["Medical Guardrail<br/>+ Safety Validator"]
+
+        OUTPUT["Output Formatter"]
     end
 
-    UI -->|HTTP/REST| API
-    API --> Agent
-    Agent --> LLM
-    Agent --> Tools
-    Agent --> Vector
-    Tools --> DB
-    API --> DB
+    %% =========================
+    %% KNOWLEDGE / DATA
+    %% =========================
+    subgraph DATA["Medical Data & Knowledge"]
+        RI[("Reference Interval Data<br/>reference_ranges.json")]
+
+        CT[("Critical Threshold Data<br/>critical_thresholds.json")]
+
+        EXPL[("Explanation Knowledge<br/>explanations.json")]
+
+        CHROMA[("ChromaDB<br/>Local Vector Store")]
+    end
+
+    %% =========================
+    %% EXTERNAL AI
+    %% =========================
+    subgraph CLOUD["External AI APIs"]
+        VISION["Vision Model<br/>OCR"]
+        EMBED["OpenAI Embeddings<br/>text-embedding-3-small"]
+        LLM["OpenAI Chat Model<br/>gpt-4o-mini"]
+    end
+
+    %% =========================
+    %% MAIN INPUT FLOW
+    %% =========================
+    USER --> INPUT
+
+    INPUT -->|"Manual / JSON"| ENDPOINT
+    INPUT -->|"Image"| OCR
+
+    OCR --> VISION
+    VISION --> OCR
+    OCR --> OCR_GATE
+    OCR_GATE --> REVIEW
+    REVIEW -->|"User confirmed"| ENDPOINT
+
+    ENDPOINT --> SCHEMA
+    SCHEMA --> REF
+
+    %% =========================
+    %% DETERMINISTIC MEDICAL LOGIC
+    %% =========================
+    RI --> REF
+
+    REF --> CRIT
+    CT --> CRIT
+
+    %% =========================
+    %% RAG + LLM
+    %% =========================
+    CRIT --> RETRIEVE
+
+    RETRIEVE --> EMBED
+    EMBED --> CHROMA
+
+    EXPL -->|"Indexed knowledge"| CHROMA
+    CHROMA -->|"Relevant context"| RETRIEVE
+
+    RETRIEVE --> ANALYZER
+    ANALYZER --> LLM
+    LLM --> ANALYZER
+
+    %% =========================
+    %% SAFETY + OUTPUT
+    %% =========================
+    ANALYZER --> GUARD
+    CRIT -->|"Deterministic facts / warning"| GUARD
+
+    GUARD --> OUTPUT
+    OUTPUT --> ENDPOINT
+
+    ENDPOINT -->|"REST JSON"| RESULT
 ```
 
 ## Components
 
-### 1. Frontend (React/Next.js)
-- **Purpose:** [mô tả]
-- **Key Features:** [danh sách]
-- **State Management:** [approach]
+### 1. Frontend (React / Next.js)
+- **Purpose:** Cung cấp giao diện tương tác trực quan cho bệnh nhân và bác sĩ; hỗ trợ nhập liệu, tải ảnh phiếu xét nghiệm qua OCR Review Gate, xem báo cáo diễn giải, biểu đồ xu hướng lịch sử và tương tác với bác sĩ.
+- **Key Features:**
+  - Form nhập liệu thủ công với 9 chỉ số chuẩn hóa (WBC, RBC, Glucose, HbA1c, Cholesterol, Triglycerides, HDL, LDL, Potassium).
+  - Tải ảnh phiếu xét nghiệm và giao diện xác nhận trích xuất (OCR Review Gate - ADR-006).
+  - Báo cáo kết quả chi tiết kèm badge trạng thái, giải thích dễ hiểu, nguồn trích dẫn y khoa và cảnh báo nguy kịch nổi bật.
+  - Lựa chọn danh sách câu hỏi gợi ý để mang đi trao đổi với bác sĩ.
+  - Biểu đồ xu hướng chỉ số theo thời gian (Trends qua Recharts).
+  - Chế độ dùng thử tức thì (Guest Session) và quản lý tài khoản Bệnh nhân / Bác sĩ.
+- **State Management:** React Hooks (`useState`, `useEffect`), Custom Contexts cho Authentication & Guest Session, quản lý state bất đồng bộ khi gọi API.
 
 ### 2. Backend (FastAPI)
-- **Purpose:** [mô tả]
-- **API Design:** RESTful
-- **Authentication:** [JWT/None]
+- **Purpose:** API Gateway xử lý yêu cầu, điều phối pipeline AI Agent (LangGraph), quản lý phiên làm việc JWT, xác thực phân quyền và lưu trữ dữ liệu lịch sử xét nghiệm.
+- **API Design:** RESTful API có cấu trúc rõ ràng:
+  - `/api/v1/analyze`: Phân tích và diễn giải phiếu xét nghiệm (Manual/Reviewed OCR).
+  - `/api/v1/auth/*`: Đăng ký, đăng nhập, phiên khách (Guest session), thông tin người dùng (`/me`).
+  - `/api/v1/ocr/*`: Tải ảnh trích xuất (`/ocr/upload`), xác nhận bản nháp (`/ocr/confirm`).
+  - `/api/v1/patient/*`: Dashboard bệnh nhân, hồ sơ cá nhân, phân tích xu hướng (`/patient/me/trends`).
+  - `/api/v1/history/*`: Danh sách phiếu xét nghiệm, chi tiết phiếu, ghi chú bác sĩ (Doctor Notes).
+  - `/health` & `/ready`: Kiểm tra tình trạng hoạt động và độ sẵn sàng của RAG.
+- **Authentication:** JSON Web Tokens (JWT - HS256) hỗ trợ 3 vai trò: `patient`, `doctor`, và `guest` (phiên khách tạm thời, không lưu row persistent vào bảng users).
 
 ### 3. AI Agent (LangGraph)
-- **Agent Type:** [ReAct / Plan-and-Execute / Custom]
-- **State:** [mô tả state schema]
-- **Nodes:** [danh sách nodes]
-- **Tools:** [danh sách tools]
+- **Agent Type:** StateGraph Pipeline có kiểm soát (Deterministic Directed Graph kết hợp Human-in-the-Loop Gate).
+- **State:** `AgentState` (TypedDict) quản lý toàn bộ vòng đời phân tích: `patient_age`, `patient_gender`, `test_date`, `raw_indicators`, `ocr_drafts`, `is_ocr_reviewed`, `indicators` (IndicatorAssessment), `critical_alerts`, `has_critical_values`, `retrieved_contexts`, `explanations`, `questions_for_doctor`, `guardrail_passed`, `disclaimer`, `summary`.
+- **Nodes:**
+  - `ui_review_gate`: Điểm neo ngắt luồng (interrupt_before) cho OCR Review Gate khi có ảnh trích xuất cần người dùng duyệt.
+  - `reference_range_checker`: Đối chiếu chỉ số với khoảng tham chiếu chuẩn hóa theo độ tuổi/giới tính từ `reference_ranges.json`.
+  - `critical_detector`: Nhận diện ngưỡng nguy kịch tất định từ `critical_thresholds.json`, tạo cảnh báo khẩn cấp độc lập với LLM.
+  - `analyzer`: RAG retriever tra cứu ChromaDB (hoặc Curated Fallback) kết hợp gọi LLM (`gpt-4o-mini`) diễn giải ý nghĩa ngôn ngữ tự nhiên.
+  - `generate_questions`: Sinh danh sách câu hỏi phù hợp cho bác sĩ dựa trên mức độ bất thường/nguy kịch.
+  - `guardrail`: Kiểm duyệt an toàn y tế độc lập (chặn chẩn đoán bệnh, kê đơn thuốc, suy đoán nguyên nhân cá nhân).
 - **Flow:**
 
 ```mermaid
 graph LR
-    START --> A[Node A]
-    A --> B{Decision}
-    B -->|Yes| C[Node C]
-    B -->|No| D[Node D]
-    C --> E[END]
-    D --> E
+    START([Start]) --> ROUTE{Has unreviewed OCR?}
+    ROUTE -->|Yes| GATE[ui_review_gate<br/>HITL Interrupt]
+    GATE --> REF[reference_range_checker]
+    ROUTE -->|No| REF
+    REF --> CRIT[critical_detector]
+    CRIT --> ANALYZE[analyzer<br/>RAG + LLM]
+    ANALYZE --> GEN_Q[generate_questions]
+    GEN_Q --> GUARD[guardrail<br/>Safety Validator]
+    GUARD --> FINISH([End])
 ```
 
 ### 4. Database
-- **Type:** [PostgreSQL / SQLite]
-- **Tables:** [danh sách]
-- **Migrations:** Alembic
+- **Type:** SQLite (mặc định tại `./data/app.db` cho dev/demo), hỗ trợ chuyển đổi PostgreSQL qua biến môi trường `DATABASE_URL`.
+- **Tables:**
+  - `users`: Tài khoản định danh bệnh nhân (`patient`) và bác sĩ (`doctor`).
+  - `lab_reports`: Phiếu xét nghiệm đã phân tích và lưu trữ theo bệnh nhân.
+  - `report_indicators`: Chi tiết từng chỉ số xét nghiệm, giá trị đo, khoảng tham chiếu, trạng thái và giải thích.
+  - `report_critical_alerts`: Cảnh báo giá trị nguy kịch gắn theo phiếu.
+  - `indicator_catalog`: Danh mục chỉ số chuẩn hóa (canonical name, unit, aliases, unit conversion formulas).
+  - `report_questions`: Câu hỏi gợi ý cho bác sĩ, trạng thái bệnh nhân tick chọn và câu trả lời của bác sĩ.
+  - `doctor_notes`: Ghi chú nhận xét chuyên môn của bác sĩ (HITL notes).
+  - `report_doctor_views`: Lịch sử bác sĩ đã mở xem phiếu xét nghiệm.
+  - `out_of_scope_log`: Nhật ký ghi nhận các chỉ số ngoài danh mục hỗ trợ.
+- **Migrations:** Khởi tạo qua `Base.metadata.create_all()` kết hợp cơ chế idempotent runtime migration tối thiểu cho SQLite (`_migrate_sqlite_schema()`).
 
 ### 5. Vector Store
-- **Type:** ChromaDB hiện tại; có thể thay bằng vector service qua abstraction.
-- **Embeddings:** provider ngoài, cấu hình bằng môi trường; không tải model local trong API.
-- **Purpose:** chỉ truy xuất tài liệu y khoa phi cấu trúc để làm giàu giải thích.
-- **Boundary:** mã chỉ số, alias, đơn vị, khoảng tham chiếu và critical threshold dùng
-  deterministic lookup; RAG không có quyền sửa hoặc quyết định các trường này.
-- **Failure policy:** RAG là optional enrichment. Lỗi provider/index/metadata phải rơi
-  về curated fallback và không được làm chết `/analyze`.
+- **Type:** ChromaDB cục bộ (`./data/chroma`).
+- **Embeddings:** OpenAI Embeddings (`text-embedding-3-small`, 1536 chiều), cấu hình qua biến môi trường.
+- **Purpose:** Chỉ truy xuất tài liệu giáo dục y khoa phi cấu trúc (`data/reference/explanations.json`) để làm giàu ngữ cảnh diễn giải.
+- **Boundary:** Mã chỉ số, alias, đơn vị, khoảng tham chiếu và critical threshold dùng deterministic lookup; RAG không có quyền sửa hoặc quyết định các trường này.
+- **Failure policy:** RAG là optional enrichment. Lỗi provider/index/metadata phải rơi về curated fallback và không được làm gián đoạn `/analyze`.
 
 ## Data Flow
 
-1. User gửi request từ Frontend
-2. API route nhận và validate input
-3. Agent xử lý qua LangGraph pipeline
-4. LLM generate response
-5. Tools thực thi actions (nếu cần)
-6. Response trả về Frontend
+1. **Tiếp nhận dữ liệu:** Người dùng nhập kết quả qua Form hoặc tải ảnh phiếu xét nghiệm từ Frontend. Dữ liệu OCR đi qua OCR Review Gate để người dùng kiểm tra trước khi chuyển tiếp.
+2. **API Tiếp nhận & Xác thực:** FastAPI nhận request tại `POST /api/v1/analyze`, xác thực Bearer token (Patient/Doctor/Guest) và kiểm tra định dạng qua `AnalyzeRequest` schema.
+3. **Phân tích tất định (Deterministic Logic):**
+   - `Reference Range Checker` chuẩn hóa đơn vị, đối chiếu khoảng tham chiếu theo độ tuổi/giới tính và phân loại `LOW` / `NORMAL` / `HIGH` / `UNKNOWN`.
+   - `Critical Detector` kiểm tra ngưỡng nguy kịch độc lập và sinh `CriticalAlert` nếu vượt ngưỡng.
+4. **RAG & Diễn giải LLM:**
+   - `RAG Retriever` tìm kiếm ngữ cảnh y khoa tương ứng từ ChromaDB (hoặc Curated Explanation Fallback nếu RAG tắt/lỗi).
+   - `LLM Analyzer` diễn giải ý nghĩa chỉ số theo giọng văn thân thiện, trung lập, không khẳng định bệnh lý.
+   - `Doctor Question Generator` tạo câu hỏi định hướng cho bệnh nhân trao đổi với bác sĩ.
+5. **Kiểm duyệt an toàn (Medical Guardrail):** Toàn bộ nội dung do LLM sinh ra được kiểm duyệt qua Validator an toàn y tế; thay thế bằng câu dự phòng an toàn nếu phát hiện vi phạm quy tắc chẩn đoán/kê đơn.
+6. **Persistence & Phản hồi:** Nếu là tài khoản `patient` đã đăng nhập, phiếu kết quả được lưu trữ vào Database; trả về `AnalyzeResponse` JSON chuẩn cho Frontend hiển thị.
 
 ## Deployment Architecture
 
 ```mermaid
 graph LR
-    subgraph Docker
-        FE[Frontend Container]
-        BE[Backend Container]
-        DB_C[Database Container]
+    subgraph Client["Client Browser"]
+        WEB[Next.js Web Interface]
     end
-    FE --> BE --> DB_C
+
+    subgraph Vercel["Vercel Cloud"]
+        FE[Frontend Next.js App<br/>vmec-05.vercel.app]
+    end
+
+    subgraph Railway["Railway Cloud"]
+        BE[Backend FastAPI API<br/>vmec-05-api-production.up.railway.app]
+        SQLITE[(SQLite Persistent DB<br/>data/app.db)]
+        CHROMA_DIR[(ChromaDB Vector Store<br/>data/chroma)]
+    end
+
+    subgraph CloudAI["External Cloud AI Services"]
+        OPENAI[OpenAI API<br/>gpt-4o-mini / text-embedding-3-small]
+        GEMINI[Google Gemini Vision<br/>OCR Engine]
+    end
+
+    WEB --> FE
+    FE -->|HTTPS REST API / JWT| BE
+    BE --> SQLITE
+    BE --> CHROMA_DIR
+    BE --> OPENAI
+    BE --> GEMINI
 ```
 
 ## Security
 
-- API keys stored in `.env` (never commit)
-- Input validation via Pydantic
-- Rate limiting on API endpoints
-- CORS configured for frontend domain
+- **Quản lý Secrets:** Toàn bộ API keys (OpenAI, Gemini, LangSmith) và `JWT_SECRET` được cấu hình qua biến môi trường (`.env`), không commit vào kho mã nguồn.
+- **Xác thực dữ liệu đầu vào:** Kiểm soát chặt chẽ kiểu dữ liệu, giới hạn độ tuổi, lọc chuỗi ký tự qua Pydantic v2 schemas.
+- **Phân quyền và bảo mật phiên:** JWT Token có thời hạn sống tách biệt (`120 phút` cho phiên khách vãng lai, `12 giờ` cho tài khoản đăng nhập).
+- **CORS Protection:** Cấu hình danh sách domain tường minh (`CORS_ORIGINS`), chặn tuyệt đối wildcard `*` khi `allow_credentials=True`.
+- **Bảo mật thông tin y tế (PHI) & Xử lý lỗi:** Không lưu trữ ảnh gốc của bệnh nhân trên máy chủ; thông tin định danh cá nhân được tách biệt; che giấu stack trace và thông tin lỗi hệ thống nội bộ ra client.
 
 ## Design Decisions
 
 | Decision | Choice | Reason |
-|----------|--------|--------|
-| Framework | FastAPI | Async, auto-docs, type-safe |
-| Agent | LangGraph | Flexible state management |
-| Database | [choice] | [reason] |
-| Frontend | Next.js | [reason] |
+|---|---|---|
+| **API Framework** | FastAPI (Python 3.11+) | Hiệu năng bất đồng bộ cao, tự động sinh OpenAPI documentation, tích hợp Pydantic v2 type safety |
+| **Agent Orchestration** | LangGraph | Quản lý luồng thực thi dạng StateGraph tường minh, hỗ trợ ngắt luồng (interrupt) cho Human-in-the-Loop (OCR Review Gate) |
+| **Medical Assessment** | Deterministic Rule-Based Engine | Đảm bảo tính toán khoảng tham chiếu và phát hiện giá trị nguy kịch chính xác 100%, loại bỏ nguy cơ ảo giác từ LLM |
+| **RAG Knowledge Base** | ChromaDB + Curated Fallback | Truy xuất vector cục bộ gọn nhẹ, sẵn sàng fallback sang bộ tri thức tĩnh khi ngắt kết nối mạng hoặc không có API key embedding |
+| **OCR Architecture** | Gemini Vision + OpenRouter Fallback + Review Gate | Đảm bảo tỷ lệ bóc tách chính xác cao, có phương án dự phòng khi quota cạn, và bắt buộc người dùng xác nhận dữ liệu trước khi phân tích |
+| **Database** | SQLite (Dev/Demo) / PostgreSQL (Prod) | Đơn giản, tự động seed dữ liệu demo phục vụ nghiệm thu; kiến trúc sẵn sàng chuyển sang PostgreSQL khi vận hành thực tế |
+| **Frontend Framework** | Next.js 16 (App Router) + TailwindCSS 4 | Tối ưu hóa render, tải trang nhanh, xây dựng giao diện hiện đại, dễ dàng triển khai trên nền tảng Vercel |
