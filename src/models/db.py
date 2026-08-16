@@ -22,13 +22,21 @@ tầng ứng dụng chịu trách nhiệm đảm bảo target tồn tại và d�
 nếu target bị xóa.
 
 LƯU Ý VẬN HÀNH:
-SQLite local phù hợp cho nghiệm thu/demo nhưng không nên dùng làm persistence
-production nếu Railway không gắn persistent Volume. Trước khi có dữ liệu
-người dùng thật cần chuyển sang PostgreSQL hoặc storage persistent tương đương.
+Production chạy **Neon Postgres** từ 2026-08-15 (region Frankfurt, cùng khu với
+Railway). `settings.database_url` mặc định `sqlite:///./data/app.db` chỉ là
+fallback cho máy dev — đừng đọc giá trị mặc định đó như sự thật của production.
+
+Hệ quả của việc DB nay sống dai hơn code: `create_all()` chỉ tạo bảng còn thiếu,
+nó KHÔNG ALTER bảng đã có. Trước kia SQLite bị xoá mỗi lần redeploy nên bảng luôn
+được tạo mới và không ai thấy vấn đề. Với Postgres, mỗi lần model thêm cột mà DB
+chưa có là production trả 500 `UndefinedColumn` — đã xảy ra thật với
+`report_indicators.critical_status`. `add_missing_columns()` bù chỗ đó, nhưng nó
+chỉ THÊM được cột; đổi tên, đổi kiểu, xoá cột thì cần Alembic.
 """
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import (
@@ -45,13 +53,18 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     event,
+    inspect,
+    text,
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
+from sqlalchemy.schema import CreateColumn
 from sqlalchemy.types import JSON
 
 from src.config import get_settings
 from src.services.auth import hash_password
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -599,63 +612,96 @@ def _sqlite_table_columns(table_name: str) -> set[str]:
     return {str(row[1]) for row in rows}
 
 
-def _migrate_sqlite_schema() -> None:
-    """Small idempotent migration for the local create_all-based SQLite setup."""
-    if not _is_sqlite:
-        return
+def add_missing_columns() -> list[str]:
+    """Thêm cột model đã khai nhưng bảng thật chưa có. Chạy cho MỌI dialect.
 
-    migrations = {
-        "users": {
-            "full_name": "VARCHAR",
-            "date_of_birth": "DATE",
-            "sex": "VARCHAR",
-            "email": "VARCHAR",
-            "created_at": "DATETIME",
-            "updated_at": "DATETIME",
-        },
-        "lab_reports": {
-            "status": "VARCHAR",
-            "report_fingerprint": "VARCHAR",
-        },
-        "report_indicators": {
-            "analyte_raw": "VARCHAR",
-            "analyte_canonical": "VARCHAR",
-            "raw_value": "FLOAT",
-            "raw_unit": "VARCHAR",
-            "canonical_value": "FLOAT",
-            "canonical_unit": "VARCHAR",
-            "critical_status": "VARCHAR",
-        },
-    }
+    ``create_all()`` chỉ tạo bảng còn thiếu, nó **không bao giờ ALTER** bảng đã
+    tồn tại. Với SQLite trên Railway thì điều đó vô hại vì đĩa bị xoá mỗi lần
+    redeploy nên bảng luôn được tạo mới. Từ khi production chuyển sang Postgres
+    (2026-08-15) thì DB sống dai hơn code, và mỗi lần model thêm cột là
+    production trả 500 ``UndefinedColumn`` — đã xảy ra thật với
+    ``report_indicators.critical_status``.
+
+    Danh sách cột được **suy ra từ chính model**, không phải bảng viết tay. Bản
+    trước liệt kê tay theo từng bảng, nên chỉ cần ai thêm cột mà quên cập nhật
+    danh sách là lại đứt — đúng cách mà `critical_status` lọt lưới.
+
+    Cột được thêm dạng NULLABLE kể cả khi model khai NOT NULL: bảng có thể đang
+    có dòng cũ, thêm NOT NULL mà không có server default sẽ fail. Ứng dụng vẫn
+    ghi bình thường vì default nằm ở tầng Python.
+
+    Đây là bản vá tối thiểu cho mô hình create_all, KHÔNG phải migration tool.
+    Nó chỉ thêm cột; đổi tên, đổi kiểu và xoá cột đều nằm ngoài khả năng. Khi cần
+    những thứ đó thì phải đưa Alembic vào.
+
+    Trả về danh sách "bảng.cột" đã thêm, để test và log kiểm được.
+    """
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    added: list[str] = []
 
     with engine.begin() as conn:
-        for table_name, columns in migrations.items():
-            existing = {
-                str(row[1])
-                for row in conn.exec_driver_sql(f"PRAGMA table_info({table_name})").fetchall()
-            }
-            for column_name, column_type in columns.items():
-                if column_name not in existing:
-                    conn.exec_driver_sql(
-                        f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
-                    )
+        for table in Base.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                # Bảng chưa có: create_all() sẽ tạo đầy đủ, không cần ALTER.
+                continue
+
+            db_columns = {column["name"] for column in inspector.get_columns(table.name)}
+
+            for column in table.columns:
+                if column.name in db_columns:
+                    continue
+
+                ddl = str(CreateColumn(column).compile(engine)).replace(" NOT NULL", "")
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN {ddl}'))
+                added.append(f"{table.name}.{column.name}")
+
+    if added:
+        logger.warning(
+            "Schema drift: da them %d cot con thieu -> %s",
+            len(added),
+            ", ".join(added),
+        )
+
+    return added
 
 
-def _backfill_sqlite_defaults() -> None:
-    if not _is_sqlite:
-        return
+def backfill_added_column_defaults() -> None:
+    """Điền giá trị cho các cột vừa được thêm, vì dòng cũ đang để NULL.
+
+    Chạy cho mọi dialect chứ không riêng SQLite: cột thêm trên Postgres cũng
+    NULL y hệt, và một `status` NULL sẽ khiến màn lịch sử hiển thị sai.
+
+    Dùng `text()` với tham số đặt tên thay cho placeholder `?` của SQLite, để
+    câu lệnh chạy đúng trên cả hai.
+    """
+
     now = datetime.now(UTC).replace(tzinfo=None)
+
     with engine.begin() as conn:
-        conn.exec_driver_sql(
-            "UPDATE users SET created_at = COALESCE(created_at, ?), updated_at = COALESCE(updated_at, ?)",
-            (now, now),
+        conn.execute(
+            text(
+                "UPDATE users SET created_at = COALESCE(created_at, :now), "
+                "updated_at = COALESCE(updated_at, :now)"
+            ),
+            {"now": now},
         )
-        conn.exec_driver_sql(
-            "UPDATE lab_reports SET status = COALESCE(status, CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+        conn.execute(
+            text(
+                "UPDATE lab_reports SET status = COALESCE(status, "
+                "CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+            )
         )
-        conn.exec_driver_sql(
-            "UPDATE report_indicators SET critical_status = status WHERE critical_status IS NULL AND status IN ('critical_low', 'critical_high')"
+        conn.execute(
+            text(
+                "UPDATE report_indicators SET critical_status = status "
+                "WHERE critical_status IS NULL "
+                "AND status IN ('critical_low', 'critical_high')"
+            )
         )
+
+
 def seed_demo_users(db: Session) -> None:
     """Seed tài khoản demo nếu bảng users đang trống.
 
@@ -681,63 +727,17 @@ def seed_demo_users(db: Session) -> None:
         db.rollback()
 
 
-def _sqlite_columns(conn, table: str) -> set[str]:
-    return {
-        row[1]
-        for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")
-    }
-
-
-def _upgrade_sqlite_schema() -> None:
-    """Bản vá tối thiểu cho SQLite cũ thiếu cột mới thêm về sau.
-
-    create_all() chỉ tạo bảng chưa tồn tại; nó không ALTER bảng cũ.
-    Khi project cần nhiều migration hơn nên chuyển sang migration tool thật.
-    """
-    if engine.dialect.name != "sqlite":
-        return
-
-    with engine.begin() as conn:
-        user_columns = _sqlite_columns(conn, "users")
-
-        # Bảng chưa tồn tại: để create_all() tạo mới.
-        if user_columns and "created_at" not in user_columns:
-            conn.exec_driver_sql(
-                "ALTER TABLE users ADD COLUMN created_at DATETIME"
-            )
-            conn.exec_driver_sql(
-                "UPDATE users "
-                "SET created_at = ? "
-                "WHERE created_at IS NULL",
-                (_utcnow().isoformat(sep=" "),),
-            )
-
-        # Câu hỏi gợi ý: cột thêm khi bổ sung phần bệnh nhân tick chọn và bác
-        # sĩ trả lời. indicator_id đổi từ NOT NULL sang nullable không cần
-        # ALTER — SQLite không enforce lại ràng buộc cũ trên dòng mới, và bảng
-        # này chưa từng có dữ liệu thật ở bất kỳ môi trường nào.
-        question_columns = _sqlite_columns(conn, "report_questions")
-
-        if question_columns:
-            for column, ddl in (
-                ("display_order", "INTEGER NOT NULL DEFAULT 0"),
-                ("is_selected", "BOOLEAN NOT NULL DEFAULT 0"),
-                ("answer_text", "TEXT"),
-                ("answered_by_doctor_id", "INTEGER"),
-                ("answered_at", "DATETIME"),
-            ):
-                if column not in question_columns:
-                    conn.exec_driver_sql(
-                        f"ALTER TABLE report_questions ADD COLUMN {column} {ddl}"
-                    )
-
-
 def init_db() -> None:
-    _upgrade_sqlite_schema()
+    """Tạo bảng còn thiếu, bù cột còn thiếu, rồi seed tài khoản demo.
+
+    Thứ tự bắt buộc: `create_all()` trước để bảng mới tồn tại, rồi
+    `add_missing_columns()` mới ALTER được những bảng cũ.
+    """
 
     Base.metadata.create_all(bind=engine)
-    _migrate_sqlite_schema()
-    _backfill_sqlite_defaults()
+    add_missing_columns()
+    backfill_added_column_defaults()
+
     with SessionLocal() as db:
         seed_demo_users(db)
 
