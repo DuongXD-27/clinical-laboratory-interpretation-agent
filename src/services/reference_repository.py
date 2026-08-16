@@ -80,12 +80,6 @@ class ReferenceRepository:
                 for alias, bounds in config_copy.get("age_scope_aliases", {}).items()
             }
         )
-        self.unit_map_aliases = MappingProxyType(
-            {
-                str(analyte).strip(): str(unit_name).strip()
-                for analyte, unit_name in config_copy.get("unit_map_aliases", {}).items()
-            }
-        )
         self._rules = tuple(rules_copy)
         self._rules_by_analyte = self._index_rules(self._rules)
 
@@ -203,8 +197,7 @@ class ReferenceRepository:
         }
         conflicts: set[str] = set()
         for analyte in requested_approved:
-            unit_key = self.unit_map_aliases.get(analyte, analyte)
-            expected_unit = unit_map.get(unit_key)
+            expected_unit = unit_map.get(analyte)
             ri_units = {
                 self._rule_unit(rule)
                 for rule in self._rules_by_analyte.get(analyte, ())
@@ -307,8 +300,16 @@ class ReferenceRepository:
             "µmol/L": "umol/L",
             "μmol/L": "umol/L",
             "umol/L": "umol/L",
+            "µmol/l": "umol/L",
+            "μmol/l": "umol/L",
+            "umol/l": "umol/L",
+            "mmol/l": "mmol/L",
+            "mmol/L": "mmol/L",
             "G/L": "10^9/L",
             "T/L": "10^12/L",
+            "U/l": "U/L",
+            "u/l": "U/L",
+            "U/L": "U/L",
         }
         return unit_aliases.get(text, text)
 

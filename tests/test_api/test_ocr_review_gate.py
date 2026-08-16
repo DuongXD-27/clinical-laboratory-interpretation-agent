@@ -402,3 +402,36 @@ async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, mon
     initial_state = mock_ainvoke.await_args.args[0]
     assert [item["name"] for item in initial_state["raw_indicators"]] == ["WBC"]
     assert response.json()["out_of_scope_indicators"] == ["AST"]
+
+
+def test_ocr_review_gate_alias_support_and_safety():
+    """Verify that verified OCR aliases are supported and generic Glucose remains fail-closed."""
+    drafts, _ = prepare_review(
+        [
+            OCRIndicatorDraft(name="K+", value=4.2, unit="mmol/L", confidence=0.9),
+            OCRIndicatorDraft(name="Creatinin", value=80.0, unit="µmol/L", confidence=0.9),
+            OCRIndicatorDraft(name="HDL-cho.", value=1.4, unit="mmol/L", confidence=0.9),
+            OCRIndicatorDraft(name="LDL-cho.", value=2.2, unit="mmol/L", confidence=0.9),
+            OCRIndicatorDraft(name="Glucose", value=5.2, unit="mmol/L", confidence=0.9),
+        ],
+        username="benhnhan",
+    )
+
+    by_name = {d.name: d for d in drafts}
+
+    # Positive cases: supported = True
+    assert by_name["K+"].supported is True
+    assert by_name["K+"].unsupported_reason == ""
+
+    assert by_name["Creatinin"].supported is True
+    assert by_name["Creatinin"].unsupported_reason == ""
+
+    assert by_name["HDL-cho."].supported is True
+    assert by_name["HDL-cho."].unsupported_reason == ""
+
+    assert by_name["LDL-cho."].supported is True
+    assert by_name["LDL-cho."].unsupported_reason == ""
+
+    # Negative/safety case: generic Glucose remains fail-closed (supported = False)
+    assert by_name["Glucose"].supported is False
+    assert "chưa được hỗ trợ" in by_name["Glucose"].unsupported_reason

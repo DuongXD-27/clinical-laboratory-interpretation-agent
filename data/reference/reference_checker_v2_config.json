@@ -32,24 +32,22 @@
     "Fasting plasma glucose": "Fasting plasma glucose",
     "HDL-Cholesterol": "HDL-C",
     "HDL-C": "HDL-C",
+    "HDL-cho.": "HDL-C",
     "Creatinine": "Creatinine",
+    "Creatinin": "Creatinine",
     "HbA1c": "HbA1c",
     "LDL-Cholesterol": "LDL-C",
     "LDL-C": "LDL-C",
+    "LDL-cho.": "LDL-C",
     "Kali": "Potassium",
     "Potassium": "Potassium",
-    "Potassium (K+)": "Potassium"
+    "Potassium (K+)": "Potassium",
+    "K+": "Potassium"
   },
   "age_scope_aliases": {
     "Adult": {
       "min_age": 18,
       "max_age": 60
     }
-  },
-  "unit_map_aliases": {
-    "Fasting plasma glucose": "Fasting Blood Glucose",
-    "LDL-C": "LDL-Cholesterol",
-    "HDL-C": "HDL-Cholesterol",
-    "Potassium": "Potassium (K+)"
   }
 }

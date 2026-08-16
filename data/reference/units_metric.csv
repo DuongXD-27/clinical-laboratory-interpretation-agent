@@ -1,4 +1,4 @@
-﻿test_name,standardized_unit
+test_name,standardized_unit
 WBC,10^9/L
 RBC,10^12/L
 HGB,g/L
@@ -19,12 +19,12 @@ MCH,pg
 MCHC,g/L
 RDW,%CV
 MPV,fL
-Fasting Blood Glucose,mmol/L
+Fasting plasma glucose,mmol/L
 HbA1c,%
 Total Cholesterol,mg/dL
 Triglycerides,mg/dL
-HDL-Cholesterol,mmol/L
-LDL-Cholesterol,mmol/L
+HDL-C,mmol/L
+LDL-C,mmol/L
 AST (GOT),U/L
 ALT (GPT),U/L
 GGT,U/L
@@ -33,7 +33,7 @@ Creatinine,µmol/L
 Uric Acid,µmol/L
 eGFR,mL/min/1.73 m^2
 Sodium (Na),mmol/L
-Potassium (K+),mmol/L
+Potassium,mmol/L
 Chloride (Cl-),mmol/L
 Total Protein,g/L
 Albumin,g/L
