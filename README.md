@@ -1,11 +1,24 @@
-# AI Agent Giải Thích Kết Quả Xét Nghiệm Bằng Ngôn Ngữ Dễ Hiểu Cho Bệnh Nhân
+# VMEC-05 — AI Agent Giải Thích Kết Quả Xét Nghiệm
 
-> Bệnh nhân nhận phiếu kết quả xét nghiệm đầy chỉ số và thuật ngữ (WBC, HbA1c, LDL...) nhưng không hiểu ý nghĩa, lo lắng quá mức hoặc chủ quan, gọi hỏi bác sĩ/hotline nhiều. Cần AI Agent tiếp nhận phiếu kết quả (mô phỏng), đối chiếu khoảng tham chiếu, giải thích từng chỉ số bằng ngôn ngữ đơn giản, nêu chỉ số bất thường và ý nghĩa chung, gợi ý câu hỏi nên hỏi bác sĩ. Agent lập kế hoạch: phân tích - tra cứu chỉ số có nguồn - cá nhân hóa lời giải - tạo bản tóm tắt thân thiện.
+Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại trú bằng ngôn ngữ dễ hiểu, có căn cứ y khoa và tuân thủ nghiêm ngặt các rào cản an toàn y tế (Medical Guardrails).
 
-Reference data contained in the application's canonical reference dataset is treated as authoritative input for application logic. The application does not perform a secondary quality classification of those records. This is an application assumption, not a claim that every range is medically universal in every context.
+> **Tuyên bố miễn trừ trách nhiệm**: Đây là hệ thống thông tin giáo dục sức khỏe (Educational System), **KHÔNG** phải công cụ chẩn đoán y khoa, không thay thế ý kiến chuyên môn của bác sĩ hay nhân viên y tế có thẩm quyền.
 
+---
 
-## Link chạy thật (Live)
+## 1. Project Overview
+
+- **Tiếp nhận kết quả xét nghiệm mô phỏng**: Nhập liệu qua giao diện biểu mẫu hoặc OCR phiếu xét nghiệm (Review Gate).
+- **Reference Range Checker**: Đối chiếu chỉ số với khoảng tham chiếu chuẩn hóa theo độ tuổi/giới tính để phân loại trạng thái: `LOW` / `NORMAL` / `HIGH` / `UNKNOWN`.
+- **Critical Detector**: Công cụ xác định giá trị nguy kịch độc lập và tất định (Deterministic), cảnh báo khẩn cấp khi vượt ngưỡng an toàn.
+- **RAG Knowledge Retrieval**: Tra cứu tri thức y khoa đã được thẩm định từ tài liệu nguồn uy tín (Vinmec, Long Châu, Cleveland Clinic,...).
+- **LLM Analyzer**: Diễn giải ý nghĩa chỉ số bằng ngôn ngữ phổ thông, gần gũi với người bệnh.
+- **Medical Guardrail**: Chặn triệt để mọi hành vi chẩn đoán bệnh, suy đoán nguyên nhân cá nhân hóa hoặc chỉ định điều trị.
+- **Doctor Questions Generator**: Gợi ý các câu hỏi trọng tâm để bệnh nhân chủ động trao đổi với bác sĩ trong lần khám tiếp theo.
+
+---
+
+## 2. Link chạy thật (Live)
 
 | Thành phần | URL | Ghi chú |
 |---|---|---|
@@ -14,120 +27,342 @@ Reference data contained in the application's canonical reference dataset is tre
 | API docs | https://vmec-05-api-production.up.railway.app/docs | Swagger UI |
 | Health / Readiness | `/health` · `/ready` | `/ready` báo cả trạng thái RAG |
 
-Tài khoản demo: `benhnhan` / `benhnhan123` · `bacsi` / `bacsi123`
+---
 
-> Deploy chạy tay, **merge vào `main` không tự động cập nhật bản live**:
-> `railway up --service vmec-05-api` (backend) và `vercel --prod` (frontend, chạy trong `frontend/`).
+## 3. MVP Architecture
 
-## Vấn đề (Problem)
+> Xem tài liệu đặc tả kiến trúc toàn diện và sơ đồ chi tiết tại [ARCHITECTURE.md](ARCHITECTURE.md).
 
-Bệnh nhân ngoại trú 25-55 tuổi, vừa nhận phiếu sau khám sức khoẻ định kỳ hoặc theo dõi bệnh mãn tính, chưa có cuộc hẹn tái khám với bác sĩ, đang tự đọc phiếu một mình mà không có ai giải thích. Phiếu kết quả xét nghiệm đầy chỉ số và thuật ngữ (WBC, HbA1c, LDL...) nhưng không hiểu ý nghĩa, lo lắng quá mức hoặc chủ quan, gọi hỏi bác sĩ/hotline nhiều.
+### Luồng xử lý Pipeline
 
-- Nhiều người lo lắng khi chỉ số xét nghiệm không giống bình thường (Nguồn: Tuoitre).
-- Dẫn chứng bệnh nhân “mất ăn mất ngủ” vì một chỉ số tăng cao (Nguồn: Vietnamnet).
-- Khoảng 67,3% người trưởng thành Việt Nam có năng lực đọc hiểu thông tin sức khỏe thấp (Nguồn: ScienceDirect).
+```text
+Phiếu xét nghiệm (Manual / Reviewed OCR)
+       │
+       ▼
+ FastAPI Backend (/api/v1/analyze)
+       │
+       ▼
+ [1] Reference Range Checker ──► status: LOW | NORMAL | HIGH | UNKNOWN
+       │
+       ▼
+ [2] Critical Detector ────────► is_critical: true/false
+       │                         critical_status: critical_low | critical_high | null
+       ▼
+ [3] RAG Knowledge Retriever ──► Live Chunks từ ChromaDB (hoặc Curated Fallback)
+       │
+       ▼
+ [4] LLM Analyzer Node ────────► Diễn giải ngôn ngữ tự nhiên theo ngữ cảnh
+       │
+       ▼
+ [5] Medical Guardrail Node ───► Kiểm duyệt an toàn (Chặn chẩn đoán / đơn thuốc)
+       │
+       ▼
+ API JSON Response ────────────► Frontend Next.js (Dashboard / Báo cáo chi tiết)
+```
 
-Dẫn chứng dễ thấy nhất là người trẻ chúng ta, có bố mẹ bị mắc bệnh điển hình như tiểu đường, mỡ máu. Phụ huynh hàng tháng phải xét nghiệm định kỳ, ngồi tập trung tra dò từng chỉ số trên phiếu kết quả xét nghiệm phức tạp. Điều này gây tốn thời gian và trên hết ảnh hưởng đến tâm lý người bệnh khi kết quả “khác thường” đi một chút, dù thực tế là bình thường.
+### Nguyên tắc phân tách trạng thái cốt lõi
+- **Reference status**: `low` | `normal` | `high` | `unknown`
+- **Critical state**: `is_critical` (boolean), `critical_status` (`critical_low` | `critical_high` | `null`)
+- **Nguyên tắc phân định**: **Abnormal $\ne$ Critical** (Chỉ số bất thường vượt khoảng tham chiếu chưa chắc là giá trị nguy kịch; giá trị nguy kịch được kiểm tra qua ngưỡng riêng biệt).
 
+---
 
-## Giải pháp (Solution)
+## 4. Tech Stack
 
-Sản phẩm AI Agent giải thích kết quả xét nghiệm từng bước, thân thiện, dựa trên Web Search uy tín:
+- **Backend**: FastAPI 0.115+, Python 3.11+, Uvicorn, Pydantic v2, Pydantic-Settings
+- **Agent Orchestration**: LangGraph 0.2+, LangChain 0.3+
+- **LLM Provider**: OpenAI (`gpt-4o-mini`) / Gemini (`langchain-google-genai`)
+- **Embedding Provider**: OpenAI `text-embedding-3-small` (1536 dimensions)
+- **Vector Database**: ChromaDB 0.5+ (`./data/chroma`)
+- **OCR / Vision**: Gemini Vision (`gemini-3.5-flash-lite`), OpenRouter Vision Fallback (`google/gemma-4-26b-a4b-it:free`)
+- **Database & Persistence**: SQLite (mặc định dev/demo tại `./data/app.db`), hỗ trợ PostgreSQL qua SQLAlchemy 2.0
+- **Frontend**: Next.js 16 (App Router), React 19, TailwindCSS 4, TypeScript 5, Recharts
 
-1. Input: Bệnh nhân dán/tải ảnh phiếu kết quả (OCR+classification → loại báo cáo & chỉ số); Agent nhận định đây là phiếu xét nghiệm.
-2. Quy trình (thông qua LangGraph): Agent lập kế hoạch phân tích từng chỉ số → Web Search tìm kiếm khoảng tham chiếu + ý nghĩa y khoa với nguồn đáng tin (Mayo Clinic, MedlinePlus, bệnh viện uy tín) → phân tích so với khoảng tham chiếu → tạo lời giải thích đơn giản, nhấn mạnh chỉ số bất thường và ý nghĩa kèm rủi ro chung → trả lời câu hỏi tự nhiên của bệnh nhân → cuối cùng tóm tắt kết quả tổng quát.
-3. Output: Trả về JSON: 
-   - `summary`: giải thích ngắn bằng ngôn ngữ đời thường.
-   - `abnormalities`: danh sách chỉ số bất thường và cảnh báo.
-   - `suggestions`: gợi ý câu hỏi nên hỏi bác sĩ.
-   - `sources`: nguồn tham khảo cho từng chỉ số.
+---
 
-## Target User
+## 5. Prerequisites
 
-- Primary: Bệnh nhân ngoại trú 25-55 tuổi, vừa nhận phiếu sau khám sức khoẻ định kỳ hoặc theo dõi bệnh mãn tính, chưa có cuộc hẹn tái khám với bác sĩ, đang tự đọc phiếu một mình mà không có ai giải thích. 
-- Secondary: Bác sĩ muốn giảm số cuộc gọi hỏi những câu cơ bản, nhưng vẫn cần kiểm soát được thông tin bệnh nhân nhận. 
+- **Python**: Phiên bản 3.11 trở lên
+- **Node.js**: Phiên bản 20.x trở lên
+- **npm**: Đi kèm Node.js
+- **Git**: Quản lý mã nguồn
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|-----------|
-| AI Agent | LangGraph + [LLM] |
-| Backend | FastAPI + Python 3.11+ |
-| Frontend | React/Next.js + TypeScript |
-| Database | PostgreSQL / SQLite |
-| DevOps | Docker + GitHub Actions |
+## 6. Backend Setup
 
-## Quick Start
+### Bước 1: Khởi tạo Virtual Environment và Cài đặt
 
-```bash
-# 1. Clone repo
-git clone https://github.com/a20-ai-thuc-chien/A20-App-XXX.git
-cd A20-App-XXX
+**Trên Windows (PowerShell):**
+```powershell
+# Tạo virtual environment
+python -m venv .venv
 
-# 2. Setup environment
-cp .env.example .env
-# Edit .env with your API keys
+# Kích hoạt venv
+.\.venv\Scripts\Activate.ps1
 
-# 3. Install dependencies
+# Cài đặt thư viện phụ thuộc
 pip install -r requirements.txt
-
-# 4. Run development server
-uvicorn src.main:app --reload
 ```
 
-## Project Structure
-
-```
-├── src/
-│   ├── agents/          # LangGraph agent definitions
-│   │   ├── graph.py     # Main graph (nodes + edges)
-│   │   ├── state.py     # State schema
-│   │   ├── nodes/       # Individual nodes
-│   │   └── tools/       # Agent tools
-│   ├── api/             # FastAPI routes
-│   ├── models/          # Pydantic schemas
-│   ├── services/        # Business logic
-│   ├── config.py        # Settings
-│   └── main.py          # App entry point
-├── tests/               # Test suite
-├── docs/                # Documentation
-├── eval/                # Evaluation results
-├── presentation/        # Demo materials
-├── Dockerfile           # Multi-stage build
-├── docker-compose.yml   # Full stack
-└── .github/workflows/   # CI/CD pipelines
+**Trên Linux / macOS (Bash):**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## API Endpoints
+### Bước 2: Cấu hình biến môi trường
+```powershell
+# Copy cấu hình mẫu
+cp .env.example .env
+```
+Mở file `.env` và điền API key cần thiết (xem chi tiết tại mục [Environment Variables](#7-environment-variables)).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | /health | Health check |
-| POST | /api/v1/chat | Chat with agent |
-| POST | /api/v1/analyze | Analyze input |
+### Bước 3: Khởi chạy Backend API
+```powershell
+uvicorn src.main:app --reload --port 8000
+```
+API sẽ hoạt động tại: `http://localhost:8000` (Swagger UI: `http://localhost:8000/docs`).
 
-## Deliverables Checklist
+---
 
-- [x] Source Code (GitHub)
-- [x] README.md
-- [x] Architecture Diagram (`docs/architecture_diagram.md`)
-- [x] AI Logs (auto-collected)
-- [x] Live URL / Deploy (xem mục [Link chạy thật](#link-chạy-thật-live))
-- [ ] Video Demo
-- [ ] Pitch Deck (`presentation/`)
-- [x] Weekly Journal (`JOURNAL.md`)
-- [x] Worklog (`WORKLOG.md`)
-- [ ] Evaluation Evidence (`eval/results/`)
+## 7. Frontend Setup
 
-## Team
+### Bước 1: Cài đặt Dependencies
+```powershell
+cd frontend
+npm install
+```
 
-| Member | Role | Student ID |
-|--------|------|-----------|
-| NGUYỄN TUẤN DƯƠNG | Team Lead + PO + PM | 2A202601966 |
-| TRẦN CHÍ VŨ | Tech Lead | 2A202601044 |
-| TẠ QUỐC TUẤN | Developer | 2A202601114 |
-| NGUYỄN HOÀNG DUY | Developer | 2A202601466 |
+### Bước 2: Khởi chạy Frontend Dev Server
+```powershell
+npm run dev
+```
+Giao diện người dùng sẽ chạy tại: `http://localhost:3000`.
 
-## License
+---
 
-MIT
+## 8. Environment Variables
+
+Bảng cấu hình các biến môi trường trong file `.env`:
+
+| Biến môi trường | Phân loại | Mục đích | Giá trị mặc định / Ví dụ |
+|---|---|---|---|
+| `OPENAI_API_KEY` | REQUIRED (nếu dùng OpenAI) | Khóa API gọi LLM và sinh Embedding | `sk-...` |
+| `GOOGLE_API_KEY` | REQUIRED (nếu dùng Gemini/OCR) | Khóa API Gemini cho LLM và Vision OCR | `AIzaSy...` |
+| `JWT_SECRET` | REQUIRED (Production) | Khóa ký phiên đăng nhập JWT | `dev-only-insecure-secret-change-me` |
+| `APP_ENV` | DEFAULTED | Môi trường ứng dụng (`development`, `production`, `test`) | `development` |
+| `APP_PORT` | DEFAULTED | Cổng mạng backend lắng nghe | `8000` |
+| `APP_HOST` | DEFAULTED | Địa chỉ host backend bind | `0.0.0.0` |
+| `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://localhost:3000,http://localhost:5173` |
+| `DATABASE_URL` | DEFAULTED | Chuỗi kết nối CSDL SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
+| `RAG_ENABLED` | DEFAULTED | Bật/tắt tra cứu vector động qua ChromaDB | `false` |
+| `RAG_COLLECTION_NAME` | DEFAULTED | Tên collection ChromaDB | `medical_kb_v1` |
+| `RAG_CORPUS_VERSION` | DEFAULTED | Phiên bản dữ liệu tri thức y khoa | `medical-kb-v1` |
+| `EMBEDDING_PROVIDER` | DEFAULTED | Nhà cung cấp embedding (`disabled`, `openai`) | `disabled` (đổi `openai` khi bật RAG) |
+| `EMBEDDING_MODEL_NAME` | DEFAULTED | Tên model embedding | `text-embedding-3-small` |
+| `CHROMA_PERSIST_DIR` | DEFAULTED | Đường dẫn lưu trữ vector DB | `./data/chroma` |
+| `MODEL_NAME` | DEFAULTED | Tên mô hình LLM chính | `gpt-4o-mini` |
+| `LLM_TIMEOUT_SECONDS` | DEFAULTED | Thời gian chờ tối đa cho 1 lượt gọi LLM | `20` |
+| `OPENROUTER_API_KEY` | OPTIONAL | Khóa API OpenRouter dùng làm fallback OCR | `sk-or-v1-...` |
+| `OCR_UPLOAD_MODE` | DEFAULTED | Chế độ nhận ảnh OCR (`demo_only`, `open_with_consent`, `internal_only`) | `demo_only` |
+| `OCR_SAMPLES_DIR` | DEFAULTED | Thư mục chứa ảnh mẫu hợp lệ cho chế độ demo | `./data/ocr_samples` |
+| `LANGCHAIN_API_KEY` | OPTIONAL | Khóa API LangSmith ghi nhận AI Trace | `lsv2_pt_...` |
+
+> [!IMPORTANT]
+> **Cơ chế RAG Fallback**:
+> - Khi `RAG_ENABLED=false` (mặc định): Hệ thống kích hoạt cơ chế fallback sử dụng thư viện giải thích chuẩn hóa đã kiểm duyệt (Curated Reference Explanations), không phụ thuộc vào kết nối vector store ngoài.
+> - Khi `RAG_ENABLED=true`: Cần cấu hình `EMBEDDING_PROVIDER=openai`, cung cấp `OPENAI_API_KEY` hợp lệ và đã chạy lệnh build vector store index vào ChromaDB.
+
+---
+
+## 9. Build / Rebuild RAG Knowledge Index
+
+Dữ liệu tri thức giải thích y khoa nguồn nằm tại `data/reference/explanations.json`. Để lập chỉ mục vào ChromaDB:
+
+```powershell
+# Đảm bảo đã kích hoạt virtual environment và set RAG_ENABLED=true trong .env
+python src/scripts/ingest_kb.py
+```
+
+Quy trình xử lý:
+1. Đọc danh mục chỉ số và nội dung giải thích từ `data/reference/explanations.json`.
+2. Tạo văn bản ngữ cảnh kèm nguồn trích dẫn.
+3. Sinh vector embedding qua `OpenAIEmbeddings` (`text-embedding-3-small`, 1536 chiều).
+4. Lưu trữ và lập chỉ mục vào thư mục ChromaDB cục bộ (`./data/chroma`).
+
+*(Lưu ý: Thư mục `data/chroma` được gitignore theo quy chuẩn, môi trường mới cần chạy script ingest nếu muốn bật tính năng RAG động).*
+
+---
+
+## 10. Run the Application
+
+| Dịch vụ | URL | Ghi chú |
+|---|---|---|
+| **Frontend Web** | `http://localhost:3000` | Giao diện Next.js cho người dùng |
+| **Backend API** | `http://localhost:8000` | FastAPI service |
+| **Swagger UI Docs** | `http://localhost:8000/docs` | Tài liệu API tương tác |
+| **Readiness Check** | `http://localhost:8000/ready` | Báo cáo chi tiết trạng thái API và RAG |
+| **Health Check** | `http://localhost:8000/health` | Kiểm tra kết nối cơ bản |
+
+**Tài khoản đăng nhập có sẵn (Demo seed tự động):**
+- **Bệnh nhân**: Tên đăng nhập `benhnhan` / Mật khẩu `benhnhan123`
+- **Bác sĩ**: Tên đăng nhập `bacsi` / Mật khẩu `bacsi123`
+- **Khách vãng lai**: Nhấn "Dùng thử ngay" trên giao diện để nhận token phiên khách (Guest session).
+
+---
+
+## 11. Sample Queries
+
+Dưới đây là các truy vấn mẫu gửi đến endpoint `POST /api/v1/analyze`:
+
+### Case A: Potassium 5.8 mmol/L (Abnormal nhưng Non-Critical)
+- **Mục đích**: Kiểm chứng phân tách *Abnormal $\ne$ Critical*.
+- **Payload**:
+```json
+{
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-08-15",
+  "language": "vi",
+  "indicators": [
+    {
+      "name": "Potassium",
+      "value": 5.8,
+      "unit": "mmol/L"
+    }
+  ]
+}
+```
+- **Kết quả kỳ vọng**: `status = "high"`, `is_critical = false`, `critical_status = null`, `critical_alerts = []`.
+
+### Case B: Potassium 6.5 mmol/L (Critical High)
+- **Mục đích**: Kiểm chứng luồng phát hiện giá trị nguy kịch cao.
+- **Payload**:
+```json
+{
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-08-15",
+  "language": "vi",
+  "indicators": [
+    {
+      "name": "Potassium",
+      "value": 6.5,
+      "unit": "mmol/L"
+    }
+  ]
+}
+```
+- **Kết quả kỳ vọng**: `status = "critical_high"`, `is_critical = true`, có 1 cảnh báo nguy kịch nêu rõ ngưỡng $> 6.1\text{ mmol/L}$.
+
+### Case C: Generic Glucose 5.2 mmol/L (Fail-Closed / An toàn)
+- **Mục đích**: Kiểm chứng chỉ số không rõ danh mục ("Glucose" không tự map sang "Fasting plasma glucose").
+- **Payload**:
+```json
+{
+  "patient_age": 35,
+  "patient_gender": "male",
+  "test_date": "2026-08-15",
+  "language": "vi",
+  "indicators": [
+    {
+      "name": "Glucose",
+      "value": 5.2,
+      "unit": "mmol/L"
+    }
+  ]
+}
+```
+- **Kết quả kỳ vọng**: `status = "unknown"`, `is_critical = false`, `reference_low = null`, `reference_high = null`, chuyển hướng tham vấn an toàn.
+
+### Ví dụ gọi API qua PowerShell
+```powershell
+# 1. Lấy token phiên khách
+$guest = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/auth/guest" -Method Post
+$token = $guest.access_token
+
+# 2. Gửi request phân tích
+$body = @{
+    patient_age = 35
+    patient_gender = "male"
+    test_date = "2026-08-15"
+    language = "vi"
+    indicators = @(
+        @{
+            name = "Potassium"
+            value = 5.8
+            unit = "mmol/L"
+        }
+    )
+} | ConvertTo-Json
+
+$headers = @{
+    "Authorization" = "Bearer $token"
+    "Content-Type" = "application/json"
+}
+
+Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Headers $headers -Body $body
+```
+
+---
+
+## 12. Tests
+
+### Chạy kiểm thử tự động
+
+**Backend Unit & Integration Tests:**
+```powershell
+pytest
+```
+
+**Kiểm tra Linting & Định dạng code:**
+```powershell
+ruff check .
+```
+
+**Frontend Unit Tests:**
+```powershell
+cd frontend
+npm test
+```
+
+**Frontend TypeScript Typecheck:**
+```powershell
+cd frontend
+npx tsc --noEmit
+```
+
+### Trạng thái hồi quy được xác minh (Verified at G2 preparation time)
+- **Backend Test Suite**: `627 passed` (100% pass)
+- **Frontend Unit Tests**: `18 passed` (100% pass)
+- **TypeScript Typecheck**: `0 errors`
+- **Ruff Code Audit**: Đã xác nhận trên toàn bộ các module lõi
+
+---
+
+## 13. Evaluation
+
+Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
+
+- [Manual E2E Evaluation Evidence](eval/manual_e2e_evidence.md) — Kiểm chứng thực nghiệm 5 ca E2E chính + 1 ca an toàn bổ sung trên runtime thực tế.
+- [G2 Final Evaluation Summary](eval/G2_EVALUATION_SUMMARY.md) — Tổng kết toàn diện các tiêu chí đánh giá G2.
+- [API Contract Evidence](eval/api_contract.md) — Đặc tả và xác nhận schema API `/api/v1/analyze`.
+- [Safety Evaluation Results](eval/safety/post_safety_fix_safety_eval.md) — Đánh giá an toàn y khoa độc lập 10 tiêu chí sau khắc phục.
+- [OCR Accuracy Results](eval/ocr/ocr_accuracy_results.md) — Kết quả đo lường độ chính xác trích xuất OCR phiếu xét nghiệm.
+- [Latency Benchmark](eval/performance/latency_summary.md) — Đo lường độ trễ chi tiết từng giai đoạn qua Server-Timing.
+- [Live RAG Sanity Probes](eval/rag/live_rag_sanity.md) — Bằng chứng truy xuất vector trực tiếp từ ChromaDB.
+- [RAGAS Benchmark Note](eval/results/G2_RAGAS_SCOPE_NOTE.md) — Điểm số Faithfulness (0.875) & Context Precision (0.940).
+
+---
+
+## 14. Safety & Limitations
+
+- **Không chẩn đoán**: Hệ thống không đưa ra bất kỳ kết luận chẩn đoán bệnh lý nào.
+- **Không kê đơn / chỉ định điều trị**: Tuyệt đối không gợi ý dùng thuốc, liều lượng hoặc phương pháp chữa trị.
+- **Không suy diễn nguyên nhân cá nhân**: Không quy chụp nguyên nhân bất thường cho một bệnh nhân cụ thể.
+- **Ý nghĩa của NORMAL**: Giá trị "Bình thường" chỉ biểu thị số đo nằm trong khoảng tham chiếu mà hệ thống đang sử dụng đối chiếu.
+- **Ý nghĩa của HIGH / LOW**: Tăng/giảm ngoài khoảng tham chiếu không tự động đồng nghĩa với tình trạng nguy kịch.
+- **Tính tất định của Giá trị Nguy kịch (Critical Values)**: Được kiểm soát bởi Deterministic Rule Engine với ngưỡng cố định, hoàn toàn không phụ thuộc vào suy luận xác suất của LLM.
+- **Phạm vi kiểm thử**: Các kết quả kiểm nghiệm hiện tại phản ánh tập dữ liệu xét nghiệm và các chỉ số được hỗ trợ trong phạm vi MVP, không đảm bảo tính đúng đắn cho mọi tình huống bệnh lý hay mọi định dạng phiếu xét nghiệm nằm ngoài danh mục.
