@@ -185,7 +185,7 @@ def project_source_urls() -> set[str]:
             if item.get("source_url"):
                 urls.add(str(item["source_url"]))
 
-    quarantine_path = Path("data/reference/quarantine_v2.csv")
+    quarantine_path = Path("data/reference/quarantine.csv")
     if quarantine_path.exists():
         with quarantine_path.open("r", encoding="utf-8-sig", newline="") as file:
             for row in csv.DictReader(file):

@@ -21,7 +21,7 @@ EXPLANATION_PATH   = REPO_ROOT / "data/reference/explanations.json"
 REFERENCE_JSON_PATH = REPO_ROOT / "data/reference/reference_ranges.json"
 UNITS_CSV_PATH     = REPO_ROOT / "data/reference/units_metric.csv"
 
-# Canonical names as defined in reference_checker_v2_config.json
+# Canonical names as defined in reference_checker_config.json
 APPROVED_ANALYTES = frozenset({
     "WBC", "RBC", "HGB", "Fasting plasma glucose",
     "HbA1c", "LDL-C", "HDL-C", "Creatinine", "Potassium",

@@ -24,7 +24,7 @@ from src.services.reference_repository import ReferenceRepository
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPLANATIONS_PATH = REPO_ROOT / "data/reference/explanations.json"
-SOURCE = REPO_ROOT / "adult_outpatient_laboratory_reference_map.csv"
+SOURCE = REPO_ROOT / "data/reference/source/adult_outpatient_laboratory_reference_map.csv"
 REFERENCE_JSON = REPO_ROOT / "data/reference/reference_ranges.json"
 REFERENCE_CSV = REPO_ROOT / "data/reference/reference_ranges.csv"
 RAGAS_DATASET = REPO_ROOT / "eval/datasets/ragas_v2_baseline.jsonl"
@@ -75,7 +75,7 @@ def test_sync_01_input_inventory():
 def test_sync_02_build_time_alias_resolution():
     # BUILD_TIME_ALIAS: used only while extracting supplemental explanation
     # ranges. This is intentionally separate from the RUNTIME_REFERENCE_ALIAS
-    # contract in reference_checker_v2_config.json.
+    # contract in reference_checker_config.json.
     assert canonical_analyte("Glucose") == "Fasting plasma glucose"
     assert canonical_analyte("HDL-Cholesterol") == "HDL-C"
     assert canonical_analyte("LDL-Cholesterol") == "LDL-C"

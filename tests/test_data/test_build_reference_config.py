@@ -17,7 +17,7 @@ from src.scripts.build_reference_config import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCE = REPO_ROOT / "adult_outpatient_laboratory_reference_map.csv"
+SOURCE = REPO_ROOT / "data/reference/source/adult_outpatient_laboratory_reference_map.csv"
 PROTECTED_REFERENCE_FILES = [
     REPO_ROOT / "data/reference/reference_ranges.csv",
     REPO_ROOT / "data/reference/reference_ranges.json",
