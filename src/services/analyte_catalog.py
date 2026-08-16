@@ -112,7 +112,7 @@ class AnalyteCatalog:
     def from_default_files(cls) -> AnalyteCatalog:
         root = Path(__file__).resolve().parents[2]
         explanations_path = root / "data/reference/explanations.json"
-        config_path = root / "data/reference/reference_checker_v2_config.json"
+        config_path = root / "data/reference/reference_checker_config.json"
         try:
             explanations = json.loads(explanations_path.read_text(encoding="utf-8"))
             config = json.loads(config_path.read_text(encoding="utf-8"))

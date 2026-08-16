@@ -15,13 +15,13 @@ from typing import Any
 from src.scripts.extract_explanation_reference_ranges import extract_supplemental_rules
 
 BUILDER_VERSION = "v2"
-DEFAULT_INPUT = "adult_outpatient_laboratory_reference_map.csv"
+DEFAULT_INPUT = "data/reference/source/adult_outpatient_laboratory_reference_map.csv"
 DEFAULT_OUTPUT_DIR = "data/reference"
 DEFAULT_SUPPLEMENTAL = "data/reference/explanations.json"
 
 RUNTIME_CSV = "reference_ranges.csv"
 RUNTIME_JSON = "reference_ranges.json"
-QUARANTINE_CSV = "quarantine_v2.csv"
+QUARANTINE_CSV = "quarantine.csv"
 BUILD_REPORT_JSON = "reference_build_report.json"
 
 SUPPLEMENTAL_FIELDS = [
@@ -503,7 +503,7 @@ def build_reference_config(
                 "path": relative_path(runtime_json_path, root),
                 "sha256": sha256_file(runtime_json_path),
             },
-            "quarantine_v2_csv": {
+            "quarantine_csv": {
                 "path": relative_path(quarantine_csv_path, root),
                 "sha256": sha256_file(quarantine_csv_path),
             },

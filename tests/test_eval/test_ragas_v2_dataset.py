@@ -28,7 +28,7 @@ def project_source_urls() -> set[str]:
     for item in json.loads(Path("data/reference/reference_ranges.json").read_text(encoding="utf-8")):
         if item.get("source_url"):
             urls.add(item["source_url"])
-    with Path("data/reference/quarantine_v2.csv").open(encoding="utf-8-sig", newline="") as file:
+    with Path("data/reference/quarantine.csv").open(encoding="utf-8-sig", newline="") as file:
         for row in csv.DictReader(file):
             if row.get("source_url"):
                 urls.add(row["source_url"])
