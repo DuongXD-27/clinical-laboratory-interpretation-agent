@@ -48,6 +48,39 @@ def _decimal_variants(value: float | int) -> set[str]:
     return {item for item in variants if item}
 
 
+# Đơn vị dạng khoa học, bắt cả khi model viết khác đơn vị canonical một chút:
+# "10^9/L", "x10^9/L", "× 10 ^ 12 / L".
+_SCIENTIFIC_UNIT_RE = re.compile(r"(?:x|×)?\s*10\s*\^\s*\d+(?:\s*/\s*\w+)?", re.IGNORECASE)
+
+
+def _strip_unit_mentions(text: str, unit: str | None) -> str:
+    """Bỏ đơn vị khỏi text trước khi quét số.
+
+    Validator chặn mọi con số không có trong dữ liệu trend, để model không bịa ra
+    số liệu. Nhưng **đơn vị của một số chỉ số có chứa chữ số**: WBC là `10^9/L`,
+    RBC là `10^12/L`. Model viết "dao động quanh 7.2 10^9/L" — hoàn toàn đúng —
+    thì `10` bị coi là số bịa và cả câu trả lời bị thay bằng mẫu dự phòng.
+
+    Đó là nguyên nhân thật của lỗi "lúc được lúc không" báo ngày 16/08: nó phụ
+    thuộc model có tình cờ nhắc đơn vị hay không. Glucose đơn vị `mmol/L` không có
+    chữ số nên luôn chạy; WBC gần như lần nào cũng bị chặn.
+
+    Bỏ đơn vị đi thay vì cho phép hẳn chữ số của nó: nếu whitelist thêm "10" thì
+    model bịa "tăng 10%" cũng lọt. Ở đây chỉ chỗ nào đúng là đơn vị mới được
+    miễn, phần còn lại vẫn bị soi.
+    """
+
+    cleaned = text
+
+    if unit:
+        # Khớp linh hoạt khoảng trắng giữa các ký tự của đơn vị.
+        pattern = r"\s*".join(re.escape(char) for char in unit if not char.isspace())
+        if pattern:
+            cleaned = re.sub(pattern, " ", cleaned, flags=re.IGNORECASE)
+
+    return _SCIENTIFIC_UNIT_RE.sub(" ", cleaned)
+
+
 def _allowed_numbers(trend: TrendResponse) -> set[str]:
     allowed = {"3", "5", str(len(trend.points)), str(trend.result_count)}
     for point in trend.points:
@@ -72,7 +105,8 @@ def validate_trend_explanation(text: str, trend: TrendResponse) -> list[TrendExp
             violations.append(TrendExplanationViolation(label, pattern))
 
     allowed = _allowed_numbers(trend)
-    for token in re.findall(r"\d+(?:[.,]\d+)?", text):
+    scannable = _strip_unit_mentions(text, trend.canonical_unit)
+    for token in re.findall(r"\d+(?:[.,]\d+)?", scannable):
         if token not in allowed:
             violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
     return list(dict.fromkeys(violations))
