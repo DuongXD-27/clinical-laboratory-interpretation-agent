@@ -58,12 +58,22 @@ class Settings(BaseSettings):
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
     rag_enabled: bool = False
-    rag_collection_name: str = "medical_kb_v1"
-    rag_corpus_version: str = "medical-kb-v1"
-    embedding_provider: Literal["disabled", "openai"] = "disabled"
+    rag_collection_name: str = "medical_kb_v2"
+    rag_corpus_version: str = "medical-kb-v2"
+    embedding_provider: Literal["disabled", "openai", "gemini"] = "disabled"
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimension: int = Field(default=1536, ge=1)
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
+    # 0.8, not a guess: empirically the clean-separation boundary between
+    # genuine content (floor 0.807 across 3 tested domains) and catchable
+    # junk (ceiling 0.794). See docs/version-handoff/retrieval-min-score-evidence.md
+    # and eval/rag/adversarial_threshold_test.py before changing this value.
+    retrieval_min_score: float = Field(default=0.8, ge=0.0, le=1.0)
+    retrieval_top_k: int = Field(default=3, ge=1, le=10)
+    metadata_prong_enabled: bool = True
+    metadata_min_chunk_length: int = Field(default=30, ge=1)
+    max_analyzer_context_chars: int = Field(default=4000, ge=200)
+    max_guardrail_context_chars: int = Field(default=3000, ge=200)
 
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
