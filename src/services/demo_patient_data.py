@@ -4,8 +4,9 @@ import datetime
 
 from sqlalchemy.orm import Session
 
-from src.models.db import User
+from src.models.db import LabReport, ReportQuestion, User
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse
+from src.services.doctor_review_service import refresh_review_flags
 from src.services.lab_history_service import save_analyzed_report
 
 DEMO_PATIENT_USERNAME = "benhnhan"
@@ -104,7 +105,7 @@ def seed_demo_patient_reports(db: Session) -> int:
         return 0
 
     saved = 0
-    for report in DEMO_REPORTS:
+    for index, report in enumerate(DEMO_REPORTS):
         rows = []
         raw_names = report.get("raw_names", {})
         for canonical, (value, status) in report["values"].items():
@@ -165,7 +166,36 @@ def seed_demo_patient_reports(db: Session) -> int:
             username=DEMO_PATIENT_USERNAME,
             request=request,
             analysis=analysis,
+            source_image=f"demo-ocr-{index + 1}.png" if index < 3 else None,
         )
+        report_id = result.report_id or result.existing_report_id
+        if report_id is not None:
+            saved_report = db.get(LabReport, report_id)
+            if saved_report is not None:
+                if index < 3 and saved_report.indicators:
+                    saved_report.ocr_source_filename = f"demo-ocr-{index + 1}.png"
+                    saved_report.indicators[0].ocr_confidence = 0.62 + (index * 0.04)
+                    saved_report.indicators[0].ocr_raw_text = saved_report.indicators[0].name
+
+                if index < 3 and not saved_report.questions:
+                    db.add(
+                        ReportQuestion(
+                            report_id=saved_report.id,
+                            indicator_id=saved_report.indicators[0].id if saved_report.indicators else None,
+                            question_text=(
+                                "Tôi nên hỏi bác sĩ điều gì quan trọng nhất về "
+                                f"{saved_report.indicators[0].name if saved_report.indicators else 'phiếu này'}?"
+                            ),
+                            priority="critical" if saved_report.has_critical_values else "abnormal",
+                            display_order=0,
+                            status="sent_to_doctor",
+                            is_selected=True,
+                        )
+                    )
+                    db.commit()
+
+                refresh_review_flags(db, saved_report)
+
         if result.saved:
             saved += 1
     return saved

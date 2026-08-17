@@ -1,4 +1,10 @@
 import type {
+  DoctorQueueResponse,
+  DoctorReportDetail,
+  FindingReviewResponse,
+  ReviewOutcome,
+} from "@/types/doctor";
+import type {
   DoctorNote,
   LabReportDetail,
   LabReportListResponse,
@@ -219,6 +225,82 @@ export async function markReportReviewed(reportId: number): Promise<LabReportDet
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không đánh dấu được đã xem"));
+  }
+  return response.json();
+}
+
+export type DoctorQueueTab = "pending" | "critical" | "ocr" | "questions" | "verified";
+
+export async function fetchDoctorQueue(
+  tab: DoctorQueueTab,
+  page = 1,
+  pageSize = 20,
+): Promise<DoctorQueueResponse> {
+  const params = new URLSearchParams({
+    tab,
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+  const response = await authFetch(`/api/v1/doctor/queue?${params.toString()}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được hàng đợi kiểm chứng"));
+  }
+  return response.json();
+}
+
+export async function fetchDoctorReport(reportId: number): Promise<DoctorReportDetail> {
+  const response = await authFetch(`/api/v1/doctor/reports/${reportId}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không mở được phiếu kiểm chứng"));
+  }
+  return response.json();
+}
+
+export async function reviewDoctorFinding(
+  findingId: number,
+  outcome: Exclude<ReviewOutcome, "pending">,
+  doctorNote?: string,
+): Promise<FindingReviewResponse> {
+  const response = await authFetch(`/api/v1/doctor/findings/${findingId}/review`, {
+    method: "PATCH",
+    body: JSON.stringify({ outcome, doctor_note: doctorNote }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được kiểm chứng luận điểm"));
+  }
+  return response.json();
+}
+
+export async function answerDoctorQuestion(
+  questionId: number,
+  answerText: string,
+): Promise<ReportQuestion> {
+  const response = await authFetch(`/api/v1/doctor/questions/${questionId}/answer`, {
+    method: "POST",
+    body: JSON.stringify({ answer_text: answerText }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được câu trả lời"));
+  }
+  return response.json();
+}
+
+export async function completeDoctorReport(reportId: number) {
+  const response = await authFetch(`/api/v1/doctor/reports/${reportId}/complete`, {
+    method: "POST",
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không hoàn tất được phiếu"));
   }
   return response.json();
 }

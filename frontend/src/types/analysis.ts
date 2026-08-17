@@ -16,6 +16,11 @@ export type IndicatorResult = {
   is_abnormal: boolean;
   is_critical: boolean;
   explanation?: string;
+  review_outcome?: "pending" | "agreed" | "corrected" | "skipped";
+  doctor_note?: string | null;
+  ai_text_snapshot?: string | null;
+  reviewed_by_username?: string | null;
+  reviewed_at?: string | null;
   sources?: string[];
 };
 
