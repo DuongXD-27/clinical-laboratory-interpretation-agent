@@ -198,13 +198,10 @@ class ReferenceRepository:
         conflicts: set[str] = set()
         for analyte in requested_approved:
             expected_unit = unit_map.get(analyte)
-            ri_units = {
-                self._rule_unit(rule)
-                for rule in self._rules_by_analyte.get(analyte, ())
-                if self._norm_text(rule.get("reference_type")) in self.allowed_reference_types
-            }
-            ri_units.discard(None)
-            if not expected_unit or not ri_units or ri_units != {expected_unit}:
+            analyte_rules = self._rules_by_analyte.get(analyte, ())
+            analyte_units = {self._rule_unit(rule) for rule in analyte_rules}
+            analyte_units.discard(None)
+            if not expected_unit or not analyte_units or analyte_units != {expected_unit}:
                 conflicts.add(analyte)
         return conflicts
 
@@ -257,7 +254,30 @@ class ReferenceRepository:
         if not sex_candidates:
             return self._miss(canonical, "sex_scope_not_supported")
         if len(sex_candidates) > 1:
-            return self._miss(canonical, "ambiguous_reference_rule")
+            ri_candidates = [r for r in sex_candidates if self._norm_text(r.get("reference_type")) == "RI"]
+            if len(ri_candidates) == 1:
+                sex_candidates = ri_candidates
+            elif len(ri_candidates) > 1:
+                return self._miss(canonical, "ambiguous_reference_rule")
+            else:
+                cdl_candidates = [
+                    r for r in sex_candidates if self._norm_text(r.get("reference_type")) in {"CDL", "BAND"}
+                ]
+                if len(cdl_candidates) == 1:
+                    sex_candidates = cdl_candidates
+                else:
+                    if canonical == "HDL-C":
+                        baseline_cdl = [
+                            r for r in cdl_candidates if r.get("range_lower") is not None and r.get("range_upper") is not None
+                        ]
+                    else:
+                        baseline_cdl = [
+                            r for r in cdl_candidates if r.get("range_lower") is None or r.get("range_lower") == 0
+                        ]
+                    if len(baseline_cdl) == 1:
+                        sex_candidates = baseline_cdl
+                    else:
+                        return self._miss(canonical, "ambiguous_reference_rule")
 
         return ReferenceLookupResult(
             matched=True,

@@ -58,8 +58,8 @@ class Settings(BaseSettings):
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
     rag_enabled: bool = False
-    rag_collection_name: str = "medical_kb_v1"
-    rag_corpus_version: str = "medical-kb-v1"
+    rag_collection_name: str = "medical_kb_v4"
+    rag_corpus_version: str = "medical-kb-v4"
     embedding_provider: Literal["disabled", "openai"] = "disabled"
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimension: int = Field(default=1536, ge=1)

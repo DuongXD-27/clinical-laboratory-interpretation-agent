@@ -41,6 +41,7 @@ HEADER = [
     "value_type",
     "range_lower",
     "range_upper",
+    "upper_operator",
     "reference_type",
     "source_priority_tier",
     "source_type",
@@ -56,6 +57,7 @@ HEADER = [
     "normalization_note",
     "vn_unit_verified",
     "confidence",
+    "range_flag",
     "range_notes",
 ]
 
@@ -105,8 +107,8 @@ def test_actual_source_dry_run(tmp_path: Path) -> None:
     result = build_reference_config(SOURCE, tmp_path)
     report = result.report
 
-    assert report["input_rows"] == 80
-    assert report["structurally_eligible_rows"] == 80
+    assert report["input_rows"] == 65
+    assert report["structurally_eligible_rows"] == 65
     assert report["structurally_rejected_rows"] == 0
 
     accepted_analytes = set(report["accepted_analytes"])
@@ -221,7 +223,7 @@ def test_unit_source_analytes_regenerate_with_g_l_canonical(tmp_path: Path) -> N
     # After the fix, affected RI rules must store unit_canonical=g/L not 10^9/L
     result = build_reference_config(SOURCE, tmp_path)
     accepted = result.accepted
-    affected_ids = {"RRV2-0005", "RRV2-0006", "RRV2-0013", "RRV2-0014", "RRV2-0052", "RRV2-0053"}
+    affected_ids = {"RRV2-0005", "RRV2-0006", "RRV2-0013", "RRV2-0014", "RRV2-0039", "RRV2-0040"}
     found = {r["rule_id"]: r["unit_canonical"] for r in accepted if r.get("rule_id") in affected_ids}
     assert set(found.keys()) == affected_ids, f"Missing rule IDs: {affected_ids - set(found.keys())}"
     for rule_id, canon in found.items():

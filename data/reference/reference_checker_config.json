@@ -1,6 +1,6 @@
 {
   "config_version": "v2",
-  "allowed_reference_types": ["RI"],
+  "allowed_reference_types": ["RI", "CDL", "BAND", "ONE_SIDED_LIMIT"],
   "approved_analytes": [
     "WBC",
     "RBC",
@@ -13,6 +13,13 @@
     "Potassium"
   ],
   "pending_analytes": [],
+  "hold_analytes": {
+    "Uric acid": {
+      "status": "HOLD",
+      "rule_type": "RI",
+      "reason": "NO_APPROVED_RI_AUTHORITY"
+    }
+  },
   "analyte_aliases": {
     "WBC": "WBC",
     "Bạch cầu": "WBC",

@@ -7,7 +7,11 @@ from typing import Any
 from src.agents.nodes.reference_range_checker_node import get_reference_repository
 from src.agents.state import AgentState, CriticalAlert, IndicatorAssessment
 from src.config import get_settings
-from src.services.measurement_conversion import glucose_mmol_l_to_mg_dl
+from src.services.measurement_conversion import (
+    bilirubin_umol_l_to_mg_dl,
+    glucose_mmol_l_to_mg_dl,
+    validate_numeric_measurement,
+)
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
@@ -17,6 +21,10 @@ _CONVERT_INPUT_TO_SOURCE_UNIT = "CONVERT_INPUT_TO_SOURCE_UNIT"
 _FASTING_PLASMA_GLUCOSE = "Fasting plasma glucose"
 _GLUCOSE_INPUT_UNIT = "mmol/l"
 _GLUCOSE_SOURCE_UNIT = "mg/dl"
+
+_TOTAL_BILIRUBIN = "Total bilirubin"
+_BILIRUBIN_INPUT_UNIT = "umol/l"
+_BILIRUBIN_SOURCE_UNIT = "mg/dl"
 
 # LEGACY_OPERATOR_DEFAULT: temporary Phase 2B migration compatibility only.
 # Patch C must add explicit operators to every active production side, after
@@ -72,13 +80,10 @@ def _parse_numeric(val: Any) -> float | None:
 
 
 def _parse_decimal_numeric(val: Any) -> Decimal | None:
-    if val is None:
-        return None
     try:
-        value = Decimal(str(val))
-    except (InvalidOperation, ValueError):
+        return validate_numeric_measurement(val)
+    except (ValueError, TypeError):
         return None
-    return value if value.is_finite() else None
 
 
 def _compare_critical(
@@ -262,6 +267,12 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             and normalized_input_unit == _GLUCOSE_INPUT_UNIT
             and normalized_threshold_unit == _GLUCOSE_SOURCE_UNIT
         )
+        approved_bilirubin_conversion = (
+            canonical_analyte == _TOTAL_BILIRUBIN
+            and thresholds.get("vmec_comparison_strategy") == _CONVERT_INPUT_TO_SOURCE_UNIT
+            and normalized_input_unit == _BILIRUBIN_INPUT_UNIT
+            and normalized_threshold_unit == _BILIRUBIN_SOURCE_UNIT
+        )
 
         if approved_glucose_conversion:
             try:
@@ -269,6 +280,19 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             except ValueError:
                 logger.warning(
                     "Critical glucose conversion skipped for '%s': value %r is invalid",
+                    name,
+                    val,
+                )
+                updated_indicators.append(new_ind)
+                continue
+            comparison_unit = threshold_unit
+            use_decimal = True
+        elif approved_bilirubin_conversion:
+            try:
+                comparison_value = bilirubin_umol_l_to_mg_dl(val)
+            except ValueError:
+                logger.warning(
+                    "Critical bilirubin conversion skipped for '%s': value %r is invalid",
                     name,
                     val,
                 )

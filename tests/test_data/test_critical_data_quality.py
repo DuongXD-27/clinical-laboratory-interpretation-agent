@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from src.services.analyte_resolver import LOCKED_35_ANALYTES
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CRITICAL_PATH      = REPO_ROOT / "data/reference/critical_thresholds.json"
@@ -23,8 +25,8 @@ UNITS_CSV_PATH     = REPO_ROOT / "data/reference/units_metric.csv"
 
 # Canonical names as defined in reference_checker_config.json
 APPROVED_ANALYTES = frozenset({
-    "WBC", "RBC", "HGB", "Fasting plasma glucose",
-    "HbA1c", "LDL-C", "HDL-C", "Creatinine", "Potassium",
+    "WBC", "RBC", "HGB", "HCT", "PLT", "Sodium", "Potassium",
+    "Fasting plasma glucose", "Total bilirubin", "HbA1c", "LDL-C", "HDL-C", "Creatinine",
 })
 
 # Alias spellings forbidden as independent production registry records
@@ -69,21 +71,71 @@ _EXPECTED_EXECUTION_MATRIX = {
     "WBC": (None, None, None, None, "10^9/L"),
     "RBC": (None, None, None, None, "10^12/L"),
     "HGB": (None, None, None, None, "g/L"),
+    "HCT": (None, None, None, None, "L/L"),
+    "MCV": (None, None, None, None, "fL"),
+    "MCH": (None, None, None, None, "pg"),
+    "MCHC": (None, None, None, None, "g/L"),
+    "RDW-CV": (None, None, None, None, "%"),
+    "PLT": (None, None, None, None, "10^9/L"),
+    "Neutrophils %": (None, None, None, None, "%"),
+    "Neutrophils abs": (None, None, None, None, "10^9/L"),
+    "Lymphocytes %": (None, None, None, None, "%"),
+    "Lymphocytes abs": (None, None, None, None, "10^9/L"),
+    "Monocytes %": (None, None, None, None, "%"),
+    "Monocytes abs": (None, None, None, None, "10^9/L"),
+    "Eosinophils %": (None, None, None, None, "%"),
+    "Eosinophils abs": (None, None, None, None, "10^9/L"),
+    "Sodium": (120, "<", 160, ">", "mmol/L"),
+    "Potassium": (3.0, "<", 6.1, ">", "mmol/L"),
+    "Chloride": (None, None, None, None, "mmol/L"),
     "Fasting plasma glucose": (55, "<", 450, ">", "mg/dL"),
     "HbA1c": (None, None, None, None, "%"),
-    "LDL-C": (None, None, None, None, "mmol/L"),
-    "HDL-C": (None, None, None, None, "mmol/L"),
     "Creatinine": (None, None, None, None, "umol/L"),
-    "Potassium": (3.0, "<", 6.1, ">", "mmol/L"),
+    "Urea": (None, None, None, None, "mmol/L"),
+    "Uric acid": (None, None, None, None, "umol/L"),
+    "AST": (None, None, None, None, "U/L"),
+    "ALT": (None, None, None, None, "U/L"),
+    "GGT": (None, None, None, None, "U/L"),
+    "Total bilirubin": (None, None, 15, ">", "mg/dL"),
+    "Total protein": (None, None, None, None, "g/L"),
+    "Albumin": (None, None, None, None, "g/L"),
+    "Total cholesterol": (None, None, None, None, "mmol/L"),
+    "Triglyceride": (None, None, None, None, "mmol/L"),
+    "HDL-C": (None, None, None, None, "mmol/L"),
+    "LDL-C": (None, None, None, None, "mmol/L"),
 }
 _EXPECTED_INACTIVE_REASONS = {
     "WBC": "SOURCE_ROW_RESTRICTED_U_OF_U_ONLY",
     "RBC": "NO_APPLICABLE_ARUP_REV46_RBC_COUNT_RULE",
     "HGB": "SOURCE_ROW_RESTRICTED_U_OF_U_ONLY",
+    "HCT": "SOURCE_ROW_RESTRICTED_U_OF_U_ONLY",
+    "MCV": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "MCH": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "MCHC": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "RDW-CV": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "PLT": "SOURCE_ROW_RESTRICTED_U_OF_U_ONLY",
+    "Neutrophils %": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Neutrophils abs": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Lymphocytes %": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Lymphocytes abs": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Monocytes %": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Monocytes abs": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Eosinophils %": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Eosinophils abs": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Chloride": "NO_APPLICABLE_ARUP_REV46_RULE",
     "HbA1c": "NO_APPLICABLE_ARUP_REV46_RULE",
-    "LDL-C": "NO_APPLICABLE_ARUP_REV46_RULE",
-    "HDL-C": "NO_APPLICABLE_ARUP_REV46_RULE",
     "Creatinine": "NO_APPLICABLE_ARUP_REV46_ADULT_RULE",
+    "Urea": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Uric acid": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "AST": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "ALT": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "GGT": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Total protein": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Albumin": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Total cholesterol": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "Triglyceride": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "HDL-C": "NO_APPLICABLE_ARUP_REV46_RULE",
+    "LDL-C": "NO_APPLICABLE_ARUP_REV46_RULE",
 }
 
 
@@ -200,9 +252,9 @@ def test_crit_01_no_duplicate_names_in_explanation_new():
 def test_crit_02_production_registry_is_canonical_only_without_alias_records():
     critical_keys = set(_load_critical())
 
-    assert critical_keys == set(APPROVED_ANALYTES)
+    assert critical_keys == set(LOCKED_35_ANALYTES)
     assert critical_keys.isdisjoint(_FORBIDDEN_CRITICAL_ALIASES)
-    assert len(critical_keys) == 9
+    assert len(critical_keys) == 35
 
 
 # ── CRIT-03 ──────────────────────────────────────────────────────────────────
@@ -215,8 +267,8 @@ def test_crit_03a_approved_analytes_in_explanation_new():
 
 
 def test_crit_03b_approved_analytes_in_critical_thresholds():
-    """Production critical registry contains exactly the canonical current-9."""
-    assert set(_load_critical()) == set(APPROVED_ANALYTES)
+    """Production critical registry contains exactly the 35 locked analytes."""
+    assert set(_load_critical()) == set(LOCKED_35_ANALYTES)
 
 
 def test_crit_03c_approved_analytes_in_reference_ranges():
@@ -271,7 +323,9 @@ def test_crit_04a_explanation_new_metric_vs_units_csv():
 
     for entry in entries:
         name = entry["name"]
-        metric = entry.get("metric", "")
+        if name not in APPROVED_ANALYTES:
+            continue
+        metric = entry.get("canonical_unit") or entry.get("metric", "")
         key = name.lower()
 
         if key not in csv_units:
@@ -321,7 +375,17 @@ def test_crit_04b_critical_thresholds_unit_vs_units_csv():
             and values.get("vmec_conversion_authority") == "NIST-CAS-492-62-6-MW-180.1559"
             and values.get("vmec_conversion_scope") == "CRITICAL_LAYER_ONLY"
         )
-        if approved_fpg_conversion:
+        approved_bilirubin_conversion = (
+            key == "Total bilirubin"
+            and actual == "mg/dL"
+            and expected == "umol/L"
+            and values.get("vmec_canonical_unit") == "umol/L"
+            and values.get("vmec_comparison_strategy") == "CONVERT_INPUT_TO_SOURCE_UNIT"
+            and values.get("vmec_conversion_function") == "bilirubin_umol_l_to_mg_dl"
+            and values.get("vmec_conversion_authority") == "NIST-CAS-635-65-4-MW-584.66"
+            and values.get("vmec_conversion_scope") == "CRITICAL_LAYER_ONLY"
+        )
+        if approved_fpg_conversion or approved_bilirubin_conversion:
             continue
         if actual != expected:
             mismatches.append(
@@ -454,8 +518,11 @@ def test_crit_07c_active_rules_have_complete_provenance_and_exact_source_literal
         if record["low"] is not None or record["high"] is not None
     }
 
-    assert set(active) == {"Potassium", "Fasting plasma glucose"}
+    assert set(active) == {"Sodium", "Potassium", "Fasting plasma glucose", "Total bilirubin"}
     assert all(_validate_final_arup_record(record) == [] for record in active.values())
+    assert active["Sodium"]["source_literal"] == "< 120 or > 160 mmol/L"
+    assert active["Sodium"]["source_analyte_label"] == "Sodium"
+    assert active["Sodium"]["source_page"] == 1
     assert active["Potassium"]["source_literal"] == "< 3.0 or > 6.1 mmol/L"
     assert active["Potassium"]["source_analyte_label"] == "Potassium"
     assert active["Potassium"]["source_page"] == 1
@@ -466,6 +533,9 @@ def test_crit_07c_active_rules_have_complete_provenance_and_exact_source_literal
     assert active["Fasting plasma glucose"]["source_page"] == 1
     assert active["Fasting plasma glucose"]["population_context"] == ">30 days to adult"
     assert active["Fasting plasma glucose"]["qualifier"] is None
+    assert active["Total bilirubin"]["source_literal"] == "> 15 mg/dL"
+    assert active["Total bilirubin"]["source_analyte_label"] == "Bilirubin, Total"
+    assert active["Total bilirubin"]["source_page"] == 1
 
 
 def test_crit_07d_inactive_rules_are_explicit_and_auditable():
@@ -485,6 +555,10 @@ def test_crit_07d_inactive_rules_are_explicit_and_auditable():
     assert critical["WBC"]["qualifier"] == restricted_qualifier
     assert critical["HGB"]["source_analyte_label"] == "Hemoglobin"
     assert critical["HGB"]["qualifier"] == restricted_qualifier
+    assert critical["HCT"]["source_analyte_label"] == "Hematocrit"
+    assert critical["HCT"]["qualifier"] == restricted_qualifier
+    assert critical["PLT"]["source_analyte_label"] == "Platelet Count"
+    assert critical["PLT"]["qualifier"] == restricted_qualifier
 
 
 def test_crit_07e_no_negative_sentinels_or_legacy_missing_operators():

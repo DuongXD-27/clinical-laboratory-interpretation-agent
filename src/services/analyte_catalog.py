@@ -10,10 +10,12 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from src.services.analyte_resolver import canonical_analyte_id
 
 
 class AnalyteCatalogError(Exception):
@@ -32,6 +34,9 @@ class AnalyteDefinition:
     low_note: str = ""
     critical_high_note: str = ""
     critical_low_note: str = ""
+    band_notes: dict[str, str] = field(default_factory=dict)
+    preanalytic_note: str = ""
+    limitation_note: str = ""
 
     @property
     def description(self) -> str:
@@ -41,12 +46,14 @@ class AnalyteDefinition:
         self,
         status: str,
         critical_status: str | None = None,
+        band_id: str | None = None,
     ) -> str:
         """Deterministic status-aware explanation selection.
 
         Selection policy:
         CRITICAL_HIGH: critical_high_note -> high_note -> description
         CRITICAL_LOW: critical_low_note -> low_note -> description
+        BAND: exact band_note[band_id] -> description
         HIGH: high_note -> description
         LOW: low_note -> description
         NORMAL / UNKNOWN / other: neutral description
@@ -59,6 +66,8 @@ class AnalyteDefinition:
             return self.critical_high_note or self.high_note or self.curated_explanation
         if effective_status == "critical_low":
             return self.critical_low_note or self.low_note or self.curated_explanation
+        if band_id and band_id in self.band_notes:
+            return self.band_notes[band_id]
         if effective_status == "high":
             return self.high_note or self.curated_explanation
         if effective_status == "low":
@@ -123,15 +132,16 @@ class AnalyteCatalog:
 
         definitions: list[AnalyteDefinition] = []
         for index, item in enumerate(explanations):
-            # New schema: "name" is the indicator field; "id" is derived from it.
-            if not isinstance(item, dict) or not item.get("name"):
+            if not isinstance(item, dict):
+                raise AnalyteCatalogError(f"analyte definition at index {index} must be an object")
+            indicator = str(item.get("canonical_name") or item.get("name") or "").strip()
+            if not indicator:
                 raise AnalyteCatalogError(
-                    f"analyte definition at index {index} requires 'name'"
+                    f"analyte definition at index {index} requires 'canonical_name' or 'name'"
                 )
-            indicator = str(item["name"]).strip()
-            # Derive a stable lowercase id from the name (e.g. "WBC" → "wbc")
-            analyte_id = indicator.lower().replace("-", "_").replace(" ", "_")
-            # "sources" is a list of objects; extract URLs and notes.
+            # Use authoritative shared resolver
+            analyte_id = str(item.get("analyte_id") or canonical_analyte_id(indicator)).strip()
+
             raw_sources = item.get("sources", [])
             source_urls: list[str] = []
             descriptions: list[str] = []
@@ -139,6 +149,9 @@ class AnalyteCatalog:
             low_notes: list[str] = []
             crit_high_notes: list[str] = []
             crit_low_notes: list[str] = []
+            all_band_notes: dict[str, str] = {}
+            preanalytic_notes: list[str] = []
+            limitation_notes: list[str] = []
 
             for src in raw_sources:
                 if not isinstance(src, dict):
@@ -161,6 +174,16 @@ class AnalyteCatalog:
                 cln = str(src.get("critical_low_note") or "").strip()
                 if cln:
                     crit_low_notes.append(cln)
+                pan = str(src.get("preanalytic_note") or "").strip()
+                if pan:
+                    preanalytic_notes.append(pan)
+                lim = str(src.get("limitation_note") or "").strip()
+                if lim:
+                    limitation_notes.append(lim)
+                if isinstance(src.get("band_notes"), dict):
+                    for b_id, b_text in src["band_notes"].items():
+                        if b_text and str(b_text).strip() and b_id not in all_band_notes:
+                            all_band_notes[str(b_id).strip()] = str(b_text).strip()
 
             definitions.append(
                 AnalyteDefinition(
@@ -174,6 +197,9 @@ class AnalyteCatalog:
                     low_note=low_notes[0] if low_notes else "",
                     critical_high_note=crit_high_notes[0] if crit_high_notes else "",
                     critical_low_note=crit_low_notes[0] if crit_low_notes else "",
+                    band_notes=all_band_notes,
+                    preanalytic_note=preanalytic_notes[0] if preanalytic_notes else "",
+                    limitation_note=limitation_notes[0] if limitation_notes else "",
                 )
             )
 
@@ -182,7 +208,6 @@ class AnalyteCatalog:
 
     def resolve(self, value: Any) -> AnalyteDefinition | None:
         """Resolve an ID/name/alias using exact normalized-key lookup."""
-
         return self._by_key.get(_lookup_key(value))
 
     def get(self, analyte_id: str) -> AnalyteDefinition | None:

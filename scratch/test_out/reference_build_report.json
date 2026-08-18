@@ -1,0 +1,72 @@
+{
+  "builder_version": "v2",
+  "input_file": "data/reference/source/adult_outpatient_laboratory_reference_map.csv",
+  "input_sha256": "0D4A723CC2515E0778CF15752EB8311E775FFA6FCDD026734A98FEC7ECB89CE2",
+  "input_sha256_after": "0D4A723CC2515E0778CF15752EB8311E775FFA6FCDD026734A98FEC7ECB89CE2",
+  "input_size_bytes": 39475,
+  "input_rows": 76,
+  "structurally_eligible_rows": 76,
+  "structurally_rejected_rows": 0,
+  "runtime_accepted_rows": 76,
+  "quarantined_rows": 0,
+  "multiple_reason_rows": 0,
+  "rejection_reason_counts": {},
+  "accepted_analytes": [
+    "ALT",
+    "AST",
+    "Albumin",
+    "Basophils %",
+    "Basophils abs",
+    "Chloride",
+    "Creatinine",
+    "Direct bilirubin",
+    "Eosinophils %",
+    "Eosinophils abs",
+    "Fasting plasma glucose",
+    "GGT",
+    "HCT",
+    "HDL-C",
+    "HGB",
+    "HbA1c",
+    "LDL-C",
+    "Lymphocytes %",
+    "Lymphocytes abs",
+    "MCH",
+    "MCHC",
+    "MCV",
+    "MPV",
+    "Monocytes %",
+    "Monocytes abs",
+    "Neutrophils %",
+    "Neutrophils abs",
+    "PLT",
+    "Potassium",
+    "RBC",
+    "RDW-CV",
+    "Sodium",
+    "Total bilirubin",
+    "Total cholesterol",
+    "Total protein",
+    "Triglyceride",
+    "Urea",
+    "WBC",
+    "eGFR"
+  ],
+  "quarantined_analytes": [],
+  "output_files": {
+    "reference_ranges_csv": {
+      "path": "scratch/test_out/reference_ranges.csv",
+      "sha256": "CF34D12EE3B668EDA469AE20177EADB77CA414B34A9404386BA4E2ECDD4ADFAE"
+    },
+    "reference_ranges_json": {
+      "path": "scratch/test_out/reference_ranges.json",
+      "sha256": "D0396E0B5EDD4BA370F3A8EF684EBE3943DCA7F010916C9DB2AE58FD484278AF"
+    },
+    "quarantine_csv": {
+      "path": "scratch/test_out/quarantine.csv",
+      "sha256": "F8CD17A48820E5164735E07AAD36D0059A69537EE166AC115612606607D45229"
+    }
+  },
+  "generated_at": "2026-08-17T17:23:06Z",
+  "source_integrity_verified": true
+}

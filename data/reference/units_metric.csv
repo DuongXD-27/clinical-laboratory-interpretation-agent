@@ -28,12 +28,30 @@ LDL-C,mmol/L
 AST (GOT),U/L
 ALT (GPT),U/L
 GGT,U/L
+Total bilirubin,µmol/L
+Direct bilirubin,µmol/L
 Urea,mmol/L
 Creatinine,µmol/L
 Uric Acid,µmol/L
 eGFR,mL/min/1.73 m^2
+Sodium,mmol/L
 Sodium (Na),mmol/L
 Potassium,mmol/L
-Chloride (Cl-),mmol/L
+Chloride,mmol/L
 Total Protein,g/L
 Albumin,g/L
+Total cholesterol,mmol/L
+Triglyceride,mmol/L
+AST,U/L
+ALT,U/L
+RDW-CV,%
+Neutrophils %,%
+Neutrophils abs,10^9/L
+Lymphocytes %,%
+Lymphocytes abs,10^9/L
+Monocytes %,%
+Monocytes abs,10^9/L
+Eosinophils %,%
+Eosinophils abs,10^9/L
+Total protein,g/L
+Uric acid,µmol/L

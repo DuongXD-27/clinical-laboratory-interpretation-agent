@@ -1,13 +1,13 @@
 {
   "builder_version": "v2",
-  "input_file": "adult_outpatient_laboratory_reference_map.csv",
-  "input_sha256": "BAF1307328634DA04368995094C7A827CD5C5059BEB69D2BFE2BB7B9E5AB0E54",
-  "input_sha256_after": "BAF1307328634DA04368995094C7A827CD5C5059BEB69D2BFE2BB7B9E5AB0E54",
-  "input_size_bytes": 41476,
-  "input_rows": 80,
-  "structurally_eligible_rows": 80,
+  "input_file": "data/reference/source/adult_outpatient_laboratory_reference_map.csv",
+  "input_sha256": "2324755F2D4894B12E0CEABE30BC953313AA632E3C9FB7B52AEA1A8DF799753C",
+  "input_sha256_after": "2324755F2D4894B12E0CEABE30BC953313AA632E3C9FB7B52AEA1A8DF799753C",
+  "input_size_bytes": 34092,
+  "input_rows": 65,
+  "structurally_eligible_rows": 65,
   "structurally_rejected_rows": 0,
-  "runtime_accepted_rows": 80,
+  "runtime_accepted_rows": 65,
   "quarantined_rows": 0,
   "multiple_reason_rows": 0,
   "rejection_reason_counts": {},
@@ -21,10 +21,10 @@
     "Eosinophils abs",
     "Fasting plasma glucose",
     "GGT",
-    "HbA1c",
     "HCT",
     "HDL-C",
     "HGB",
+    "HbA1c",
     "LDL-C",
     "Lymphocytes %",
     "Lymphocytes abs",
@@ -47,61 +47,29 @@
     "Urea",
     "WBC"
   ],
-  "quarantined_analytes": [
-    "Basophils %",
-    "Basophils abs",
-    "Direct bilirubin",
-    "MPV",
-    "Uric acid",
-    "eGFR"
-  ],
-  "runtime_approval": {
-    "note": "Canonical reference records are active without a secondary application quality gate.",
-    "promoted_analytes": [
-      {
-        "name": "HbA1c",
-        "promoted_at": "2026-08-08",
-        "reason": "canonical reference record available to application logic"
-      },
-      {
-        "name": "LDL-C",
-        "promoted_at": "2026-08-08",
-        "reason": "canonical reference record available to application logic"
-      },
-      {
-        "name": "Potassium",
-        "promoted_at": "2026-08-08",
-        "reason": "canonical reference record available; independent critical thresholds remain active"
-      }
-    ]
-  },
+  "quarantined_analytes": [],
   "output_files": {
     "reference_ranges_csv": {
       "path": "data/reference/reference_ranges.csv",
-      "sha256": "17612220D05CC5A789620EA9ACEFF1F5EC77C1DE2429DDA9AC5BC62BCE56F660"
+      "sha256": "076DCFC4FCC00F5A4A5BC79A5CC1F87E19741E155A0EEBF3C969FCDC6D34427E"
     },
     "reference_ranges_json": {
       "path": "data/reference/reference_ranges.json",
-      "sha256": "8606EC069E6EDE8ABD90BB969BFC6969FC9BCCCD3866192DE7459D36CD144A25"
+      "sha256": "0AEBE60AC2C82E4DB2FD0B4E82C10758A4CF5079EA095F88F4BBDC69529237C4"
     },
-    "quarantine_v2_csv": {
-      "path": "data/reference/quarantine_v2.csv",
-      "sha256": "1A7E67DF2535BDB63C3A20A98585AF32E6C851582A91580705B0848D7FA9EC7E"
+    "quarantine_csv": {
+      "path": "data/reference/quarantine.csv",
+      "sha256": "881D7F13DA90517B6CA79FFE2B2BFEE2D7539866A592A16B88519CB96B3AB2CB"
     }
   },
-  "generated_at": "2026-08-07T15:45:20Z",
+  "generated_at": "2026-08-18T04:57:14Z",
   "source_integrity_verified": true,
   "explanation_supplement": {
     "supplemental_file": "data/reference/explanations.json",
     "entries_scanned": 9,
-    "missing_analytes": 4,
-    "supplemental_analytes": [
-      "HDL-C",
-      "HbA1c",
-      "LDL-C",
-      "Potassium"
-    ],
-    "rules_added": 20,
+    "missing_analytes": 0,
+    "supplemental_analytes": [],
+    "rules_added": 0,
     "boundary_warnings": [
       {
         "analyte": "HbA1c",
@@ -156,10 +124,6 @@
     ]
   },
   "catalog": {
-    "total_rules": 73,
-    "accepted_analytes_count": 34,
-    "quarantined_analytes_count": 6,
-    "runtime_promoted_count": 3
-  },
-  "last_updated_at": "2026-08-09"
+    "total_rules": 65
+  }
 }
