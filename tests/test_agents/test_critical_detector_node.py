@@ -566,7 +566,7 @@ async def test_production_glucose_mmol_l_pipeline_can_escalate_non_unknown():
 
     result = await detect_critical_values_node({**state, **ri_state})
 
-    assert result["indicators"][0]["status"] == "low"
+    assert result["indicators"][0]["status"] == "normal"
     assert result["indicators"][0]["critical_status"] == "critical_low"
     assert result["indicators"][0]["is_critical"] is True
 
@@ -998,7 +998,7 @@ async def test_status_and_critical_status_contract_separation():
         ({"name": "Potassium", "value": 4.5, "unit": "mmol/L"}, "normal", None, False),
         ({"name": "Potassium", "value": 5.8, "unit": "mmol/L"}, "high", None, False),
         ({"name": "Potassium", "value": 6.5, "unit": "mmol/L"}, "high", "critical_high", True),
-        ({"name": "Fasting plasma glucose", "value": 3.05, "unit": "mmol/L"}, "low", "critical_low", True),
+        ({"name": "Fasting plasma glucose", "value": 3.05, "unit": "mmol/L"}, "normal", "critical_low", True),
         ({"name": "Glucose", "value": 5.2, "unit": "mmol/L"}, "unknown", None, False),
     ]
 

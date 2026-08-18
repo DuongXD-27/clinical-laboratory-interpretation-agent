@@ -123,13 +123,64 @@ class VectorStore:
             logger.exception("Failed to write %d embeddings to ChromaDB", len(texts))
             raise VectorStoreError(f"cannot write embeddings to ChromaDB: {exc}") from exc
 
+    def get_by_metadata(
+        self,
+        *,
+        filter: dict[str, Any],
+        limit: int | None = None,
+        include_embeddings: bool = False,
+    ) -> dict[str, Any]:
+        """Deterministic metadata lookup without embedding a query.
+
+        Returns documents/metadatas matching the metadata filter, ordered by
+        Chroma's internal ordering. Used by the metadata-prong of the
+        status-aware retriever where relevance is already decided by
+        structured status, so no semantic search is required.
+
+        ``include_embeddings`` returns each chunk's embedding as stored at
+        ingest time (no extra embedding call), so callers can cross-check a
+        deterministic metadata match against actual content similarity
+        instead of trusting the label alone.
+        """
+        collection = self.get_collection(create_if_missing=False)
+        if collection.count() == 0:
+            return {"documents": [], "metadatas": [], "ids": [], "embeddings": []}
+        include = ["documents", "metadatas"]
+        if include_embeddings:
+            include.append("embeddings")
+        try:
+            result = collection.get(
+                where=filter,
+                limit=limit,
+                include=include,
+            )
+        except Exception as exc:
+            logger.exception("Failed to fetch ChromaDB documents by metadata")
+            raise VectorStoreError(f"cannot fetch ChromaDB documents by metadata: {exc}") from exc
+        raw_embeddings = result.get("embeddings") if include_embeddings else None
+        return {
+            "documents": list(result.get("documents") or []),
+            "metadatas": list(result.get("metadatas") or []),
+            "ids": list(result.get("ids") or []),
+            "embeddings": (
+                [[float(value) for value in embedding] for embedding in raw_embeddings]
+                if raw_embeddings is not None
+                else []
+            ),
+        }
+
     def search(
         self,
         query: str,
         *,
         k: int = 5,
         filter: dict[str, Any] | None = None,
+        query_embedding: list[float] | None = None,
     ) -> dict[str, Any]:
+        """Semantic search. Pass a precomputed ``query_embedding`` to avoid
+        re-embedding the same query text (e.g. when a caller already embedded
+        it to cross-check other candidates); otherwise ``query`` is embedded
+        here."""
         collection = self.get_collection(create_if_missing=False)
         if collection.count() == 0:
             return {
@@ -138,11 +189,12 @@ class VectorStore:
                 "distances": [[]],
                 "ids": [[]],
             }
-        try:
-            query_embedding = self.embedding_provider.embed_query(query)
-        except Exception as exc:
-            logger.exception("Failed to embed medical query")
-            raise VectorStoreError(f"query embedding failed: {exc}") from exc
+        if query_embedding is None:
+            try:
+                query_embedding = self.embedding_provider.embed_query(query)
+            except Exception as exc:
+                logger.exception("Failed to embed medical query")
+                raise VectorStoreError(f"query embedding failed: {exc}") from exc
         self._validate_embedding_dimensions([query_embedding])
         try:
             return collection.query(
