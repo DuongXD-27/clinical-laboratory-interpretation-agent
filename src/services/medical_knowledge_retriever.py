@@ -1,15 +1,54 @@
-"""Status-gated, band-aware and critical-isolated medical knowledge retriever."""
+"""Optional RAG retrieval for unstructured medical-knowledge documents.
+
+Implements status-aware selective retrieval: a deterministic metadata-prong
+(driven by the already-classified structured status) is fused with a dense
+semantic prong, then a relevance gate drops low-confidence chunks so the
+pipeline falls back to the curated explanation when retrieval is weak.
+
+Design decisions after the RAG architecture review:
+- No fuzzy content-dedup. The previous containment-based dedup could not
+  reliably separate "same idea, different words" from "different causes sharing
+  a prefix", so it risked dropping distinct medical content. Only exact
+  text-level dedup is applied during fusion.
+- Metadata chunks are scored with a length taper AND a semantic cross-check
+  (cosine similarity between the chunk's stored embedding and the query
+  embedding) so a chunk that merely carries the right label but is long,
+  off-topic or low-quality does not keep the deterministic score ceiling.
+  Label match alone is no longer trusted as a proxy for content quality.
+- RETRIEVAL_MIN_SCORE=0.8 is evidence-based, not a guess. The real curated
+  corpus alone can't prove a value (every genuine candidate scores >= 0.76,
+  so the gate never binds on it — see eval/rag/retrieval_param_sweep.py).
+  Adversarial testing across 3 domains (eval/rag/adversarial_threshold_test.py)
+  found a real, reproducible boundary: genuine content floor 0.807, and
+  synthetic junk consistently splits into a "catchable" band topping out at
+  0.794 (off-topic, wrong-indicator, mislabeled, spam, OCR-garbage, mixed
+  content) and a "structurally uncatchable" band starting at 0.820
+  (keyword-stuffed and confidently-wrong-but-fluent text — these score
+  *above* the genuine floor, so no threshold value can catch them without
+  also rejecting real content). 0.8 sits in the proven clean-separation
+  window (0.794, 0.807): zero genuine-content loss, maximum catchable-junk
+  rejection. See docs/version-handoff/retrieval-min-score-evidence.md for the
+  full write-up, including why the uncatchable band is not a tuning gap —
+  it's why GENERATION_SAFETY_CONTRACT + MedicalSafetyValidator downstream
+  exist: a relevance-similarity gate can never substitute for a factuality/
+  safety check. Re-run the adversarial script whenever the knowledge base
+  grows or changes provider/model, since the boundary is corpus- and
+  embedding-model-specific.
+- top_k (default 3): primary_hit_rate@1 is 1.0 at every tested value on the
+  real corpus and larger top_k only adds context chars with no accuracy
+  gain (eval/rag/retrieval_param_sweep.md) — kept at 3.
+"""
 
 from __future__ import annotations
 
 import json
 import logging
+import unicodedata
 from functools import lru_cache
 from typing import Any, Protocol
 
 from src.agents.state import RetrievedChunk
 from src.config import get_settings
-from src.services.analyte_resolver import canonical_analyte_id
 from src.services.embedding_provider import get_embedding_provider
 from src.services.vector_store import VectorStore
 
@@ -26,7 +65,7 @@ class MedicalKnowledgeRetriever(Protocol):
         *,
         query: str,
         analyte_id: str,
-        status: str = "normal",
+        status: str = "unknown",
         band_id: str | None = None,
         critical_status: str | None = None,
         limit: int = 3,
@@ -35,74 +74,126 @@ class MedicalKnowledgeRetriever(Protocol):
     def readiness(self) -> dict[str, Any]: ...
 
 
-class ChromaMedicalKnowledgeRetriever:
-    """Retrieves grounded explanatory notes with strict status and critical decoupling."""
+def _normalized_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).strip()
 
+
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Cosine similarity, matching the collection's `hnsw:space: cosine`
+    convention so this is directly comparable to the dense-prong's
+    `1 - distance` score."""
+    if not a or not b or len(a) != len(b):
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sum(x * x for x in a) ** 0.5
+    norm_b = sum(y * y for y in b) ** 0.5
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return max(0.0, dot / (norm_a * norm_b))
+
+
+class ChromaMedicalKnowledgeRetriever:
     def __init__(self, vector_store: VectorStore) -> None:
         self.vector_store = vector_store
 
-    def retrieve(
+    def _status_query(self, query: str, status: str, critical_status: str | None) -> str:
+        crit = str(critical_status or "").lower().strip()
+        stat = str(status or "").lower().strip()
+        if crit == "critical_high" or stat == "high":
+            return f"{query}. Khi kết quả tăng cao, ý nghĩa và nguyên nhân là gì?"
+        if crit == "critical_low" or stat == "low":
+            return f"{query}. Khi kết quả giảm thấp, ý nghĩa và nguyên nhân là gì?"
+        return f"{query}. Giải thích chung về ý nghĩa của chỉ số này."
+
+    def _metadata_chunk(
+        self,
+        text: str,
+        metadata: dict[str, Any],
+        *,
+        analyte_id: str,
+        score: float,
+    ) -> RetrievedChunk:
+        raw_sources = metadata.get("sources", "[]")
+        try:
+            sources = json.loads(raw_sources) if isinstance(raw_sources, str) else raw_sources
+        except json.JSONDecodeError:
+            sources = [raw_sources] if raw_sources else []
+        sources = [str(source) for source in sources if str(source)]
+        return {
+            "indicator_name": str(metadata.get("indicator", analyte_id)),
+            "text": str(text),
+            "source": str(sources[0]) if sources else "",
+            "sources": sources,
+            "score": score,
+            "note_type": str(metadata.get("note_type", "")),
+        }
+
+    def _metadata_score(
+        self,
+        text: str,
+        *,
+        min_chunk_length: int,
+        chunk_embedding: list[float] | None = None,
+        query_embedding: list[float] | None = None,
+    ) -> float:
+        """Length-tapered ceiling, capped by semantic relevance to the query.
+
+        Length alone only catches chunks too thin to carry real content; it
+        says nothing about whether a long, correctly-labeled chunk actually
+        answers the query. The label match is a deterministic hint, not proof
+        of quality, so the final score is the *minimum* of the length ceiling
+        and the cosine similarity between the chunk's stored embedding and
+        the query embedding (same scale as the dense-prong's `1 - distance`
+        score) — a long but off-topic/low-quality chunk gets capped down to
+        its real semantic relevance instead of keeping the full ceiling.
+        When embeddings are unavailable, falls back to the length ceiling
+        alone (graceful degradation, not silent failure).
+        """
+        length = len(_normalized_text(text))
+        if length >= min_chunk_length * 2:
+            length_ceiling = 1.0
+        else:
+            span = max(1, min_chunk_length)
+            length_ceiling = 0.9 + 0.1 * (length - min_chunk_length) / span
+
+        if chunk_embedding is None or query_embedding is None:
+            return length_ceiling
+        semantic_score = _cosine_similarity(chunk_embedding, query_embedding)
+        return min(length_ceiling, semantic_score)
+
+    def _metadata_prong(
         self,
         *,
-        query: str,
         analyte_id: str,
-        status: str = "normal",
-        band_id: str | None = None,
-        critical_status: str | None = None,
-        limit: int = 3,
+        min_chunk_length: int,
+        query_embedding: list[float] | None,
+        allowed_note_types: list[str],
+        prohibited_notes: set[str],
+        clean_bid: str | None,
     ) -> list[RetrievedChunk]:
-        clean_aid = canonical_analyte_id(analyte_id)
-        if not clean_aid:
-            return []
-
-        norm_status = str(status or "normal").lower().strip()
-        norm_crit = str(critical_status or "none").lower().strip()
-        clean_bid = str(band_id).strip() if band_id else None
-
-        # Build allowed target note priorities based on frozen contract
-        allowed_note_types: list[str] = []
-        if norm_crit == "critical_high":
-            allowed_note_types = ["critical_high_note", "high_note", "description", "limitation_note", "preanalytic_note"]
-        elif norm_crit == "critical_low":
-            allowed_note_types = ["critical_low_note", "low_note", "description", "limitation_note", "preanalytic_note"]
-        elif clean_bid:
-            allowed_note_types = ["band_note", "description", "limitation_note", "preanalytic_note"]
-        elif norm_status == "high":
-            allowed_note_types = ["high_note", "description", "limitation_note", "preanalytic_note"]
-        elif norm_status == "low":
-            allowed_note_types = ["low_note", "description", "limitation_note", "preanalytic_note"]
-        else:
-            # normal, unknown, or neutral
-            allowed_note_types = ["description", "limitation_note", "preanalytic_note"]
-
-        # ABSOLUTE CRITICAL DECOUPLING:
-        # If critical_status is not critical_high/critical_low, critical notes are strictly PROHIBITED.
-        prohibited_notes: set[str] = set()
-        if norm_crit not in {"critical_high", "critical_low"}:
-            prohibited_notes.add("critical_high_note")
-            prohibited_notes.add("critical_low_note")
-
-        # Query ChromaDB with analyte_id metadata filter
         try:
-            result = self.vector_store.search(
-                query,
-                k=max(limit * 2, 10),
-                filter={"analyte_id": clean_aid},
+            result = self.vector_store.get_by_metadata(
+                filter={
+                    "$and": [
+                        {"analyte_id": analyte_id},
+                        {"note_type": {"$in": allowed_note_types}},
+                    ]
+                },
+                include_embeddings=query_embedding is not None,
             )
         except Exception as exc:
-            logger.warning("ChromaDB search failed for analyte '%s': %s", clean_aid, exc)
+            logger.error("Metadata-prong retrieval failed for %s: %s", analyte_id, exc)
             return []
-
-        documents = (result.get("documents") or [[]])[0]
-        metadatas = (result.get("metadatas") or [[]])[0]
-        distances = (result.get("distances") or [[]])[0]
-
-        candidates: list[dict[str, Any]] = []
-
+        documents = result.get("documents") or []
+        metadatas = result.get("metadatas") or []
+        embeddings = result.get("embeddings") or []
+        chunks: list[RetrievedChunk] = []
         for index, text in enumerate(documents):
-            meta = metadatas[index] if index < len(metadatas) else {}
-            note_type = str(meta.get("note_type") or "").strip()
-            chunk_band_id = str(meta.get("band_id") or "").strip() or None
+            metadata = metadatas[index] if index < len(metadatas) else {}
+            
+            note_type = str(metadata.get("note_type") or "").strip()
+            chunk_band_id = str(metadata.get("band_id") or "").strip() or None
 
             # 1. Enforce critical decoupling
             if note_type in prohibited_notes:
@@ -112,69 +203,236 @@ class ChromaMedicalKnowledgeRetriever:
             if clean_bid and note_type == "band_note" and chunk_band_id != clean_bid:
                 continue
 
-            # 3. Check if note_type is in allowed types
-            if note_type and allowed_note_types and note_type not in allowed_note_types:
+            text = str(text)
+            if len(_normalized_text(text)) < min_chunk_length:
+                continue
+            chunk_embedding = embeddings[index] if index < len(embeddings) else None
+            chunks.append(
+                self._metadata_chunk(
+                    text,
+                    metadata,
+                    analyte_id=analyte_id,
+                    score=self._metadata_score(
+                        text,
+                        min_chunk_length=min_chunk_length,
+                        chunk_embedding=chunk_embedding,
+                        query_embedding=query_embedding,
+                    ),
+                )
+            )
+        return chunks
+
+    def _dense_prong(
+        self,
+        *,
+        status_query: str,
+        query_embedding: list[float] | None,
+        analyte_id: str,
+        k: int,
+        allowed_note_types: list[str],
+        prohibited_notes: set[str],
+        clean_bid: str | None,
+    ) -> list[RetrievedChunk]:
+        try:
+            result = self.vector_store.search(
+                status_query,
+                k=k,
+                filter={
+                    "$and": [
+                        {"analyte_id": analyte_id},
+                        {"note_type": {"$in": allowed_note_types}},
+                    ]
+                },
+                query_embedding=query_embedding,
+            )
+        except Exception as exc:
+            logger.error("Dense-prong retrieval failed for %s: %s", analyte_id, exc)
+            return []
+        documents = (result.get("documents") or [[]])[0]
+        metadatas = (result.get("metadatas") or [[]])[0]
+        distances = (result.get("distances") or [[]])[0]
+        chunks: list[RetrievedChunk] = []
+        for index, text in enumerate(documents):
+            metadata = metadatas[index] if index < len(metadatas) else {}
+
+            note_type = str(metadata.get("note_type") or "").strip()
+            chunk_band_id = str(metadata.get("band_id") or "").strip() or None
+
+            # 1. Enforce critical decoupling
+            if note_type in prohibited_notes:
                 continue
 
-            raw_sources = meta.get("sources", "[]") if meta else "[]"
-            try:
-                sources = json.loads(raw_sources) if isinstance(raw_sources, str) and raw_sources.startswith("[") else []
-            except Exception:
-                sources = []
-            if not sources:
-                source_val = str(meta.get("source_url") or meta.get("source_id") or "")
-                if source_val:
-                    sources = [source_val]
+            # 2. If filtering for specific band, reject other band notes
+            if clean_bid and note_type == "band_note" and chunk_band_id != clean_bid:
+                continue
 
-            dist = float(distances[index]) if index < len(distances) else 1.0
-            score = 1.0 - dist
+            score = 1.0 - float(distances[index]) if index < len(distances) else 0.0
+            chunks.append(
+                self._metadata_chunk(
+                    text,
+                    metadata,
+                    analyte_id=analyte_id,
+                    score=score,
+                )
+            )
+        return chunks
 
-            # Compute match priority score
-            priority = 999
-            if clean_bid and note_type == "band_note" and chunk_band_id == clean_bid:
-                priority = 0
-            elif norm_crit == "critical_high" and note_type == "critical_high_note":
-                priority = 0
-            elif norm_crit == "critical_low" and note_type == "critical_low_note":
-                priority = 0
-            elif norm_status == "high" and note_type == "high_note":
-                priority = 1
-            elif norm_status == "low" and note_type == "low_note":
-                priority = 1
-            elif note_type == "description":
-                priority = 2
-            elif note_type in {"preanalytic_note", "limitation_note"}:
-                priority = 3
+    def _fuse(
+        self,
+        candidates: list[RetrievedChunk],
+        *,
+        primary_note: str,
+        limit: int,
+        min_score: float,
+        min_chunk_length: int,
+    ) -> list[RetrievedChunk]:
+        if not candidates:
+            return []
 
-            candidates.append({
-                "chunk": {
-                    "indicator_name": str(meta.get("indicator", clean_aid)),
-                    "text": str(text),
-                    "source": str(sources[0]) if sources else "",
-                    "sources": [str(s) for s in sources if str(s)],
-                    "score": max(score, 0.0),
-                },
-                "priority": priority,
-                "score": score,
-                "note_type": note_type,
-            })
+        # Exact text-level dedup only, keeping the best score. Fuzzy
+        # content-dedup is intentionally omitted (see module docstring).
+        by_text: dict[str, RetrievedChunk] = {}
+        for chunk in candidates:
+            text = str(chunk.get("text", ""))
+            if not text:
+                continue
+            # Thin chunks carry too little content to ground the LLM safely;
+            # drop them regardless of which prong produced them.
+            if len(_normalized_text(text)) < min_chunk_length:
+                continue
+            existing = by_text.get(text)
+            if existing is None or float(chunk.get("score", 0.0)) > float(existing.get("score", 0.0)):
+                by_text[text] = chunk
 
-        # Sort candidates primarily by status/note priority, then by semantic score
-        candidates.sort(key=lambda item: (item["priority"], -item["score"]))
+        # Relevance gate: drop weak hits regardless of prong.
+        passed = [
+            chunk
+            for chunk in by_text.values()
+            if float(chunk.get("score", 0.0)) >= min_score
+        ]
+        if not passed:
+            return []
 
-        # Return top_k unique chunks (deduplicated by text)
-        retrieved: list[RetrievedChunk] = []
-        seen_texts: set[str] = set()
-        for cand in candidates:
-            chunk_obj = cand["chunk"]
-            txt = chunk_obj["text"].strip()
-            if txt and txt not in seen_texts:
-                seen_texts.add(txt)
-                retrieved.append(chunk_obj)
-                if len(retrieved) >= limit:
+        # Prefer status-matching note types first, then by score, then by
+        # content richness so a strong dense hit can win over a thin metadata
+        # chunk while the deterministic status signal keeps priority.
+        passed.sort(
+            key=lambda chunk: (
+                str(chunk.get("note_type", "")) != primary_note,
+                -float(chunk.get("score", 0.0)),
+                -len(_normalized_text(str(chunk.get("text", "")))),
+            )
+        )
+
+        selected: list[RetrievedChunk] = []
+        seen_sources: set[str] = set()
+        for chunk in passed:
+            source = str(chunk.get("source", ""))
+            if source and source in seen_sources:
+                continue
+            selected.append(chunk)
+            if source:
+                seen_sources.add(source)
+            if len(selected) >= limit:
+                break
+
+        if len(selected) < limit:
+            for chunk in passed:
+                if chunk in selected:
+                    continue
+                selected.append(chunk)
+                if len(selected) >= limit:
                     break
+        return selected
 
-        return retrieved
+    def retrieve(
+        self,
+        *,
+        query: str,
+        analyte_id: str,
+        status: str = "unknown",
+        band_id: str | None = None,
+        critical_status: str | None = None,
+        limit: int = 3,
+    ) -> list[RetrievedChunk]:
+        settings = get_settings()
+        status_query = self._status_query(query, status, critical_status)
+
+        norm_status = str(status or "normal").lower().strip()
+        norm_crit = str(critical_status or "none").lower().strip()
+        clean_bid = str(band_id).strip() if band_id else None
+
+        allowed_note_types: list[str] = []
+        primary_note = "description"
+        if norm_crit == "critical_high":
+            allowed_note_types = ["critical_high_note", "high_note", "description", "limitation_note", "preanalytic_note"]
+            primary_note = "critical_high_note"
+        elif norm_crit == "critical_low":
+            allowed_note_types = ["critical_low_note", "low_note", "description", "limitation_note", "preanalytic_note"]
+            primary_note = "critical_low_note"
+        elif clean_bid:
+            allowed_note_types = ["band_note", "description", "limitation_note", "preanalytic_note"]
+            primary_note = "band_note"
+        elif norm_status == "high":
+            allowed_note_types = ["high_note", "description", "limitation_note", "preanalytic_note"]
+            primary_note = "high_note"
+        elif norm_status == "low":
+            allowed_note_types = ["low_note", "description", "limitation_note", "preanalytic_note"]
+            primary_note = "low_note"
+        else:
+            allowed_note_types = ["description", "limitation_note", "preanalytic_note"]
+
+        prohibited_notes: set[str] = set()
+        if norm_crit not in {"critical_high", "critical_low"}:
+            prohibited_notes.add("critical_high_note")
+            prohibited_notes.add("critical_low_note")
+
+        # Embed the query once and share it between both prongs: the
+        # dense-prong uses it for the actual vector search, and the
+        # metadata-prong uses it to cross-check a label match against real
+        # content similarity instead of trusting the label alone. If this
+        # fails, both prongs degrade gracefully (dense re-embeds internally;
+        # metadata falls back to length-only scoring) rather than crashing.
+        try:
+            query_embedding = self.vector_store.embedding_provider.embed_query(status_query)
+        except Exception as exc:
+            logger.error("Query embedding failed for %s: %s", analyte_id, exc)
+            query_embedding = None
+
+        candidates: list[RetrievedChunk] = []
+
+        if settings.metadata_prong_enabled:
+            candidates.extend(
+                self._metadata_prong(
+                    analyte_id=analyte_id,
+                    min_chunk_length=settings.metadata_min_chunk_length,
+                    query_embedding=query_embedding,
+                    allowed_note_types=allowed_note_types,
+                    prohibited_notes=prohibited_notes,
+                    clean_bid=clean_bid,
+                )
+            )
+
+        dense_k = max(limit * 2, len(allowed_note_types))
+        candidates.extend(
+            self._dense_prong(
+                status_query=status_query,
+                query_embedding=query_embedding,
+                analyte_id=analyte_id,
+                k=dense_k,
+                allowed_note_types=allowed_note_types,
+                prohibited_notes=prohibited_notes,
+                clean_bid=clean_bid,
+            )
+        )
+
+        return self._fuse(
+            candidates,
+            primary_note=primary_note,
+            limit=limit,
+            min_score=settings.retrieval_min_score,
+            min_chunk_length=settings.metadata_min_chunk_length,
+        )
 
     def readiness(self) -> dict[str, Any]:
         return self.vector_store.readiness()

@@ -5,7 +5,13 @@ from copy import deepcopy
 from langchain_core.messages import HumanMessage
 
 from src.agents.state import AgentState
+from src.config import get_settings
+from src.services.context_budget import build_bounded_context
 from src.services.llm import get_llm
+from src.services.medical_safety_assets import (
+    GENERATION_SAFETY_CONTRACT,
+    ensure_reference_qualification,
+)
 from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.request_timing import add_timing_event
 from src.services.template_loader import load_templates
@@ -53,10 +59,10 @@ Yêu cầu:
 1. Giữ lại thông tin giải thích giáo dục hữu ích chỉ khi thông tin đó xuất hiện trong context. Nếu context trống hoặc không hỗ trợ một thông tin y khoa thì xóa thông tin đó.
 2. Loại bỏ chẩn đoán, khẳng định bệnh lý, kê đơn hoặc khuyên dùng thuốc.
 3. Không suy đoán nguyên nhân.
-4. Nếu văn bản nói NORMAL/LOW/HIGH, chỉ mô tả kết quả tương đối với khoảng tham chiếu được hệ thống sử dụng. Nếu nói CRITICAL_LOW/CRITICAL_HIGH, chỉ mô tả việc vượt ngưỡng cảnh báo nguy kịch được cấu hình; không chuyển thành chẩn đoán.
-5. Loại bỏ mọi kết luận từ một kết quả xét nghiệm rằng bệnh nhân không có bệnh/viêm/nhiễm trùng/vấn đề y khoa, không gây triệu chứng/ảnh hưởng, miễn dịch ổn định, chức năng cơ quan bình thường hoặc đang ở mức tối ưu. Nếu trạng thái là NORMAL mà context không trực tiếp hỗ trợ nội dung giải thích cho mức bình thường, chỉ giữ lại câu xác nhận giá trị nằm trong khoảng tham chiếu được hệ thống sử dụng.
-6. Không thêm định nghĩa chỉ số, triệu chứng, nguyên nhân, hậu quả, điều trị hoặc kiến thức y khoa mới. Nếu bỏ phần vi phạm làm nội dung ngắn hơn thì giữ nội dung ngắn hơn.
-7. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
+4. Không thêm định nghĩa chỉ số, triệu chứng, nguyên nhân, hậu quả, điều trị hoặc kiến thức y khoa mới. Nếu bỏ phần vi phạm làm nội dung ngắn hơn thì giữ nội dung ngắn hơn.
+5. Chỉ trả về đoạn văn đã sửa, không giải thích thêm.
+
+{GENERATION_SAFETY_CONTRACT}
 """
     started_at = time.perf_counter()
     try:
@@ -157,12 +163,13 @@ async def guardrail_node(state: AgentState) -> dict:
 
     def grounding_context_for(indicator_name: str) -> str:
         normalized_name = indicator_name.strip().casefold()
-        return "\n\n".join(
-            str(chunk.get("text", "")).strip()
+        chunks = [
+            chunk
             for chunk in retrieved_contexts
             if str(chunk.get("indicator_name", "")).strip().casefold() == normalized_name
             and str(chunk.get("text", "")).strip()
-        )
+        ]
+        return build_bounded_context(chunks, max_chars=get_settings().max_guardrail_context_chars)
 
     llm = None
     llm_loaded = False
@@ -181,10 +188,9 @@ async def guardrail_node(state: AgentState) -> dict:
 
     if violations_for(summary, "summary"):
         active_llm = retry_llm()
-        summary_context = "\n\n".join(
-            str(chunk.get("text", "")).strip()
-            for chunk in retrieved_contexts
-            if str(chunk.get("text", "")).strip()
+        summary_context = build_bounded_context(
+            retrieved_contexts,
+            max_chars=get_settings().max_guardrail_context_chars,
         )
         rewritten = (
             await rewrite_with_llm(active_llm, summary, summary_context)
@@ -213,13 +219,15 @@ async def guardrail_node(state: AgentState) -> dict:
                 if active_llm
                 else text
             )
-            explanation["explanation"] = (
-                templates.fallback_explanation
-                if rewrite_requires_fallback(
-                    rewritten, f"explanation {indicator_name} sau retry"
+            if rewrite_requires_fallback(rewritten, f"explanation {indicator_name} sau retry"):
+                explanation["explanation"] = templates.fallback_explanation
+            else:
+                explanation["explanation"] = ensure_reference_qualification(
+                    rewritten,
+                    str(explanation.get("status", "unknown")),
+                    critical_status=explanation.get("critical_status"),
+                    is_critical=bool(explanation.get("is_critical", False)),
                 )
-                else rewritten
-            )
 
     for indicator in indicators:
         indicator_name = str(indicator.get("name", ""))
@@ -237,13 +245,15 @@ async def guardrail_node(state: AgentState) -> dict:
                 if active_llm
                 else text
             )
-            indicator["explanation"] = (
-                templates.fallback_explanation
-                if rewrite_requires_fallback(
-                    rewritten, f"indicator {indicator_name} sau retry"
+            if rewrite_requires_fallback(rewritten, f"indicator {indicator_name} sau retry"):
+                indicator["explanation"] = templates.fallback_explanation
+            else:
+                indicator["explanation"] = ensure_reference_qualification(
+                    rewritten,
+                    str(indicator.get("status", "unknown")),
+                    critical_status=indicator.get("critical_status"),
+                    is_critical=bool(indicator.get("is_critical", False)),
                 )
-                else rewritten
-            )
 
     if any(violations_for(question, "câu hỏi cho bác sĩ") for question in questions_for_doctor):
         active_llm = retry_llm()

@@ -4,11 +4,11 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from src.agents.nodes import guardrail_node as guardrail_module
-from src.agents.nodes.analyzer_node import (
+from src.agents.nodes.guardrail_node import guardrail_node, rewrite_with_llm
+from src.services.medical_safety_assets import (
     GENERATION_SAFETY_CONTRACT,
     ensure_reference_qualification,
 )
-from src.agents.nodes.guardrail_node import guardrail_node, rewrite_with_llm
 from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.template_loader import load_templates
 

@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     rag_enabled: bool = False
     rag_collection_name: str = "medical_kb_v4"
     rag_corpus_version: str = "medical-kb-v4"
-    embedding_provider: Literal["disabled", "openai"] = "disabled"
+    embedding_provider: Literal["disabled", "openai", "gemini"] = "disabled"
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimension: int = Field(default=1536, ge=1)
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)

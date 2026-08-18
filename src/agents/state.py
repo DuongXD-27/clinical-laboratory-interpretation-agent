@@ -45,6 +45,7 @@ class RetrievedChunk(TypedDict, total=False):
     source: str
     sources: list[str]
     score: float
+    note_type: str  # description | high_note | low_note | critical_high_note | critical_low_note
 
 
 class IndicatorExplanation(TypedDict, total=False):
