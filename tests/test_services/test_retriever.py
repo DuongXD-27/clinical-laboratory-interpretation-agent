@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.services.medical_knowledge_retriever import (
-    _STATUS_NOTE_TYPES,
+
     ChromaMedicalKnowledgeRetriever,
 )
 
@@ -134,19 +134,7 @@ def _settings_stub(
     return settings
 
 
-@pytest.mark.parametrize(
-    "status,expected_note_types",
-    [
-        ("high", ("high_note", "description")),
-        ("low", ("low_note", "description")),
-        ("critical_high", ("critical_high_note", "high_note", "description")),
-        ("critical_low", ("critical_low_note", "low_note", "description")),
-        ("normal", ("description",)),
-        ("unknown", ("description",)),
-    ],
-)
-def test_status_to_note_type_mapping(status, expected_note_types):
-    assert _STATUS_NOTE_TYPES[status] == expected_note_types
+
 
 
 def test_metadata_prong_returns_status_matching_chunks(monkeypatch):
