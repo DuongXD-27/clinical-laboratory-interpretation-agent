@@ -13,6 +13,17 @@
     "Potassium"
   ],
   "pending_analytes": [],
+  "trend_max_gap_days": {
+    "WBC": null,
+    "RBC": null,
+    "HGB": null,
+    "Fasting plasma glucose": null,
+    "HbA1c": null,
+    "LDL-C": null,
+    "HDL-C": null,
+    "Creatinine": null,
+    "Potassium": null
+  },
   "analyte_aliases": {
     "WBC": "WBC",
     "Bạch cầu": "WBC",

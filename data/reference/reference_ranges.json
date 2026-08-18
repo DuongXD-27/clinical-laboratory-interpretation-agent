@@ -17,7 +17,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0056",
@@ -37,7 +38,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0053",
@@ -57,7 +59,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0039",
@@ -77,7 +80,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0043",
@@ -97,7 +101,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0042",
@@ -117,7 +122,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0032",
@@ -137,7 +143,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0031",
@@ -157,7 +164,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0034",
@@ -177,7 +185,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0033",
@@ -197,7 +206,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0060",
@@ -217,7 +227,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0061",
@@ -237,7 +248,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0040",
@@ -257,7 +269,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0059",
@@ -277,7 +290,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0058",
@@ -297,7 +311,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0008",
@@ -317,7 +332,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0007",
@@ -337,7 +353,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "EXPV2-HDLC-001",
@@ -372,7 +389,8 @@
     "source_range_lower_original": 60.0,
     "source_range_upper_original": null,
     "conversion_factor": "0.0259",
-    "conversion_rounding": "ROUND_HALF_UP_2DP"
+    "conversion_rounding": "ROUND_HALF_UP_2DP",
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HDLC-004",
@@ -407,7 +425,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": 50.0,
     "conversion_factor": "0.0259",
-    "conversion_rounding": "ROUND_HALF_UP_2DP"
+    "conversion_rounding": "ROUND_HALF_UP_2DP",
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HDLC-002",
@@ -442,7 +461,8 @@
     "source_range_lower_original": 50.0,
     "source_range_upper_original": 59.0,
     "conversion_factor": "0.0259",
-    "conversion_rounding": "ROUND_HALF_UP_2DP"
+    "conversion_rounding": "ROUND_HALF_UP_2DP",
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HDLC-005",
@@ -477,7 +497,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": 40.0,
     "conversion_factor": "0.0259",
-    "conversion_rounding": "ROUND_HALF_UP_2DP"
+    "conversion_rounding": "ROUND_HALF_UP_2DP",
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HDLC-003",
@@ -512,7 +533,8 @@
     "source_range_lower_original": 40.0,
     "source_range_upper_original": 59.0,
     "conversion_factor": "0.0259",
-    "conversion_rounding": "ROUND_HALF_UP_2DP"
+    "conversion_rounding": "ROUND_HALF_UP_2DP",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0006",
@@ -532,7 +554,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0005",
@@ -552,7 +575,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "EXPV2-HBA1C-002",
@@ -586,7 +610,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HBA1C-003",
@@ -620,7 +645,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-HBA1C-001",
@@ -654,7 +680,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-LDLC-002",
@@ -691,7 +718,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-LDLC-003",
@@ -728,7 +756,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-LDLC-004",
@@ -765,7 +794,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-LDLC-005",
@@ -802,7 +832,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "EXPV2-LDLC-001",
@@ -839,7 +870,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0024",
@@ -859,7 +891,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0026",
@@ -879,7 +912,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0025",
@@ -899,7 +933,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0012",
@@ -919,7 +954,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0011",
@@ -939,7 +975,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0014",
@@ -959,7 +996,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0013",
@@ -979,7 +1017,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0010",
@@ -999,7 +1038,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0009",
@@ -1019,7 +1059,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0028",
@@ -1039,7 +1080,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0027",
@@ -1059,7 +1101,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0030",
@@ -1079,7 +1122,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0029",
@@ -1099,7 +1143,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0022",
@@ -1119,7 +1164,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0021",
@@ -1139,7 +1185,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0023",
@@ -1159,7 +1206,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0018",
@@ -1179,7 +1227,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0017",
@@ -1199,7 +1248,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-002",
@@ -1236,7 +1286,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-003",
@@ -1273,7 +1324,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-004",
@@ -1310,7 +1362,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-005",
@@ -1347,7 +1400,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-006",
@@ -1384,7 +1438,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-007",
@@ -1421,7 +1476,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "EXPV2-POTASSIUM-001",
@@ -1458,7 +1514,8 @@
     "source_range_lower_original": null,
     "source_range_upper_original": null,
     "conversion_factor": null,
-    "conversion_rounding": null
+    "conversion_rounding": null,
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0004",
@@ -1478,7 +1535,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0003",
@@ -1498,7 +1556,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0016",
@@ -1518,7 +1577,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0015",
@@ -1538,7 +1598,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   },
   {
     "rule_id": "RRV2-0037",
@@ -1558,7 +1619,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/sodium-na/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0054",
@@ -1578,7 +1640,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/bilirubin-total-sbr/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0065",
@@ -1598,7 +1661,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0066",
@@ -1618,7 +1682,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0067",
@@ -1638,7 +1703,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0052",
@@ -1658,7 +1724,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0068",
@@ -1678,7 +1745,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0069",
@@ -1698,7 +1766,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0070",
@@ -1718,7 +1787,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0071",
@@ -1738,7 +1808,8 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "lipids"
   },
   {
     "rule_id": "RRV2-0041",
@@ -1758,7 +1829,8 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/urea/",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "chemistry"
   },
   {
     "rule_id": "RRV2-0002",
@@ -1778,6 +1850,7 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH"
+    "confidence": "HIGH",
+    "section": "hematology"
   }
 ]
