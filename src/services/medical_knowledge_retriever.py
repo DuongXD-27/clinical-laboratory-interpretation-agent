@@ -313,12 +313,15 @@ class ChromaMedicalKnowledgeRetriever:
         if not passed:
             return []
 
-        # Prefer status-matching note types first, then by score, then by
-        # content richness so a strong dense hit can win over a thin metadata
-        # chunk while the deterministic status signal keeps priority.
+        # Prefer status-matching note types first. For critical notes,
+        # the base note (e.g. high_note) is preferred over generic descriptions.
+        # Then sort by score, then by content richness.
+        base_note = primary_note.replace("critical_", "") if primary_note.startswith("critical_") else None
         passed.sort(
             key=lambda chunk: (
-                str(chunk.get("note_type", "")) != primary_note,
+                0 if str(chunk.get("note_type", "")) == primary_note else (
+                    1 if base_note and str(chunk.get("note_type", "")) == base_note else 2
+                ),
                 -float(chunk.get("score", 0.0)),
                 -len(_normalized_text(str(chunk.get("text", "")))),
             )

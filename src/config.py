@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     vision_timeout_seconds: float = Field(default=30.0, ge=1.0, le=60.0)
     ocr_low_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     ocr_review_token_expire_minutes: int = Field(default=15, ge=1, le=60)
-    retrieval_min_score: float = Field(default=0.8, ge=0.0, le=1.0)
+    retrieval_min_score: float = Field(default=0.4, ge=0.0, le=1.0)
     retrieval_top_k: int = Field(default=3, ge=1, le=10)
     metadata_prong_enabled: bool = True
     metadata_min_chunk_length: int = Field(default=30, ge=1)
