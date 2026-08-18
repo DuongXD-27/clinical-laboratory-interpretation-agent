@@ -27,6 +27,16 @@ STATUS_QUALIFIERS = {
     "high": "Giá trị này cao so với khoảng tham chiếu được hệ thống sử dụng.",
     "critical_low": "Giá trị này vượt ngưỡng cảnh báo nguy kịch được hệ thống cấu hình.",
     "critical_high": "Giá trị này vượt ngưỡng cảnh báo nguy kịch được hệ thống cấu hình.",
+    "desirable": "Giá trị này thuộc mức 'mong muốn' theo hệ thống phân loại đang được áp dụng.",
+    "borderline_high": "Giá trị này thuộc mức 'ranh giới cao' theo hệ thống phân loại đang được áp dụng.",
+    "very_high": "Giá trị này thuộc mức 'rất cao' theo hệ thống phân loại đang được áp dụng.",
+    "optimal": "Giá trị này thuộc mức 'tối ưu' theo hệ thống phân loại đang được áp dụng.",
+    "near_optimal": "Giá trị này thuộc mức 'gần tối ưu' theo hệ thống phân loại đang được áp dụng.",
+    "intermediate": "Giá trị này thuộc mức 'trung gian' theo hệ thống phân loại đang được áp dụng.",
+    "impaired_fasting_glucose": "Giá trị này nằm trong khoảng phân loại rối loạn đường huyết lúc đói theo ngưỡng đang được áp dụng.",
+    "prediabetes": "Giá trị này nằm trong khoảng xét nghiệm được phân loại là tiền đái tháo đường theo ngưỡng đang được áp dụng.",
+    "provisional_diabetes": "Giá trị này đạt ngưỡng xét nghiệm được sử dụng trong tiêu chuẩn chẩn đoán đái tháo đường; một kết quả đơn lẻ không tự xác lập chẩn đoán trong đa số trường hợp.",
+    "unknown": "Hệ thống chưa đủ cơ sở để phân loại giá trị này.",
 }
 
 

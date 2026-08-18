@@ -75,7 +75,7 @@ async def test_rag_is_optional_and_only_metadata_sources_are_returned(monkeypatc
             return FakeStructuredLLM()
 
     class FakeRetriever:
-        def retrieve(self, *, query, analyte_id, status, limit):
+        def retrieve(self, *, query, analyte_id, status, limit, band_id=None, critical_status=None):
             return [
                 {
                     "indicator_name": "WBC",

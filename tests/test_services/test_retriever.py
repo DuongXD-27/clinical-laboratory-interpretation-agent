@@ -311,6 +311,7 @@ def test_relevance_gate_drops_weak_dense_chunks(monkeypatch):
     long_text = "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch"
     docs = [_doc(long_text, note_type="description")]
     retriever, store = _retriever(docs)
+    store.get_by_metadata = lambda filter=None, include_embeddings=False: {"documents": [[]], "metadatas": [[]], "ids": [[]]}
     store.search = lambda query, *, k, filter=None, query_embedding=None: {
         "documents": [[long_text]],
         "metadatas": [[docs[0]["metadata"]]],
@@ -334,6 +335,7 @@ def test_relevance_gate_passes_sufficient_score(monkeypatch):
     long_text = "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch"
     docs = [_doc(long_text, note_type="description")]
     retriever, store = _retriever(docs)
+    store.get_by_metadata = lambda filter=None, include_embeddings=False: {"documents": [[]], "metadatas": [[]], "ids": [[]]}
     store.search = lambda query, *, k, filter=None, query_embedding=None: {
         "documents": [[long_text]],
         "metadatas": [[docs[0]["metadata"]]],

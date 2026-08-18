@@ -13,7 +13,7 @@ from src.services.embedding_provider import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
-COLLECTION_SCHEMA_VERSION = "2"
+COLLECTION_SCHEMA_VERSION = "1"
 
 
 class VectorStoreError(Exception):

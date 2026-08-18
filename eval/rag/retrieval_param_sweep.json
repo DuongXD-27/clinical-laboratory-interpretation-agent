@@ -1,293 +1,325 @@
 {
-  "pairs_tested": 35,
+  "pairs_tested": 85,
   "results": [
     {
-      "min_score": 0.0,
+      "min_score": 0.4,
       "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
+      "fallback_rate": 0.624,
+      "primary_hit_rate": 0.938,
       "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
-    },
-    {
-      "min_score": 0.0,
-      "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.0,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
-    },
-    {
-      "min_score": 0.0,
-      "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
-    },
-    {
-      "min_score": 0.1,
-      "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
-    },
-    {
-      "min_score": 0.1,
-      "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.1,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
-    },
-    {
-      "min_score": 0.1,
-      "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
-    },
-    {
-      "min_score": 0.2,
-      "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
-    },
-    {
-      "min_score": 0.2,
-      "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.2,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
-    },
-    {
-      "min_score": 0.2,
-      "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
-    },
-    {
-      "min_score": 0.3,
-      "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
-    },
-    {
-      "min_score": 0.3,
-      "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.3,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
-    },
-    {
-      "min_score": 0.3,
-      "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
+      "avg_context_chars": 161.8
     },
     {
       "min_score": 0.4,
-      "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
+      "top_k": 2,
+      "fallback_rate": 0.624,
+      "primary_hit_rate": 0.938,
+      "avg_chunks": 1.31,
+      "avg_context_chars": 208.2
     },
     {
       "min_score": 0.4,
       "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.4,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
+      "fallback_rate": 0.624,
+      "primary_hit_rate": 0.938,
+      "avg_chunks": 1.53,
+      "avg_context_chars": 240.1
     },
     {
       "min_score": 0.4,
       "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
+      "fallback_rate": 0.624,
+      "primary_hit_rate": 0.938,
+      "avg_chunks": 1.69,
+      "avg_context_chars": 257.3
+    },
+    {
+      "min_score": 0.45,
+      "top_k": 1,
+      "fallback_rate": 0.871,
+      "primary_hit_rate": 0.818,
+      "avg_chunks": 1.0,
+      "avg_context_chars": 165.5
+    },
+    {
+      "min_score": 0.45,
+      "top_k": 2,
+      "fallback_rate": 0.871,
+      "primary_hit_rate": 0.818,
+      "avg_chunks": 1.45,
+      "avg_context_chars": 217.5
+    },
+    {
+      "min_score": 0.45,
+      "top_k": 3,
+      "fallback_rate": 0.871,
+      "primary_hit_rate": 0.818,
+      "avg_chunks": 1.55,
+      "avg_context_chars": 235.4
+    },
+    {
+      "min_score": 0.45,
+      "top_k": 5,
+      "fallback_rate": 0.871,
+      "primary_hit_rate": 0.818,
+      "avg_chunks": 1.55,
+      "avg_context_chars": 235.4
     },
     {
       "min_score": 0.5,
       "top_k": 1,
-      "fallback_rate": 0.0,
+      "fallback_rate": 0.953,
       "primary_hit_rate": 1.0,
       "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
+      "avg_context_chars": 141.2
+    },
+    {
+      "min_score": 0.5,
+      "top_k": 2,
+      "fallback_rate": 0.953,
+      "primary_hit_rate": 1.0,
+      "avg_chunks": 1.25,
+      "avg_context_chars": 176.8
     },
     {
       "min_score": 0.5,
       "top_k": 3,
-      "fallback_rate": 0.0,
+      "fallback_rate": 0.953,
       "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.5,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
+      "avg_chunks": 1.25,
+      "avg_context_chars": 176.8
     },
     {
       "min_score": 0.5,
       "top_k": 5,
-      "fallback_rate": 0.0,
+      "fallback_rate": 0.953,
       "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
+      "avg_chunks": 1.25,
+      "avg_context_chars": 176.8
+    },
+    {
+      "min_score": 0.55,
+      "top_k": 1,
+      "fallback_rate": 0.988,
+      "primary_hit_rate": 1.0,
+      "avg_chunks": 1.0,
+      "avg_context_chars": 68.0
+    },
+    {
+      "min_score": 0.55,
+      "top_k": 2,
+      "fallback_rate": 0.988,
+      "primary_hit_rate": 1.0,
+      "avg_chunks": 1.0,
+      "avg_context_chars": 68.0
+    },
+    {
+      "min_score": 0.55,
+      "top_k": 3,
+      "fallback_rate": 0.988,
+      "primary_hit_rate": 1.0,
+      "avg_chunks": 1.0,
+      "avg_context_chars": 68.0
+    },
+    {
+      "min_score": 0.55,
+      "top_k": 5,
+      "fallback_rate": 0.988,
+      "primary_hit_rate": 1.0,
+      "avg_chunks": 1.0,
+      "avg_context_chars": 68.0
+    },
+    {
+      "min_score": 0.6,
+      "top_k": 1,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.6,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.6,
+      "top_k": 3,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.6,
+      "top_k": 5,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.65,
+      "top_k": 1,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.65,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.65,
+      "top_k": 3,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.65,
+      "top_k": 5,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.7,
       "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.7,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.7,
       "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.89,
-      "avg_context_chars": 865.1
-    },
-    {
-      "min_score": 0.7,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.66,
-      "avg_context_chars": 1102.5
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.7,
       "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 4.17,
-      "avg_context_chars": 1258.1
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.75,
+      "top_k": 1,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.75,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.75,
+      "top_k": 3,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.75,
+      "top_k": 5,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.8,
       "top_k": 1,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 288.5
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.8,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.8,
       "top_k": 3,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 2.71,
-      "avg_context_chars": 811.2
-    },
-    {
-      "min_score": 0.8,
-      "top_k": 4,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.17,
-      "avg_context_chars": 960.7
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.8,
       "top_k": 5,
-      "fallback_rate": 0.0,
-      "primary_hit_rate": 1.0,
-      "avg_chunks": 3.43,
-      "avg_context_chars": 1042.5
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.85,
       "top_k": 1,
-      "fallback_rate": 0.2,
-      "primary_hit_rate": 0.821,
-      "avg_chunks": 1.0,
-      "avg_context_chars": 292.9
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
+    },
+    {
+      "min_score": 0.85,
+      "top_k": 2,
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.85,
       "top_k": 3,
-      "fallback_rate": 0.2,
-      "primary_hit_rate": 0.821,
-      "avg_chunks": 2.43,
-      "avg_context_chars": 721.5
-    },
-    {
-      "min_score": 0.85,
-      "top_k": 4,
-      "fallback_rate": 0.2,
-      "primary_hit_rate": 0.821,
-      "avg_chunks": 2.71,
-      "avg_context_chars": 825.0
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     },
     {
       "min_score": 0.85,
       "top_k": 5,
-      "fallback_rate": 0.2,
-      "primary_hit_rate": 0.821,
-      "avg_chunks": 2.79,
-      "avg_context_chars": 847.1
+      "fallback_rate": 1.0,
+      "primary_hit_rate": null,
+      "avg_chunks": 0,
+      "avg_context_chars": 0
     }
   ]
 }
