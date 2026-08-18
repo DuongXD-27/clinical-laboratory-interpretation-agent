@@ -35,6 +35,10 @@ class IndicatorAssessment(TypedDict, total=False):
     category: str
     is_abnormal: bool
     is_critical: bool
+    rule_type: str | None
+    band_id: str | None
+    upper_operator: str | None
+    evaluation_reason: str | None
 
 
 class RetrievedChunk(TypedDict, total=False):
@@ -59,6 +63,10 @@ class IndicatorExplanation(TypedDict, total=False):
     is_critical: bool
     explanation: str
     sources: list[str]
+    rule_type: str | None
+    band_id: str | None
+    upper_operator: str | None
+    evaluation_reason: str | None
 
 
 class DoctorQuestionMeta(TypedDict, total=False):

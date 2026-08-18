@@ -1181,6 +1181,7 @@ textarea::placeholder {
 .result-card-normal::before { background: #28a36a; }
 .result-card-abnormal::before { background: #e89a20; }
 .result-card-critical::before { background: #d32f2f; }
+.result-card-unknown::before { background: #64748b; }
 
 .status-badge {
   display: inline-flex;
@@ -1197,6 +1198,7 @@ textarea::placeholder {
 .status-normal { background: #eaf8f1; color: #13764a; }
 .status-abnormal { background: #fff4df; color: #9a5d05; }
 .status-critical { background: #ffebeb; color: #aa2020; }
+.status-unknown { background: #f1f5f9; color: #475569; }
 
 .badge-sev,
 .badge-ver {

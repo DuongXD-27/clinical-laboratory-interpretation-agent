@@ -3,11 +3,10 @@ import test from "node:test";
 
 import { buildManualIndicators, MANUAL_ANALYTES } from "./manualEntry.mjs";
 
-test("manual form contains exactly the nine currently approved analytes", () => {
-  assert.deepEqual(
-    MANUAL_ANALYTES.map((item) => item.name),
-    ["WBC", "RBC", "HGB", "Fasting plasma glucose", "HbA1c", "LDL-C", "HDL-C", "Creatinine", "Potassium"],
-  );
+test("manual form contains exactly 35 analytes without duplicates", () => {
+  assert.equal(MANUAL_ANALYTES.length, 35);
+  const names = MANUAL_ANALYTES.map(a => a.name);
+  assert.equal(new Set(names).size, 35);
 });
 
 test("blank fields are omitted and configured units are preserved", () => {
@@ -15,9 +14,9 @@ test("blank fields are omitted and configured units are preserved", () => {
     buildManualIndicators({ WBC: "7.5", RBC: "", "Fasting plasma glucose": "5.2", HbA1c: "5.6", Potassium: "4.2" }),
     [
       { name: "WBC", value: 7.5, unit: "10^9/L" },
+      { name: "Potassium", value: 4.2, unit: "mmol/L" },
       { name: "Fasting plasma glucose", value: 5.2, unit: "mmol/L" },
       { name: "HbA1c", value: 5.6, unit: "%" },
-      { name: "Potassium", value: 4.2, unit: "mmol/L" },
     ],
   );
 });

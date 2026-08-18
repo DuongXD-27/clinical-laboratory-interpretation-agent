@@ -22,6 +22,10 @@ export type IndicatorResult = {
   reviewed_by_username?: string | null;
   reviewed_at?: string | null;
   sources?: string[];
+  rule_type?: string | null;
+  band_id?: string | null;
+  upper_operator?: string | null;
+  evaluation_reason?: string | null;
 };
 
 export type AnalysisResult = {

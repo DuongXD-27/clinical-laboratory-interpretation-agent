@@ -41,6 +41,15 @@ export function indicatorStatusText(status, critical_status) {
     CRITICAL_HIGH: "Nguy kịch – cao",
     CRITICAL_LOW: "Nguy kịch – thấp",
     ABNORMAL: "Bất thường",
+    UNKNOWN: "Chưa thể đánh giá",
+    HOLD: "Chưa thể đánh giá",
+    VERY_HIGH: "Rất cao",
+    VERY_LOW: "Rất thấp",
+    BORDERLINE_HIGH: "Cao mức biên",
+    PREDIABETES: "Tiền đái tháo đường",
+    PROVISIONAL_DIABETES: "Nghi ngờ đái tháo đường",
+    OPTIMAL: "Tối ưu",
+    DESIRABLE: "Mong muốn",
   };
   return labels[String(status).toUpperCase()] ?? String(status);
 }
@@ -54,9 +63,10 @@ export function reportStatusText(status) {
 
 export function reportTone(status) {
   const normalized = String(status).toUpperCase();
+  if (normalized === "UNKNOWN" || normalized === "HOLD") return "unknown";
   if (normalized === "CRITICAL" || normalized === "CRITICAL_HIGH" || normalized === "CRITICAL_LOW") return "critical";
-  if (normalized === "ABNORMAL" || normalized === "HIGH" || normalized === "LOW") return "abnormal";
-  return "normal";
+  if (normalized === "NORMAL" || normalized === "OPTIMAL" || normalized === "DESIRABLE") return "normal";
+  return "abnormal";
 }
 
 export function sourceHostname(source) {
@@ -65,4 +75,37 @@ export function sourceHostname(source) {
   } catch {
     return source;
   }
+}
+
+export function renderReferenceRange(indicator) {
+  if (indicator.status === "unknown" || indicator.status === "HOLD") {
+    return null;
+  }
+  
+  if (indicator.rule_type) {
+    if (indicator.rule_type === "CDL" || indicator.rule_type === "BAND") {
+      return null;
+    }
+    if (indicator.rule_type === "ONE_SIDED_LIMIT") {
+      if (indicator.upper_operator && indicator.reference_high !== null && indicator.reference_high !== undefined) {
+        return `Ngưỡng: ${indicator.upper_operator} ${indicator.reference_high} ${indicator.unit}`;
+      }
+      if (indicator.reference_low !== null && indicator.reference_low !== undefined) {
+        const op = indicator.upper_operator === "<" || indicator.upper_operator === "<=" ? ">" : (indicator.upper_operator || ">");
+        return `Ngưỡng: ${op} ${indicator.reference_low} ${indicator.unit}`;
+      }
+      return null;
+    }
+    if (indicator.reference_low !== null || indicator.reference_high !== null) {
+      return `Tham chiếu: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
+    }
+    return null;
+  }
+
+  // Legacy case: rule_type is null
+  if (indicator.reference_low !== null && indicator.reference_high !== null) {
+    return `Tham chiếu: ${indicator.reference_low} – ${indicator.reference_high}`;
+  }
+
+  return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";
 }

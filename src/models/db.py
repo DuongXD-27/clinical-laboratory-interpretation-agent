@@ -309,6 +309,12 @@ class ReportIndicator(Base):
     # Biểu diễn riêng biệt cho critical state ("critical_low" / "critical_high" / None).
     critical_status = Column(String, nullable=True, default=None)
 
+    # Context luật xét nghiệm gốc
+    rule_type = Column(String, nullable=True)
+    band_id = Column(String, nullable=True)
+    upper_operator = Column(String, nullable=True)
+    evaluation_reason = Column(String, nullable=True)
+
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
 
