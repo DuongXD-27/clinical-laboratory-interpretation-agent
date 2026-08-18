@@ -112,9 +112,7 @@ class AnalyzeRequest(BaseModel):
 
     patient_gender: Literal["male", "female", "other"] = Field(
         ...,
-        description=(
-            "Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"
-        ),
+        description=("Giới tính bệnh nhân — dùng để chọn khoảng tham chiếu phù hợp"),
     )
 
     test_date: date = Field(
@@ -153,6 +151,8 @@ class IndicatorResultSchema(BaseModel):
     unit: str
     analyte_raw: str | None = None
     analyte_canonical: str | None = None
+    section: str | None = None
+    section_label: str | None = None
     raw_value: float | None = None
     raw_unit: str | None = None
     canonical_value: float | None = None
@@ -240,10 +240,7 @@ class AnalyzeResponse(BaseModel):
     #   → None
     saved_report_id: int | None = Field(
         default=None,
-        description=(
-            "ID phiếu đã lưu trong lịch sử bệnh nhân. "
-            "None nếu phiên hiện tại không được lưu lịch sử."
-        ),
+        description=("ID phiếu đã lưu trong lịch sử bệnh nhân. None nếu phiên hiện tại không được lưu lịch sử."),
     )
 
 
@@ -530,6 +527,8 @@ class LabReportDetailSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
 class PatientProfileSchema(BaseModel):
     patient_id: int
     username: str
@@ -593,6 +592,8 @@ class TrendAnalyteSummary(BaseModel):
     canonical_unit: str
     result_count: int
     trend_available: bool
+    section: str | None = None
+    section_label: str | None = None
 
 
 class TrendAnalyteListResponse(BaseModel):
@@ -615,6 +616,10 @@ class TrendResponse(BaseModel):
     trend_available: bool
     points: list[TrendPointResponse] = Field(default_factory=list)
     reason: str | None = None
+    section: str | None = None
+    section_label: str | None = None
+    critical_status: str | None = None
+    approaching_critical: bool = False
 
 
 class TrendExplanationResponse(BaseModel):

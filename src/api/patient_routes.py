@@ -14,6 +14,7 @@ from src.models.schemas import (
     TrendFilter,
     TrendResponse,
 )
+from src.services import history_repository as repo
 from src.services.lab_history_service import (
     ReportNotFoundError,
     delete_report,
@@ -27,11 +28,11 @@ from src.services.patient_service import (
     get_patient_by_username,
     update_patient_profile,
 )
-from src.services.trend_service import get_patient_trend, get_patient_trend_analytes
 from src.services.trend_explanation_service import (
     TrendExplanationUnavailable,
     explain_patient_trend,
 )
+from src.services.trend_service import get_patient_trend, get_patient_trend_analytes
 
 router = APIRouter(prefix="/patient/me", tags=["patient"])
 
@@ -74,9 +75,7 @@ async def patch_profile(
 ) -> PatientProfileSchema:
     _require_patient(current_user)
     try:
-        return _profile_response(
-            update_patient_profile(db, username=current_user.username, payload=request)
-        )
+        return _profile_response(update_patient_profile(db, username=current_user.username, payload=request))
     except PatientNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PatientServiceError as exc:
@@ -114,9 +113,7 @@ async def trend_analytes(
 ) -> TrendAnalyteListResponse:
     _require_patient(current_user)
     try:
-        return TrendAnalyteListResponse(
-            analytes=get_patient_trend_analytes(db, username=current_user.username)
-        )
+        return TrendAnalyteListResponse(analytes=get_patient_trend_analytes(db, username=current_user.username))
     except PatientNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -172,7 +169,10 @@ async def lab_report_detail(
         report = get_report_detail(db, username=current_user.username, report_id=report_id)
     except (PatientNotFoundError, ReportNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    detail = LabReportDetailSchema.model_validate(report)
+    # Dùng chung repo.to_detail() với /api/v1/history/{id} (ADR-010 CRIT-TREND-06)
+    # thay vì model_validate thẳng từ ORM — chỗ đó là nơi duy nhất gán section cho
+    # từng indicator; validate thẳng sẽ luôn để section=None.
+    detail = repo.to_detail(report)
     detail.result_count = len(report.indicators)
     return detail
 
