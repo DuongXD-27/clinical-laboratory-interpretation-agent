@@ -46,8 +46,14 @@ def install_vertexai_legacy_import_shim() -> bool:
     if loaded_module is not None:
         return getattr(loaded_module, "ChatVertexAI", None) is UnavailableChatVertexAI
 
-    if importlib.util.find_spec(LEGACY_CHAT_VERTEXAI_MODULE) is not None:
-        return False
+    try:
+        if importlib.util.find_spec(LEGACY_CHAT_VERTEXAI_MODULE) is not None:
+            return False
+    except ModuleNotFoundError as exc:
+        if exc.name in (LEGACY_CHAT_VERTEXAI_MODULE, "langchain_community"):
+            pass
+        else:
+            raise
 
     compatibility_module = types.ModuleType(LEGACY_CHAT_VERTEXAI_MODULE)
     compatibility_module.ChatVertexAI = UnavailableChatVertexAI

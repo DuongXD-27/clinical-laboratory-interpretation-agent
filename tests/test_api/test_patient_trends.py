@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 from types import SimpleNamespace
-from urllib.parse import quote
 from unittest.mock import AsyncMock
+from urllib.parse import quote
 
 import pytest
 import pytest_asyncio
@@ -15,6 +15,7 @@ from src.api import routes
 from src.main import app
 from src.models import db as db_module
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, TrendResponse
+from src.services import trend_service
 from src.services.auth import create_access_token
 from src.services.lab_history_service import save_analyzed_report
 from src.services.trend_explanation_service import validate_trend_explanation
@@ -271,6 +272,8 @@ async def test_analyze_persistence_writes_canonical_fields_for_wbc_trends(isolat
         assert [item.analyte_canonical for item in indicators] == ["WBC", "WBC", "WBC"]
         assert [item.canonical_value for item in indicators] == [7.0, 12.0, 10.5]
         assert [item.canonical_unit for item in indicators] == ["10^9/L", "10^9/L", "10^9/L"]
+        assert [item.indicator_catalog_id is not None for item in indicators] == [True, True, True]
+        assert session.query(db_module.IndicatorCatalog).filter_by(canonical_name="WBC").count() == 1
 
     catalog = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
     trend = await client.get(_trend_url("WBC"), headers=headers)
@@ -479,6 +482,198 @@ async def test_trend_guardrail_blocks_restricted_language(isolated_client):
     assert validate_trend_explanation("Bạn nên dùng thuốc.", trend)
     assert validate_trend_explanation("Lần tới giá trị có thể là 3.9.", trend)
     assert not validate_trend_explanation("Giá trị gần nhất cao hơn lần trước.", trend)
+
+
+def _save_glucose_series(session_local, values: list[float]):
+    for index, value in enumerate(values):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index + 1:02d}",
+            [{"name": "Fasting plasma glucose", "value": value, "unit": "mmol/L"}],
+        )
+
+
+@pytest.mark.asyncio
+async def test_trend_sets_critical_status_for_glucose_below_low_threshold(isolated_client):
+    """ADR-010 CRIT-TREND-03: điểm mới nhất vượt ngưỡng nguy kịch (< 55 mg/dL, tức
+    khoảng < 3.05 mmol/L) phải set critical_status trên TrendResponse — kết nối trực
+    tiếp với module ngưỡng nguy kịch dùng chung, không còn là điểm mù an toàn."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [5.0, 4.8, 2.0])
+
+    response = await client.get(_trend_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] == "critical_low"
+    assert payload["approaching_critical"] is False
+
+
+@pytest.mark.asyncio
+async def test_trend_sets_approaching_critical_when_moving_toward_high_threshold(isolated_client):
+    """Ngưỡng cao FPG = 450 mg/dL (~24.98 mmol/L); biên 10% => ~[22.48, 27.47]
+    mmol/L. 24.0 mmol/L nằm trong biên, chưa critical, và đang tăng từ 20.0."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [5.0, 20.0, 24.0])
+
+    response = await client.get(_trend_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] is None
+    assert payload["approaching_critical"] is True
+
+
+@pytest.mark.asyncio
+async def test_trend_has_no_critical_wiring_for_analyte_without_active_threshold(isolated_client):
+    """LDL-C không có threshold active (ADR-009) — không được tự bịa ra cảnh báo nào."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] is None
+    assert payload["approaching_critical"] is False
+
+
+@pytest.mark.asyncio
+async def test_trend_explanation_prepends_fixed_notice_when_critical(isolated_client, monkeypatch):
+    """ADR-010 CRIT-TREND-03.4: thông báo liên hệ bác sĩ là văn bản cố định, không
+    qua LLM — phải xuất hiện dù LLM trả lời bình thường."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [5.0, 4.8, 2.0])
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(return_value=SimpleNamespace(content="Giá trị gần nhất giảm mạnh so với lần trước."))
+    )
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["fallback"] is False
+    assert payload["explanation"].startswith("Chỉ số này đang ở mức cần chú ý đặc biệt — vui lòng liên hệ bác sĩ sớm")
+    assert "Giá trị gần nhất giảm mạnh so với lần trước." in payload["explanation"]
+
+
+@pytest.mark.asyncio
+async def test_trend_explanation_prepends_fixed_notice_even_when_llm_fails(isolated_client, monkeypatch):
+    """Thông báo an toàn không được phụ thuộc vào LLM có khả dụng hay không —
+    nếu không, đúng điểm mù mà nhóm trưởng đã cảnh báo vẫn còn tồn tại khi LLM lỗi."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [5.0, 4.8, 2.0])
+    mock_llm = SimpleNamespace(ainvoke=AsyncMock(side_effect=RuntimeError("quota")))
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["fallback"] is True
+    assert payload["explanation"].startswith("Chỉ số này đang ở mức cần chú ý đặc biệt — vui lòng liên hệ bác sĩ sớm")
+
+
+@pytest.mark.asyncio
+async def test_trend_explanation_prompt_carries_matched_reference_range(isolated_client, monkeypatch):
+    """ADR-010 CRIT-TREND-02: prompt phải mang cận khoảng tham chiếu đã khớp theo
+    sex/age tại lần đo gần nhất — không chỉ giá trị điểm dữ liệu như trước đây."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+    captured_prompt = {}
+
+    async def fake_ainvoke(messages):
+        captured_prompt["text"] = messages[0].content
+        return SimpleNamespace(content="Giá trị gần nhất cao hơn lần trước.")
+
+    mock_llm = SimpleNamespace(ainvoke=fake_ainvoke)
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert "Khoảng tham chiếu đã khớp" in captured_prompt["text"]
+
+
+@pytest.mark.asyncio
+async def test_trend_guardrail_blocks_risk_inference_and_referral_language(isolated_client):
+    """ADR-010 CRIT-TREND-01: từ vựng suy diễn nguy cơ / khuyến nghị thăm khám thêm
+    phải bị chặn dù không phải chẩn đoán hay dự đoán tương lai trực tiếp."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+    trend = TrendResponse.model_validate(response.json())
+
+    assert validate_trend_explanation("Điều này cho thấy nguy cơ về sau.", trend)
+    assert validate_trend_explanation("Bạn nên đi khám thêm để chắc chắn.", trend)
+    assert not validate_trend_explanation("Giá trị gần nhất cao hơn lần trước.", trend)
+
+
+@pytest.mark.asyncio
+async def test_patient_report_detail_groups_indicators_by_section(isolated_client):
+    """ADR-010 CRIT-TREND-06: trang kết quả một phiếu (bệnh nhân tự xem, không phải
+    qua /history/{id} của bác sĩ) cũng phải có section — trước đây hai endpoint dùng
+    hai code path khác nhau và chỉ một bên có section."""
+
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    saved = _save(
+        session_local,
+        "benhnhan",
+        "2026-08-01",
+        [
+            {"name": "LDL-C", "value": 2.1, "unit": "mmol/L"},
+            {"name": "WBC", "value": 7.0, "unit": "10^9/L"},
+        ],
+    )
+
+    response = await client.get(f"/api/v1/patient/me/lab-reports/{saved.report_id}", headers=headers)
+
+    assert response.status_code == 200, response.text
+    indicators = {item["analyte_canonical"]: item for item in response.json()["indicators"]}
+    assert indicators["LDL-C"]["section"] == "lipids"
+    assert indicators["LDL-C"]["section_label"] == "Mỡ máu & đường huyết"
+    assert indicators["WBC"]["section"] == "hematology"
+    assert indicators["WBC"]["section_label"] == "Huyết học"
+
+
+@pytest.mark.asyncio
+async def test_configured_max_gap_keeps_only_the_newest_contiguous_series(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    monkeypatch.setattr(trend_service, "_max_gap_days_for", lambda _: 10)
+    for date_text, value in [
+        ("2026-01-01", 2.0),
+        ("2026-01-05", 2.1),
+        ("2026-04-01", 2.2),
+        ("2026-04-05", 2.3),
+    ]:
+        _save(session_local, "benhnhan", date_text, [{"name": "LDL-C", "value": value, "unit": "mmol/L"}])
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["trend_available"] is False
+    assert payload["reason"] == "GAP_TOO_LARGE"
+    assert payload["result_count"] == 2
+    assert payload["points"] == []
 
 
 @pytest.mark.asyncio
