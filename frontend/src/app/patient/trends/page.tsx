@@ -8,6 +8,7 @@ import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import {
   canRenderTrendChart,
   defaultTrendAnalyte,
+  groupBySection,
   trendReasonMessage,
 } from "@/lib/trendUi.mjs";
 import type {
@@ -140,6 +141,9 @@ export default function PatientTrendsPage() {
     [analytes],
   );
 
+  const analyteGroups = useMemo(() => groupBySection(analytes), [analytes]);
+  const trendEscalated = Boolean(trend?.critical_status || trend?.approaching_critical);
+
   if (checkingAuth) return null;
 
   return (
@@ -182,14 +186,18 @@ export default function PatientTrendsPage() {
                     onChange={(event) => setSelectedAnalyte(event.target.value)}
                     disabled={eligibleCount === 0}
                   >
-                    {analytes.map((item) => (
-                      <option
-                        key={item.analyte_canonical}
-                        value={item.analyte_canonical}
-                        disabled={!item.trend_available}
-                      >
-                        {item.display_name} - {item.result_count} kết quả{item.trend_available ? "" : " (chưa đủ)"}
-                      </option>
+                    {analyteGroups.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.items.map((item) => (
+                          <option
+                            key={item.analyte_canonical}
+                            value={item.analyte_canonical}
+                            disabled={!item.trend_available}
+                          >
+                            {item.display_name} - {item.result_count} kết quả{item.trend_available ? "" : " (chưa đủ)"}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </label>
@@ -236,10 +244,19 @@ export default function PatientTrendsPage() {
                 </div>
               ) : trend ? (
                 <div className="mt-6">
+                  {trendEscalated && (
+                    <div className="critical-report-notice mb-5" role="alert">
+                      <strong>Cần chú ý ngay</strong>
+                      Chỉ số này {trend.critical_status ? "đã đạt" : "đang tiến gần"} ngưỡng nguy kịch — vui lòng liên hệ bác sĩ sớm để được tư vấn kịp thời.
+                    </div>
+                  )}
                   <div className="trend-chart-header">
                     <div>
                       <h3>{trend.display_name}</h3>
-                      <p>Đơn vị: {trend.canonical_unit}</p>
+                      <p>
+                        {trend.section_label ? `${trend.section_label} · ` : ""}
+                        Đơn vị: {trend.canonical_unit}
+                      </p>
                     </div>
                     <span className="status-badge status-normal">{trend.result_count} điểm</span>
                   </div>

@@ -17,6 +17,9 @@ export type IndicatorResult = {
   is_critical: boolean;
   explanation?: string;
   sources?: string[];
+  /** Nhóm chức năng (ADR-010 CRIT-TREND-06) — null khi chỉ số chưa khớp được nhóm nào. */
+  section?: string | null;
+  section_label?: string | null;
 };
 
 export type AnalysisResult = {
@@ -49,6 +52,8 @@ export type TrendAnalyteSummary = {
   canonical_unit: string;
   result_count: number;
   trend_available: boolean;
+  section?: string | null;
+  section_label?: string | null;
 };
 
 export type TrendPoint = {
@@ -67,6 +72,12 @@ export type TrendResponse = {
   trend_available: boolean;
   points: TrendPoint[];
   reason?: string | null;
+  section?: string | null;
+  section_label?: string | null;
+  /** ADR-010 CRIT-TREND-03: điểm mới nhất đã vượt ngưỡng nguy kịch (chỉ glucose/potassium). */
+  critical_status?: "critical_low" | "critical_high" | null;
+  /** ADR-010 CRIT-TREND-03: điểm mới nhất đang tiến gần ngưỡng nguy kịch (trong 10%). */
+  approaching_critical?: boolean;
 };
 
 export type TrendExplanationResponse = {

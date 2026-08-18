@@ -1900,6 +1900,14 @@ textarea::placeholder {
   text-transform: uppercase;
 }
 
+.indicator-group-title {
+  color: #1769e0;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
 .critical-report-notice {
   border: 1px solid #f3b8b8;
   border-left: 4px solid #c62020;

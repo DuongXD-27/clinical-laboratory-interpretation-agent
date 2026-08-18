@@ -7,6 +7,7 @@ import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatDate, indicatorStatusText, reportStatusText, reportTone } from "@/lib/patientUi.mjs";
+import { groupBySection } from "@/lib/trendUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
 
@@ -89,6 +90,7 @@ export default function PatientReportDetail() {
   }
 
   const abnormalCount = report.indicators.filter((indicator) => indicator.is_abnormal).length;
+  const indicatorGroups = groupBySection(report.indicators);
 
   return (
     <div className="report-detail-layout">
@@ -133,33 +135,40 @@ export default function PatientReportDetail() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-3">
-          {report.indicators.map((indicator, index) => {
-            const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
-            return (
-              <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-950">{indicator.analyte_canonical ?? indicator.name}</h3>
-                    {indicator.analyte_raw && indicator.analyte_raw !== indicator.analyte_canonical && (
-                      <p className="mt-1 text-xs text-slate-500">Tên gốc: {indicator.analyte_raw}</p>
-                    )}
-                    <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-                      {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
-                    </p>
-                    {(indicator.reference_low !== null || indicator.reference_high !== null) && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Tham chiếu: {indicator.reference_low ?? "-"} – {indicator.reference_high ?? "-"}
-                      </p>
-                    )}
-                  </div>
-                  <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status, indicator.critical_status)}</span>
-                </div>
-                {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
-                <SourcesDisclosure sources={indicator.sources} />
-              </article>
-            );
-          })}
+        <div className="mt-6 flex flex-col gap-6">
+          {indicatorGroups.map((group) => (
+            <div key={group.label}>
+              <h4 className="indicator-group-title">{group.label}</h4>
+              <div className="mt-3 grid gap-3">
+                {group.items.map((indicator, index) => {
+                  const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
+                  return (
+                    <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h3 className="font-semibold text-slate-950">{indicator.analyte_canonical ?? indicator.name}</h3>
+                          {indicator.analyte_raw && indicator.analyte_raw !== indicator.analyte_canonical && (
+                            <p className="mt-1 text-xs text-slate-500">Tên gốc: {indicator.analyte_raw}</p>
+                          )}
+                          <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+                            {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
+                          </p>
+                          {(indicator.reference_low !== null || indicator.reference_high !== null) && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Tham chiếu: {indicator.reference_low ?? "-"} – {indicator.reference_high ?? "-"}
+                            </p>
+                          )}
+                        </div>
+                        <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status, indicator.critical_status)}</span>
+                      </div>
+                      {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
+                      <SourcesDisclosure sources={indicator.sources} />
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="disclaimer-box mt-6" role="note" aria-label="Lưu ý y khoa">
