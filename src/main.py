@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 from src.adapters.vision_adapter import close_vision_clients
 from src.api.auth_routes import router as auth_router
+from src.api.doctor_routes import router as doctor_router
 from src.api.history_routes import router as history_router
 from src.api.ocr_routes import router as ocr_router
 from src.api.patient_routes import router as patient_router
@@ -14,6 +15,7 @@ from src.api.routes import router
 from src.config import get_settings
 from src.models.db import SessionLocal, init_db
 from src.services.demo_patient_data import seed_demo_patient_reports
+from src.services.doctor_review_service import backfill_review_flags
 from src.services.logging_config import configure_logging
 from src.services.medical_knowledge_retriever import get_rag_readiness
 from src.services.request_timing import (
@@ -46,6 +48,9 @@ async def lifespan(app: FastAPI):
     if settings.app_env == "development":
         with SessionLocal() as db:
             seed_demo_patient_reports(db)
+            changed = backfill_review_flags(db)
+            if changed:
+                logger.info("doctor_review_backfill", extra={"reports_changed": changed})
     try:
         yield
     finally:
@@ -160,6 +165,7 @@ app.include_router(router, prefix="/api/v1")
 app.include_router(ocr_router, prefix="/api/v1")
 app.include_router(patient_router, prefix="/api/v1")
 app.include_router(history_router, prefix="/api/v1")
+app.include_router(doctor_router, prefix="/api/v1")
 
 
 @app.get("/health")

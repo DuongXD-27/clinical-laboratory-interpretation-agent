@@ -15,7 +15,7 @@ from src.models.schemas import (
     IndicatorResultSchema,
 )
 from src.services import history_repository
-from src.services.lab_history_service import save_analyzed_report
+from src.services.doctor_review_service import refresh_review_flags
 from src.services.question_templates import (
     GeneratedQuestion,
     reconcile_after_guardrail,
@@ -173,6 +173,7 @@ async def run_analysis(
             ocr_drafts=ocr_drafts,
             ocr_source_filename=ocr_source_filename,
         )
+        refresh_review_flags(db, saved_report)
 
         response.saved_report_id = saved_report.id
 

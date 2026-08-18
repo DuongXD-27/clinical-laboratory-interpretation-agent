@@ -46,7 +46,9 @@ EXPECTED_TABLES = {
     "report_critical_alerts",
     "indicator_catalog",
     "report_questions",
+    "review_flags",
     "doctor_notes",
+    "report_doctor_views",
     "out_of_scope_log",
 }
 

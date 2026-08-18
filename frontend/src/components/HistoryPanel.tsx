@@ -11,8 +11,12 @@ import {
   selectReportQuestions,
   UnauthorizedError,
 } from "@/lib/api";
+import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
+import SeverityBadge from "@/components/common/SeverityBadge";
+import VerificationBadge from "@/components/common/VerificationBadge";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment, indicatorStatusText } from "@/lib/patientUi.mjs";
+import type { SeverityLevel } from "@/types/doctor";
 
 type Props = {
   /** "patient" chỉ xem của mình; "doctor" tra được theo tên bệnh nhân. */
@@ -30,38 +34,10 @@ const ACCENT = {
   indigo: { button: "bg-indigo-600 hover:bg-indigo-700", text: "text-indigo-600" },
 };
 
-/** Nhãn trạng thái phiếu cho cả hai phía.
- *
- * Hai trạng thái tách biệt vì chúng trả lời hai câu hỏi khác nhau. "Đã có ai xem
- * phiếu của tôi chưa" thường quan trọng hơn cả nội dung nhận xét.
- */
-function reviewBadge(item: { reviewed_by_doctor: boolean; has_doctor_notes: boolean }) {
-  if (item.has_doctor_notes) {
-    return {
-      label: "Đã có ý kiến bác sĩ",
-      className: "bg-emerald-50 text-emerald-700",
-    };
-  }
-  if (item.reviewed_by_doctor) {
-    return {
-      label: "Bác sĩ đã xem",
-      className: "bg-sky-50 text-sky-700",
-    };
-  }
-  return {
-    label: "Chưa có bác sĩ xem",
-    className: "bg-slate-100 text-slate-600",
-  };
-}
-
-function reportBadge(item: { has_critical_values: boolean; abnormal_count: number }) {
-  if (item.has_critical_values) {
-    return { label: "Nguy kịch", tone: "critical" };
-  }
-  if (item.abnormal_count > 0) {
-    return { label: "Bất thường", tone: "abnormal" };
-  }
-  return { label: "Bình thường", tone: "normal" };
+function reportSeverity(item: { has_critical_values: boolean; abnormal_count: number }): SeverityLevel {
+  if (item.has_critical_values) return "critical";
+  if (item.abnormal_count > 0) return "abnormal";
+  return "normal";
 }
 
 export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, refreshToken = 0, onUnauthorized }: Props) {
@@ -153,6 +129,9 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               ...item,
               reviewed_by_doctor: updated.reviewed_by_doctor,
               has_doctor_notes: updated.has_doctor_notes,
+              verification_status: updated.verification_status,
+              verified_by_username: updated.verified_by_username,
+              verified_at: updated.verified_at,
             }
           : item,
       ),
@@ -381,8 +360,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
           </p>
           <ul className="divide-y divide-slate-100">
             {items.map((item) => {
-              const badge = reviewBadge(item);
-              const status = reportBadge(item);
+              const severity = reportSeverity(item);
 
               return (
                 <li key={item.id}>
@@ -409,12 +387,8 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`status-badge status-${status.tone}`}>
-                          {status.label}
-                        </span>
-                        <span className={`review-badge ${badge.className}`}>
-                          {badge.label}
-                        </span>
+                        <SeverityBadge level={severity} />
+                        <VerificationBadge status={item.verification_status} />
                         <span className={`text-xs font-medium ${theme.text}`}>
                           {expandedId === item.id ? "Thu gọn" : mode === "patient" ? "Mở nhanh" : "Xem chi tiết"} ›
                         </span>
@@ -466,9 +440,19 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                                   {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status, indicator.critical_status)}
                                 </div>
                                 {indicator.explanation && (
-                                  <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                                    {indicator.explanation}
-                                  </p>
+                                  <div className="mt-3">
+                                    <p className="finding-card__label text-slate-500">Giải thích của AI</p>
+                                    <p className="text-sm leading-relaxed text-slate-700">
+                                      {indicator.explanation}
+                                    </p>
+                                  </div>
+                                )}
+                                {indicator.doctor_note && (
+                                  <DoctorNoteBlock
+                                    note={indicator.doctor_note}
+                                    doctorName={indicator.reviewed_by_username}
+                                    reviewedAt={indicator.reviewed_at}
+                                  />
                                 )}
                               </div>
                             ))}

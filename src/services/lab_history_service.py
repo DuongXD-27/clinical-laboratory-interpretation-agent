@@ -220,6 +220,9 @@ def save_analyzed_report(
     db.add(report)
     db.commit()
     db.refresh(report)
+    from src.services.doctor_review_service import refresh_review_flags
+
+    refresh_review_flags(db, report)
     return SaveReportResult(saved=True, duplicate=False, report_id=report.id)
 
 
@@ -274,6 +277,11 @@ def get_dashboard_summary(db: Session, *, username: str, limit: int = 5) -> dict
         "total_reports": total,
         "latest_test_date": reports[0].test_date if reports else None,
         "recent_reports": [_summary_row(report) for report in reports],
+        "newly_verified_count": sum(
+            1
+            for report in reports
+            if report.verification_status == "verified"
+        ),
     }
 
 
@@ -321,4 +329,6 @@ def _summary_row(report: LabReport) -> dict:
         "result_count": len(report.indicators),
         "status": status,
         "created_at": report.created_at,
+        "verification_status": report.verification_status or "unverified",
+        "verified_at": report.verified_at,
     }

@@ -355,6 +355,7 @@ def list_reports(
             stmt.options(
                 selectinload(LabReport.indicators),
                 selectinload(LabReport.patient),
+                selectinload(LabReport.verified_by),
                 # doctor_views nạp sẵn để `_is_reviewed()` không lazy-load từng
                 # dòng — cùng lý do với `_report_ids_with_notes()` bên dưới.
                 selectinload(LabReport.doctor_views),
@@ -393,7 +394,10 @@ def get_report(
             )
             .options(
                 selectinload(LabReport.patient),
-                selectinload(LabReport.indicators),
+                selectinload(LabReport.verified_by),
+                selectinload(LabReport.indicators).selectinload(
+                    ReportIndicator.reviewed_by
+                ),
                 selectinload(LabReport.critical_alerts),
                 selectinload(LabReport.questions).selectinload(
                     ReportQuestion.answered_by
@@ -573,6 +577,13 @@ def _to_summary(
         summary=report.summary,
         reviewed_by_doctor=_is_reviewed(report, has_notes=has_notes),
         has_doctor_notes=has_notes,
+        verification_status=report.verification_status or "unverified",
+        verified_by_username=(
+            report.verified_by.username
+            if report.verified_by is not None
+            else None
+        ),
+        verified_at=report.verified_at,
     )
 
 
@@ -627,9 +638,19 @@ def to_detail(
                 reference_low=indicator.reference_low,
                 reference_high=indicator.reference_high,
                 status=indicator.status,
+                critical_status=indicator.critical_status,
                 is_abnormal=indicator.is_abnormal,
                 is_critical=indicator.is_critical,
                 explanation=indicator.explanation,
+                review_outcome=indicator.review_outcome or "pending",
+                doctor_note=indicator.doctor_note,
+                ai_text_snapshot=indicator.ai_text_snapshot,
+                reviewed_by_username=(
+                    indicator.reviewed_by.username
+                    if indicator.reviewed_by is not None
+                    else None
+                ),
+                reviewed_at=indicator.reviewed_at,
                 sources=list(indicator.sources or []),
             )
             for indicator in report.indicators
@@ -672,6 +693,13 @@ def to_detail(
 
         reviewed_by_doctor=_is_reviewed(report, has_notes=bool(notes)),
         has_doctor_notes=bool(notes),
+        verification_status=report.verification_status or "unverified",
+        verified_by_username=(
+            report.verified_by.username
+            if report.verified_by is not None
+            else None
+        ),
+        verified_at=report.verified_at,
     )
 
 
@@ -715,6 +743,9 @@ def select_questions(
         raise
 
     db.refresh(report)
+    from src.services.doctor_review_service import refresh_review_flags
+
+    refresh_review_flags(db, report)
 
     return sorted(
         report.questions,

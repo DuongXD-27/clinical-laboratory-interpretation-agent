@@ -141,6 +141,7 @@ class User(Base):
         back_populates="patient",
         cascade="all, delete-orphan",
         order_by="LabReport.test_date.desc()",
+        foreign_keys="LabReport.patient_id",
     )
 
 
@@ -184,6 +185,21 @@ class LabReport(Base):
     guardrail_passed = Column(Boolean, nullable=False, default=True)
     disclaimer = Column(Text, nullable=False, default="")
 
+    # Doctor verification workflow:
+    # "unverified" | "pending_review" | "verified"
+    verification_status = Column(String, nullable=False, default="unverified", index=True)
+    priority_score = Column(Float, nullable=False, default=0.0)
+    queued_at = Column(DateTime, nullable=True, index=True)
+    verified_by_doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    verified_at = Column(DateTime, nullable=True)
+    findings_total = Column(Integer, nullable=False, default=0)
+    findings_reviewed = Column(Integer, nullable=False, default=0)
+
     created_at = Column(
         DateTime,
         nullable=False,
@@ -194,6 +210,7 @@ class LabReport(Base):
     patient = relationship(
         "User",
         back_populates="reports",
+        foreign_keys=[patient_id],
     )
 
     indicators = relationship(
@@ -225,6 +242,14 @@ class LabReport(Base):
         back_populates="report",
         cascade="all, delete-orphan",
     )
+
+    review_flags = relationship(
+        "ReviewFlag",
+        back_populates="report",
+        cascade="all, delete-orphan",
+    )
+
+    verified_by = relationship("User", foreign_keys=[verified_by_doctor_id])
 
 
 _ABNORMAL_STATUSES = frozenset(
@@ -291,6 +316,19 @@ class ReportIndicator(Base):
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
 
+    # Doctor finding-level review:
+    # "pending" | "agreed" | "corrected" | "skipped"
+    review_outcome = Column(String, nullable=False, default="pending", index=True)
+    doctor_note = Column(Text, nullable=True)
+    ai_text_snapshot = Column(Text, nullable=True)
+    reviewed_by_doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    reviewed_at = Column(DateTime, nullable=True)
+
     report = relationship(
         "LabReport",
         back_populates="indicators",
@@ -306,6 +344,14 @@ class ReportIndicator(Base):
         back_populates="indicator",
         cascade="all, delete-orphan",
     )
+
+    review_flags = relationship(
+        "ReviewFlag",
+        back_populates="finding",
+        cascade="all, delete-orphan",
+    )
+
+    reviewed_by = relationship("User", foreign_keys=[reviewed_by_doctor_id])
 
     @property
     def is_abnormal(self) -> bool:
@@ -455,6 +501,46 @@ class ReportQuestion(Base):
     )
 
     answered_by = relationship("User", foreign_keys=[answered_by_doctor_id])
+
+
+class ReviewFlag(Base):
+    """Lý do một phiếu hoặc một luận điểm được đưa vào hàng đợi kiểm chứng."""
+
+    __tablename__ = "review_flags"
+
+    __table_args__ = (
+        Index("ix_review_flags_report_code", "report_id", "code"),
+        Index("ix_review_flags_finding_code", "finding_id", "code"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    report_id = Column(
+        Integer,
+        ForeignKey("lab_reports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    finding_id = Column(
+        Integer,
+        ForeignKey("report_indicators.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    code = Column(String, nullable=False)
+    severity = Column(String, nullable=False)
+    detail = Column(Text, nullable=False)
+
+    created_at = Column(
+        DateTime,
+        nullable=False,
+        default=_utcnow,
+    )
+
+    report = relationship("LabReport", back_populates="review_flags")
+    finding = relationship("ReportIndicator", back_populates="review_flags")
 
 
 class DoctorNote(Base):
@@ -698,9 +784,26 @@ def backfill_added_column_defaults() -> None:
         )
         conn.execute(
             text(
+                "UPDATE lab_reports SET verification_status = "
+                "COALESCE(verification_status, 'unverified'), "
+                "priority_score = COALESCE(priority_score, 0), "
+                "findings_total = COALESCE(findings_total, "
+                "(SELECT COUNT(*) FROM report_indicators "
+                "WHERE report_indicators.report_id = lab_reports.id)), "
+                "findings_reviewed = COALESCE(findings_reviewed, 0)"
+            )
+        )
+        conn.execute(
+            text(
                 "UPDATE report_indicators SET critical_status = status "
                 "WHERE critical_status IS NULL "
                 "AND status IN ('critical_low', 'critical_high')"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE report_indicators SET review_outcome = "
+                "COALESCE(review_outcome, 'pending')"
             )
         )
 
@@ -798,6 +901,7 @@ __all__ = [
     "ReportCriticalAlert",
     "ReportIndicator",
     "ReportQuestion",
+    "ReviewFlag",
     "SessionLocal",
     "User",
     "engine",
