@@ -8,6 +8,7 @@ const LABELS: Record<SeverityLevel, string> = {
   critical: "Nguy kịch",
   abnormal: "Bất thường",
   normal: "Bình thường",
+  unknown: "Chưa phân loại",
 };
 
 export default function SeverityBadge({ level }: Props) {

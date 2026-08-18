@@ -3,7 +3,7 @@
 import Link from "next/link";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
-import { indicatorStatusText } from "@/lib/patientUi.mjs";
+import { indicatorStatusText, renderReferenceRange, reportTone } from "@/lib/patientUi.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 
 type Props = {
@@ -14,6 +14,8 @@ type Props = {
   onUnauthorized: () => void;
   sourceMode: "manual" | "ocr";
 };
+
+
 
 export default function AnalysisResultView({
   result,
@@ -106,7 +108,7 @@ export default function AnalysisResultView({
 
         <div className="mt-5 grid gap-3">
           {result.indicators?.map((indicator, index) => {
-            const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
+            const tone = reportTone(indicator.status);
             return (
               <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -115,9 +117,9 @@ export default function AnalysisResultView({
                     <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
                       {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
                     </p>
-                    {(indicator.reference_low !== null || indicator.reference_high !== null) && (
+                    {renderReferenceRange(indicator) && (
                       <p className="mt-1 text-xs text-slate-500">
-                        Tham chiếu: {indicator.reference_low ?? "-"} – {indicator.reference_high ?? "-"}
+                        {renderReferenceRange(indicator)}
                       </p>
                     )}
                   </div>

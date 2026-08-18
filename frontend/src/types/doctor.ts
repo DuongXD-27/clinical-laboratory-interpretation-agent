@@ -2,7 +2,7 @@ import type { ReportQuestion } from "./history";
 
 export type VerificationStatus = "unverified" | "pending_review" | "verified";
 export type ReviewOutcome = "pending" | "agreed" | "corrected" | "skipped";
-export type SeverityLevel = "critical" | "abnormal" | "normal";
+export type SeverityLevel = "critical" | "abnormal" | "normal" | "unknown";
 
 export type ReviewFlag = {
   code: "CRITICAL_VALUE" | "LOW_OCR_CONFIDENCE" | "PATIENT_HAS_QUESTIONS";

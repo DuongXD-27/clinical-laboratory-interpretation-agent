@@ -255,6 +255,10 @@ async def process_single_indicator(
         # Never trust model-generated URLs. Only return sources supplied by the
         # authoritative catalog or retrieved document metadata.
         "sources": known_sources,
+        "rule_type": indicator.get("rule_type"),
+        "band_id": indicator.get("band_id"),
+        "upper_operator": indicator.get("upper_operator"),
+        "evaluation_reason": indicator.get("evaluation_reason"),
     }
     updated_indicator = dict(indicator)
     updated_indicator["explanation"] = explanation_text

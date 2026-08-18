@@ -9,7 +9,7 @@ import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
-import { formatDate, reportTone } from "@/lib/patientUi.mjs";
+import { formatDate, reportTone, renderReferenceRange } from "@/lib/patientUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
 
@@ -143,7 +143,7 @@ export default function PatientReportDetail() {
 
         <div className="mt-6 grid gap-3">
           {report.indicators.map((indicator, index) => {
-            const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
+            const tone = reportTone(indicator.status);
             return (
               <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -155,9 +155,9 @@ export default function PatientReportDetail() {
                     <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
                       {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
                     </p>
-                    {(indicator.reference_low !== null || indicator.reference_high !== null) && (
+                    {renderReferenceRange(indicator) && (
                       <p className="mt-1 text-xs text-slate-500">
-                        Tham chiếu: {indicator.reference_low ?? "-"} – {indicator.reference_high ?? "-"}
+                        {renderReferenceRange(indicator)}
                       </p>
                     )}
                   </div>

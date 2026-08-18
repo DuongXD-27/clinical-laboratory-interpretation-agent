@@ -179,6 +179,11 @@ class IndicatorResultSchema(BaseModel):
         description="Giải thích bằng ngôn ngữ dễ hiểu",
     )
 
+    rule_type: str | None = None
+    band_id: str | None = None
+    upper_operator: str | None = None
+    evaluation_reason: str | None = None
+
     review_outcome: ReviewOutcome = "pending"
     doctor_note: str | None = None
     ai_text_snapshot: str | None = None

@@ -27,6 +27,10 @@ def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
         "is_critical": False,
         "explanation": "",
         "sources": [],
+        "rule_type": None,
+        "band_id": None,
+        "upper_operator": None,
+        "evaluation_reason": None,
     }
 
 
@@ -138,6 +142,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             patient_age=patient_age,
         )
         if not result.matched or not result.rule:
+            assessment["evaluation_reason"] = result.reason
             indicators.append(assessment)
             continue
 
@@ -172,6 +177,9 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             definition.sources if definition else (),
             result.rule,
         )
+        assessment["rule_type"] = ref_type
+        assessment["band_id"] = result.rule.get("band_id")
+        assessment["upper_operator"] = upper_op
 
         indicators.append(assessment)
 
