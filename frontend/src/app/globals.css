@@ -105,8 +105,24 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--brand);
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: var(--surface-subtle);
+  --color-secondary-foreground: var(--foreground-secondary);
+  --color-muted: var(--surface-subtle);
+  --color-muted-foreground: var(--foreground-muted);
+  --color-accent: var(--surface-subtle);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--status-critical-fg);
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: rgba(8, 126, 139, 0.3);
   --font-sans: Arial, Helvetica, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
 }
 
 * {
