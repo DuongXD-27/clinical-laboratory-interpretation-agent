@@ -37,8 +37,15 @@ export default function PatientShell({ children }: { children: ReactNode }) {
   const isGuest = session.role === "guest";
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-dvh bg-[var(--background)] text-foreground">
-      <a href="#patient-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-background p-4 rounded-md shadow-md">
+    <div className="flex flex-col lg:flex-row min-h-dvh bg-[var(--background)] text-foreground relative">
+      {/* Decorative Atmospheric Background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute top-[-15%] left-[-5%] w-[50vw] h-[50vh] rounded-full bg-[var(--holo-cyan)]/40 blur-[120px] opacity-60" />
+        <div className="absolute top-[10%] right-[-10%] w-[40vw] h-[60vh] rounded-full bg-[var(--holo-blue)]/30 blur-[120px] opacity-50" />
+        <div className="absolute bottom-[-10%] left-[10%] w-[60vw] h-[40vh] rounded-full bg-[var(--holo-violet)]/20 blur-[120px] opacity-40" />
+      </div>
+
+      <a href="#patient-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-background p-4 rounded-md shadow-md relative">
         Bỏ qua điều hướng
       </a>
 
@@ -49,7 +56,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         onLogout={logout}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         <PatientTopbar 
           pathname={pathname}
           isGuest={isGuest}

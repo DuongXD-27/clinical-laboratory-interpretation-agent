@@ -35,8 +35,11 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
   const visibleNavigation = patientNavigation.filter((item) => !item.patientOnly || !isGuest);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-md border-b border-[var(--glass-border)] shrink-0">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--glass-border)] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] shrink-0 relative">
+      {/* Subtle background refraction / edge highlight */}
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
+      
+      <div className="flex items-center gap-3 relative z-10">
         {/* Mobile Hamburger Menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors" aria-label="Mở menu">

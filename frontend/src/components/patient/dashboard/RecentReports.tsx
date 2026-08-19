@@ -49,7 +49,7 @@ export default function RecentReports({ reports, excludeReportId }: RecentReport
           <Link
             key={report.report_id}
             href={`/patient/reports/${report.report_id}`}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:border-[var(--brand-soft)] hover:shadow-sm transition-all group"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm hover:shadow-md hover:border-[var(--border)] transition-all duration-200 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 group"
             aria-label={`Xem phiếu ngày ${formatDate(report.test_date)}`}
           >
             <div className="flex items-start gap-3">
