@@ -64,8 +64,8 @@ def _decimal_variants(value: float | int) -> set[str]:
 _SCIENTIFIC_UNIT_RE = re.compile(r"(?:x|×)?\s*10\s*\^\s*\d+(?:\s*/\s*\w+)?", re.IGNORECASE)
 
 
-def _strip_unit_mentions(text: str, unit: str | None) -> str:
-    """Bỏ đơn vị khỏi text trước khi quét số.
+def strip_units(text: str, units: list[str | None]) -> str:
+    """Bỏ đơn vị khỏi text trước khi quét số — hỗ trợ nhiều chỉ số cùng lúc.
 
     Validator chặn mọi con số không có trong dữ liệu trend, để model không bịa ra
     số liệu. Nhưng **đơn vị của một số chỉ số có chứa chữ số**: WBC là `10^9/L`,
@@ -83,7 +83,9 @@ def _strip_unit_mentions(text: str, unit: str | None) -> str:
 
     cleaned = text
 
-    if unit:
+    for unit in units:
+        if not unit:
+            continue
         # Khớp linh hoạt khoảng trắng giữa các ký tự của đơn vị.
         pattern = r"\s*".join(re.escape(char) for char in unit if not char.isspace())
         if pattern:
@@ -92,24 +94,59 @@ def _strip_unit_mentions(text: str, unit: str | None) -> str:
     return _SCIENTIFIC_UNIT_RE.sub(" ", cleaned)
 
 
-def _allowed_numbers(trend: TrendResponse, *, extra: list[float | None] | None = None) -> set[str]:
-    """ADR-010 CRIT-TREND-05: whitelist mở rộng.
+def _strip_unit_mentions(text: str, unit: str | None) -> str:
+    return strip_units(text, [unit])
 
-    Ngoài giá trị/ngày/đếm điểm sẵn có, ``extra`` mang thêm các số backend đã tính và
-    xác thực: cận khoảng tham chiếu đã khớp theo sex/age, cận ngưỡng nguy kịch active,
-    và % biến động giữa hai lần đo gần nhất. Model chỉ được LẶP LẠI các số này, không
-    được tự tính hay tự bịa số khác.
+
+def collect_allowed_numbers(
+    trends: list[TrendResponse],
+    *,
+    extras: list[list[float | None]] | None = None,
+) -> set[str]:
+    """ADR-010 CRIT-TREND-05: whitelist mở rộng cho một hay nhiều trend.
+
+    Với mỗi trend: giá trị/ngày/đếm điểm sẵn có. ``extras`` mang thêm, cho mỗi
+    trend, các số backend đã tính và xác thực: cận khoảng tham chiếu đã khớp theo
+    sex/age, cận ngưỡng nguy kịch active, và % biến động giữa hai lần đo gần nhất.
+    Model chỉ được LẶP LẠI các số này, không được tự tính hay tự bịa số khác.
+
+    Ở chế độ nhóm (CRIT-TREND-07), kết quả là **hợp** của whitelist từng chỉ số —
+    model được nói số của đúng chỉ số mà câu đang đề cập, nhưng vẫn không được
+    gộp số của hai chỉ số thành một phép tính mới.
+
+    Lưu ý các số đếm vô hại {0, 1, 2} và {3, 5} được cho phép sẵn: "3 kết quả gần
+    nhất", "5 điểm", "1 tháng", "2 lần đo" là từ nối tự nhiên của model chứ không
+    phải số liệu xét nghiệm — chặn chúng tạo lỗi "lúc được lúc không" như trường
+    hợp đơn vị khoa học của WBC. Con số lâm sàng bịa vẫn bị chặn (vd "tăng 8%").
     """
-    allowed = {"3", "5", str(len(trend.points)), str(trend.result_count)}
-    for point in trend.points:
-        allowed.update(_decimal_variants(point.value))
-        year, month, day = point.test_date.isoformat().split("-")
-        allowed.update({year, str(int(month)), month, str(int(day)), day})
-    for value in extra or ():
-        if value is None:
-            continue
-        allowed.update(_decimal_variants(value))
+    allowed = {"0", "1", "2", "3", "5"}
+    for trend in trends:
+        allowed.update({str(len(trend.points)), str(trend.result_count)})
+        for point in trend.points:
+            allowed.update(_decimal_variants(point.value))
+            year, month, day = point.test_date.isoformat().split("-")
+            allowed.update({year, str(int(month)), month, str(int(day)), day})
+    for extra in extras or ():
+        for value in extra:
+            if value is None:
+                continue
+            allowed.update(_decimal_variants(value))
     return allowed
+
+
+def scan_fabricated_numbers(text: str, allowed: set[str], units: list[str | None]) -> list[str]:
+    """Trả các token số xuất hiện trong ``text`` nhưng không nằm trong whitelist.
+
+    Bỏ đơn vị (kể cả đơn vị khoa học) của tất cả chỉ số trước khi quét; đây là bước
+    dùng chung cho validator đơn chỉ số và validator nhóm.
+    """
+    scannable = strip_units(text, units)
+    return [token for token in re.findall(r"\d+(?:[.,]\d+)?", scannable) if token not in allowed]
+
+
+def _allowed_numbers(trend: TrendResponse, *, extra: list[float | None] | None = None) -> set[str]:
+    """Wrapper đơn chỉ số của ``collect_allowed_numbers`` (CRIT-TREND-05)."""
+    return collect_allowed_numbers([trend], extras=[extra] if extra else None)
 
 
 # ADR-010 CRIT-TREND-01: từ vựng bị cấm tuyệt đối, mở rộng ngoài blacklist chẩn
@@ -121,6 +158,12 @@ _RESTRICTED_PATTERNS: dict[str, str] = {
     "Khuyến nghị xét nghiệm/thăm khám thêm": (
         r"\b(xét nghiệm thêm|xet nghiem them|nên đi khám|nen di kham|cần đi khám|can di kham|"
         r"nên gặp bác sĩ|nen gap bac si)\b"
+    ),
+    # ADR-010 amendment 2026-08-19 (CRIT-TREND-07): kết luận lâm sàng từ tổ hợp
+    # chỉ số trong một nhóm — ranh giới "chẩn đoán theo nhóm" của Business Description.
+    "Kết luận lâm sàng theo nhóm": (
+        r"\b(sự kết hợp này cho thấy|su ket hop nay cho thay|nhóm chỉ số này nghĩa là|"
+        r"nhom chi so nay nghia la|hội chứng chuyển hóa|hoi chung chuyen hoa)\b"
     ),
 }
 
@@ -141,10 +184,36 @@ def validate_trend_explanation(
             violations.append(TrendExplanationViolation(label, pattern))
 
     allowed = _allowed_numbers(trend, extra=extra_allowed_numbers)
-    scannable = _strip_unit_mentions(text, trend.canonical_unit)
-    for token in re.findall(r"\d+(?:[.,]\d+)?", scannable):
-        if token not in allowed:
-            violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
+    for token in scan_fabricated_numbers(text, allowed, [trend.canonical_unit]):
+        violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
+    return list(dict.fromkeys(violations))
+
+
+def validate_section_explanation(
+    text: str,
+    trends: list[TrendResponse],
+    *,
+    extra_allowed_numbers: list[list[float | None]] | None = None,
+) -> list[TrendExplanationViolation]:
+    """ADR-010 CRIT-TREND-07: kiểm duyệt giải thích theo nhóm chức năng.
+
+    Cùng khung an toàn như validator đơn chỉ số, nhưng whitelist là **hợp** của mọi
+    chỉ số trong nhóm (CRIT-TREND-05 amendment) và đơn vị được bỏ ra cho tất cả
+    chỉ số. Banned vocabulary bao gồm cả kết luận lâm sàng theo nhóm.
+    """
+    violations = [
+        TrendExplanationViolation(violation.mechanism, violation.evidence)
+        for violation in MedicalSafetyValidator().validate(text)
+    ]
+    lowered = text.casefold()
+    for label, pattern in _RESTRICTED_PATTERNS.items():
+        if re.search(pattern, lowered):
+            violations.append(TrendExplanationViolation(label, pattern))
+
+    allowed = collect_allowed_numbers(trends, extras=extra_allowed_numbers)
+    units = [trend.canonical_unit for trend in trends]
+    for token in scan_fabricated_numbers(text, allowed, units):
+        violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
     return list(dict.fromkeys(violations))
 
 
@@ -220,7 +289,7 @@ def _percent_change(trend: TrendResponse) -> tuple[float | None, str | None]:
     change = round(abs((latest - previous) / previous * 100), 1)
     direction = "tăng" if latest > previous else "giảm" if latest < previous else "không đổi"
     if direction == "không đổi":
-        return None, None
+        return 0.0, direction
     return change, direction
 
 
@@ -257,8 +326,13 @@ def _trend_prompt(
 
     pct_section = ""
     if pct_change is not None and pct_direction is not None:
+        change_phrase = (
+            f"{pct_direction} {pct_change}%"
+            if pct_direction != "không đổi"
+            else f"không có biến động ({pct_change}%)"
+        )
         pct_section = (
-            f"\nMức biến động giữa lần gần nhất và lần ngay trước: {pct_direction} {pct_change}% "
+            f"\nMức biến động giữa lần gần nhất và lần ngay trước: {change_phrase} "
             "(số do backend tính sẵn — chỉ được lặp lại nguyên số này, không được tự tính lại)."
         )
 
@@ -304,6 +378,8 @@ def _trend_prompt(
         - Không khuyến nghị thuốc, điều trị, xét nghiệm thêm hoặc hành động y khoa.
         - Không dự đoán giá trị tương lai.
         - Không tạo số, ngày hoặc đơn vị ngoài dữ liệu đã cung cấp ở trên.
+        - Không thêm từ nối số đếm/khoảng thời gian tự đặt như "1 tháng", "1 ngày", "2 lần đo",
+          "khoảng 3 tuần" — chỉ nói đến dữ liệu các lần đo, không đo khoảng cách thời gian.
         - Không viết disclaimer.
         Chỉ trả về đoạn giải thích, không bullet list.
         """
@@ -314,6 +390,33 @@ def _with_escalation_notice(text: str, *, escalate: bool) -> str:
     if not escalate:
         return text
     return f"{CONTACT_DOCTOR_NOTICE} {text}".strip()
+
+
+def _extract_text_content(content: object) -> str:
+    """Rút phần text hiển thị từ ``response.content`` của model.
+
+    langchain trả content dạng ``str`` (model cũ) hoặc list content block
+    (gemini mới): ``[{'type': 'text', 'text': '...', 'extras': {'signature':
+    '...'}}]``. Nếu dùng ``str(response.content)`` thì signature/provider
+    metadata lọt vào text; chữ số ngẫu nhiên trong đó khiến guardrail chặn
+    nhầm cả câu trả lời đúng (fallback "không khả dụng" dù model trả nội dung
+    hợp lệ). Cùng mẫu với ``_visible_text_content`` trong guardrail_node.py.
+    """
+    if isinstance(content, str):
+        return content
+
+    if not isinstance(content, list):
+        return ""
+
+    text_parts: list[str] = []
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "text":
+            continue
+        text = block.get("text")
+        if isinstance(text, str) and text.strip():
+            text_parts.append(text.strip())
+
+    return "\n".join(text_parts).strip()
 
 
 async def explain_patient_trend(
@@ -359,7 +462,7 @@ async def explain_patient_trend(
     started_at = time.perf_counter()
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
-        text = str(response.content).strip()
+        text = _extract_text_content(response.content).strip()
     except Exception as exc:
         add_timing_event(
             "trend-explanation-call",
@@ -389,7 +492,7 @@ async def explain_patient_trend(
 
     violations = validate_trend_explanation(text, trend, extra_allowed_numbers=extra_allowed)
     if violations:
-        logger.warning("Trend explanation blocked: %s", violations)
+        logger.warning("Trend explanation blocked: %s\nBlocked text: %s", violations, text)
         return TrendExplanationResponse(
             explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
             fallback=True,

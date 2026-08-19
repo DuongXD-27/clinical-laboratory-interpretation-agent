@@ -28,6 +28,10 @@ from src.services.patient_service import (
     get_patient_by_username,
     update_patient_profile,
 )
+from src.services.section_trend_explanation_service import (
+    SECTION_KEYS,
+    explain_section_trend,
+)
 from src.services.trend_explanation_service import (
     TrendExplanationUnavailable,
     explain_patient_trend,
@@ -150,6 +154,29 @@ async def trend_explanation(
             db,
             username=current_user.username,
             analyte_canonical=analyte_canonical,
+            trend_filter=filter,
+        )
+    except TrendExplanationUnavailable as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/trends/sections/{section}/explain", response_model=TrendExplanationResponse)
+async def section_trend_explanation(
+    section: str,
+    filter: TrendFilter = "latest5",
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TrendExplanationResponse:
+    _require_patient(current_user)
+    if section not in SECTION_KEYS:
+        raise HTTPException(status_code=400, detail="Nhóm chức năng không hợp lệ.")
+    try:
+        return await explain_section_trend(
+            db,
+            username=current_user.username,
+            section=section,
             trend_filter=filter,
         )
     except TrendExplanationUnavailable as exc:

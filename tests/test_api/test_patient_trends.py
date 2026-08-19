@@ -424,6 +424,38 @@ async def test_trend_explanation_generated_with_mocked_llm(isolated_client, monk
 
 
 @pytest.mark.asyncio
+async def test_trend_explanation_extracts_text_from_block_content(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(
+            return_value=SimpleNamespace(
+                content=[
+                    {
+                        "type": "text",
+                        "text": "Giá trị gần nhất cao hơn lần trước.",
+                        "extras": {
+                            "signature": (
+                                "EnEKbwERTTIPtkzEixgfv0guRZpI1YymyuUYByuozm87IH0FJ4"
+                                "immgHx4A75+8uIMw683NNMmSqV0wAa3viuo/CrPZSSmFv+NKcT+Tj4"
+                            )
+                        },
+                    }
+                ]
+            )
+        )
+    )
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] is False
+    assert response.json()["explanation"] == "Giá trị gần nhất cao hơn lần trước."
+
+
+@pytest.mark.asyncio
 async def test_trend_explanation_not_called_for_insufficient_points(isolated_client, monkeypatch):
     client, session_local = isolated_client
     headers = await _auth_headers(client)
@@ -686,3 +718,135 @@ async def test_trend_guardrail_allows_grounded_trailing_zero_value(isolated_clie
     trend = TrendResponse.model_validate(response.json())
 
     assert not validate_trend_explanation("Giá trị gần nhất là 4.0 mmol/L.", trend)
+
+
+def _section_explain_url(section: str, trend_filter: str = "latest5") -> str:
+    return f"/api/v1/patient/me/trends/sections/{section}/explain?filter={trend_filter}"
+
+
+def _save_ldl_and_fpg_series(session_local):
+    for index in range(3):
+        date_text = f"2026-08-{index + 1:02d}"
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [
+                {"name": "LDL-C", "value": 2.1 + index / 10, "unit": "mmol/L"},
+                {"name": "Fasting plasma glucose", "value": 5.0 + index / 10, "unit": "mmol/L"},
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_covers_multiple_analytes(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_and_fpg_series(session_local)
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(return_value=SimpleNamespace(content="LDL-C và FPG cùng tăng qua các lần đo."))
+    )
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] is False
+    assert response.json()["explanation"] == "LDL-C và FPG cùng tăng qua các lần đo."
+    assert mock_llm.ainvoke.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_blocks_group_diagnosis(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_and_fpg_series(session_local)
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(return_value=SimpleNamespace(content="Sự kết hợp này cho thấy nguy cơ tim mạch."))
+    )
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] is True
+    assert response.json()["reason"] == "GUARDRAIL_BLOCKED"
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_single_eligible_delegates_to_single_analyte(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(return_value=SimpleNamespace(content="Giá trị gần nhất cao hơn lần trước."))
+    )
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] is False
+    assert response.json()["explanation"] == "Giá trị gần nhất cao hơn lần trước."
+    assert mock_llm.ainvoke.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_no_eligible_returns_fallback(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_ldl_series(session_local, 3)
+    mock_llm = SimpleNamespace(ainvoke=AsyncMock())
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("hematology"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] is True
+    assert response.json()["reason"] == "INSUFFICIENT_DATA"
+    assert mock_llm.ainvoke.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_invalid_section_returns_400(isolated_client, monkeypatch):
+    client, _ = isolated_client
+    headers = await _auth_headers(client)
+    mock_llm = SimpleNamespace(ainvoke=AsyncMock())
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("unknown"), headers=headers)
+
+    assert response.status_code == 400
+    assert mock_llm.ainvoke.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_section_trend_explanation_escalates_with_fixed_notice(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, (name, value) in enumerate(
+        [
+            ("Creatinine", 80),
+            ("Potassium", 3.4),
+            ("Creatinine", 82),
+            ("Potassium", 3.1),
+            ("Creatinine", 85),
+            ("Potassium", 2.8),
+        ],
+        start=1,
+    ):
+        date_text = f"2026-08-{index:02d}"
+        _save(session_local, "benhnhan", date_text, [{"name": name, "value": value, "unit": "umol/L" if name == "Creatinine" else "mmol/L"}])
+    mock_llm = SimpleNamespace(
+        ainvoke=AsyncMock(return_value=SimpleNamespace(content="Creatinine và Potassium cùng tăng qua các lần đo."))
+    )
+    monkeypatch.setattr("src.services.section_trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_section_explain_url("chemistry"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["fallback"] is False
+    assert payload["explanation"].startswith("Chỉ số này đang ở mức cần chú ý đặc biệt")
+    assert payload["explanation"].endswith("Creatinine và Potassium cùng tăng qua các lần đo.")

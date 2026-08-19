@@ -105,6 +105,25 @@ def test_a_percent_change_the_model_computed_itself_is_blocked():
     assert any(v.evidence == "42" for v in violations)
 
 
+def test_allows_stating_backend_computed_zero_percent_change():
+    """Hai lần đo bằng nhau: backend tính ra 0% thật nên model được lặp lại.
+
+    Trước đây ``_percent_change`` trả ``None`` cho case không đổi, nên model
+    viết "0%" (số đúng nhưng không nằm trong whitelist) bị chặn → luôn fallback
+    ở case phổ biến nhất (chỉ số ổn định).
+    """
+
+    trend = _trend()
+
+    violations = validate_trend_explanation(
+        "LDL-C không có biến động (0%) so với lần xét nghiệm trước.",
+        trend,
+        extra_allowed_numbers=[0.0],
+    )
+
+    assert violations == []
+
+
 # --- CRIT-TREND-01 dạng câu 3: hướng đi tổng thể --------------------------------
 
 
