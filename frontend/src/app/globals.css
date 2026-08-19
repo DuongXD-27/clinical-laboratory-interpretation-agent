@@ -1,19 +1,91 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f9fc;
-  --foreground: #172033;
-  --brand: #1769e0;
-  --brand-dark: #0d55c7;
-  --sev-critical-fg: #b91c1c;
-  --sev-critical-bg: #fee2e2;
-  --sev-abnormal-fg: #c2410c;
-  --sev-abnormal-bg: #ffedd5;
-  --sev-normal-fg: #15803d;
-  --sev-normal-bg: #dcfce7;
+  /* 1. NEUTRAL FOUNDATION */
+  --background: #F6F9FB;
+  --surface: #FFFFFF;
+  --surface-subtle: #F1F5F7;
+  --surface-elevated: rgba(255,255,255,0.84);
+  --foreground: #15242B;
+  --foreground-secondary: #475A63;
+  --foreground-muted: #6B7D85;
+  --border: #DCE6EA;
+  --border-strong: #C5D4DA;
+
+  /* 2. BRAND TOKENS */
+  --brand: #087E8B;
+  --brand-strong: #056773;
+  --brand-soft: #E6F5F6;
+  --info: #2864DC;
+
+  /* 3. LIQUID GLASS TOKENS */
+  --glass-surface: rgba(255,255,255,0.72);
+  --glass-border: rgba(255,255,255,0.64);
+  --holo-cyan: rgba(71,214,211,0.28);
+  --holo-blue: rgba(96,165,250,0.22);
+  --holo-violet: rgba(167,139,250,0.16);
+
+  /* 4. MEDICAL PRESENTATION TOKENS */
+  --status-normal-fg: #087443;
+  --status-normal-bg: #ECFDF3;
+  --status-normal-border: #B7E4C7;
+  --status-abnormal-fg: #9A5B13;
+  --status-abnormal-bg: #FFF8E8;
+  --status-abnormal-border: #F4D58D;
+  --status-critical-fg: #B42318;
+  --status-critical-bg: #FEF3F2;
+  --status-critical-border: #FDA29B;
+  --status-unknown-fg: #475467;
+  --status-unknown-bg: #F2F4F7;
+  --status-unknown-border: #D0D5DD;
+
+  /* 6. SPACING FOUNDATION */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* 7. RADIUS FOUNDATION */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-glass: 16px;
+
+  /* 8. SHADOW FOUNDATION */
+  --shadow-sm: 0 1px 2px rgba(21, 36, 43, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(21, 36, 43, 0.1), 0 2px 4px -1px rgba(21, 36, 43, 0.06);
+  --shadow-glass: 0 8px 32px rgba(21, 36, 43, 0.08);
+
+  /* 9. MOTION FOUNDATION */
+  --motion-fast: 150ms ease;
+  --motion-normal: 200ms ease;
+  --motion-slow: 250ms ease;
+
+  /* 5. MEDICAL TOKEN COMPATIBILITY (LEGACY) */
+  --brand-dark: var(--brand-strong);
+  --sev-critical-fg: var(--status-critical-fg);
+  --sev-critical-bg: var(--status-critical-bg);
+  --sev-abnormal-fg: var(--status-abnormal-fg);
+  --sev-abnormal-bg: var(--status-abnormal-bg);
+  --sev-normal-fg: var(--status-normal-fg);
+  --sev-normal-bg: var(--status-normal-bg);
+  
   --ver-unverified: #64748b;
   --ver-pending: #4f46e5;
   --ver-verified: #15803d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-normal: 0ms;
+    --motion-slow: 0ms;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
