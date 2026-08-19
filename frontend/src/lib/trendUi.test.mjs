@@ -4,9 +4,12 @@ import test from "node:test";
 import {
   assessmentText,
   canRenderTrendChart,
+  dedupeTrendPoints,
   defaultTrendAnalyte,
   formatTrendDate,
   groupBySection,
+  groupableSections,
+  sectionFallbackReason,
   trendReasonMessage,
   TREND_INSUFFICIENT_MESSAGE,
 } from "./trendUi.mjs";
@@ -78,4 +81,56 @@ test("items without a section_label fall into a trailing Khác group", () => {
 test("groupBySection tolerates a missing or empty list", () => {
   assert.deepEqual(groupBySection(undefined), []);
   assert.deepEqual(groupBySection([]), []);
+});
+
+test("groupableSections keeps only sections with at least two eligible analytes", () => {
+  const groups = groupableSections([
+    { analyte_canonical: "WBC", section: "hematology", section_label: "Huyết học", trend_available: true },
+    { analyte_canonical: "RBC", section: "hematology", section_label: "Huyết học", trend_available: true },
+    { analyte_canonical: "LDL-C", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: true },
+    { analyte_canonical: "HbA1c", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: false },
+    { analyte_canonical: "Creatinine", section: "chemistry", section_label: "Sinh hóa thận - gan", trend_available: true },
+    { analyte_canonical: "WithoutSection", trend_available: true },
+  ]);
+
+  assert.deepEqual(groups, [{ key: "hematology", label: "Huyết học", eligible: 2 }]);
+});
+
+test("groupableSections returns an empty list when no section has two eligible analytes", () => {
+  assert.deepEqual(groupableSections([]), []);
+  assert.deepEqual(
+    groupableSections([
+      { analyte_canonical: "LDL-C", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: true },
+    ]),
+    [],
+  );
+  assert.deepEqual(groupableSections(undefined), []);
+});
+
+test("sectionFallbackReason maps backend fallback reasons to patient-friendly messages", () => {
+  assert.match(sectionFallbackReason("INSUFFICIENT_DATA"), /chưa có đủ chỉ số/);
+  assert.match(sectionFallbackReason("GUARDRAIL_BLOCKED"), /chưa đạt chuẩn an toàn/);
+  assert.match(sectionFallbackReason("PROVIDER_ERROR"), /chưa khả dụng/);
+  assert.match(sectionFallbackReason(null), /chưa khả dụng/);
+});
+
+test("dedupeTrendPoints keeps the newest report per test date in original order", () => {
+  const points = [
+    { report_id: 1, test_date: "2026-08-15", value: 4.0 },
+    { report_id: 2, test_date: "2026-08-14", value: 5.0 },
+    { report_id: 11, test_date: "2026-08-15", value: 6.0 },
+    { report_id: 7, test_date: "2026-08-15", value: 5.5 },
+  ];
+  assert.deepEqual(
+    dedupeTrendPoints(points).map((point) => point.report_id),
+    [2, 11],
+  );
+});
+
+test("dedupeTrendPoints tolerates missing lists and points without report_id", () => {
+  assert.deepEqual(dedupeTrendPoints(undefined), []);
+  assert.deepEqual(dedupeTrendPoints([]), []);
+  const fallback = dedupeTrendPoints([{ test_date: "2026-08-15", value: 1 }]);
+  assert.equal(fallback.length, 1);
+  assert.deepEqual(dedupeTrendPoints([{ value: 1 }]), []);
 });

@@ -80,3 +80,67 @@ export function groupBySection(items) {
     .map((label) => ({ label, items: groups.get(label) }));
   return [...ordered, ...extras];
 }
+
+/**
+ * Giữ một điểm duy nhất cho mỗi ngày xét nghiệm (test_date): điểm của phiếu có
+ * `report_id` lớn nhất (phiếu được lưu muộn nhất trong ngày đó). Khi một ngày có
+ * nhiều phiếu khác nhau, trục thời gian của recharts không phân biệt được các giá
+ * trị cùng timestamp nên chỉ hiển thị điểm mới nhất, tránh warning key trùng.
+ *
+ * Thứ tự gốc được giữ nguyên.
+ *
+ * @param {{ test_date?: string, report_id?: number }[] | null | undefined} points
+ * @returns {{ test_date?: string, report_id?: number }[]}
+ */
+/**
+ * Các nhóm chức năng đủ điều kiện giải thích "cả nhóm" (ADR-010 CRIT-TREND-07):
+ * những nhóm có từ 2 chỉ số đủ điểm (`trend_available`) trở lên, vì 0 hoặc 1 chỉ
+ * số thì backend fallback về dữ kiện đơn chỉ số — không còn ý nghĩa "đọc cùng nhau".
+ *
+ * @param {{ section?: string | null, section_label?: string | null, trend_available?: boolean }[] | null | undefined} analytes
+ * @returns {{ key: string, label: string, eligible: number }[]}
+ */
+export function groupableSections(analytes) {
+  const byKey = new Map();
+  for (const item of analytes ?? []) {
+    const key = item?.section;
+    if (!key) continue;
+    if (!byKey.has(key)) {
+      byKey.set(key, { key, label: item.section_label || key, eligible: 0 });
+    }
+    if (item.trend_available) byKey.get(key).eligible += 1;
+  }
+  return [...byKey.values()]
+    .filter((group) => group.eligible >= 2)
+    .sort(
+      (a, b) =>
+        (SECTION_LABEL_ORDER.indexOf(a.label) + 1 || Number.POSITIVE_INFINITY)
+        - (SECTION_LABEL_ORDER.indexOf(b.label) + 1 || Number.POSITIVE_INFINITY),
+    );
+}
+
+export function sectionFallbackReason(reason) {
+  if (reason === "INSUFFICIENT_DATA") {
+    return "Nhóm này chưa có đủ chỉ số để giải thích cùng nhau; hãy lưu thêm kết quả xét nghiệm.";
+  }
+  if (reason === "GUARDRAIL_BLOCKED") {
+    return "Phần giải thích chưa đạt chuẩn an toàn nên đã bị chặn; bạn có thể thử lại.";
+  }
+  return "Phần giải thích theo nhóm hiện chưa khả dụng; bạn vẫn có thể dùng biểu đồ từng chỉ số khi trao đổi với bác sĩ.";
+}
+
+export function dedupeTrendPoints(points) {
+  if (!Array.isArray(points)) return [];
+  const newestPerDate = new Map();
+  for (const point of points) {
+    const date = point?.test_date;
+    if (date == null) continue;
+    const current = newestPerDate.get(date);
+    if (!current || (point.report_id ?? 0) > (current.report_id ?? 0)) {
+      newestPerDate.set(date, point);
+    }
+  }
+  return points.filter(
+    (point) => point?.test_date != null && newestPerDate.get(point.test_date) === point,
+  );
+}
