@@ -1,12 +1,27 @@
 # ADR-010 — Trend Interpretation Safety Contract and Reference-Range Context
 
-**Status:** ACCEPTED
+**Status:** ACCEPTED (amended 2026-08-19)
 
-**Human approval date:** 2026-08-18
+**Human approval date:** 2026-08-18 (amendment approved 2026-08-19)
 
 **Decision owner:** Human Product/Technical Owner
 
 **ADR number:** ADR-010
+
+---
+
+## Amendment — 2026-08-19
+
+Approved by the Human Product/Technical Owner to align with the Business Description
+`nhan-xet-phan-tich-xh.docx`. The amendment extends the interpretation contract from a
+**single-analyte** scope to also cover **group-level factual interpretation**: a patient may
+read the indicators of a functional section **together** and receive an explanation of the
+factual relationships between them (e.g. "HbA1c và LDL-C cùng tăng qua các lần đo"). The
+amendment codifies exactly the boundary the Business Description draws between **"diễn giải
+dữ kiện"** and **"chẩn đoán theo nhóm"**: cross-analyte factual statements are allowed,
+combined clinical conclusions are not. Changes: CRIT-TREND-01, CRIT-TREND-05, CRIT-TREND-06,
+new CRIT-TREND-07, Safety Invariants, Validation criteria. All previously accepted rules
+remain in force; this is an extension, not a relaxation.
 
 ---
 
@@ -52,6 +67,10 @@ The trend explanation may state **facts grounded in the patient's own measuremen
 3. Overall direction of the series:
    `"[Chỉ số] có xu hướng tăng/giảm/dao động/ổn định qua N lần đo."`
 4. Combination of the above with dates from the data.
+5. **Cross-analyte factual relationships within a functional section (group mode, see CRIT-TREND-07).** These use only the fact blocks supplied per analyte; every number must come from the block of the analyte it names:
+   - `"[A] và [B] cùng tăng/giảm/ổn định qua các lần đo."`
+   - `"Cả [A] và [B] trong nhóm này đều vượt ngưỡng trên của khoảng tham chiếu."` / `"...đều nằm trong khoảng tham chiếu."`
+   - `"[A] tăng trong khi [B] giảm (trái chiều)."`
 
 **Absolutely banned vocabulary** — expanded beyond the existing blacklist in `validate_trend_explanation()`:
 
@@ -60,6 +79,7 @@ The trend explanation may state **facts grounded in the patient's own measuremen
 - Causation inference: "nguyên nhân là do", "do ăn nhiều chất béo", "do thiếu".
 - Risk interpretation: "cho thấy nguy cơ", "có thể là dấu hiệu của", "bạn có nguy cơ".
 - Treatment/drug/lab referral: "nên dùng thuốc", "cần xét nghiệm thêm", "nên đi khám vì", "hãy uống".
+- **Combined clinical conclusion from a group of indicators** (the boundary the Business Description calls "chẩn đoán theo nhóm"): "sự kết hợp này cho thấy", "nhóm chỉ số này nghĩa là", "nguy cơ tim mạch", "hội chứng chuyển hóa", or any statement deriving a condition, risk, or clinical significance from the combination of indicators in a section.
 - Any number not present in the supplied data, reference bounds, critical bounds, or backend-computed change values.
 
 The adversarial test suite in `tests/test_services/test_trend_explanation_guardrail.py` operationalizes these rules before the code is changed (test-first), following the pattern of the `RETRIEVAL_MIN_SCORE` evidence.
@@ -100,13 +120,28 @@ The percentage change between the two most recent measurements is computed by th
 
 The existing behavior (points, dates, counts) is unchanged, and the scientific-unit strip rule (`_strip_unit_mentions`) is preserved.
 
+**Group mode (amendment 2026-08-19):** when validating a section-level explanation (CRIT-TREND-07), the allowed-number set is the **union** of the per-analyte sets across every analyte included in the group — each analyte's point values/dates/counts, its sex/age-matched reference bounds, its backend-computed percentage change, and the critical bounds of any escalated analyte. Number fabrication is still blocked: a number in the final text must exist in the supplied data of the analyte it names (or its supplied bounds/change), and combining values of two analytes into a computed figure is treated as a fabricated number.
+
 ### CRIT-TREND-06 — Functional sections (Objective 1)
 
 - The build (`src/scripts/build_reference_config.py`) propagates the source CSV `section` column into every `reference_ranges.json` rule as a canonical key (`hematology` / `chemistry` / `lipids`).
 - The runtime per-analyte section is the section of the analyte's **reference interval (RI)** rules. One explicit expert override is recorded: **Fasting plasma glucose → `lipids`**, because the product group "Mỡ máu & đường huyết" (per Business Description) includes blood glucose, while the source CSV places its RI rule under "Chemistry, renal, and liver analytes".
 - Analytes with no section resolve to the `other` group ("Khác"), displayed last.
 - Section is derived at runtime from `reference_ranges.json`; **no new `IndicatorCatalog` database column is added** in this phase (the table is not yet populated — `report_indicators.indicator_catalog_id` is always `NULL`). The consolidated indicator configuration (Objective 3) is deferred to a later phase and will decide the authoritative schema.
-- The report-detail page (`LabReportDetailSchema` indicators) and the trend page both display sections. The doctor-facing/report page shows **sections only**, never a trend LLM explanation, to avoid extra cost/latency and duplicate content.
+- The report-detail page (`LabReportDetailSchema` indicators) and the trend page both display sections. The doctor-facing/report page shows **sections only**, never a trend LLM explanation (single-analyte or group), to avoid extra cost/latency and duplicate content.
+- **Group membership is expert-declared configuration data** (from `reference_ranges.json`, propagated from the source CSV). The LLM never invents a group or a section membership; it only reads the groups the configuration defines. A section serves both **display grouping** and, under CRIT-TREND-07, **group-level explanation**.
+
+### CRIT-TREND-07 — Group-level factual interpretation (amendment 2026-08-19)
+
+The Business Description asks that a patient be able to read the indicators of a functional section **together** and learn the factual relationship between them (e.g. "HbA1c và LDL-C cùng tăng") instead of comparing each indicator one by one by eye. This is allowed as **fact-interpretation across indicators**, never as a combined clinical conclusion.
+
+1. **Scope.** Trends page only, never the report-detail page. One group explanation covers all `trend_available` analytes of one section key (`hematology` / `chemistry` / `lipids`). An analyte needs at least 3 points (existing rule) to be included; analytes with fewer points are listed in the UI but excluded from the group prompt.
+2. **Per-analyte facts.** Each included analyte contributes a fact block computed by the backend with the same helpers as the single-analyte flow: sex/age-matched reference bounds (CRIT-TREND-02), percentage change between the two most recent measurements (CRIT-TREND-04), overall direction, and critical bounds if escalated (CRIT-TREND-03). The model repeats these facts; it never computes its own.
+3. **Allowed content.** Only factual cross-analyte relationships as in CRIT-TREND-01 structure #5 (co-direction, all above / all within the reference range, approaching a threshold, divergence). **Banned:** any combined clinical conclusion, diagnosis, risk interpretation, causation, future prediction, or action recommendation derived from the group — the "chẩn đoán theo nhóm" boundary in the Business Description.
+4. **Guardrail.** The section explanation is validated with the **union** allowed-number set (CRIT-TREND-05) and the same banned vocabulary. An LLM output that combines indicators into a clinical claim (e.g. "sự kết hợp này cho thấy nguy cơ tim mạch") is blocked even when every number it contains is grounded.
+5. **Edge cases.** No eligible analyte in the section → return the fixed fallback text (`INSUFFICIENT_DATA`). Exactly one eligible analyte → delegate to the single-analyte flow (identical behavior). Any included analyte is critical or approaching-critical → the fixed high-priority notice of CRIT-TREND-03 is appended to the group explanation.
+6. **Cost control.** Group explanations are generated **on demand only** (one LLM call per section when the patient asks), never automatically for every group on page load — consistent with the Business Description risk "chi phí và độ trễ".
+7. **Failure handling.** LLM unavailable, empty output, or guardrail block → return the fixed fallback text; the charts and data remain fully visible (Business Description edge case "Khi hệ thống không sinh được phần diễn giải").
 
 ---
 
@@ -139,6 +174,7 @@ The following from the Business Description are **not** implemented by this ADR 
 4. **No critical escalation without an active threshold.** Approaching/critical templates fire only for analytes with active critical rules (glucose, potassium under ADR-009).
 5. **No pipeline coupling.** The pipeline graph is unchanged; the shared module is the only interface between the trend service and the critical threshold data.
 6. **Existing fail-closed critical behavior preserved.** The refactor to the shared module must not alter the node's unit normalization, canonicalization, upstream-`unknown` preservation, or alert messages.
+7. **No cross-analyte medical conclusion.** A group explanation may state factual co-direction/co-range relationships grounded in each analyte's own supplied facts; deriving a condition, risk, diagnosis, or combined clinical significance from the combination is blocked by the guardrail and the prompt.
 
 ---
 
@@ -152,6 +188,11 @@ The following from the Business Description are **not** implemented by this ADR 
 - [ ] `critical_detector_node` tests pass unchanged (message and behavior preserved).
 - [ ] Every rule in `reference_ranges.json` carries a `section`; per-analyte section is deterministic; FPG → `lipids`; unknown → `other`.
 - [ ] Trend page and report-detail page group indicators by section; report-detail shows no LLM explanation.
+- [ ] **Group mode:** the section guardrail blocks a combined clinical conclusion ("nguy cơ tim mạch", "sự kết hợp này cho thấy") even when every number in the output is grounded.
+- [ ] **Group mode:** the union allowed-number set accepts numbers of any included analyte; a figure formed by combining two analytes' values is blocked as fabricated.
+- [ ] **Group mode:** a section with exactly one eligible analyte produces identical behavior to the single-analyte flow.
+- [ ] **Group mode:** an escalated analyte appends the fixed CRIT-TREND-03 notice; zero eligible analytes return the fixed fallback.
+- [ ] **Group mode:** explanations are generated on demand only; an LLM failure or guardrail block returns the fixed fallback with charts/data still visible.
 
 ---
 
