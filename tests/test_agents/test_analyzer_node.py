@@ -75,7 +75,7 @@ async def test_rag_is_optional_and_only_metadata_sources_are_returned(monkeypatc
             return FakeStructuredLLM()
 
     class FakeRetriever:
-        def retrieve(self, *, query, analyte_id, limit):
+        def retrieve(self, *, query, analyte_id, status, limit, band_id=None, critical_status=None):
             return [
                 {
                     "indicator_name": "WBC",
@@ -120,7 +120,7 @@ async def test_slow_llm_times_out_and_uses_curated_fallback(monkeypatch):
     monkeypatch.setattr(
         analyzer_module,
         "get_settings",
-        lambda: SimpleNamespace(llm_timeout_seconds=0.01),
+        lambda: SimpleNamespace(llm_timeout_seconds=0.01, max_analyzer_context_chars=4000),
     )
 
     result = await asyncio.wait_for(

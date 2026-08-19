@@ -12,6 +12,10 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from src.scripts.extract_explanation_reference_ranges import extract_supplemental_rules
 
 BUILDER_VERSION = "v3"
@@ -39,7 +43,7 @@ SUPPLEMENTAL_FIELDS = [
 
 # Analytes whose primary catalog rules are superseded by supplemental rules derived from explanations.json.
 # Primary rules for these analytes are excluded from the final catalog (but still counted in runtime_accepted_rows).
-SUPPLEMENTAL_REPLACEMENT_ANALYTES: frozenset[str] = frozenset({"HDL-C"})
+SUPPLEMENTAL_REPLACEMENT_ANALYTES: frozenset[str] = frozenset()
 
 # Source CSV section column -> canonical runtime key (ADR-010 CRIT-TREND-06).
 SECTION_CSV_TO_CANONICAL: dict[str, str] = {
@@ -66,6 +70,8 @@ STRUCTURAL_REASON_ORDER = [
     "invalid_lower_bound",
     "invalid_upper_bound",
     "lower_greater_than_upper",
+    "missing_upper_operator",
+    "invalid_upper_operator",
 ]
 REASON_ORDER = STRUCTURAL_REASON_ORDER
 
@@ -99,6 +105,7 @@ RUNTIME_FIELDS = [
     "value_type",
     "range_lower",
     "range_upper",
+    "upper_operator",
     "reference_type",
     "source_priority_tier",
     "source_url",
@@ -271,6 +278,14 @@ def structural_result(row: dict[str, str]) -> tuple[list[str], dict[str, Any]]:
     normalized["range_lower_decimal"] = lower
     normalized["range_upper_decimal"] = upper
 
+    upper_op = normalize_null(row.get("upper_operator"))
+    if reference_type == "ONE_SIDED_LIMIT":
+        if not upper_op:
+            reasons.append("missing_upper_operator")
+        elif upper_op not in {"<", "<=", ">", ">="}:
+            reasons.append("invalid_upper_operator")
+    normalized["upper_operator"] = upper_op
+
     return [reason for reason in STRUCTURAL_REASON_ORDER if reason in reasons], normalized
 
 
@@ -306,6 +321,7 @@ def make_runtime_record(
         "value_type": normalize_optional_source_value(row.get("value_type")),
         "range_lower": lower_value,
         "range_upper": upper_value,
+        "upper_operator": normalized.get("upper_operator"),
         "reference_type": normalized["reference_type"],
         "source_priority_tier": normalize_for_compare(row.get("source_priority_tier")),
         "source_url": normalize_optional_source_value(row.get("source_url")),

@@ -1,5 +1,7 @@
 import type { IndicatorResult } from "./analysis";
 
+type VerificationStatus = "unverified" | "pending_review" | "verified";
+
 export type ReportQuestion = {
   id: number;
   /** null với câu dự phòng hoặc câu gộp nhiều chỉ số. */
@@ -46,6 +48,9 @@ export type LabReportSummary = {
   /** Đã có bác sĩ xem (bấm nút) hoặc đã có ghi chú. */
   reviewed_by_doctor: boolean;
   has_doctor_notes: boolean;
+  verification_status: VerificationStatus;
+  verified_by_username: string | null;
+  verified_at: string | null;
 };
 
 export type LabReportDetail = LabReportSummary & {

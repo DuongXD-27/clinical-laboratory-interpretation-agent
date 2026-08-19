@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from src.config import get_settings
-from src.services.measurement_conversion import glucose_mmol_l_to_mg_dl
+from src.services.measurement_conversion import (
+    bilirubin_umol_l_to_mg_dl,
+    glucose_mmol_l_to_mg_dl,
+)
 from src.services.reference_repository import ReferenceRepository
 
 logger = logging.getLogger(__name__)
@@ -18,6 +21,10 @@ _CONVERT_INPUT_TO_SOURCE_UNIT = "CONVERT_INPUT_TO_SOURCE_UNIT"
 _FASTING_PLASMA_GLUCOSE = "Fasting plasma glucose"
 _GLUCOSE_INPUT_UNIT = "mmol/l"
 _GLUCOSE_SOURCE_UNIT = "mg/dl"
+
+_TOTAL_BILIRUBIN = "Total bilirubin"
+_BILIRUBIN_INPUT_UNIT = "umol/l"
+_BILIRUBIN_SOURCE_UNIT = "mg/dl"
 
 # LEGACY_OPERATOR_DEFAULT: temporary Phase 2B migration compatibility only.
 # Patch C must add explicit operators to every active production side, after
@@ -216,6 +223,12 @@ def evaluate_critical(
         and normalized_input_unit == _GLUCOSE_INPUT_UNIT
         and normalized_threshold_unit == _GLUCOSE_SOURCE_UNIT
     )
+    approved_bilirubin_conversion = (
+        analyte_canonical == _TOTAL_BILIRUBIN
+        and thresholds.get("vmec_comparison_strategy") == _CONVERT_INPUT_TO_SOURCE_UNIT
+        and normalized_input_unit == _BILIRUBIN_INPUT_UNIT
+        and normalized_threshold_unit == _BILIRUBIN_SOURCE_UNIT
+    )
 
     if approved_glucose_conversion:
         try:
@@ -223,6 +236,18 @@ def evaluate_critical(
         except ValueError:
             logger.warning(
                 "Critical glucose conversion skipped for '%s': value %r is invalid",
+                name,
+                value,
+            )
+            return neutral
+        comparison_unit = threshold_unit
+        use_decimal = True
+    elif approved_bilirubin_conversion:
+        try:
+            comparison_value = bilirubin_umol_l_to_mg_dl(value)
+        except ValueError:
+            logger.warning(
+                "Critical bilirubin conversion skipped for '%s': value %r is invalid",
                 name,
                 value,
             )

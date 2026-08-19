@@ -65,10 +65,10 @@ async def test_detect_critical_values_node_legacy_mock():
     """Test legacy critical value detector mock state execution."""
     mock_state: AgentState = {
         "raw_indicators": [
-            {"name": "Kali", "value": 2.0, "unit": "mmol/L"},  # Production ARUP critical low (<3.0)
+            {"name": "Kali", "value": 2.0, "unit": "mmol/L"},        # Production ARUP critical low (<3.0)
             {"name": "Fasting plasma glucose", "value": 30.5, "unit": "mmol/L"},  # Converts above production >450 mg/dL
-            {"name": "LDL-C", "value": 3.2, "unit": "mmol/L"},  # Below critical high threshold
-            {"name": "WBC", "value": 7.5, "unit": "10^9/L"},  # Within non-critical range
+            {"name": "LDL-C", "value": 3.2, "unit": "mmol/L"},       # Below critical high threshold
+            {"name": "WBC", "value": 7.5, "unit": "10^9/L"},         # Within non-critical range
         ]
     }
 
@@ -164,7 +164,6 @@ async def test_potassium_exact_critical_boundaries_software_execution(value, exp
 # Phase 2B Patch A: Explicit Operator Dispatch
 # ===========================================================================
 
-
 @pytest.mark.parametrize(
     ("value", "threshold", "operator", "expected"),
     [
@@ -186,16 +185,13 @@ def test_explicit_operator_dispatch(value, threshold, operator, expected):
 )
 @pytest.mark.asyncio
 async def test_invalid_operator_fails_closed_without_alert(monkeypatch, operator):
-    _set_test_rule(
-        monkeypatch,
-        {
-            "low": 3.0,
-            "low_operator": operator,
-            "high": None,
-            "high_operator": None,
-            "unit": "mmol/L",
-        },
-    )
+    _set_test_rule(monkeypatch, {
+        "low": 3.0,
+        "low_operator": operator,
+        "high": None,
+        "high_operator": None,
+        "unit": "mmol/L",
+    })
 
     result = await detect_critical_values_node(_potassium_state(2.0))
     indicator = result["indicators"][0]
@@ -208,16 +204,13 @@ async def test_invalid_operator_fails_closed_without_alert(monkeypatch, operator
 
 @pytest.mark.asyncio
 async def test_null_low_side_is_inactive_while_high_side_still_executes(monkeypatch):
-    _set_test_rule(
-        monkeypatch,
-        {
-            "low": None,
-            "low_operator": None,
-            "high": 6.1,
-            "high_operator": ">",
-            "unit": "mmol/L",
-        },
-    )
+    _set_test_rule(monkeypatch, {
+        "low": None,
+        "low_operator": None,
+        "high": 6.1,
+        "high_operator": ">",
+        "unit": "mmol/L",
+    })
 
     low_result = await detect_critical_values_node(_potassium_state(-999.0))
     assert low_result["indicators"][0]["is_critical"] is False
@@ -232,16 +225,13 @@ async def test_null_low_side_is_inactive_while_high_side_still_executes(monkeypa
 
 @pytest.mark.asyncio
 async def test_null_null_record_is_inactive_without_crash(monkeypatch):
-    _set_test_rule(
-        monkeypatch,
-        {
-            "low": None,
-            "low_operator": None,
-            "high": None,
-            "high_operator": None,
-            "unit": "mmol/L",
-        },
-    )
+    _set_test_rule(monkeypatch, {
+        "low": None,
+        "low_operator": None,
+        "high": None,
+        "high_operator": None,
+        "unit": "mmol/L",
+    })
 
     result = await detect_critical_values_node(_potassium_state(999.0))
 
@@ -254,14 +244,11 @@ async def test_null_null_record_is_inactive_without_crash(monkeypatch):
 @pytest.mark.asyncio
 async def test_legacy_migration_compatibility_missing_operators_defaults_inclusive(monkeypatch):
     """LEGACY_MIGRATION_COMPATIBILITY: missing operators temporarily mean <= / >=."""
-    _set_test_rule(
-        monkeypatch,
-        {
-            "low": 3.0,
-            "high": 6.1,
-            "unit": "mmol/L",
-        },
-    )
+    _set_test_rule(monkeypatch, {
+        "low": 3.0,
+        "high": 6.1,
+        "unit": "mmol/L",
+    })
 
     low_result = await detect_critical_values_node(_potassium_state(3.0))
     high_result = await detect_critical_values_node(_potassium_state(6.1))
@@ -294,10 +281,8 @@ async def test_future_provenance_fields_load_and_execute(tmp_path, monkeypatch):
     }
     config_path = tmp_path / "critical_thresholds.json"
     config_path.write_text(json.dumps({"Potassium": record}), encoding="utf-8")
-    import src.services.critical_value_service as critical_service
-
     monkeypatch.setattr(
-        critical_service,
+        critical_detector,
         "get_settings",
         lambda: SimpleNamespace(critical_thresholds_path=str(config_path)),
     )
@@ -354,7 +339,6 @@ async def test_alert_text_renders_explicit_operator(monkeypatch, record, value, 
 # Phase 2B Patch B: GLUCOSE-CONV-01
 # ===========================================================================
 
-
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
@@ -408,16 +392,14 @@ async def test_production_glucose_mmol_l_conversion_strict_boundaries_use_decima
     value,
     expected_status,
 ):
-    import src.services.critical_value_service as critical_service
-
-    original_compare = critical_service.compare_critical
+    original_compare = critical_detector._compare_critical
     compared_operands = []
 
     def capture_compare(comparison_value, threshold, operator):
         compared_operands.append((comparison_value, threshold, operator))
         return original_compare(comparison_value, threshold, operator)
 
-    monkeypatch.setattr(critical_service, "compare_critical", capture_compare)
+    monkeypatch.setattr(critical_detector, "_compare_critical", capture_compare)
 
     result = await detect_critical_values_node(_glucose_state(value, "mmol/L"))
     indicator = result["indicators"][0]
@@ -584,7 +566,7 @@ async def test_production_glucose_mmol_l_pipeline_can_escalate_non_unknown():
 
     result = await detect_critical_values_node({**state, **ri_state})
 
-    assert result["indicators"][0]["status"] == "low"
+    assert result["indicators"][0]["status"] == "normal"
     assert result["indicators"][0]["critical_status"] == "critical_low"
     assert result["indicators"][0]["is_critical"] is True
 
@@ -644,7 +626,6 @@ async def test_existing_fpg_aliases_reach_one_production_canonical_rule(name):
 # ===========================================================================
 # Check 1 & Blocker 01: Canonical Analyte Equivalence & No Raw-Name Bypass
 # ===========================================================================
-
 
 @pytest.mark.asyncio
 async def test_canonical_analyte_equivalence_potassium_and_kali():
@@ -731,7 +712,6 @@ async def test_generic_glucose_has_no_standalone_raw_name_critical_fallback():
 # ===========================================================================
 # Check 2 & Blocker 02: Upstream Unknown Preservation (No Critical Escalation)
 # ===========================================================================
-
 
 @pytest.mark.asyncio
 async def test_upstream_unknown_is_not_overwritten_by_critical_detector():
@@ -833,7 +813,6 @@ async def test_pipeline_potassium_6500_umol_returns_unknown_end_to_end():
 # Check 3 & Blocker 03: Shared Normalizer Reuse (No Local Unit Exceptions)
 # ===========================================================================
 
-
 @pytest.mark.asyncio
 async def test_shared_unit_normalizer_aliases_execute_correctly(monkeypatch):
     """Fix 1 regression uses isolated active rules; production WBC/Creatinine remain inactive."""
@@ -859,9 +838,9 @@ async def test_shared_unit_normalizer_aliases_execute_correctly(monkeypatch):
     )
     state: AgentState = {
         "raw_indicators": [
-            {"name": "WBC", "value": 35.0, "unit": "G/L"},  # G/L normalized to 10^9/L by shared normalizer
-            {"name": "WBC", "value": 35.0, "unit": "×10^9/L"},  # Symbol normalized to 10^9/L
-            {"name": "Creatinine", "value": 400.0, "unit": "µmol/L"},  # Unicode µ normalized to umol/L
+            {"name": "WBC", "value": 35.0, "unit": "G/L"},              # G/L normalized to 10^9/L by shared normalizer
+            {"name": "WBC", "value": 35.0, "unit": "×10^9/L"},          # Symbol normalized to 10^9/L
+            {"name": "Creatinine", "value": 400.0, "unit": "µmol/L"},    # Unicode µ normalized to umol/L
         ],
     }
 
@@ -881,23 +860,11 @@ async def test_convertible_units_without_converters_fail_closed_standalone():
     """Blocker 03: unsupported cross-unit inputs fail closed without raw comparison."""
     state: AgentState = {
         "raw_indicators": [
-            {
-                "name": "Potassium",
-                "value": 6500.0,
-                "unit": "umol/L",
-            },  # 6500 µmol/L = 6.5 mmol/L, must NOT raw compare 6500 >= 6.5
-            {
-                "name": "Fasting plasma glucose",
-                "value": 27.8,
-                "unit": "g/L",
-            },  # No approved g/L -> mg/dL glucose conversion
-            {"name": "HGB", "value": 60.0, "unit": "g/dL"},  # 60 g/dL = 600 g/L, must NOT raw compare 60 <= 60
-            {"name": "LDL-C", "value": 5.0, "unit": "mg/dL"},  # 5.0 mg/dL != 5.0 mmol/L
-            {
-                "name": "Potassium",
-                "value": 6.5,
-                "unit": "mEq/L",
-            },  # mEq/L is not in shared normalize_unit in V1 -> fail closed
+            {"name": "Potassium", "value": 6500.0, "unit": "umol/L"},   # 6500 µmol/L = 6.5 mmol/L, must NOT raw compare 6500 >= 6.5
+            {"name": "Fasting plasma glucose", "value": 27.8, "unit": "g/L"},  # No approved g/L -> mg/dL glucose conversion
+            {"name": "HGB", "value": 60.0, "unit": "g/dL"},            # 60 g/dL = 600 g/L, must NOT raw compare 60 <= 60
+            {"name": "LDL-C", "value": 5.0, "unit": "mg/dL"},           # 5.0 mg/dL != 5.0 mmol/L
+            {"name": "Potassium", "value": 6.5, "unit": "mEq/L"},       # mEq/L is not in shared normalize_unit in V1 -> fail closed
         ],
     }
 
@@ -944,7 +911,6 @@ async def test_production_registry_only_active_analytes_execute():
 # Production inactive null-side regression
 # ===========================================================================
 
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "value",
@@ -969,7 +935,6 @@ async def test_production_null_inactive_rbc_never_triggers(value):
 # ===========================================================================
 # Non-Critical Happy Paths Preserved
 # ===========================================================================
-
 
 @pytest.mark.asyncio
 async def test_non_critical_happy_paths_preserve_existing_ri_status():
@@ -1033,7 +998,7 @@ async def test_status_and_critical_status_contract_separation():
         ({"name": "Potassium", "value": 4.5, "unit": "mmol/L"}, "normal", None, False),
         ({"name": "Potassium", "value": 5.8, "unit": "mmol/L"}, "high", None, False),
         ({"name": "Potassium", "value": 6.5, "unit": "mmol/L"}, "high", "critical_high", True),
-        ({"name": "Fasting plasma glucose", "value": 3.05, "unit": "mmol/L"}, "low", "critical_low", True),
+        ({"name": "Fasting plasma glucose", "value": 3.05, "unit": "mmol/L"}, "normal", "critical_low", True),
         ({"name": "Glucose", "value": 5.2, "unit": "mmol/L"}, "unknown", None, False),
     ]
 

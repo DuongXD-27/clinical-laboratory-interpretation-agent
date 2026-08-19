@@ -1,0 +1,16 @@
+{
+  "schema_version": 4,
+  "corpus_version": "medical-kb-v4",
+  "collection_name": "medical_kb_v4",
+  "corpus_sha256": "1115376f6f3bae490916877d141b5521df2bb0d3cccc88c130586a3084d98b7a",
+  "source_corpus_sha256": "1115376f6f3bae490916877d141b5521df2bb0d3cccc88c130586a3084d98b7a",
+  "chunk_count": 201,
+  "source_record_count": 79,
+  "analyte_count": 35,
+  "chunk_builder_version": "corpus_builder",
+  "embedding_provider": "fake",
+  "embedding_model": "fake-embedding",
+  "embedding_dimension": 3,
+  "build_timestamp": "2026-08-18T00:15:00+07:00",
+  "release_validator_result": "PASS"
+}

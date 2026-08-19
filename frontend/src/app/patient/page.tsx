@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import SeverityBadge from "@/components/common/SeverityBadge";
+import VerificationBadge from "@/components/common/VerificationBadge";
 import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import { formatDate, formatMoment, reportStatusText, reportTone } from "@/lib/patientUi.mjs";
 
@@ -12,12 +14,15 @@ type DashboardReport = {
   result_count: number;
   status: string;
   created_at: string;
+  verification_status: "unverified" | "pending_review" | "verified";
+  verified_at: string | null;
 };
 
 type DashboardSummary = {
   total_reports: number;
   latest_test_date?: string | null;
   recent_reports: DashboardReport[];
+  newly_verified_count: number;
 };
 
 export default function PatientDashboardPage() {
@@ -100,6 +105,17 @@ export default function PatientDashboardPage() {
         </section>
       ) : dashboard ? (
         <>
+          {dashboard.newly_verified_count > 0 && (
+            <section className="patient-card p-4 sm:p-5">
+              <div className="info-message" role="status">
+                Bác sĩ đã kiểm chứng {dashboard.newly_verified_count} phiếu xét nghiệm của bạn.
+                <Link href="/patient/history" className="ml-2 text-blue-700 hover:underline">
+                  Xem lại
+                </Link>
+              </div>
+            </section>
+          )}
+
           <section className="dashboard-summary-grid" aria-label="Tóm tắt kết quả xét nghiệm">
             <article className="dashboard-summary-card">
               <span className="dashboard-summary-icon" aria-hidden="true">▤</span>
@@ -132,7 +148,8 @@ export default function PatientDashboardPage() {
                   <div><strong>{latestReport.result_count}</strong><span>chỉ số</span></div>
                   <div><strong>{formatMoment(latestReport.created_at)}</strong><span>thời gian tạo</span></div>
                 </div>
-                <span className={`status-badge status-${reportTone(latestReport.status)}`}>{reportStatusText(latestReport.status)}</span>
+                <SeverityBadge level={reportTone(latestReport.status)} />
+                <VerificationBadge status={latestReport.verification_status} />
                 <Link href={`/patient/reports/${latestReport.report_id}`} className="secondary-button">Xem chi tiết</Link>
               </article>
             ) : (
@@ -159,7 +176,10 @@ export default function PatientDashboardPage() {
                       <strong>{formatDate(report.test_date)}</strong>
                       <span>{report.result_count} chỉ số · tạo {formatMoment(report.created_at)}</span>
                     </div>
-                    <span className={`status-badge status-${reportTone(report.status)}`}>{reportStatusText(report.status)}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <SeverityBadge level={reportTone(report.status)} />
+                      <VerificationBadge status={report.verification_status} />
+                    </div>
                     <Link href={`/patient/reports/${report.report_id}`} aria-label={`Xem phiếu ngày ${formatDate(report.test_date)}`}>Xem chi tiết</Link>
                   </article>
                 ))}

@@ -13,6 +13,8 @@ def get_reference_repository() -> ReferenceRepository:
     return ReferenceRepository.from_default_files()
 
 
+from src.services.measurement_conversion import validate_numeric_measurement
+
 def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
     return {
         "name": name,
@@ -25,15 +27,17 @@ def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
         "is_critical": False,
         "explanation": "",
         "sources": [],
+        "rule_type": None,
+        "band_id": None,
+        "upper_operator": None,
+        "evaluation_reason": None,
     }
 
 
 def _parse_value(value) -> Decimal | None:
-    if value is None:
-        return None
     try:
-        return Decimal(str(value))
-    except (InvalidOperation, ValueError):
+        return validate_numeric_measurement(value)
+    except (ValueError, TypeError):
         return None
 
 
@@ -65,7 +69,27 @@ def _sources_from_catalog_or_rule(catalog_sources: tuple[str, ...], rule: dict) 
     return [source_url] if source_url else []
 
 
-def _classify(value: Decimal, lower: Decimal | None, upper: Decimal | None) -> str:
+def _classify(
+    value: Decimal,
+    lower: Decimal | None,
+    upper: Decimal | None,
+    rule_type: str | None = None,
+    upper_operator: str | None = None,
+) -> str:
+    if value < Decimal("0"):
+        return "unknown"
+    if rule_type == "ONE_SIDED_LIMIT":
+        if upper is None or upper_operator not in {"<", "<=", ">", ">="}:
+            return "unknown"
+        if upper_operator == "<":
+            return "normal" if value < upper else "high"
+        if upper_operator == "<=":
+            return "normal" if value <= upper else "high"
+        if upper_operator == ">":
+            return "normal" if value > upper else "low"
+        if upper_operator == ">=":
+            return "normal" if value >= upper else "low"
+        return "unknown"
     if lower is not None and upper is not None:
         if value < lower:
             return "low"
@@ -118,12 +142,21 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             patient_age=patient_age,
         )
         if not result.matched or not result.rule:
+            assessment["evaluation_reason"] = result.reason
             indicators.append(assessment)
             continue
 
         lower = _parse_rule_bound(result.rule.get("range_lower"))
         upper = _parse_rule_bound(result.rule.get("range_upper"))
-        status = _classify(numeric_value, lower, upper)
+        ref_type = result.rule.get("reference_type")
+        upper_op = result.rule.get("upper_operator")
+        status = _classify(
+            numeric_value,
+            lower,
+            upper,
+            rule_type=ref_type,
+            upper_operator=upper_op,
+        )
         if status == "unknown":
             indicators.append(assessment)
             continue
@@ -144,6 +177,9 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             definition.sources if definition else (),
             result.rule,
         )
+        assessment["rule_type"] = ref_type
+        assessment["band_id"] = result.rule.get("band_id")
+        assessment["upper_operator"] = upper_op
 
         indicators.append(assessment)
 

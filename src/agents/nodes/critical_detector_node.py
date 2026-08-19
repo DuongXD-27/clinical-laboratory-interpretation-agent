@@ -1,30 +1,167 @@
+import json
 import logging
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+from typing import Any
 
 from src.agents.nodes.reference_range_checker_node import get_reference_repository
 from src.agents.state import AgentState, CriticalAlert, IndicatorAssessment
-
-# `_compare_critical`, `glucose_mmol_l_to_mg_dl` và `load_critical_thresholds` không
-# còn gọi trực tiếp trong file này nữa (logic đã chuyển vào critical_value_service),
-# nhưng tests/test_agents/test_critical_detector_node.py monkeypatch/gọi đúng các tên
-# này trên module `critical_detector` để chứng minh converter/so sánh không bị gọi
-# trong các nhánh fail-closed và để load lại config trong test. Xoá các import này
-# (kể cả khi lint báo "unused") sẽ làm AttributeError ở test, không phải làm test đó
-# bớt cần thiết.
-from src.services.critical_value_service import (
-    CRITICAL_THRESHOLDS,
-    evaluate_critical,
-    load_critical_thresholds,  # noqa: F401
+from src.config import get_settings
+from src.services.measurement_conversion import (
+    bilirubin_umol_l_to_mg_dl,
+    glucose_mmol_l_to_mg_dl,
+    validate_numeric_measurement,
 )
-from src.services.critical_value_service import (
-    compare_critical as _compare_critical,  # noqa: F401
-)
-from src.services.critical_value_service import (
-    parse_numeric as _parse_numeric,
-)
-from src.services.measurement_conversion import glucose_mmol_l_to_mg_dl  # noqa: F401
-from src.services.reference_repository import ReferenceRepositoryError
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
+
+_ALLOWED_CRITICAL_OPERATORS = frozenset({"<", "<=", ">", ">="})
+_CONVERT_INPUT_TO_SOURCE_UNIT = "CONVERT_INPUT_TO_SOURCE_UNIT"
+_FASTING_PLASMA_GLUCOSE = "Fasting plasma glucose"
+_GLUCOSE_INPUT_UNIT = "mmol/l"
+_GLUCOSE_SOURCE_UNIT = "mg/dl"
+
+_TOTAL_BILIRUBIN = "Total bilirubin"
+_BILIRUBIN_INPUT_UNIT = "umol/l"
+_BILIRUBIN_SOURCE_UNIT = "mg/dl"
+
+# LEGACY_OPERATOR_DEFAULT: temporary Phase 2B migration compatibility only.
+# Patch C must add explicit operators to every active production side, after
+# which final data-quality validation will prohibit this fallback.
+_LEGACY_OPERATOR_DEFAULTS = {
+    "low": "<=",
+    "high": ">=",
+}
+
+
+def load_critical_thresholds() -> dict:
+    settings = get_settings()
+    config_path = Path(settings.critical_thresholds_path)
+    if config_path.exists():
+        with open(config_path, encoding="utf-8") as f:
+            data = json.load(f)
+            # Normalize keys to lowercase for case-insensitive lookup
+            return {k.lower(): v for k, v in data.items()}
+    return {}
+
+
+CRITICAL_THRESHOLDS = load_critical_thresholds()
+
+
+def _is_unit_compatible(
+    input_unit: str,
+    threshold_unit: str,
+) -> bool:
+    """Check unit compatibility strictly using the shared ReferenceRepository normalizer.
+
+    Current V1 Policy:
+    1. Normalize input unit using ReferenceRepository.normalize_unit().
+    2. Normalize threshold unit using ReferenceRepository.normalize_unit().
+    3. Direct numeric comparison is allowed ONLY when normalized units are identical.
+    4. Otherwise critical evaluation is skipped / fails closed.
+    """
+    if not input_unit or not threshold_unit:
+        return False
+
+    norm_input = ReferenceRepository.normalize_unit(input_unit).strip().lower()
+    norm_thresh = ReferenceRepository.normalize_unit(threshold_unit).strip().lower()
+
+    return norm_input == norm_thresh
+
+
+def _parse_numeric(val: Any) -> float | None:
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_decimal_numeric(val: Any) -> Decimal | None:
+    try:
+        return validate_numeric_measurement(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _compare_critical(
+    value: float | Decimal,
+    threshold: float | Decimal,
+    operator: str,
+) -> bool:
+    """Compare deterministically with an allowlisted critical-rule operator.
+
+    Invalid operators fail closed. String evaluation is deliberately not used.
+    """
+    if operator == "<":
+        return value < threshold
+    if operator == "<=":
+        return value <= threshold
+    if operator == ">":
+        return value > threshold
+    if operator == ">=":
+        return value >= threshold
+    return False
+
+
+def _resolve_active_side(
+    thresholds: dict[str, Any],
+    side: str,
+    *,
+    use_decimal: bool = False,
+) -> tuple[float | Decimal, str] | None:
+    """Return an executable ``(threshold, operator)`` pair or fail closed.
+
+    ``null`` is the final inactive representation. Negative thresholds remain
+    temporarily inactive for compatibility with the pre-migration ``-1``
+    sentinel data, but are not valid final-schema values.
+    """
+    threshold_raw = thresholds.get(side)
+    operator_key = f"{side}_operator"
+
+    if threshold_raw is None:
+        if thresholds.get(operator_key) is not None:
+            logger.warning(
+                "Critical %s side ignored: inactive threshold has non-null operator %r",
+                side,
+                thresholds.get(operator_key),
+            )
+        return None
+
+    threshold = _parse_decimal_numeric(threshold_raw) if use_decimal else _parse_numeric(threshold_raw)
+    if threshold is None:
+        logger.warning(
+            "Critical %s side ignored: threshold %r is not numeric",
+            side,
+            threshold_raw,
+        )
+        return None
+
+    # Temporary compatibility for the current production -1 sentinels.
+    if threshold < 0:
+        return None
+
+    if operator_key not in thresholds:
+        operator = _LEGACY_OPERATOR_DEFAULTS[side]
+        logger.debug(
+            "LEGACY_OPERATOR_DEFAULT applied to active critical %s side: %s",
+            side,
+            operator,
+        )
+        return threshold, operator
+
+    operator = thresholds.get(operator_key)
+    if not isinstance(operator, str) or operator not in _ALLOWED_CRITICAL_OPERATORS:
+        logger.warning(
+            "Critical %s side ignored: unsupported operator %r",
+            side,
+            operator,
+        )
+        return None
+
+    return threshold, operator
 
 
 async def detect_critical_values_node(state: AgentState) -> dict:
@@ -111,30 +248,103 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             updated_indicators.append(new_ind)
             continue
 
-        evaluation = evaluate_critical(
-            canonical_analyte,
-            val,
-            input_unit,
-            display_name=name,
-            thresholds=CRITICAL_THRESHOLDS.get(canonical_key),
+        thresholds = CRITICAL_THRESHOLDS[canonical_key]
+        threshold_unit = thresholds.get("unit", "")
+
+        # Blocker 03: compare directly only in the same normalized unit. The
+        # sole cross-unit path is the human-approved, explicitly configured
+        # glucose mmol/L -> mg/dL conversion below.
+        comparison_value: float | Decimal = numeric_val
+        comparison_unit = input_unit or threshold_unit
+        use_decimal = False
+
+        normalized_input_unit = ReferenceRepository.normalize_unit(input_unit).strip().lower()
+        normalized_threshold_unit = ReferenceRepository.normalize_unit(threshold_unit).strip().lower()
+        same_normalized_unit = _is_unit_compatible(input_unit, threshold_unit)
+        approved_glucose_conversion = (
+            canonical_analyte == _FASTING_PLASMA_GLUCOSE
+            and thresholds.get("vmec_comparison_strategy") == _CONVERT_INPUT_TO_SOURCE_UNIT
+            and normalized_input_unit == _GLUCOSE_INPUT_UNIT
+            and normalized_threshold_unit == _GLUCOSE_SOURCE_UNIT
+        )
+        approved_bilirubin_conversion = (
+            canonical_analyte == _TOTAL_BILIRUBIN
+            and thresholds.get("vmec_comparison_strategy") == _CONVERT_INPUT_TO_SOURCE_UNIT
+            and normalized_input_unit == _BILIRUBIN_INPUT_UNIT
+            and normalized_threshold_unit == _BILIRUBIN_SOURCE_UNIT
         )
 
-        if evaluation.is_critical:
+        if approved_glucose_conversion:
+            try:
+                comparison_value = glucose_mmol_l_to_mg_dl(val)
+            except ValueError:
+                logger.warning(
+                    "Critical glucose conversion skipped for '%s': value %r is invalid",
+                    name,
+                    val,
+                )
+                updated_indicators.append(new_ind)
+                continue
+            comparison_unit = threshold_unit
+            use_decimal = True
+        elif approved_bilirubin_conversion:
+            try:
+                comparison_value = bilirubin_umol_l_to_mg_dl(val)
+            except ValueError:
+                logger.warning(
+                    "Critical bilirubin conversion skipped for '%s': value %r is invalid",
+                    name,
+                    val,
+                )
+                updated_indicators.append(new_ind)
+                continue
+            comparison_unit = threshold_unit
+            use_decimal = True
+        elif not same_normalized_unit:
+            logger.warning(
+                "Critical evaluation skipped for '%s' (canonical: '%s'): unit '%s' does not match threshold unit '%s' and no approved conversion applies (fail closed)",
+                name,
+                canonical_analyte,
+                input_unit,
+                threshold_unit,
+            )
+            updated_indicators.append(new_ind)
+            continue
+
+        low_side = _resolve_active_side(thresholds, "low", use_decimal=use_decimal)
+        high_side = _resolve_active_side(thresholds, "high", use_decimal=use_decimal)
+
+        # Side-local, deterministic comparison. An invalid side fails closed
+        # without preventing the valid opposite side from being evaluated.
+        if low_side is not None and _compare_critical(comparison_value, low_side[0], low_side[1]):
+            low_val, low_operator = low_side
             new_ind["is_abnormal"] = True
             new_ind["is_critical"] = True
-            new_ind["critical_status"] = evaluation.critical_status
+            new_ind["critical_status"] = "critical_low"
             has_critical = True
             # Chống trùng lặp (nếu đồ thị chạy lại / retry)
             if not any(a.get("indicator_name") == name for a in critical_alerts):
-                critical_alerts.append(
-                    {
-                        "indicator_name": name,
-                        "value": val,
-                        "unit": input_unit,
-                        "message": evaluation.alert_message or "",
-                    }
-                )
-        elif evaluation.evaluated:
+                critical_alerts.append({
+                    "indicator_name": name,
+                    "value": val,
+                    "unit": input_unit,
+                    "message": f"CẢNH BÁO: {name} giảm tới ngưỡng nguy kịch ({comparison_value} {low_operator} {low_val} {comparison_unit}). Yêu cầu can thiệp y tế.",
+                })
+        elif high_side is not None and _compare_critical(comparison_value, high_side[0], high_side[1]):
+            high_val, high_operator = high_side
+            new_ind["is_abnormal"] = True
+            new_ind["is_critical"] = True
+            new_ind["critical_status"] = "critical_high"
+            has_critical = True
+            # Chống trùng lặp
+            if not any(a.get("indicator_name") == name for a in critical_alerts):
+                critical_alerts.append({
+                    "indicator_name": name,
+                    "value": val,
+                    "unit": input_unit,
+                    "message": f"CẢNH BÁO: {name} tăng tới ngưỡng nguy kịch ({comparison_value} {high_operator} {high_val} {comparison_unit}). Yêu cầu can thiệp y tế.",
+                })
+        else:
             new_ind["is_critical"] = False
             new_ind["critical_status"] = None
 

@@ -7,16 +7,13 @@
     "status_keys": "low | high | critical_low | critical_high. Chi so status=normal KHONG sinh cau hoi.",
     "review": "Duyet noi dung: chua. Can Duong (mien critical value) va nguoi phu trach noi dung y khoa doc lai truoc khi phat hanh."
   },
-
   "unknown_indicator": "Chỉ số {name} ({value} {unit}) chưa có trong dữ liệu đối chiếu của ứng dụng nên tôi không biết mức này có bình thường hay không. Bác sĩ đọc giúp tôi chỉ số này với ạ?",
-
   "generic": {
     "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi ạ?",
     "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi ạ?",
     "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
     "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
   },
-
   "analytes": {
     "wbc": {
       "low": "Số lượng bạch cầu của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi, và tôi có cần lưu ý gì để tránh nhiễm trùng không ạ?",
@@ -69,6 +66,162 @@
     "potassium": {
       "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tình trạng của tôi, và tôi nên lưu ý gì trong ăn uống ạ?",
       "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tôi, và tôi nên lưu ý gì trong ăn uống ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "hct": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "mcv": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "mch": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "mchc": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "rdw_cv": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "plt": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "neutrophils_%": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "neutrophils_abs": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "lymphocytes_%": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "lymphocytes_abs": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "monocytes_%": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "monocytes_abs": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "eosinophils_%": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "eosinophils_abs": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "sodium": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "chloride": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "urea": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "uric_acid": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "ast": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "alt": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "ggt": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "total_bilirubin": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "total_protein": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "albumin": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "total_cholesterol": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
+      "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    },
+    "triglyceride": {
+      "low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
+      "high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn khoảng tham chiếu. Kết quả này có ý nghĩa gì với tình trạng của tôi và tôi nên lưu ý gì ạ?",
       "critical_low": "Chỉ số {name} của tôi là {value} {unit}, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?",
       "critical_high": "Chỉ số {name} của tôi là {value} {unit}, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
     }

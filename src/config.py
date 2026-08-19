@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     vision_timeout_seconds: float = Field(default=30.0, ge=1.0, le=60.0)
     ocr_low_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     ocr_review_token_expire_minutes: int = Field(default=15, ge=1, le=60)
+    retrieval_min_score: float = Field(default=0.4, ge=0.0, le=1.0)
+    retrieval_top_k: int = Field(default=3, ge=1, le=10)
+    metadata_prong_enabled: bool = True
+    metadata_min_chunk_length: int = Field(default=30, ge=1)
+    max_analyzer_context_chars: int = Field(default=4000, ge=200)
+    max_guardrail_context_chars: int = Field(default=3000, ge=200)
+
     # Chính sách nhận ảnh cho bản demo public (V3). Đổi được bằng biến môi
     # trường, không phải sửa code:
     #   internal_only     — tắt hẳn /ocr/upload (503), dùng khi chưa muốn mở ra ngoài
@@ -59,9 +66,9 @@ class Settings(BaseSettings):
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
     rag_enabled: bool = False
-    rag_collection_name: str = "medical_kb_v1"
-    rag_corpus_version: str = "medical-kb-v1"
-    embedding_provider: Literal["disabled", "openai"] = "disabled"
+    rag_collection_name: str = "medical_kb_v4"
+    rag_corpus_version: str = "medical-kb-v4"
+    embedding_provider: Literal["disabled", "openai", "gemini"] = "disabled"
     embedding_model_name: str = "text-embedding-3-small"
     embedding_dimension: int = Field(default=1536, ge=1)
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)

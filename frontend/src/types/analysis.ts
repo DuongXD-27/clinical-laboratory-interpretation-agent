@@ -16,10 +16,19 @@ export type IndicatorResult = {
   is_abnormal: boolean;
   is_critical: boolean;
   explanation?: string;
+  review_outcome?: "pending" | "agreed" | "corrected" | "skipped";
+  doctor_note?: string | null;
+  ai_text_snapshot?: string | null;
+  reviewed_by_username?: string | null;
+  reviewed_at?: string | null;
   sources?: string[];
   /** Nhóm chức năng (ADR-010 CRIT-TREND-06) — null khi chỉ số chưa khớp được nhóm nào. */
   section?: string | null;
   section_label?: string | null;
+  rule_type?: string | null;
+  band_id?: string | null;
+  upper_operator?: string | null;
+  evaluation_reason?: string | null;
 };
 
 export type AnalysisResult = {

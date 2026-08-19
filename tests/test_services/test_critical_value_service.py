@@ -14,7 +14,10 @@ from src.services.critical_value_service import (
     approaches_critical,
     evaluate_critical,
 )
-from src.services.measurement_conversion import glucose_mmol_l_to_mg_dl
+from src.services.measurement_conversion import (
+    bilirubin_umol_l_to_mg_dl,
+    glucose_mmol_l_to_mg_dl,
+)
 
 
 def test_potassium_below_low_threshold_is_critical_low():
@@ -87,6 +90,34 @@ def test_glucose_within_range_mmol_l_is_not_critical():
     evaluation = evaluate_critical("Fasting plasma glucose", 5.5, "mmol/L")
 
     assert evaluation.evaluated is True
+    assert evaluation.is_critical is False
+
+
+def test_bilirubin_umol_l_input_converts_before_comparing_to_mg_dl_threshold():
+    """Total bilirubin ngưỡng cao = 15 mg/dL (ARUP Rev.46). Giá trị 300 umol/L ≈
+    17.5 mg/dL — vượt ngưỡng sau khi convert; umol/L vs mg/dL phải đi qua đường
+    convert được duyệt giống glucose, không fail-closed âm thầm."""
+
+    evaluation = evaluate_critical("Total bilirubin", 300, "umol/L")
+
+    assert evaluation.is_critical is True
+    assert evaluation.critical_status == "critical_high"
+    assert evaluation.comparison_value == bilirubin_umol_l_to_mg_dl(300)
+
+
+def test_bilirubin_within_range_umol_l_is_not_critical():
+    evaluation = evaluate_critical("Total bilirubin", 20, "umol/L")
+
+    assert evaluation.evaluated is True
+    assert evaluation.is_critical is False
+
+
+def test_bilirubin_wrong_unit_without_conversion_fails_closed():
+    """Không phải cặp umol/L -> mg/dL (vd. nhập nhầm mmol/L) thì fail-closed."""
+
+    evaluation = evaluate_critical("Total bilirubin", 300, "mmol/L")
+
+    assert evaluation.evaluated is False
     assert evaluation.is_critical is False
 
 

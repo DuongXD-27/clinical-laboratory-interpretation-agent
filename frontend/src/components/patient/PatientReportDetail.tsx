@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
+import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
+import SeverityBadge from "@/components/common/SeverityBadge";
+import VerificationBadge from "@/components/common/VerificationBadge";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
-import { formatDate, indicatorStatusText, reportStatusText, reportTone } from "@/lib/patientUi.mjs";
+import { formatDate, reportTone, renderReferenceRange } from "@/lib/patientUi.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
@@ -26,6 +29,9 @@ type ReportDetail = {
   critical_alerts: CriticalAlert[];
   questions: ReportQuestion[];
   out_of_scope_entries: { id: number; raw_indicator_name: string; created_at: string }[];
+  verification_status: "unverified" | "pending_review" | "verified";
+  verified_by_username: string | null;
+  verified_at: string | null;
 };
 
 export default function PatientReportDetail() {
@@ -91,6 +97,7 @@ export default function PatientReportDetail() {
 
   const abnormalCount = report.indicators.filter((indicator) => indicator.is_abnormal).length;
   const indicatorGroups = groupBySection(report.indicators);
+  const reportSeverity = reportTone(report.status) as "critical" | "abnormal" | "normal";
 
   return (
     <div className="report-detail-layout">
@@ -124,7 +131,8 @@ export default function PatientReportDetail() {
           <div className="report-summary-stats">
             <div><strong>{report.result_count}</strong><span>chỉ số</span></div>
             <div><strong>{abnormalCount}</strong><span>bất thường</span></div>
-            <span className={`status-badge status-${reportTone(report.status)}`}>{reportStatusText(report.status)}</span>
+            <SeverityBadge level={reportSeverity} />
+            <VerificationBadge status={report.verification_status} />
           </div>
         </div>
 
@@ -141,7 +149,7 @@ export default function PatientReportDetail() {
               <h4 className="indicator-group-title">{group.label}</h4>
               <div className="mt-3 grid gap-3">
                 {group.items.map((indicator, index) => {
-                  const tone = indicator.is_critical ? "critical" : indicator.is_abnormal ? "abnormal" : "normal";
+                  const tone = reportTone(indicator.status);
                   return (
                     <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -153,15 +161,27 @@ export default function PatientReportDetail() {
                           <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
                             {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
                           </p>
-                          {(indicator.reference_low !== null || indicator.reference_high !== null) && (
+                          {renderReferenceRange(indicator) && (
                             <p className="mt-1 text-xs text-slate-500">
-                              Tham chiếu: {indicator.reference_low ?? "-"} – {indicator.reference_high ?? "-"}
+                              {renderReferenceRange(indicator)}
                             </p>
                           )}
                         </div>
-                        <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status, indicator.critical_status)}</span>
+                        <SeverityBadge level={tone} />
                       </div>
-                      {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
+                      {indicator.explanation && (
+                        <div className="mt-4">
+                          <p className="finding-card__label text-slate-500">Giải thích của AI</p>
+                          <p className="text-sm leading-6 text-slate-600">{indicator.explanation}</p>
+                        </div>
+                      )}
+                      {indicator.doctor_note && (
+                        <DoctorNoteBlock
+                          note={indicator.doctor_note}
+                          doctorName={indicator.reviewed_by_username}
+                          reviewedAt={indicator.reviewed_at}
+                        />
+                      )}
                       <SourcesDisclosure sources={indicator.sources} />
                     </article>
                   );
@@ -173,7 +193,19 @@ export default function PatientReportDetail() {
 
         <div className="disclaimer-box mt-6" role="note" aria-label="Lưu ý y khoa">
           <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
-          <p className="mt-1">{report.disclaimer}</p>
+          {report.verification_status === "verified" ? (
+            <p className="mt-1">
+              Kết quả đã được bác sĩ kiểm chứng trong phạm vi phiếu này.
+              {report.verified_by_username || report.verified_at ? (
+                <>
+                  {" "}Đã được kiểm chứng bởi {report.verified_by_username || "bác sĩ"}
+                  {report.verified_at ? ` ngày ${formatDate(report.verified_at)}` : ""}.
+                </>
+              ) : null}
+            </p>
+          ) : (
+            <p className="mt-1">{report.disclaimer}</p>
+          )}
         </div>
       </section>
 

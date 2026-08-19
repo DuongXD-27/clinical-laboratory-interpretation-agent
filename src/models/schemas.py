@@ -6,6 +6,14 @@ from pydantic import BaseModel, Field
 IndicatorStatus = str
 
 SessionRole = Literal["patient", "doctor", "guest"]
+VerificationStatus = Literal["unverified", "pending_review", "verified"]
+ReviewOutcome = Literal["pending", "agreed", "corrected", "skipped"]
+ReviewFlagCode = Literal[
+    "CRITICAL_VALUE",
+    "LOW_OCR_CONFIDENCE",
+    "PATIENT_HAS_QUESTIONS",
+]
+ReviewFlagSeverity = Literal["high", "medium"]
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +179,17 @@ class IndicatorResultSchema(BaseModel):
         description="Giải thích bằng ngôn ngữ dễ hiểu",
     )
 
+    rule_type: str | None = None
+    band_id: str | None = None
+    upper_operator: str | None = None
+    evaluation_reason: str | None = None
+
+    review_outcome: ReviewOutcome = "pending"
+    doctor_note: str | None = None
+    ai_text_snapshot: str | None = None
+    reviewed_by_username: str | None = None
+    reviewed_at: datetime | None = None
+
     sources: list[str] = Field(
         default_factory=list,
         description="Nguồn tài liệu giáo dục y khoa",
@@ -283,6 +302,9 @@ class LabReportSummarySchema(BaseModel):
     # sĩ và phiếu nào chưa, không cần mở từng phiếu ra xem.
     reviewed_by_doctor: bool = False
     has_doctor_notes: bool = False
+    verification_status: VerificationStatus = "unverified"
+    verified_by_username: str | None = None
+    verified_at: datetime | None = None
 
     model_config = {
         "from_attributes": True,
@@ -523,6 +545,9 @@ class LabReportDetailSchema(BaseModel):
     # xét. Một phiếu có ghi chú thì hiển nhiên đã được xem; ngược lại thì không.
     reviewed_by_doctor: bool = False
     has_doctor_notes: bool = False
+    verification_status: VerificationStatus = "unverified"
+    verified_by_username: str | None = None
+    verified_at: datetime | None = None
 
     model_config = {
         "from_attributes": True,
@@ -553,12 +578,113 @@ class PatientDashboardReportSchema(BaseModel):
     result_count: int
     status: str
     created_at: datetime
+    verification_status: VerificationStatus = "unverified"
+    verified_at: datetime | None = None
 
 
 class PatientDashboardSchema(BaseModel):
     total_reports: int
     latest_test_date: date | None = None
     recent_reports: list[PatientDashboardReportSchema] = Field(default_factory=list)
+    newly_verified_count: int = 0
+
+
+class ReviewFlagSchema(BaseModel):
+    code: ReviewFlagCode
+    detail: str
+    severity: ReviewFlagSeverity
+    finding_id: int | None = None
+
+    model_config = {
+        "from_attributes": True,
+    }
+
+
+class DoctorQueueItemSchema(BaseModel):
+    report_id: int
+    patient_name: str
+    patient_id: int
+    test_date: date
+    severity_level: Literal["critical", "abnormal", "normal"]
+    flags: list[ReviewFlagSchema] = Field(default_factory=list)
+    findings_reviewed: int = 0
+    findings_total: int = 0
+    queued_at: datetime | None = None
+
+
+class DoctorQueueCountsSchema(BaseModel):
+    critical: int = 0
+    ocr: int = 0
+    questions: int = 0
+    pending: int = 0
+    verified: int = 0
+
+
+class DoctorQueueResponse(BaseModel):
+    items: list[DoctorQueueItemSchema] = Field(default_factory=list)
+    counts: DoctorQueueCountsSchema
+    page: int
+    page_size: int
+    total: int
+
+
+class DoctorPatientSchema(BaseModel):
+    id: int
+    name: str
+    age: int | None = None
+    gender: str | None = None
+
+
+class DoctorReportSchema(BaseModel):
+    id: int
+    test_date: date
+    verification_status: VerificationStatus
+    verified_by: str | None = None
+    verified_at: datetime | None = None
+    input_method: Literal["manual", "ocr"]
+    original_image_url: str | None = None
+
+
+class DoctorFindingSchema(BaseModel):
+    id: int
+    metric_code: str | None = None
+    metric_name: str
+    value: float
+    unit: str
+    reference_range: str
+    classification: Literal["critical", "abnormal", "normal"]
+    ai_text: str
+    review_outcome: ReviewOutcome
+    doctor_note: str | None = None
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+
+
+class DoctorReportDetailResponse(BaseModel):
+    report: DoctorReportSchema
+    patient: DoctorPatientSchema
+    flags: list[ReviewFlagSchema] = Field(default_factory=list)
+    findings: list[DoctorFindingSchema] = Field(default_factory=list)
+    questions: list[ReportQuestionSchema] = Field(default_factory=list)
+
+
+class FindingReviewRequest(BaseModel):
+    outcome: Literal["agreed", "corrected", "skipped"]
+    doctor_note: str | None = Field(default=None, max_length=4000)
+
+
+class ReportProgressSchema(BaseModel):
+    reviewed: int
+    total: int
+
+
+class FindingReviewResponse(BaseModel):
+    finding: DoctorFindingSchema
+    report_progress: ReportProgressSchema
+
+
+class DoctorCompleteReportResponse(BaseModel):
+    report: DoctorReportSchema
 
 
 class PatientLabReportListResponse(BaseModel):
