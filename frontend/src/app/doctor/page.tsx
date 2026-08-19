@@ -1,16 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QueueRow from "@/components/doctor/QueueRow";
 import QueueTabs from "@/components/doctor/QueueTabs";
 import {
-  clearSession,
   fetchDoctorQueue,
   getRole,
   getToken,
-  getUsername,
   type DoctorQueueTab,
 } from "@/lib/api";
 import type { DoctorQueueCounts, DoctorQueueItem } from "@/types/doctor";
@@ -21,7 +18,6 @@ const VALID_TABS = new Set<DoctorQueueTab>(["pending", "critical", "ocr", "quest
 export default function DoctorPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [username, setUsername] = useState<string | null>(null);
   const [tab, setTab] = useState<DoctorQueueTab>("pending");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<DoctorQueueItem[]>([]);
@@ -38,7 +34,6 @@ export default function DoctorPage() {
     const queryTab = new URLSearchParams(window.location.search).get("tab") as DoctorQueueTab | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- URL/localStorage only exist after mount in this client page.
     if (queryTab && VALID_TABS.has(queryTab)) setTab(queryTab);
-    setUsername(getUsername());
     setCheckingAuth(false);
   }, [router]);
 
@@ -65,11 +60,6 @@ export default function DoctorPage() {
     if (!checkingAuth) void load(tab, page);
   }, [checkingAuth, load, page, tab]);
 
-  function handleLogout() {
-    clearSession();
-    router.replace("/");
-  }
-
   function changeTab(nextTab: DoctorQueueTab) {
     setTab(nextTab);
     setPage(1);
@@ -84,21 +74,12 @@ export default function DoctorPage() {
   if (checkingAuth) return null;
 
   return (
-    <main className="doctor-portal">
+    <div className="doctor-portal">
       <section className="doctor-queue-shell">
         <header className="doctor-queue-header">
           <div>
             <h1>Hàng đợi kiểm chứng</h1>
             <p>{counts?.pending ?? 0} phiếu đang chờ</p>
-          </div>
-          <div className="doctor-queue-header__account">
-            <div className="doctor-queue-header__account-main">
-              <span>{username || "Bác sĩ"}</span>
-              <button type="button" onClick={handleLogout}>Đăng xuất</button>
-            </div>
-            <Link href="/doctor/sandbox" className="doctor-queue-header__account-secondary">
-              Công cụ thử nghiệm
-            </Link>
           </div>
         </header>
 
@@ -169,6 +150,6 @@ export default function DoctorPage() {
           </nav>
         )}
       </section>
-    </main>
+    </div>
   );
 }
