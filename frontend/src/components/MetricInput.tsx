@@ -8,6 +8,7 @@ type Props = {
   value: string | number;
   onValueChange: (value: string) => void;
   onRemove: () => void;
+  removeLabel?: string;
   onNameChange?: (value: string) => void;
   onUnitChange?: (value: string) => void;
   attentionMessage?: string;
@@ -22,6 +23,7 @@ export default function MetricInput({
   value,
   onValueChange,
   onRemove,
+  removeLabel,
   onNameChange,
   onUnitChange,
   attentionMessage,
@@ -56,11 +58,11 @@ export default function MetricInput({
         <button
           type="button"
           onClick={onRemove}
-          className="icon-button"
-          aria-label={`Xóa chỉ số ${label ?? name}`}
-          title="Xóa chỉ số"
+          className="text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-2 py-1 rounded transition-colors"
+          aria-label={`${removeLabel || "Xóa chỉ số"} ${label ?? name}`}
+          title={removeLabel || "Xóa chỉ số"}
         >
-          ×
+          {removeLabel || "×"}
         </button>
       </div>
 
