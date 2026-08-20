@@ -1084,9 +1084,31 @@ textarea::placeholder {
 
 .trend-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: end;
+}
+
+.trend-mode-panel {
+  min-width: 0;
+}
+
+.analyte-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analyte-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dbe5f0;
+  border-radius: 999px;
+  background: #f4f9ff;
+  color: #1d4b8f;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .trend-filter-tabs {
@@ -1113,6 +1135,13 @@ textarea::placeholder {
   background: #fff;
   box-shadow: 0 2px 9px rgba(24, 49, 83, 0.11);
   color: #145fcf;
+}
+
+.trend-group-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.5fr);
+  gap: 16px;
+  align-items: end;
 }
 
 .trend-chart-header {
@@ -2851,6 +2880,14 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.indicator-group-title {
+  color: #1769e0;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
 .critical-report-notice {
   border: 1px solid #f3b8b8;
   border-left: 4px solid #c62020;
@@ -3196,7 +3233,11 @@ button:disabled {
     width: 100%;
   }
 
-  .trend-controls {
+.trend-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .trend-group-controls {
     grid-template-columns: 1fr;
   }
 

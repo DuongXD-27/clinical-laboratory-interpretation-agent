@@ -71,6 +71,16 @@ class ReferenceRepository:
                 for alias, canonical in config_copy["analyte_aliases"].items()
             }
         )
+        aliases_by_canonical: dict[str, list[str]] = {}
+        for alias, canonical in config_copy["analyte_aliases"].items():
+            aliases_by_canonical.setdefault(str(canonical).strip(), []).append(str(alias).strip())
+        self._aliases_by_canonical = MappingProxyType(
+            {name: tuple(sorted(set(aliases), key=str.casefold)) for name, aliases in aliases_by_canonical.items()}
+        )
+        self.trend_max_gap_days = self._load_trend_gap_policy(
+            config_copy.get("trend_max_gap_days"),
+            requested_approved=set(config_copy["approved_analytes"]),
+        )
         self.age_scope_aliases = MappingProxyType(
             {
                 self._alias_key(alias): AgeRange(
@@ -93,6 +103,35 @@ class ReferenceRepository:
 
         if not self.approved_analytes:
             raise ReferenceRepositoryError("no approved analytes remain after unit validation")
+
+    @staticmethod
+    def _load_trend_gap_policy(
+        raw_policy: Any,
+        *,
+        requested_approved: set[str],
+    ) -> MappingProxyType:
+        """Read the optional config-only maximum interval between trend points.
+
+        Omitting the key is backwards-compatible and means no limit for every
+        approved analyte.  When supplied it must explicitly cover the complete
+        approved catalog, preventing a silent default for a newly added analyte.
+        """
+        if raw_policy is None:
+            return MappingProxyType({name: None for name in requested_approved})
+        if not isinstance(raw_policy, dict) or set(raw_policy) != requested_approved:
+            raise ReferenceRepositoryError(
+                "trend_max_gap_days must declare exactly the approved analytes"
+            )
+        normalized: dict[str, int | None] = {}
+        for analyte, value in raw_policy.items():
+            if value is not None and (
+                not isinstance(value, int) or isinstance(value, bool) or value < 1
+            ):
+                raise ReferenceRepositoryError(
+                    f"trend_max_gap_days for {analyte} must be a positive integer or null"
+                )
+            normalized[analyte] = value
+        return MappingProxyType(normalized)
 
     @classmethod
     def from_default_files(cls) -> ReferenceRepository:
@@ -204,6 +243,20 @@ class ReferenceRepository:
             if not expected_unit or not analyte_units or analyte_units != {expected_unit}:
                 conflicts.add(analyte)
         return conflicts
+
+    def aliases_for(self, canonical_analyte: str) -> tuple[str, ...]:
+        """Declared input aliases for one canonical analyte."""
+        return self._aliases_by_canonical.get(canonical_analyte, ())
+
+    def canonical_unit_for(self, canonical_analyte: str) -> str | None:
+        """Return the sole approved RI unit, or ``None`` if it is not unique."""
+        units = {
+            self._rule_unit(rule)
+            for rule in self._rules_by_analyte.get(canonical_analyte, ())
+            if self._norm_text(rule.get("reference_type")) in self.allowed_reference_types
+        }
+        units.discard(None)
+        return next(iter(units)) if len(units) == 1 else None
 
     def select_rule(
         self,
