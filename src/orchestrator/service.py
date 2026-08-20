@@ -11,6 +11,7 @@ from src.models.orchestrator_schemas import (
     BlockedPayload,
     ConfirmOcrAction,
     DataType,
+    HistorySummaryPayload,
     IntentEnum,
     NeedsInputPayload,
     OrchestratorRequest,
@@ -18,6 +19,7 @@ from src.models.orchestrator_schemas import (
     ReasonCode,
     ResponseStatus,
     RetryAction,
+    TrendDataPayload,
 )
 from src.orchestrator.context_resolver import resolve_context
 from src.orchestrator.dispatcher import DispatchContext, WorkflowResult, dispatch_workflow
@@ -80,6 +82,24 @@ async def _response_from_workflow(intent: IntentEnum, result: WorkflowResult) ->
         data=result.data,
         reason_code=result.reason_code,
     )
+
+
+def _context_after_workflow(
+    *,
+    result: WorkflowResult,
+    current_report_ref: str | None,
+    current_analyte: str | None,
+) -> tuple[str | None, str | None]:
+    data = result.data
+    next_report_ref = current_report_ref
+    next_analyte = current_analyte
+
+    if result.status == ResponseStatus.SUCCESS and isinstance(data, HistorySummaryPayload):
+        next_report_ref = data.report_ref
+    if result.status == ResponseStatus.SUCCESS and isinstance(data, TrendDataPayload):
+        next_analyte = data.trend.analyte_canonical
+
+    return next_report_ref, next_analyte
 
 
 def _is_ocr_bypass_request(message: str) -> bool:
@@ -263,12 +283,17 @@ async def handle_message(
             current_analyte=resolved.current_analyte,
         ),
     )
+    next_report_ref, next_analyte = _context_after_workflow(
+        result=result,
+        current_report_ref=resolved.current_report_ref,
+        current_analyte=resolved.current_analyte,
+    )
     runtime.session_store.update_after_turn(
         current_user,
         session,
         last_intent=route.intent,
-        current_report_ref=resolved.current_report_ref,
-        current_analyte=resolved.current_analyte,
+        current_report_ref=next_report_ref,
+        current_analyte=next_analyte,
         transient_ui_context=request.ui_context,
     )
     _log_turn(
