@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { assessmentText, formatTrendDate } from "@/lib/trendUi.mjs";
+import { assessmentText, dedupeTrendPoints, formatTrendDate } from "@/lib/trendUi.mjs";
 import type { TrendPoint } from "@/types/analysis";
 
 type ChartPoint = TrendPoint & {
@@ -52,8 +52,8 @@ export default function TrendChart({
   unit: string;
   points: TrendPoint[];
 }) {
-  const chartData: ChartPoint[] = points.map((point) => ({
-    ...point,
+  const chartData: ChartPoint[] = dedupeTrendPoints(points).map((point) => ({
+    ...(point as TrendPoint),
     timestamp: new Date(`${point.test_date}T00:00:00`).getTime(),
   }));
 

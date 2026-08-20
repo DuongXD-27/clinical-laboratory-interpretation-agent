@@ -18,7 +18,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from src.scripts.extract_explanation_reference_ranges import extract_supplemental_rules
 
-BUILDER_VERSION = "v2"
+BUILDER_VERSION = "v3"
 DEFAULT_INPUT = "data/reference/source/adult_outpatient_laboratory_reference_map.csv"
 DEFAULT_OUTPUT_DIR = "data/reference"
 DEFAULT_SUPPLEMENTAL = "data/reference/explanations.json"
@@ -44,6 +44,21 @@ SUPPLEMENTAL_FIELDS = [
 # Analytes whose primary catalog rules are superseded by supplemental rules derived from explanations.json.
 # Primary rules for these analytes are excluded from the final catalog (but still counted in runtime_accepted_rows).
 SUPPLEMENTAL_REPLACEMENT_ANALYTES: frozenset[str] = frozenset()
+
+# Source CSV section column -> canonical runtime key (ADR-010 CRIT-TREND-06).
+SECTION_CSV_TO_CANONICAL: dict[str, str] = {
+    "HEMATOLOGY ANALYTES": "hematology",
+    "CHEMISTRY, RENAL, AND LIVER ANALYTES": "chemistry",
+    "LIPIDS, HBA1C, AND DECISION-LIMIT ANALYTES": "lipids",
+}
+
+# Expert overrides for the per-analyte functional group. FPG's RI rule lives in the
+# "Chemistry, renal, and liver analytes" section of the source CSV, but the product
+# group "Mỡ máu & đường huyết" (Business Description) includes blood glucose, so FPG
+# is grouped under lipids. Applies to every rule of the analyte.
+SECTION_OVERRIDES: dict[str, str] = {
+    "Fasting plasma glucose": "lipids",
+}
 
 STRUCTURAL_REASON_ORDER = [
     "missing_analyte",
@@ -78,6 +93,7 @@ RUNTIME_FIELDS = [
     "rule_id",
     "source_row_number",
     "analyte_canonical",
+    "section",
     "specimen",
     "fasting_required",
     "sex",
@@ -153,6 +169,13 @@ def normalize_sex(value: Any) -> str | None:
     if text in {"A", "ALL", "ANY"}:
         return "A"
     return None
+
+
+def normalize_section(value: Any) -> str | None:
+    text = normalize_for_compare(value)
+    if not text:
+        return None
+    return SECTION_CSV_TO_CANONICAL.get(text)
 
 
 def normalize_unit(value: Any) -> str | None:
@@ -286,6 +309,7 @@ def make_runtime_record(
         "rule_id": rule_id_for(source_row_number),
         "source_row_number": source_row_number,
         "analyte_canonical": normalized["analyte_canonical"],
+        "section": normalize_section(row.get("section")),
         "specimen": normalize_optional_source_value(row.get("specimen")),
         "fasting_required": normalize_optional_source_value(row.get("fasting_required")),
         "sex": normalized["sex"],
@@ -324,6 +348,36 @@ def csv_value(value: Any) -> Any:
     if isinstance(value, list):
         return "|".join(str(v) for v in value)
     return value
+
+
+def resolve_record_sections(
+    records: list[dict[str, Any]],
+    overrides: dict[str, str] | None = None,
+) -> tuple[Counter[str], list[dict[str, str]]]:
+    """Fill missing per-record ``section`` (supplemental rules have none) and apply
+    the expert override map. Resolution precedence per record:
+    SECTION_OVERRIDES[analyte] -> the record's own CSV section -> the analyte's
+    section from any other record -> None (resolved to "other" at runtime)."""
+    overrides = overrides or SECTION_OVERRIDES
+    by_analyte: dict[str, str] = {}
+    for rec in records:
+        analyte = str(rec.get("analyte_canonical") or "")
+        section = rec.get("section")
+        if analyte and section and analyte not in by_analyte:
+            by_analyte[analyte] = section
+
+    applied_overrides: list[dict[str, str]] = []
+    section_counts: Counter[str] = Counter()
+    for rec in records:
+        analyte = str(rec.get("analyte_canonical") or "")
+        override = overrides.get(analyte)
+        section = override or rec.get("section") or by_analyte.get(analyte)
+        rec["section"] = section
+        if override and rec.get("section") == override:
+            applied_overrides.append({"analyte_canonical": analyte, "section": override})
+        if section:
+            section_counts[section] += 1
+    return section_counts, applied_overrides
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
@@ -447,12 +501,17 @@ def build_reference_config(
 
     # --- Write output files ---
     # Pre-compute catalog-accepted sets (exclude replacement analytes regardless of supplemental)
-    catalog_accepted_json = [r for r in accepted_json if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
-    catalog_accepted_csv = [r for r in accepted_csv if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES]
+    catalog_accepted_json = [
+        r for r in accepted_json if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
+    ]
+    catalog_accepted_csv = [
+        r for r in accepted_csv if r.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
+    ]
 
     if supplemental_json:
         catalog_fields = RUNTIME_FIELDS + SUPPLEMENTAL_FIELDS
         combined_json = sorted(catalog_accepted_json + supplemental_json, key=sort_runtime_key)
+        section_counts, applied_overrides = resolve_record_sections(combined_json)
         # Build CSV-compatible copies of supplemental records (lists → pipe strings)
         supplemental_csv: list[dict[str, Any]] = []
         for rec in supplemental_json:
@@ -460,10 +519,13 @@ def build_reference_config(
             csv_rec["source_urls"] = "|".join(str(u) for u in (rec.get("source_urls") or []))
             supplemental_csv.append(csv_rec)
         combined_csv = sorted(catalog_accepted_csv + supplemental_csv, key=sort_runtime_key)
+        resolve_record_sections(combined_csv)
         write_csv(runtime_csv_path, combined_csv, catalog_fields)
         write_json(runtime_json_path, combined_json)
         catalog_rule_count = len(combined_json)
     else:
+        section_counts, applied_overrides = resolve_record_sections(accepted_json)
+        resolve_record_sections(accepted_csv)
         write_csv(runtime_csv_path, accepted_csv, RUNTIME_FIELDS)
         write_json(runtime_json_path, accepted_json)
         catalog_rule_count = len(accepted_json)
@@ -507,7 +569,9 @@ def build_reference_config(
         "runtime_accepted_rows": runtime_accepted_rows,
         "quarantined_rows": quarantined_rows,
         "multiple_reason_rows": multiple_reason_rows,
-        "rejection_reason_counts": {reason: rejection_counts[reason] for reason in REASON_ORDER if rejection_counts[reason]},
+        "rejection_reason_counts": {
+            reason: rejection_counts[reason] for reason in REASON_ORDER if rejection_counts[reason]
+        },
         "accepted_analytes": accepted_analytes,
         "quarantined_analytes": quarantined_analytes,
         "output_files": {
@@ -526,6 +590,11 @@ def build_reference_config(
         },
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "source_integrity_verified": True,
+        "section_propagation": {
+            "records_per_section": {k: v for k, v in sorted(section_counts.items())},
+            "records_without_section": catalog_rule_count - sum(section_counts.values()),
+            "overrides_applied": applied_overrides,
+        },
     }
 
     if supplemental_path is not None:
@@ -551,8 +620,12 @@ def build_reference_config(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build reference catalog and structural-rejection artifacts.")
-    parser.add_argument("--input", default=DEFAULT_INPUT, help="Source CSV path, relative to repo root unless absolute.")
-    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory, relative to repo root unless absolute.")
+    parser.add_argument(
+        "--input", default=DEFAULT_INPUT, help="Source CSV path, relative to repo root unless absolute."
+    )
+    parser.add_argument(
+        "--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory, relative to repo root unless absolute."
+    )
     return parser.parse_args(argv)
 
 

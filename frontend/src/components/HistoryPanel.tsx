@@ -17,6 +17,7 @@ import VerificationBadge from "@/components/common/VerificationBadge";
 import IndicatorResultCard from "./patient/IndicatorResultCard";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
+import { groupBySection } from "@/lib/trendUi.mjs";
 import type { SeverityLevel } from "@/types/doctor";
 
 type Props = {
@@ -427,12 +428,17 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                           </div>
 
                           {/* ---- Khối 1: nội dung do hệ thống sinh ---- */}
-                          <div className="space-y-3">
-                            {detail.indicators.map((indicator, index) => (
-                              <IndicatorResultCard
-                                key={index}
-                                indicator={indicator as unknown as import("@/types/analysis").IndicatorResult}
-                              />
+                          <div className="space-y-4">
+                            {groupBySection(detail.indicators).map((group) => (
+                              <div key={group.label} className="space-y-3">
+                                <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
+                                {group.items.map((indicator, index) => (
+                                  <IndicatorResultCard
+                                    key={index}
+                                    indicator={indicator as unknown as import("@/types/analysis").IndicatorResult}
+                                  />
+                                ))}
+                              </div>
                             ))}
 
                             {detail.disclaimer && (

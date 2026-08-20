@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session, object_session, selectinload
 from src.models.db import (
     ROLE_PATIENT,
     DoctorNote,
+    IndicatorCatalog,
     LabReport,
     OutOfScopeLog,
     ReportCriticalAlert,
@@ -45,6 +46,12 @@ from src.models.schemas import (
     LabReportSummarySchema,
     ReportDoctorViewSchema,
     ReportQuestionSchema,
+)
+from src.services.analyte_sections import analyte_section, section_label
+from src.services.indicator_catalog_service import (
+    IndicatorConfigurationError,
+    IndicatorConfigurationService,
+    get_indicator_configuration_service,
 )
 from src.services.question_templates import GeneratedQuestion
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
@@ -84,6 +91,13 @@ def _reference_repository() -> ReferenceRepository | None:
         return None
 
 
+def _indicator_configuration_service() -> IndicatorConfigurationService | None:
+    try:
+        return get_indicator_configuration_service()
+    except (IndicatorConfigurationError, ReferenceRepositoryError):
+        return None
+
+
 def _canonical_indicator_snapshot(
     *,
     repository: ReferenceRepository | None,
@@ -96,9 +110,7 @@ def _canonical_indicator_snapshot(
     resolved_analyte = repository.resolve_analyte(canonical_source) if repository is not None else None
     canonical_unit_source = indicator.canonical_unit or raw_unit or indicator.unit
     canonical_unit = (
-        repository.normalize_unit(canonical_unit_source)
-        if repository is not None
-        else canonical_unit_source
+        repository.normalize_unit(canonical_unit_source) if repository is not None else canonical_unit_source
     )
 
     return {
@@ -109,6 +121,43 @@ def _canonical_indicator_snapshot(
         "canonical_value": indicator.canonical_value if indicator.canonical_value is not None else raw_value,
         "canonical_unit": canonical_unit,
     }
+
+
+def _catalog_entry_for_snapshot(
+    db: Session,
+    *,
+    configuration_service: IndicatorConfigurationService | None,
+    canonical_name: object,
+    canonical_unit: object,
+    cache: dict[str, IndicatorCatalog],
+) -> IndicatorCatalog | None:
+    """Resolve/create the DB foreign-key target from the validated config facade.
+
+    Unknown indicators and an unexpected unit deliberately remain unlinked: a
+    history snapshot is still preserved, but it must not borrow another
+    indicator's policy or aliases.
+    """
+    if configuration_service is None or not isinstance(canonical_name, str):
+        return None
+    configured = configuration_service.get(canonical_name)
+    if configured is None or configured.canonical_unit != canonical_unit:
+        return None
+    if canonical_name in cache:
+        return cache[canonical_name]
+
+    entry = db.scalar(
+        select(IndicatorCatalog).where(IndicatorCatalog.canonical_name == canonical_name)
+    )
+    if entry is None:
+        entry = IndicatorCatalog(
+            canonical_name=configured.canonical_name,
+            canonical_unit=configured.canonical_unit,
+            aliases=list(configured.aliases),
+            max_gap_days_for_trend=configured.max_gap_days,
+        )
+        db.add(entry)
+    cache[canonical_name] = entry
+    return entry
 
 
 def save_report(
@@ -136,6 +185,8 @@ def save_report(
 
     report_indicators: list[ReportIndicator] = []
     repository = _reference_repository()
+    configuration_service = _indicator_configuration_service()
+    catalog_entries: dict[str, IndicatorCatalog] = {}
 
     for index, indicator in enumerate(response.indicators):
         raw_input = request.indicators[index] if index < len(request.indicators) else None
@@ -152,6 +203,13 @@ def save_report(
             raw_name=raw_name,
             raw_value=raw_value,
             raw_unit=raw_unit,
+        )
+        catalog_entry = _catalog_entry_for_snapshot(
+            db,
+            configuration_service=configuration_service,
+            canonical_name=canonical_snapshot["analyte_canonical"],
+            canonical_unit=canonical_snapshot["canonical_unit"],
+            cache=catalog_entries,
         )
 
         report_indicators.append(
@@ -175,9 +233,7 @@ def save_report(
                 evaluation_reason=getattr(indicator, "evaluation_reason", None),
                 explanation=indicator.explanation or "",
                 sources=list(indicator.sources or []),
-                # indicator_catalog_id hiện để NULL nếu chưa có bước
-                # canonical catalog resolution trong pipeline.
-                indicator_catalog_id=None,
+                catalog_entry=catalog_entry,
                 ocr_confidence=ocr_confidence,
                 ocr_raw_text=ocr_raw_text,
             )
@@ -203,21 +259,17 @@ def save_report(
     report = LabReport(
         patient_id=patient_id,
         test_date=request.test_date,
-
         # Snapshot tại thời điểm xét nghiệm.
         patient_age_at_test=request.patient_age,
         patient_gender_at_test=request.patient_gender,
-
         # None = manual.
         # Có filename = report tới từ OCR.
         ocr_source_filename=ocr_source_filename,
-
         language=request.language,
         has_critical_values=response.has_critical_values,
         guardrail_passed=response.guardrail_passed,
         summary=response.summary or "",
         disclaimer=response.disclaimer or "",
-
         indicators=report_indicators,
         critical_alerts=critical_alerts,
         out_of_scope_entries=out_of_scope_entries,
@@ -266,9 +318,7 @@ def _attach_questions(
         indicator_id = None
 
         if question.indicator_name:
-            indicator_id = indicator_ids.get(
-                _normalize_indicator_name(question.indicator_name)
-            )
+            indicator_id = indicator_ids.get(_normalize_indicator_name(question.indicator_name))
 
         db.add(
             ReportQuestion(
@@ -301,21 +351,15 @@ def _base_query(
     stmt = select(LabReport)
 
     if patient_id is not None:
-        stmt = stmt.where(
-            LabReport.patient_id == patient_id
-        )
+        stmt = stmt.where(LabReport.patient_id == patient_id)
 
     # Inclusive cả hai đầu:
     # from_date <= test_date <= to_date
     if from_date is not None:
-        stmt = stmt.where(
-            LabReport.test_date >= from_date
-        )
+        stmt = stmt.where(LabReport.test_date >= from_date)
 
     if to_date is not None:
-        stmt = stmt.where(
-            LabReport.test_date <= to_date
-        )
+        stmt = stmt.where(LabReport.test_date <= to_date)
 
     return stmt
 
@@ -345,14 +389,7 @@ def list_reports(
         to_date,
     )
 
-    total = (
-        db.scalar(
-            select(func.count()).select_from(
-                stmt.subquery()
-            )
-        )
-        or 0
-    )
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 
     rows = (
         db.execute(
@@ -378,10 +415,7 @@ def list_reports(
     # Một truy vấn cho cả trang, thay vì hai truy vấn mỗi phiếu.
     with_notes = _report_ids_with_notes(db, [report.id for report in rows])
 
-    return total, [
-        _to_summary(report, has_notes=report.id in with_notes)
-        for report in rows
-    ]
+    return total, [_to_summary(report, has_notes=report.id in with_notes) for report in rows]
 
 
 def get_report(
@@ -412,8 +446,7 @@ def get_report(
                 ),
             )
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
 
 
 def resolve_patient_id(
@@ -422,15 +455,12 @@ def resolve_patient_id(
 ) -> int | None:
     """Resolve username của patient persistent thành users.id."""
 
-    user = (
-        db.execute(
-            select(User).where(
-                User.username == username,
-                User.role == ROLE_PATIENT,
-            )
+    user = db.execute(
+        select(User).where(
+            User.username == username,
+            User.role == ROLE_PATIENT,
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
 
     if user is None:
         return None
@@ -527,11 +557,7 @@ def question_to_schema(question: ReportQuestion) -> ReportQuestionSchema:
         is_selected=bool(question.is_selected),
         answer_text=question.answer_text,
         answered_at=question.answered_at,
-        answered_by_username=(
-            question.answered_by.username
-            if question.answered_by is not None
-            else None
-        ),
+        answered_by_username=(question.answered_by.username if question.answered_by is not None else None),
         created_at=question.created_at,
     )
 
@@ -544,9 +570,7 @@ def note_to_schema(note: DoctorNote) -> DoctorNoteSchema:
         target_id=note.target_id,
         note_text=note.note_text,
         created_at=note.created_at,
-        doctor_username=(
-            note.doctor.username if note.doctor is not None else None
-        ),
+        doctor_username=(note.doctor.username if note.doctor is not None else None),
     )
 
 
@@ -563,19 +587,11 @@ def _to_summary(
 
     return LabReportSummarySchema(
         id=report.id,
-        patient_username=(
-            report.patient.username
-            if report.patient is not None
-            else None
-        ),
+        patient_username=(report.patient.username if report.patient is not None else None),
         test_date=report.test_date,
         created_at=report.created_at,
         indicator_count=len(report.indicators),
-        abnormal_count=sum(
-            1
-            for indicator in report.indicators
-            if indicator.is_abnormal
-        ),
+        abnormal_count=sum(1 for indicator in report.indicators if indicator.is_abnormal),
         has_critical_values=report.has_critical_values,
         source=_derive_source(report),
         summary=report.summary,
@@ -603,31 +619,19 @@ def to_detail(
     return LabReportDetailSchema(
         id=report.id,
         patient_id=report.patient_id,
-        patient_username=(
-            report.patient.username
-            if report.patient is not None
-            else None
-        ),
+        patient_username=(report.patient.username if report.patient is not None else None),
         test_date=report.test_date,
         created_at=report.created_at,
-
         patient_age_at_test=report.patient_age_at_test,
         patient_gender_at_test=report.patient_gender_at_test,
-
         language=report.language,
         summary=report.summary,
         has_critical_values=report.has_critical_values,
         guardrail_passed=report.guardrail_passed,
         disclaimer=report.disclaimer,
-
         indicator_count=len(report.indicators),
-        abnormal_count=sum(
-            1
-            for indicator in report.indicators
-            if indicator.is_abnormal
-        ),
+        abnormal_count=sum(1 for indicator in report.indicators if indicator.is_abnormal),
         source=_derive_source(report),
-
         indicators=[
             IndicatorResultSchema(
                 name=indicator.name,
@@ -635,6 +639,10 @@ def to_detail(
                 unit=indicator.unit,
                 analyte_raw=indicator.analyte_raw,
                 analyte_canonical=indicator.analyte_canonical,
+                section=(analyte_section(indicator.analyte_canonical) if indicator.analyte_canonical else None),
+                section_label=(
+                    section_label(analyte_section(indicator.analyte_canonical)) if indicator.analyte_canonical else None
+                ),
                 raw_value=indicator.raw_value,
                 raw_unit=indicator.raw_unit,
                 canonical_value=indicator.canonical_value,
@@ -663,11 +671,7 @@ def to_detail(
             )
             for indicator in report.indicators
         ],
-
-        critical_alerts=list(
-            report.critical_alerts
-        ),
-
+        critical_alerts=list(report.critical_alerts),
         questions=[
             question_to_schema(question)
             for question in sorted(
@@ -675,30 +679,19 @@ def to_detail(
                 key=lambda item: (item.display_order, item.id),
             )
         ],
-
-        out_of_scope_entries=list(
-            report.out_of_scope_entries
-        ),
-
-        doctor_notes=[
-            note_to_schema(note)
-            for note in notes
-        ],
-
+        out_of_scope_entries=list(report.out_of_scope_entries),
+        doctor_notes=[note_to_schema(note) for note in notes],
         doctor_views=[
             ReportDoctorViewSchema(
                 doctor_id=view.doctor_id,
                 viewed_at=view.viewed_at,
-                doctor_username=(
-                    view.doctor.username if view.doctor is not None else None
-                ),
+                doctor_username=(view.doctor.username if view.doctor is not None else None),
             )
             for view in sorted(
                 report.doctor_views,
                 key=lambda item: item.viewed_at,
             )
         ],
-
         reviewed_by_doctor=_is_reviewed(report, has_notes=bool(notes)),
         has_doctor_notes=bool(notes),
         verification_status=report.verification_status or "unverified",
@@ -833,9 +826,7 @@ def add_doctor_note(
     một con người.
     """
 
-    resolved_target_id = (
-        report.id if target_type == DoctorNote.TARGET_REPORT else target_id
-    )
+    resolved_target_id = report.id if target_type == DoctorNote.TARGET_REPORT else target_id
 
     if resolved_target_id is None:
         raise ValueError("target_id là bắt buộc khi target_type không phải report")

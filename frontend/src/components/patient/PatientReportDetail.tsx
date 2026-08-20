@@ -9,6 +9,7 @@ import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatDate, reportTone } from "@/lib/patientUi.mjs";
+import { groupBySection } from "@/lib/trendUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
 
@@ -94,6 +95,7 @@ export default function PatientReportDetail() {
   }
 
   const abnormalCount = report.indicators.filter((indicator) => indicator.is_abnormal).length;
+  const indicatorGroups = groupBySection(report.indicators);
   const reportSeverity = reportTone(report.status) as "critical" | "abnormal" | "normal";
 
   return (
@@ -140,9 +142,16 @@ export default function PatientReportDetail() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-3">
-          {report.indicators.map((indicator, index) => (
-            <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
+        <div className="mt-6 flex flex-col gap-6">
+          {indicatorGroups.map((group) => (
+            <div key={group.label}>
+              <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
+              <div className="mt-3 grid gap-3">
+                {group.items.map((indicator, index) => (
+                  <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
