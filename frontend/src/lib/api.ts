@@ -10,6 +10,7 @@ import type {
   LabReportListResponse,
   ReportQuestion,
 } from "@/types/history";
+import type { OrchestratorResponse, OrchestratorUiContext } from "@/types/orchestrator";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -301,6 +302,37 @@ export async function completeDoctorReport(reportId: number) {
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không hoàn tất được phiếu"));
+  }
+  return response.json();
+}
+
+export async function sendOrchestratorMessage(
+  message: string,
+  uiContext?: OrchestratorUiContext,
+): Promise<OrchestratorResponse> {
+  const response = await authFetch("/api/v1/orchestrator/message", {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      ...(uiContext ? { ui_context: uiContext } : {}),
+    }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Trợ lý chưa thể phản hồi lúc này"));
+  }
+  return response.json();
+}
+
+export async function acknowledgeOrchestratorOnboarding(): Promise<OrchestratorResponse> {
+  const response = await authFetch("/api/v1/orchestrator/onboarding/acknowledge", {
+    method: "POST",
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Chưa ghi nhận được xác nhận sử dụng trợ lý"));
   }
   return response.json();
 }

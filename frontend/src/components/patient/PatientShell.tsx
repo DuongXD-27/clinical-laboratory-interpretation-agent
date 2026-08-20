@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import AssistantWidget from "@/components/patient/AssistantWidget";
 import { clearSession, getRole, getToken, getUsername, type Role } from "@/lib/api";
 import PatientSidebar from "./PatientSidebar";
 import PatientTopbar from "./PatientTopbar";
@@ -70,6 +71,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <AssistantWidget role={session.role} />
     </div>
   );
 }

@@ -5,10 +5,12 @@ import pytest
 from pydantic import ValidationError
 
 from src.api import ocr_routes, routes
+from src.api.deps import CurrentUser
 from src.config import get_settings
+from src.models.db import User
 from src.models.ocr_schemas import OCRIndicatorDraft, OCRReviewedIndicator
 from src.models.schemas import IndicatorInputSchema
-from src.services.ocr_review_gate import prepare_review
+from src.services.ocr_review_gate import create_review_lifecycle, prepare_review, review_token_expires_at
 
 
 async def _auth_headers(client):
@@ -20,7 +22,20 @@ async def _auth_headers(client):
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def _review_payload(*, acknowledged: bool, reviewed: bool = True):
+def _review_payload(*, acknowledged: bool, reviewed: bool = True, test_db=None):
+    review_id = None
+    expires_at = None
+    if test_db is not None:
+        expires_at = review_token_expires_at()
+        with test_db.session() as db:
+            user = db.query(User).filter(User.username == "benhnhan").one()
+            current_user = CurrentUser(user.username, user.role, user_id=user.id)
+            lifecycle = create_review_lifecycle(
+                db,
+                current_user=current_user,
+                expires_at=expires_at,
+            )
+            review_id = lifecycle.review_id
     drafts, token = prepare_review(
         [
             OCRIndicatorDraft(
@@ -32,6 +47,8 @@ def _review_payload(*, acknowledged: bool, reviewed: bool = True):
             )
         ],
         username="benhnhan",
+        review_id=review_id,
+        expires_at=expires_at,
     )
     assert drafts[0].needs_review is True
     return {
@@ -272,11 +289,11 @@ async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_low_confidence_cannot_bypass_explicit_acknowledgement(client):
+async def test_low_confidence_cannot_bypass_explicit_acknowledgement(client, test_db):
     headers = await _auth_headers(client)
     response = await client.post(
         "/api/v1/ocr/confirm",
-        json=_review_payload(acknowledged=False),
+        json=_review_payload(acknowledged=False, test_db=test_db),
         headers=headers,
     )
     assert response.status_code == 400
@@ -284,11 +301,11 @@ async def test_low_confidence_cannot_bypass_explicit_acknowledgement(client):
 
 
 @pytest.mark.asyncio
-async def test_every_ocr_row_requires_manual_review(client):
+async def test_every_ocr_row_requires_manual_review(client, test_db):
     headers = await _auth_headers(client)
     response = await client.post(
         "/api/v1/ocr/confirm",
-        json=_review_payload(acknowledged=True, reviewed=False),
+        json=_review_payload(acknowledged=True, reviewed=False, test_db=test_db),
         headers=headers,
     )
     assert response.status_code == 400
@@ -296,7 +313,7 @@ async def test_every_ocr_row_requires_manual_review(client):
 
 
 @pytest.mark.asyncio
-async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
+async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch, test_db):
     final_state = {
         "indicators": [
             {
@@ -323,7 +340,7 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
 
     response = await client.post(
         "/api/v1/ocr/confirm",
-        json=_review_payload(acknowledged=True),
+        json=_review_payload(acknowledged=True, test_db=test_db),
         headers=headers,
     )
 
@@ -335,13 +352,24 @@ async def test_confirmed_ocr_enters_graph_as_reviewed(client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, monkeypatch):
+async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, monkeypatch, test_db):
+    expires_at = review_token_expires_at()
+    with test_db.session() as db:
+        user = db.query(User).filter(User.username == "benhnhan").one()
+        current_user = CurrentUser(user.username, user.role, user_id=user.id)
+        lifecycle = create_review_lifecycle(
+            db,
+            current_user=current_user,
+            expires_at=expires_at,
+        )
     drafts, token = prepare_review(
         [
             OCRIndicatorDraft(name="WBC", value=7.2, unit="10^9/L", confidence=0.95),
             OCRIndicatorDraft(name="AST", value=48, unit="U/L", confidence=0.95),
         ],
         username="benhnhan",
+        review_id=lifecycle.review_id,
+        expires_at=expires_at,
     )
     final_state = {
         "indicators": [

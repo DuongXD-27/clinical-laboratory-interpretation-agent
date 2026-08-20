@@ -74,7 +74,7 @@ async def _retrieve_optional_context(
     band_id: str | None,
     critical_status: str | None,
 ) -> list[RetrievedChunk]:
-    if retriever is None or not analyte_id:
+    if retriever is None or not analyte_id or status.strip().lower() == "unknown":
         return []
     query = f"Ý nghĩa xét nghiệm {name} khi kết quả ở mức {status}"
     try:
@@ -203,7 +203,7 @@ async def process_single_indicator(
     )
 
     explanation_text = fallback_explanation
-    if structured_llm is not None and context:
+    if structured_llm is not None and context and status.strip().lower() != "unknown":
         try:
             queue_started_at = time.perf_counter()
             async with llm_semaphore:

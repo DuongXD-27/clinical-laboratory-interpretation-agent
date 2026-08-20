@@ -23,7 +23,10 @@ from src.services.image_processor import (
 )
 from src.services.ocr_review_gate import (
     OCRReviewGateError,
+    consume_review_lifecycle,
+    create_review_lifecycle,
     prepare_review,
+    review_token_expires_at,
     validate_review,
 )
 from src.services.ocr_sample_library import get_sample, is_known_sample, load_samples
@@ -165,6 +168,7 @@ async def ocr_upload(
         description="Người dùng đã tick xác nhận đây là dữ liệu mô phỏng",
     ),
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> OCRReviewResponse:
     settings = get_settings()
 
@@ -265,10 +269,18 @@ async def ocr_upload(
     # source_image + confidence + raw_text được bind vào signed review
     # evidence. Client không được tự cung cấp lại provenance ở confirm.
     with timing_span("ocr-review-prepare"):
+        expires_at = review_token_expires_at()
+        lifecycle = create_review_lifecycle(
+            db,
+            current_user=current_user,
+            expires_at=expires_at,
+        )
         prepared_drafts, review_token = prepare_review(
             drafts,
             username=current_user.username,
             source_image=source_image,
+            review_id=lifecycle.review_id,
+            expires_at=expires_at,
         )
 
     return OCRReviewResponse(
@@ -335,6 +347,19 @@ async def ocr_confirm(
                 "danh sách hiện được hỗ trợ."
             ),
         )
+
+    try:
+        with timing_span("ocr-review-consume"):
+            consume_review_lifecycle(
+                db,
+                token=request.review_token,
+                current_user=current_user,
+            )
+    except OCRReviewGateError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
     with timing_span("ocr-build-analysis-request"):
         analyze_request = AnalyzeRequest(

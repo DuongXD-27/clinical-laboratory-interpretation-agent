@@ -15,6 +15,18 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 - **LLM Analyzer**: Diễn giải ý nghĩa chỉ số bằng ngôn ngữ phổ thông, gần gũi với người bệnh.
 - **Medical Guardrail**: Chặn triệt để mọi hành vi chẩn đoán bệnh, suy đoán nguyên nhân cá nhân hóa hoặc chỉ định điều trị.
 - **Doctor Questions Generator**: Gợi ý các câu hỏi trọng tâm để bệnh nhân chủ động trao đổi với bác sĩ trong lần khám tiếp theo.
+- **Patient/Guest Hybrid Assistant (Orchestrator V1)**: Trợ lý nổi trong giao diện bệnh nhân/khách để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa.
+
+### Orchestrator V1 scope
+
+- **Roles hỗ trợ trên Assistant**: `guest`, `patient`.
+- **Doctor conversational support**: deferred to V2; doctor-facing routes hiện có vẫn hoạt động riêng.
+- **Six intents**: `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
+- **Seven SuggestedActions**: `OPEN_REPORT`, `VIEW_ABNORMAL`, `VIEW_HISTORY`, `VIEW_TREND`, `VIEW_DOCTOR_QUESTIONS`, `CONFIRM_OCR`, `RETRY`.
+- **Onboarding bắt buộc**: Assistant chặn trước router/workflow cho tới khi người dùng xác nhận phạm vi sử dụng.
+- **OCR HITL**: dữ liệu OCR chỉ đi vào phân tích qua `/api/v1/ocr/confirm`; Assistant chỉ đọc trạng thái pending và không sao chép OCR draft thành input y khoa.
+- **History/Trend authorization**: patient chỉ truy cập dữ liệu của chính mình; guest bị chặn với `UNSUPPORTED_CAPABILITY`.
+- **Tài liệu verify cuối**: [Orchestrator V1 Final Verify Evidence](docs/orchestrator-v1-final-verify.md).
 
 ---
 
@@ -51,14 +63,40 @@ Phiếu xét nghiệm (Manual / Reviewed OCR)
  [3] RAG Knowledge Retriever ──► Live Chunks từ ChromaDB (hoặc Curated Fallback)
        │
        ▼
- [4] LLM Analyzer Node ────────► Diễn giải ngôn ngữ tự nhiên theo ngữ cảnh
+[4] LLM Analyzer Node ────────► Diễn giải ngôn ngữ tự nhiên theo ngữ cảnh
        │
        ▼
- [5] Medical Guardrail Node ───► Kiểm duyệt an toàn (Chặn chẩn đoán / đơn thuốc)
+[5] Medical Guardrail Node ───► Kiểm duyệt an toàn (Chặn chẩn đoán / đơn thuốc)
        │
        ▼
- API JSON Response ────────────► Frontend Next.js (Dashboard / Báo cáo chi tiết)
+API JSON Response ────────────► Frontend Next.js (Dashboard / Báo cáo chi tiết)
 ```
+
+### Luồng Patient/Guest Assistant
+
+```text
+Patient/Guest UI
+       │
+       ▼
+Orchestrator API (/api/v1/orchestrator/message)
+       │
+       ▼
+Role / Onboarding / OCR / Policy Gates
+       │
+       ▼
+Context Resolver -> Intent Router -> Workflow Dispatcher
+       │
+       ▼
+Approved wrappers/services
+       │
+       ▼
+Response Composer -> Medical Safety Validation -> Schema Validation
+       │
+       ▼
+SuggestedAction Validation -> Frontend Assistant
+```
+
+Trong luồng này LLM chỉ được sinh `message`. Các trường `intent`, `status`, `reason_code`, `data`, `data_type`, `sources`, `suggested_actions` và `safety_notice` do server kiểm soát.
 
 ### Nguyên tắc phân tách trạng thái cốt lõi
 - **Reference status**: `low` | `normal` | `high` | `unknown`
@@ -158,17 +196,20 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://localhost:3000,http://localhost:5173` |
 | `DATABASE_URL` | DEFAULTED | Chuỗi kết nối CSDL SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
 | `RAG_ENABLED` | DEFAULTED | Bật/tắt tra cứu vector động qua ChromaDB | `false` |
-| `RAG_COLLECTION_NAME` | DEFAULTED | Tên collection ChromaDB | `medical_kb_v1` |
-| `RAG_CORPUS_VERSION` | DEFAULTED | Phiên bản dữ liệu tri thức y khoa | `medical-kb-v1` |
-| `EMBEDDING_PROVIDER` | DEFAULTED | Nhà cung cấp embedding (`disabled`, `openai`) | `disabled` (đổi `openai` khi bật RAG) |
+| `RAG_COLLECTION_NAME` | DEFAULTED | Tên collection ChromaDB | `medical_kb_v4` |
+| `RAG_CORPUS_VERSION` | DEFAULTED | Phiên bản dữ liệu tri thức y khoa | `medical-kb-v4` |
+| `EMBEDDING_PROVIDER` | DEFAULTED | Nhà cung cấp embedding (`disabled`, `openai`, `gemini`) | `disabled` |
 | `EMBEDDING_MODEL_NAME` | DEFAULTED | Tên model embedding | `text-embedding-3-small` |
 | `CHROMA_PERSIST_DIR` | DEFAULTED | Đường dẫn lưu trữ vector DB | `./data/chroma` |
 | `MODEL_NAME` | DEFAULTED | Tên mô hình LLM chính | `gpt-4o-mini` |
 | `LLM_TIMEOUT_SECONDS` | DEFAULTED | Thời gian chờ tối đa cho 1 lượt gọi LLM | `20` |
+| `GUEST_SESSION_EXPIRE_MINUTES` | DEFAULTED | Thời gian sống phiên khách | `120` |
+| `OCR_REVIEW_TOKEN_EXPIRE_MINUTES` | DEFAULTED | Thời gian sống token review OCR | `15` |
 | `OPENROUTER_API_KEY` | OPTIONAL | Khóa API OpenRouter dùng làm fallback OCR | `sk-or-v1-...` |
 | `OCR_UPLOAD_MODE` | DEFAULTED | Chế độ nhận ảnh OCR (`demo_only`, `open_with_consent`, `internal_only`) | `demo_only` |
 | `OCR_SAMPLES_DIR` | DEFAULTED | Thư mục chứa ảnh mẫu hợp lệ cho chế độ demo | `./data/ocr_samples` |
 | `LANGCHAIN_API_KEY` | OPTIONAL | Khóa API LangSmith ghi nhận AI Trace | `lsv2_pt_...` |
+| `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://localhost:8000` |
 
 > [!IMPORTANT]
 > **Cơ chế RAG Fallback**:
@@ -314,7 +355,7 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Head
 
 **Backend Unit & Integration Tests:**
 ```powershell
-pytest
+pytest -q
 ```
 
 **Kiểm tra Linting & Định dạng code:**
@@ -334,11 +375,22 @@ cd frontend
 npx tsc --noEmit
 ```
 
-### Trạng thái hồi quy được xác minh (Verified at G2 preparation time)
-- **Backend Test Suite**: `627 passed` (100% pass)
-- **Frontend Unit Tests**: `18 passed` (100% pass)
-- **TypeScript Typecheck**: `0 errors`
-- **Ruff Code Audit**: Đã xác nhận trên toàn bộ các module lõi
+**Frontend Production Build:**
+```powershell
+cd frontend
+npm run build
+```
+
+**Focused Orchestrator / Safety Verify:**
+```powershell
+pytest tests/orchestrator -q
+pytest tests/test_eval -q
+pytest tests/test_data/test_medical_kb_manifest_integrity.py -q
+```
+
+### Trạng thái hồi quy Orchestrator V1
+
+Kết quả cuối cùng được ghi trong [Orchestrator V1 Final Verify Evidence](docs/orchestrator-v1-final-verify.md) và Final Verify Report. Không dùng các số lịch sử cũ để thay thế kết quả test hiện tại.
 
 ---
 
@@ -353,7 +405,8 @@ Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 - [OCR Accuracy Results](eval/ocr/ocr_accuracy_results.md) — Kết quả đo lường độ chính xác trích xuất OCR phiếu xét nghiệm.
 - [Latency Benchmark](eval/performance/latency_summary.md) — Đo lường độ trễ chi tiết từng giai đoạn qua Server-Timing.
 - [Live RAG Sanity Probes](eval/rag/live_rag_sanity.md) — Bằng chứng truy xuất vector trực tiếp từ ChromaDB.
-- [RAGAS Benchmark Note](eval/results/G2_RAGAS_SCOPE_NOTE.md) — Điểm số Faithfulness (0.875) & Context Precision (0.940).
+- [RAGAS Benchmark Note](eval/results/G2_RAGAS_SCOPE_NOTE.md) — Bằng chứng lịch sử G2. TIP-007 không sinh live RAGAS quality score mới; trạng thái hiện tại là `RAG_LIVE_QUALITY=NOT MEASURED`.
+- [Orchestrator V1 Final Verify Evidence](docs/orchestrator-v1-final-verify.md) — Traceability, P0/P1/P2, E2E, OCR/RAG/Auth boundaries và known limitations của Orchestrator V1.
 
 ---
 
@@ -365,4 +418,8 @@ Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 - **Ý nghĩa của NORMAL**: Giá trị "Bình thường" chỉ biểu thị số đo nằm trong khoảng tham chiếu mà hệ thống đang sử dụng đối chiếu.
 - **Ý nghĩa của HIGH / LOW**: Tăng/giảm ngoài khoảng tham chiếu không tự động đồng nghĩa với tình trạng nguy kịch.
 - **Tính tất định của Giá trị Nguy kịch (Critical Values)**: Được kiểm soát bởi Deterministic Rule Engine với ngưỡng cố định, hoàn toàn không phụ thuộc vào suy luận xác suất của LLM.
+- **Unsupported analyte fail-closed**: `status="unknown"` không gọi general RAG và không gọi LLM giải thích; chỉ cho phép nội dung curated đã phê duyệt nếu có.
+- **Không có long-term chat memory**: Assistant chỉ giữ session context tối thiểu; không lưu lịch sử chat dài hạn.
+- **Doctor Assistant deferred**: Bác sĩ dùng các route/app doctor hiện có; chatbot doctor không thuộc V1.
+- **RAG live quality**: TIP-007 không đo live RAGAS quality score mới.
 - **Phạm vi kiểm thử**: Các kết quả kiểm nghiệm hiện tại phản ánh tập dữ liệu xét nghiệm và các chỉ số được hỗ trợ trong phạm vi MVP, không đảm bảo tính đúng đắn cho mọi tình huống bệnh lý hay mọi định dạng phiếu xét nghiệm nằm ngoài danh mục.

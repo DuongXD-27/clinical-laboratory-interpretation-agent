@@ -38,6 +38,9 @@ export default function PatientAnalysisPage() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage auth is available only after mount.
     setIsGuest(role === "guest");
+    if (new URLSearchParams(window.location.search).get("mode") === "ocr") {
+      setInputMode("ocr");
+    }
     setCheckingAuth(false);
   }, [router]);
 

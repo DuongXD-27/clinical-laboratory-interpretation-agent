@@ -247,6 +247,51 @@ async def test_analyzer_unsupported_generic_glucose_fails_closed(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_unknown_status_skips_rag_and_llm_but_keeps_curated_catalog(monkeypatch):
+    calls = {"rag": 0, "llm": 0}
+
+    class FakeRetriever:
+        def retrieve(self, *, query, analyte_id, status, limit, band_id=None, critical_status=None):
+            calls["rag"] += 1
+            raise AssertionError("RAG must not run for status='unknown'")
+
+    class FakeLLM:
+        def with_structured_output(self, schema):
+            return object()
+
+    async def counted_llm_call(structured_llm, prompt):
+        calls["llm"] += 1
+        raise AssertionError("LLM explanation must not run for status='unknown'")
+
+    monkeypatch.setattr(analyzer_module, "get_llm", lambda: FakeLLM())
+    monkeypatch.setattr(analyzer_module, "get_medical_knowledge_retriever", lambda: FakeRetriever())
+    monkeypatch.setattr(analyzer_module, "call_llm_with_retry", counted_llm_call)
+
+    unknown_with_catalog = {
+        "name": "Uric acid",
+        "analyte_id": "uric_acid",
+        "value": 420.0,
+        "unit": "umol/L",
+        "status": "unknown",
+        "category": "unknown",
+        "is_abnormal": False,
+        "is_critical": False,
+        "explanation": "",
+        "sources": [],
+    }
+
+    result = await analyzer_node({"indicators": [unknown_with_catalog], "patient_gender": "male"})
+
+    indicator_result = result["indicators"][0]
+    assert calls == {"rag": 0, "llm": 0}
+    assert result["retrieved_contexts"] == []
+    assert indicator_result["status"] == "unknown"
+    assert indicator_result["is_critical"] is False
+    assert "Acid uric" in indicator_result["explanation"]
+    assert indicator_result["sources"] == ["https://ard.bmj.com/content/76/1/29"]
+
+
+@pytest.mark.asyncio
 async def test_analyzer_critical_status_qualification_with_separated_status(monkeypatch):
     monkeypatch.setattr(analyzer_module, "get_llm", lambda: (_ for _ in ()).throw(RuntimeError("no llm")))
     monkeypatch.setattr(analyzer_module, "get_medical_knowledge_retriever", lambda: None)
@@ -270,4 +315,3 @@ async def test_analyzer_critical_status_qualification_with_separated_status(monk
     assert ind["critical_status"] == "critical_high"
     assert "vượt ngưỡng cảnh báo nguy kịch" in ind["explanation"]
     assert "Phát hiện nội dung có thể chứa yếu tố suy đoán" not in ind["explanation"]
-

@@ -1,0 +1,372 @@
+"""Shared Orchestrator V1 contracts.
+
+This module is intentionally types-only. It defines the conversational
+orchestrator boundary without adding routes, workflow nodes, services, medical
+logic, or persistence.
+
+Three distinct state surfaces must never be merged:
+- LangGraph workflow checkpoint -> ``src/agents/state.py`` ``AgentState``
+- persistent medical DB -> ``history_repository`` / SQLAlchemy
+- conversational session context -> ``OrchestratorSessionContext`` in this file
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field, model_validator
+
+from src.models.db import ROLE_PATIENT
+from src.models.schemas import (
+    CriticalAlertSchema,
+    IndicatorResultSchema,
+    TrendResponse,
+    VerificationStatus,
+)
+from src.services.auth import ROLE_GUEST
+from src.services.question_templates import GeneratedQuestion
+
+ServerReference = Annotated[
+    str,
+    Field(
+        min_length=1,
+        max_length=256,
+        pattern=r"^[A-Za-z0-9_.%+-]+$",
+    ),
+]
+
+
+class IntentEnum(StrEnum):
+    UNSUPPORTED_OR_UNSAFE = "UNSUPPORTED_OR_UNSAFE"
+    ANALYZE_REPORT = "ANALYZE_REPORT"
+    EXPLAIN_CURRENT_RESULT = "EXPLAIN_CURRENT_RESULT"
+    VIEW_HISTORY = "VIEW_HISTORY"
+    ANALYZE_TREND = "ANALYZE_TREND"
+    GET_DOCTOR_QUESTIONS = "GET_DOCTOR_QUESTIONS"
+
+
+class OrchestratorRole(StrEnum):
+    GUEST = ROLE_GUEST
+    PATIENT = ROLE_PATIENT
+
+
+class ResponseStatus(StrEnum):
+    SUCCESS = "success"
+    NEEDS_INPUT = "needs_input"
+    BLOCKED = "blocked"
+    ERROR = "error"
+
+
+class ReasonCode(StrEnum):
+    ONBOARDING_REQUIRED = "ONBOARDING_REQUIRED"
+    OCR_REVIEW_REQUIRED = "OCR_REVIEW_REQUIRED"
+    OCR_CONFIRM_INVALID = "OCR_CONFIRM_INVALID"
+    MEDICAL_DIAGNOSIS_REQUEST = "MEDICAL_DIAGNOSIS_REQUEST"
+    MEDICAL_CAUSE_REQUEST = "MEDICAL_CAUSE_REQUEST"
+    TREATMENT_REQUEST = "TREATMENT_REQUEST"
+    UNSUPPORTED_ANALYTE = "UNSUPPORTED_ANALYTE"
+    UNSUPPORTED_CAPABILITY = "UNSUPPORTED_CAPABILITY"
+    AMBIGUOUS_CONTEXT = "AMBIGUOUS_CONTEXT"
+    AUTH_EXPIRED = "AUTH_EXPIRED"
+    REPORT_NOT_FOUND_OR_UNAUTHORIZED = "REPORT_NOT_FOUND_OR_UNAUTHORIZED"
+    DB_UNAVAILABLE = "DB_UNAVAILABLE"
+    LLM_UNAVAILABLE = "LLM_UNAVAILABLE"
+    RAG_UNAVAILABLE = "RAG_UNAVAILABLE"
+    TREND_INSUFFICIENT_POINTS = "TREND_INSUFFICIENT_POINTS"
+    TREND_UNIT_INCONSISTENT = "TREND_UNIT_INCONSISTENT"
+    UNKNOWN_INTENT = "UNKNOWN_INTENT"
+    GUARDRAIL_BLOCKED = "GUARDRAIL_BLOCKED"
+    INTERNAL_WORKFLOW_ERROR = "INTERNAL_WORKFLOW_ERROR"
+
+
+class UIContext(BaseModel):
+    """Untrusted client UI hints.
+
+    This is a hint only. It never grants authority, never changes role, and
+    never selects a report the user does not own.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    screen: ServerReference | None = None
+    view: ServerReference | None = None
+    candidate_analyte: ServerReference | None = None
+    candidate_report_ref: ServerReference | None = None
+
+
+class OrchestratorSessionContext(BaseModel):
+    """Server-constructed conversational context; never accepted from clients."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: ServerReference
+    user_role: OrchestratorRole
+    onboarding_acknowledged: bool = False
+    current_report_ref: ServerReference | None = None
+    current_analyte: ServerReference | None = None
+    last_intent: IntentEnum | None = None
+    transient_ui_context: UIContext | None = None
+
+    _pending_ocr_review: bool = PrivateAttr(default=False)
+
+    @computed_field
+    @property
+    def pending_ocr_review(self) -> bool:
+        """Derived from the OCR review gate; not parseable from client data."""
+
+        return self._pending_ocr_review
+
+    @classmethod
+    def from_server(
+        cls,
+        *,
+        session_id: str,
+        user_role: OrchestratorRole,
+        onboarding_acknowledged: bool = False,
+        current_report_ref: str | None = None,
+        current_analyte: str | None = None,
+        last_intent: IntentEnum | None = None,
+        pending_ocr_review: bool = False,
+        transient_ui_context: UIContext | None = None,
+    ) -> OrchestratorSessionContext:
+        context = cls(
+            session_id=session_id,
+            user_role=user_role,
+            onboarding_acknowledged=onboarding_acknowledged,
+            current_report_ref=current_report_ref,
+            current_analyte=current_analyte,
+            last_intent=last_intent,
+            transient_ui_context=transient_ui_context,
+        )
+        context._pending_ocr_review = bool(pending_ocr_review)
+        return context
+
+
+class SuggestedActionType(StrEnum):
+    OPEN_REPORT = "OPEN_REPORT"
+    VIEW_ABNORMAL = "VIEW_ABNORMAL"
+    VIEW_HISTORY = "VIEW_HISTORY"
+    VIEW_TREND = "VIEW_TREND"
+    VIEW_DOCTOR_QUESTIONS = "VIEW_DOCTOR_QUESTIONS"
+    CONFIRM_OCR = "CONFIRM_OCR"
+    RETRY = "RETRY"
+
+
+class _ActionBase(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_executable_strings(cls, data: object) -> object:
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if key == "action":
+                    continue
+                if isinstance(value, str) and value.strip().casefold().startswith("javascript:"):
+                    raise ValueError("executable string values are not allowed")
+        return data
+
+
+class OpenReportAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.OPEN_REPORT] = SuggestedActionType.OPEN_REPORT
+    report_ref: ServerReference
+
+
+class ViewAbnormalAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.VIEW_ABNORMAL] = SuggestedActionType.VIEW_ABNORMAL
+    report_ref: ServerReference | None = None
+
+
+class ViewHistoryAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.VIEW_HISTORY] = SuggestedActionType.VIEW_HISTORY
+
+
+class ViewTrendAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.VIEW_TREND] = SuggestedActionType.VIEW_TREND
+    analyte_id: ServerReference
+
+
+class ViewDoctorQuestionsAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.VIEW_DOCTOR_QUESTIONS] = SuggestedActionType.VIEW_DOCTOR_QUESTIONS
+    report_ref: ServerReference | None = None
+
+
+class ConfirmOcrAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.CONFIRM_OCR] = SuggestedActionType.CONFIRM_OCR
+    review_ref: ServerReference
+
+
+class RetryAction(_ActionBase):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal[SuggestedActionType.RETRY] = SuggestedActionType.RETRY
+    reason_code: ReasonCode | None = None
+
+
+SuggestedAction = Annotated[
+    (
+        OpenReportAction
+        | ViewAbnormalAction
+        | ViewHistoryAction
+        | ViewTrendAction
+        | ViewDoctorQuestionsAction
+        | ConfirmOcrAction
+        | RetryAction
+    ),
+    Field(discriminator="action"),
+]
+
+
+class DataType(StrEnum):
+    ANALYSIS = "analysis"
+    EXPLANATION = "explanation"
+    HISTORY_SUMMARY = "history_summary"
+    TREND = "trend"
+    DOCTOR_QUESTIONS = "doctor_questions"
+    BLOCKED = "blocked"
+    NEEDS_INPUT = "needs_input"
+
+
+class AnalysisDataPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.ANALYSIS] = DataType.ANALYSIS
+    indicators: list[IndicatorResultSchema]
+    critical_alerts: list[CriticalAlertSchema] = Field(default_factory=list)
+    has_critical_values: bool = False
+
+
+class ExplanationDataPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.EXPLANATION] = DataType.EXPLANATION
+    explanation: str
+    sources: list[str] = Field(default_factory=list)
+
+
+class HistorySummaryPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.HISTORY_SUMMARY] = DataType.HISTORY_SUMMARY
+    report_ref: ServerReference
+    test_date: str
+    summary: str
+    status: str
+    has_critical_values: bool
+    result_count: int = Field(ge=0)
+    reviewed_by_doctor: bool = False
+    verification_status: VerificationStatus = "unverified"
+
+
+class TrendDataPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.TREND] = DataType.TREND
+    trend: TrendResponse
+
+
+class DoctorQuestionsPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.DOCTOR_QUESTIONS] = DataType.DOCTOR_QUESTIONS
+    questions: list[GeneratedQuestion] = Field(default_factory=list)
+
+
+class BlockedPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.BLOCKED] = DataType.BLOCKED
+    safety_notice: str
+    disclaimer: str | None = None
+    reason_code: ReasonCode | None = None
+
+
+class NeedsInputPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    data_type: Literal[DataType.NEEDS_INPUT] = DataType.NEEDS_INPUT
+    missing_fields: list[str] = Field(default_factory=list)
+    prompt: str
+
+
+DataPayload = Annotated[
+    (
+        AnalysisDataPayload
+        | ExplanationDataPayload
+        | HistorySummaryPayload
+        | TrendDataPayload
+        | DoctorQuestionsPayload
+        | BlockedPayload
+        | NeedsInputPayload
+    ),
+    Field(discriminator="data_type"),
+]
+
+
+class OrchestratorRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str
+    ui_context: UIContext | None = None
+    client_request_id: ServerReference | None = None
+
+
+class OrchestratorResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    intent: IntentEnum
+    status: ResponseStatus
+    message: str
+    data_type: DataType
+    data: DataPayload
+    reason_code: ReasonCode | None = None
+    suggested_actions: list[SuggestedAction] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+    safety_notice: str | None = None
+
+    @model_validator(mode="after")
+    def _data_type_must_match_payload(self) -> OrchestratorResponse:
+        if self.data_type != self.data.data_type:
+            raise ValueError("response data_type must match payload data_type")
+        return self
+
+
+__all__ = [
+    "AnalysisDataPayload",
+    "BlockedPayload",
+    "ConfirmOcrAction",
+    "DataPayload",
+    "DataType",
+    "DoctorQuestionsPayload",
+    "ExplanationDataPayload",
+    "HistorySummaryPayload",
+    "IntentEnum",
+    "NeedsInputPayload",
+    "OpenReportAction",
+    "OrchestratorRequest",
+    "OrchestratorResponse",
+    "OrchestratorRole",
+    "OrchestratorSessionContext",
+    "ReasonCode",
+    "ResponseStatus",
+    "RetryAction",
+    "SuggestedAction",
+    "SuggestedActionType",
+    "TrendDataPayload",
+    "UIContext",
+    "ViewAbnormalAction",
+    "ViewDoctorQuestionsAction",
+    "ViewHistoryAction",
+    "ViewTrendAction",
+]
