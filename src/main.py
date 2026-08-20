@@ -17,6 +17,7 @@ from src.config import get_settings
 from src.models.db import SessionLocal, init_db
 from src.services.demo_patient_data import seed_demo_patient_reports
 from src.services.doctor_review_service import backfill_review_flags
+from src.services.history_repository import backfill_legacy_canonical_indicators
 from src.services.logging_config import configure_logging
 from src.services.medical_knowledge_retriever import get_rag_readiness
 from src.services.request_timing import (
@@ -52,6 +53,10 @@ async def lifespan(app: FastAPI):
             changed = backfill_review_flags(db)
             if changed:
                 logger.info("doctor_review_backfill", extra={"reports_changed": changed})
+            
+            backfill_metrics = backfill_legacy_canonical_indicators(db)
+            if backfill_metrics and backfill_metrics.get("PARTIAL_ROWS_COMPLETED", 0) > 0:
+                logger.info("legacy_trend_backfill", extra=backfill_metrics)
     try:
         yield
     finally:

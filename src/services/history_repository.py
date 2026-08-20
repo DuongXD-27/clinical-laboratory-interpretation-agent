@@ -16,12 +16,15 @@ phải truyền patient_id rõ ràng.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, object_session, selectinload
+
+logger = logging.getLogger(__name__)
 
 from src.models.db import (
     ROLE_PATIENT,
@@ -896,3 +899,110 @@ def mark_report_reviewed(
     db.refresh(view)
 
     return view
+
+
+def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
+    """Backfills missing canonical fields on old report indicators."""
+    try:
+        repo = ReferenceRepository.from_default_files()
+    except ReferenceRepositoryError:
+        logger.warning("ReferenceRepository missing/invalid during backfill.")
+        return {}
+
+    # Target rows where ANY required canonical field is NULL
+    indicators = db.execute(
+        select(ReportIndicator).where(
+            (ReportIndicator.analyte_canonical.is_(None)) |
+            (ReportIndicator.canonical_value.is_(None)) |
+            (ReportIndicator.canonical_unit.is_(None))
+        )
+    ).scalars().all()
+
+    if not indicators:
+        return {}
+
+    partial_rows_found = len(indicators)
+    partial_rows_completed = 0
+    partial_rows_conflicting = 0
+    exact_rows = 0
+    equivalent_alias_rows = 0
+    unsupported_unit_rows = 0
+
+    for ind in indicators:
+        raw_name = ind.analyte_raw or ind.name
+        raw_value = ind.raw_value if ind.raw_value is not None else ind.value
+        raw_unit = ind.raw_unit or ind.unit
+
+        resolved_analyte = repo.resolve_analyte(raw_name)
+        
+        # If unsupported analyte, fail closed
+        if not resolved_analyte:
+            unsupported_unit_rows += 1
+            continue
+            
+        # Check conflicts if canonical fields are already partially set
+        conflict = False
+        if ind.analyte_canonical is not None and ind.analyte_canonical != resolved_analyte:
+            conflict = True
+            
+        # Our invariant: we only populate canonical_value if we can map the unit
+        resolved_unit = repo.normalize_unit(raw_unit)
+        
+        # We must prove that this unit is supported for this analyte in the reference repository.
+        # This prevents silently accepting arbitrary units that don't match our allowed constraints.
+        rules = getattr(repo, "_rules_by_analyte", {}).get(resolved_analyte, ())
+        supported_units = set()
+        for r in rules:
+            if repo._norm_text(r.get("reference_type")) in repo.allowed_reference_types:
+                u = repo._rule_unit(r)
+                if u is not None:
+                    supported_units.add(u)
+        
+        if resolved_unit not in supported_units:
+            unsupported_unit_rows += 1
+            continue
+
+        if ind.canonical_unit is not None and ind.canonical_unit != resolved_unit:
+            conflict = True
+            
+        try:
+            numeric_val = float(raw_value) if raw_value is not None else None
+        except (TypeError, ValueError):
+            numeric_val = None
+            
+        if ind.canonical_value is not None and ind.canonical_value != numeric_val:
+            conflict = True
+            
+        if conflict:
+            partial_rows_conflicting += 1
+            logger.warning(
+                "Conflict during legacy backfill for report %s indicator %s. Skipping.",
+                ind.report_id,
+                ind.id
+            )
+            continue
+            
+        if resolved_unit == raw_unit:
+            exact_rows += 1
+        else:
+            equivalent_alias_rows += 1
+            
+        ind.analyte_canonical = resolved_analyte
+        ind.canonical_value = numeric_val
+        ind.canonical_unit = resolved_unit
+        partial_rows_completed += 1
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    return {
+        "PARTIAL_ROWS_FOUND": partial_rows_found,
+        "PARTIAL_ROWS_COMPLETED": partial_rows_completed,
+        "PARTIAL_ROWS_CONFLICTING": partial_rows_conflicting,
+        "EXACT_ROWS": exact_rows,
+        "EQUIVALENT_ALIAS_ROWS": equivalent_alias_rows,
+        "UNSUPPORTED_UNIT_ROWS": unsupported_unit_rows,
+    }
