@@ -21,12 +21,11 @@ export default function PatientHistoryPage() {
   if (checkingAuth) return <div className="loading-message" role="status">Đang mở lịch sử...</div>;
 
   return (
-    <div className="history-page-layout">
-      <div className="page-section-heading">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12 relative min-h-screen">
+      <div className="page-section-heading relative z-10">
         <div>
-          <span className="eyebrow">Phiếu đã lưu</span>
-          <h2>Lịch sử xét nghiệm</h2>
-          <p>Theo dõi và tìm lại các phiếu xét nghiệm đã lưu.</p>
+          <h1 className="text-2xl font-bold text-slate-950">Lịch sử xét nghiệm</h1>
+          <p className="mt-1 text-slate-500">Theo dõi và tìm lại các phiếu xét nghiệm đã lưu.</p>
         </div>
       </div>
       <HistoryPanel

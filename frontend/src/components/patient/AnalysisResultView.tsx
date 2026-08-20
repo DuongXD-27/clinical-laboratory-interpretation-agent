@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
-import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
-import { indicatorStatusText, renderReferenceRange, reportTone } from "@/lib/patientUi.mjs";
+import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import type { AnalysisResult } from "@/types/analysis";
-
 type Props = {
   result: AnalysisResult;
   criticalAcknowledged: boolean;
@@ -79,9 +77,9 @@ export default function AnalysisResultView({
 
         {(result.out_of_scope_indicators?.length ?? 0) > 0 && (
           <div className="info-message mt-5" role="status">
-            <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
+            <p className="font-semibold text-slate-800">Chưa được hệ thống hỗ trợ diễn giải</p>
             <p className="mt-1">
-              {result.out_of_scope_indicators?.join(", ")} hiện tại chưa được hỗ trợ, nên chưa được đưa vào phần phân tích.
+              {result.out_of_scope_indicators?.join(", ")}
             </p>
           </div>
         )}
@@ -107,29 +105,9 @@ export default function AnalysisResultView({
         )}
 
         <div className="mt-5 grid gap-3">
-          {result.indicators?.map((indicator, index) => {
-            const tone = reportTone(indicator.status);
-            return (
-              <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-950">{indicator.name}</h3>
-                    <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-                      {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
-                    </p>
-                    {renderReferenceRange(indicator) && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {renderReferenceRange(indicator)}
-                      </p>
-                    )}
-                  </div>
-                  <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status, indicator.critical_status)}</span>
-                </div>
-                {indicator.explanation && <p className="mt-4 text-sm leading-6 text-slate-600">{indicator.explanation}</p>}
-                <SourcesDisclosure sources={indicator.sources} />
-              </article>
-            );
-          })}
+          {result.indicators?.map((indicator, index) => (
+            <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
+          ))}
         </div>
 
         <div className="disclaimer-box mt-6" role="note" aria-label="Lưu ý y khoa">

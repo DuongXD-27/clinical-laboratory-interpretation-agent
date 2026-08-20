@@ -65,7 +65,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         />
         
         <main id="patient-main-content" className="flex-1 p-4 lg:p-8" tabIndex={-1}>
-          <div className="mx-auto max-w-6xl">
+          <div key={pathname} className="mx-auto max-w-6xl page-transition-enter">
             {children}
           </div>
         </main>

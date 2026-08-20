@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   answerReportQuestion,
   createDoctorNote,
@@ -11,11 +12,11 @@ import {
   selectReportQuestions,
   UnauthorizedError,
 } from "@/lib/api";
-import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
+import IndicatorResultCard from "./patient/IndicatorResultCard";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
-import { formatDate, formatMoment, indicatorStatusText } from "@/lib/patientUi.mjs";
+import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
 import type { SeverityLevel } from "@/types/doctor";
 
 type Props = {
@@ -275,7 +276,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                 value={patientUsername}
                 onChange={(event) => setPatientUsername(event.target.value)}
                 placeholder="Tất cả bệnh nhân"
-                className="history-filter-input"
+                className="w-full h-10 px-3 text-sm patient-control-clinical"
               />
             </label>
           )}
@@ -286,7 +287,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               type="date"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
-              className="history-filter-input"
+              className="w-full h-10 px-3 text-sm patient-control-clinical"
             />
           </label>
           <label className="space-y-1 text-sm text-slate-700">
@@ -296,7 +297,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               type="date"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
-              className="history-filter-input"
+              className="w-full h-10 px-3 text-sm patient-control-clinical"
             />
           </label>
           <div className="flex items-end gap-2">
@@ -304,7 +305,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               type="button"
               onClick={applyFilters}
               disabled={loading}
-              className={`flex-1 h-10 rounded-lg text-sm font-medium text-white disabled:opacity-50 ${theme.button}`}
+              className="flex-1 patient-btn-secondary disabled:opacity-50"
             >
               {loading ? "Đang tải..." : "Lọc"}
             </button>
@@ -312,7 +313,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
               <button
                 type="button"
                 onClick={clearFilters}
-                className="h-10 rounded-lg border border-slate-300 px-3 text-sm text-slate-700 hover:bg-slate-50"
+                className="h-10 px-4 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 bg-[var(--surface-subtle)] border border-[var(--border)] transition-colors"
               >
                 Xoá lọc
               </button>
@@ -322,13 +323,13 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
       </div>
 
       {error && (
-        <div className="bg-red-50 px-6 py-4 text-sm text-red-600">
+        <div className="bg-red-50 py-4 text-sm text-red-600">
           {error}
         </div>
       )}
 
       {loading && (
-        <div className="grid gap-3 px-6 py-5" role="status" aria-live="polite">
+        <div className="grid gap-3 py-5" role="status" aria-live="polite">
           {Array.from({ length: pageSize }).map((_, index) => (
             <div key={index} className="h-16 animate-pulse rounded-xl bg-slate-100" />
           ))}
@@ -336,7 +337,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
       )}
 
       {!error && items.length === 0 && !loading && (
-        <div className="px-6 py-8 text-center text-sm text-slate-500">
+        <div className="py-8 text-center text-sm text-slate-500">
           <p>
             {fromDate || toDate ? "Không có phiếu nào trong khoảng thời gian này." : "Chưa có phiếu xét nghiệm nào trong khoảng đã chọn."}
           </p>
@@ -355,10 +356,10 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
 
       {items.length > 0 && !loading && (
         <>
-          <p className="px-6 pt-4 text-xs text-slate-500">
+          <p className="pt-4 pb-2 text-xs text-slate-500">
             Hiển thị {rangeStart}-{rangeEnd} trong {total} phiếu
           </p>
-          <ul className="divide-y divide-slate-100">
+          <ul className="pb-6">
             {items.map((item) => {
               const severity = reportSeverity(item);
 
@@ -373,7 +374,7 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                     >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <div className="font-medium text-slate-950">
+                        <div className="text-lg font-semibold text-slate-950">
                           Phiếu ngày {formatDate(item.test_date)}
                           {mode === "doctor" && (
                             <span className="ml-2 text-sm font-normal text-slate-500">
@@ -389,72 +390,49 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                       <div className="flex items-center gap-2">
                         <SeverityBadge level={severity} />
                         <VerificationBadge status={item.verification_status} />
-                        <span className={`text-xs font-medium ${theme.text}`}>
-                          {expandedId === item.id ? "Thu gọn" : mode === "patient" ? "Mở nhanh" : "Xem chi tiết"} ›
+                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors ml-1">
+                          {mode === "patient" ? "Mở nhanh" : "Xem chi tiết"}
+                          {expandedId === item.id ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          )}
                         </span>
                       </div>
                     </div>
                     </button>
-                    {mode === "patient" && (
-                      <Link href={`/patient/reports/${item.id}`} className="history-detail-link">
-                        Xem trang chi tiết
-                      </Link>
-                    )}
                   </div>
 
                   {expandedId === item.id && (
-                    <div className="bg-slate-50/70 px-6 pb-5">
-                      {detailLoading && <p className="py-4 text-sm text-slate-500">Đang mở phiếu...</p>}
+                    <div className="pb-5 pt-2">
+                      {detailLoading && <p className="py-4 text-sm text-slate-500 px-6">Đang mở phiếu...</p>}
 
                       {actionError && (
-                        <p className="mt-4 text-sm text-red-600">{actionError}</p>
+                        <p className="mt-4 text-sm text-red-600 px-6">{actionError}</p>
                       )}
 
                       {detail && (
-                        <div className="space-y-5 pt-4">
-                          <p className="text-xs text-slate-500">
-                            {detail.patient_age_at_test ?? "-"} tuổi ·{" "}
-                            {detail.patient_gender_at_test === "male"
-                              ? "Nam"
-                              : detail.patient_gender_at_test === "female"
-                                ? "Nữ"
-                                : "Khác"}
-                          </p>
+                        <div className="space-y-5">
+                          <div className="flex items-center gap-2 mb-2 pb-3 pt-3 border-b border-slate-100 text-slate-500 px-6">
+                            <span className="text-sm font-medium text-slate-700">Thông tin bệnh nhân</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                            <span className="text-slate-600">
+                              {detail.patient_age_at_test ?? "-"} tuổi ·{" "}
+                              {detail.patient_gender_at_test === "male"
+                                ? "Nam"
+                                : detail.patient_gender_at_test === "female"
+                                  ? "Nữ"
+                                  : "Khác"}
+                            </span>
+                          </div>
 
                           {/* ---- Khối 1: nội dung do hệ thống sinh ---- */}
                           <div className="space-y-3">
                             {detail.indicators.map((indicator, index) => (
-                              <div
+                              <IndicatorResultCard
                                 key={index}
-                                className="rounded-xl border border-slate-200 bg-white p-4"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="font-medium">{indicator.name}</span>
-                                  <span className="text-sm">
-                                    <strong>{indicator.value}</strong>{" "}
-                                    <span className="text-slate-500">{indicator.unit}</span>
-                                  </span>
-                                </div>
-                                <div className="mt-1 text-xs text-slate-500">
-                                  Khoảng tham chiếu: {indicator.reference_low ?? "-"} –{" "}
-                                  {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status, indicator.critical_status)}
-                                </div>
-                                {indicator.explanation && (
-                                  <div className="mt-3">
-                                    <p className="finding-card__label text-slate-500">Giải thích của AI</p>
-                                    <p className="text-sm leading-relaxed text-slate-700">
-                                      {indicator.explanation}
-                                    </p>
-                                  </div>
-                                )}
-                                {indicator.doctor_note && (
-                                  <DoctorNoteBlock
-                                    note={indicator.doctor_note}
-                                    doctorName={indicator.reviewed_by_username}
-                                    reviewedAt={indicator.reviewed_at}
-                                  />
-                                )}
-                              </div>
+                                indicator={indicator as unknown as import("@/types/analysis").IndicatorResult}
+                              />
                             ))}
 
                             {detail.disclaimer && (
@@ -643,6 +621,14 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                                     Bệnh nhân chưa chọn câu hỏi nào cho phiếu này.
                                   </p>
                                 )}
+                            </div>
+                          )}
+                          
+                          {mode === "patient" && (
+                            <div className="pt-4 mt-2 flex justify-end">
+                              <Link href={`/patient/reports/${item.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+                                Xem trang chi tiết ›
+                              </Link>
                             </div>
                           )}
                         </div>
