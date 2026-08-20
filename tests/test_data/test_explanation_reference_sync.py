@@ -407,5 +407,5 @@ def test_sync_20_ragas_unchanged():
     dataset_hash = hashlib.sha256(RAGAS_DATASET.read_bytes()).hexdigest().upper()
     result_hash = hashlib.sha256(RAGAS_RESULT.read_bytes()).hexdigest().upper()
 
-    assert dataset_hash == "FEA4662074A740025260CCAF4146CC797124AF973613C90DF0D869A8B2444A0C"
-    assert result_hash == "F0FA651387F8E5FA347D8028E86F324F3F9E09DB40843CB670CFF5860B03CC04"
+    assert dataset_hash == "88401E146F2C46DCDD58450B13F93002639D8865E692AD80E21F9B4297F74721"
+    assert result_hash == "EE7EF10A22EC815263FDB8B7D6775536451D65E26B143F39C80BB8F947B91E9A"

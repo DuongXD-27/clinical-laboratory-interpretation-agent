@@ -16,6 +16,7 @@ import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment, indicatorStatusText } from "@/lib/patientUi.mjs";
+import { groupBySection } from "@/lib/trendUi.mjs";
 import type { SeverityLevel } from "@/types/doctor";
 
 type Props = {
@@ -422,38 +423,43 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
                           </p>
 
                           {/* ---- Khối 1: nội dung do hệ thống sinh ---- */}
-                          <div className="space-y-3">
-                            {detail.indicators.map((indicator, index) => (
-                              <div
-                                key={index}
-                                className="rounded-xl border border-slate-200 bg-white p-4"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <span className="font-medium">{indicator.name}</span>
-                                  <span className="text-sm">
-                                    <strong>{indicator.value}</strong>{" "}
-                                    <span className="text-slate-500">{indicator.unit}</span>
-                                  </span>
-                                </div>
-                                <div className="mt-1 text-xs text-slate-500">
-                                  Khoảng tham chiếu: {indicator.reference_low ?? "-"} –{" "}
-                                  {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status, indicator.critical_status)}
-                                </div>
-                                {indicator.explanation && (
-                                  <div className="mt-3">
-                                    <p className="finding-card__label text-slate-500">Giải thích của AI</p>
-                                    <p className="text-sm leading-relaxed text-slate-700">
-                                      {indicator.explanation}
-                                    </p>
+                          <div className="space-y-4">
+                            {groupBySection(detail.indicators).map((group) => (
+                              <div key={group.label} className="space-y-3">
+                                <h4 className="indicator-group-title">{group.label}</h4>
+                                {group.items.map((indicator, index) => (
+                                  <div
+                                    key={index}
+                                    className="rounded-xl border border-slate-200 bg-white p-4"
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="font-medium">{indicator.name}</span>
+                                      <span className="text-sm">
+                                        <strong>{indicator.value}</strong>{" "}
+                                        <span className="text-slate-500">{indicator.unit}</span>
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      Khoảng tham chiếu: {indicator.reference_low ?? "-"} –{" "}
+                                      {indicator.reference_high ?? "-"} · {indicatorStatusText(indicator.status, indicator.critical_status)}
+                                    </div>
+                                    {indicator.explanation && (
+                                      <div className="mt-3">
+                                        <p className="finding-card__label text-slate-500">Giải thích của AI</p>
+                                        <p className="text-sm leading-relaxed text-slate-700">
+                                          {indicator.explanation}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {indicator.doctor_note && (
+                                      <DoctorNoteBlock
+                                        note={indicator.doctor_note}
+                                        doctorName={indicator.reviewed_by_username}
+                                        reviewedAt={indicator.reviewed_at}
+                                      />
+                                    )}
                                   </div>
-                                )}
-                                {indicator.doctor_note && (
-                                  <DoctorNoteBlock
-                                    note={indicator.doctor_note}
-                                    doctorName={indicator.reviewed_by_username}
-                                    reviewedAt={indicator.reviewed_at}
-                                  />
-                                )}
+                                ))}
                               </div>
                             ))}
 
