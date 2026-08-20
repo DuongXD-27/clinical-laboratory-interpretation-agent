@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import AssistantWidget from "@/components/patient/AssistantWidget";
 import { clearSession, getRole, getToken, getUsername, type Role } from "@/lib/api";
 
 const navigation = [
@@ -136,6 +137,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      <AssistantWidget role={session.role} />
     </div>
   );
 }
