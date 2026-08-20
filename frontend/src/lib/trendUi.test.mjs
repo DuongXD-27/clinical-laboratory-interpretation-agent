@@ -83,24 +83,30 @@ test("groupBySection tolerates a missing or empty list", () => {
   assert.deepEqual(groupBySection([]), []);
 });
 
-test("groupableSections keeps only sections with at least two eligible analytes", () => {
+test("groupableSections keeps sections with at least one eligible analyte and excludes 'other'", () => {
   const groups = groupableSections([
     { analyte_canonical: "WBC", section: "hematology", section_label: "Huyết học", trend_available: true },
     { analyte_canonical: "RBC", section: "hematology", section_label: "Huyết học", trend_available: true },
     { analyte_canonical: "LDL-C", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: true },
     { analyte_canonical: "HbA1c", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: false },
     { analyte_canonical: "Creatinine", section: "chemistry", section_label: "Sinh hóa thận - gan", trend_available: true },
+    { analyte_canonical: "Mystery", section: "other", section_label: "Khác", trend_available: true },
     { analyte_canonical: "WithoutSection", trend_available: true },
   ]);
 
-  assert.deepEqual(groups, [{ key: "hematology", label: "Huyết học", eligible: 2 }]);
+  assert.deepEqual(groups, [
+    { key: "hematology", label: "Huyết học", eligible: 2 },
+    { key: "chemistry", label: "Sinh hóa thận - gan", eligible: 1 },
+    { key: "lipids", label: "Mỡ máu & đường huyết", eligible: 1 },
+  ]);
 });
 
-test("groupableSections returns an empty list when no section has two eligible analytes", () => {
+test("groupableSections returns an empty list when no valid section has an eligible analyte", () => {
   assert.deepEqual(groupableSections([]), []);
   assert.deepEqual(
     groupableSections([
-      { analyte_canonical: "LDL-C", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: true },
+      { analyte_canonical: "HbA1c", section: "lipids", section_label: "Mỡ máu & đường huyết", trend_available: false },
+      { analyte_canonical: "Mystery", section: "other", section_label: "Khác", trend_available: true },
     ]),
     [],
   );

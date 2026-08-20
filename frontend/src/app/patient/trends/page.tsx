@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TrendChart from "@/components/TrendChart";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import {
@@ -12,6 +12,7 @@ import {
   groupableSections,
   sectionFallbackReason,
   trendReasonMessage,
+  dedupeTrendPoints,
 } from "@/lib/trendUi.mjs";
 import type {
   TrendAnalyteSummary,
@@ -30,6 +31,8 @@ const FILTERS: { value: TrendFilter; label: string }[] = [
 
 export default function PatientTrendsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [analytes, setAnalytes] = useState<TrendAnalyteSummary[]>([]);
   const [selectedAnalyte, setSelectedAnalyte] = useState("");
@@ -40,7 +43,9 @@ export default function PatientTrendsPage() {
   const [trend, setTrend] = useState<TrendResponse | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState("");
-  const [viewMode, setViewMode] = useState<"single" | "group">("single");
+  const queryMode = searchParams.get("mode");
+  const queryAnalyte = searchParams.get("analyte");
+  const viewMode = queryMode === "group" ? "group" : "single";
   const [groupExplanationLoading, setGroupExplanationLoading] = useState(false);
   const [groupExplanation, setGroupExplanation] = useState<TrendExplanationResponse | null>(null);
   const [groupExplanationError, setGroupExplanationError] = useState<string | null>(null);
@@ -116,32 +121,35 @@ export default function PatientTrendsPage() {
     void loadTrend();
   }, [selectedAnalyte, filter, router]);
 
-  useEffect(() => {
+  const loadExplanation = useCallback(async () => {
     if (!trend?.trend_available) return;
-    const loadExplanation = async () => {
-      setExplanationLoading(true);
-      setExplanationError(null);
-      try {
-        const response = await authFetch(
-          `/api/v1/patient/me/trends/${encodeURIComponent(trend.analyte_canonical)}/explain?filter=${trend.filter}`,
-          { method: "POST" },
-        );
-        if (response.status === 401) {
-          clearSession();
-          router.replace("/login");
-          return;
-        }
-        if (!response.ok) throw new Error("Phần giải thích xu hướng hiện chưa khả dụng.");
-        const data = await response.json() as TrendExplanationResponse;
-        setExplanation(data.explanation);
-      } catch (caught: unknown) {
-        setExplanationError(caught instanceof Error ? caught.message : "Phần giải thích xu hướng hiện chưa khả dụng.");
-      } finally {
-        setExplanationLoading(false);
+    setExplanationLoading(true);
+    setExplanationError(null);
+    try {
+      const response = await authFetch(
+        `/api/v1/patient/me/trends/${encodeURIComponent(trend.analyte_canonical)}/explain?filter=${trend.filter}`,
+        { method: "POST" },
+      );
+      if (response.status === 401) {
+        clearSession();
+        router.replace("/login");
+        return;
       }
-    };
-    void loadExplanation();
+      if (!response.ok) throw new Error("Phần giải thích xu hướng hiện chưa khả dụng.");
+      const data = await response.json() as TrendExplanationResponse;
+      setExplanation(data.explanation);
+    } catch (caught: unknown) {
+      setExplanationError(caught instanceof Error ? caught.message : "Phần giải thích xu hướng hiện chưa khả dụng.");
+    } finally {
+      setExplanationLoading(false);
+    }
   }, [trend, router]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clear explanation when trend changes
+    setExplanation(null);
+    setExplanationError(null);
+  }, [trend]);
 
   const eligibleCount = useMemo(
     () => analytes.filter((item) => item.trend_available).length,
@@ -169,6 +177,38 @@ export default function PatientTrendsPage() {
     setGroupExplanation(null);
     setGroupExplanationError(null);
   }, [filter]);
+
+  useEffect(() => {
+    if (analytes.length === 0) return;
+    if (viewMode === "single" && queryAnalyte) {
+      const matched = analytes.find((a) => a.analyte_canonical === queryAnalyte);
+      if (matched?.trend_available) {
+        if (selectedAnalyte !== queryAnalyte) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronize deep link state
+          setSelectedAnalyte(queryAnalyte);
+        }
+      } else {
+        router.replace(pathname);
+      }
+    }
+  }, [queryAnalyte, analytes, selectedAnalyte, viewMode, pathname, router]);
+
+  const handleModeChange = (mode: "single" | "group") => {
+    if (mode === "single") {
+      if (selectedAnalyte) {
+        router.replace(`${pathname}?analyte=${encodeURIComponent(selectedAnalyte)}`);
+      } else {
+        router.replace(pathname);
+      }
+    } else {
+      router.replace(`${pathname}?mode=group`);
+    }
+  };
+
+  const handleAnalyteChange = (value: string) => {
+    setSelectedAnalyte(value);
+    router.replace(`${pathname}?analyte=${encodeURIComponent(value)}`);
+  };
 
   const loadGroupExplanation = async () => {
     if (!selectedSection) return;
@@ -199,20 +239,13 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="trend-page-layout">
-      <div className="page-section-heading">
-        <div>
-          <span className="eyebrow">Theo dõi theo thời gian</span>
-          <h2>Xu hướng chỉ số</h2>
-          <p>Chọn một chỉ số để xem biến động qua các lần xét nghiệm đã lưu.</p>
-        </div>
-      </div>
-      <section className="patient-card p-5 sm:p-7">
-          <div className="section-heading">
-            <span className="eyebrow">Phân tích xu hướng</span>
-            <h2>Xu hướng chỉ số xét nghiệm</h2>
-            <p>Chọn một chỉ số đã có trong lịch sử xét nghiệm và phạm vi dữ liệu cần xem.</p>
-          </div>
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+      <section className="space-y-1">
+        <h1 className="text-2xl font-bold text-foreground">Xu hướng chỉ số</h1>
+        <p className="text-muted-foreground">
+          Chọn một chỉ số để xem biến động qua các lần xét nghiệm đã lưu.
+        </p>
+      </section>
 
           {catalogLoading ? (
             <div className="loading-message mt-5" role="status">
@@ -228,7 +261,7 @@ export default function PatientTrendsPage() {
             </div>
           ) : (
             <>
-              <div className="mode-tabs" role="tablist" aria-label="Chế độ xem xu hướng">
+              <div className="patient-glass-focal p-1.5 inline-grid grid-cols-2 w-full max-w-sm mb-6" role="tablist" aria-label="Chế độ xem xu hướng">
                 <button
                   type="button"
                   role="tab"
@@ -236,8 +269,8 @@ export default function PatientTrendsPage() {
                   aria-selected={viewMode === "single"}
                   aria-controls="single-panel"
                   tabIndex={viewMode === "single" ? 0 : -1}
-                  onClick={() => setViewMode("single")}
-                  className={viewMode === "single" ? "active" : ""}
+                  onClick={() => handleModeChange("single")}
+                  className={`flex items-center justify-center min-h-[38px] rounded-xl text-sm font-semibold transition-all duration-150 ${viewMode === "single" ? "bg-white text-[var(--brand-strong)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   Từng chỉ số
                 </button>
@@ -248,14 +281,14 @@ export default function PatientTrendsPage() {
                   aria-selected={viewMode === "group"}
                   aria-controls="group-panel"
                   tabIndex={viewMode === "group" ? 0 : -1}
-                  onClick={() => setViewMode("group")}
-                  className={viewMode === "group" ? "active" : ""}
+                  onClick={() => handleModeChange("group")}
+                  className={`flex items-center justify-center min-h-[38px] rounded-xl text-sm font-semibold transition-all duration-150 ${viewMode === "group" ? "bg-white text-[var(--brand-strong)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   Cả nhóm chức năng
                 </button>
               </div>
 
-              <div className="field-label mt-5">
+              <div className="field-label mb-2">
                 Phạm vi dữ liệu
                 <div className="trend-filter-tabs mt-2" aria-label="Phạm vi dữ liệu xu hướng">
                   {FILTERS.map((item) => (
@@ -272,17 +305,17 @@ export default function PatientTrendsPage() {
                 </div>
               </div>
 
-              <div id="single-panel" role="tabpanel" aria-labelledby="single-tab" className="trend-mode-panel" hidden={viewMode !== "single"}>
+              <div id="single-panel" role="tabpanel" aria-labelledby="single-tab" className="min-w-0" hidden={viewMode !== "single"}>
                 {viewMode === "single" && (
                   <>
-                    <div className="trend-controls mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mt-2">
                       <label className="field-label" htmlFor="trend-analyte">
                         Chỉ số
                         <select
                           id="trend-analyte"
-                          className="form-control mt-2"
+                          className="patient-control-clinical w-full min-h-[46px] px-3 py-2 mt-2"
                           value={selectedAnalyte}
-                          onChange={(event) => setSelectedAnalyte(event.target.value)}
+                          onChange={(event) => handleAnalyteChange(event.target.value)}
                           disabled={eligibleCount === 0}
                         >
                           {analyteGroups.map((group) => (
@@ -293,7 +326,7 @@ export default function PatientTrendsPage() {
                                   value={item.analyte_canonical}
                                   disabled={!item.trend_available}
                                 >
-                                  {item.display_name} - {item.result_count} kết quả{item.trend_available ? "" : " (chưa đủ)"}
+                                  {item.display_name}{item.trend_available ? "" : " (chưa đủ)"}
                                 </option>
                               ))}
                             </optgroup>
@@ -303,82 +336,107 @@ export default function PatientTrendsPage() {
                     </div>
 
                     {eligibleCount === 0 ? (
-                      <div className="empty-metrics mt-5">
+                      <div className="patient-glass-clinical p-6 mt-6">
                         <p className="font-medium text-slate-700">Xu hướng chỉ được hiển thị đối với các chỉ số có từ 3 kết quả trở lên.</p>
                         <p className="mt-2 text-sm text-slate-500">
                           Hãy lưu ít nhất 3 phiếu khác nhau cho cùng một chỉ số; các phiếu trùng ngày và cùng bộ kết quả có thể được nhận diện là trùng lặp.
                         </p>
                       </div>
                     ) : trendLoading ? (
-                      <div className="loading-message mt-5" role="status">
-                        <span className="loading-dot" aria-hidden="true" />
+                      <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status">
+                        <span className="loading-dot mr-2" aria-hidden="true" />
                         Đang tải dữ liệu xu hướng...
                       </div>
                     ) : trendError ? (
-                      <div role="alert" className="error-message">{trendError}</div>
+                      <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">{trendError}</div>
                     ) : trend && !canRenderTrendChart(trend) ? (
-                      <div className="empty-metrics mt-5">
+                      <div className="patient-glass-clinical p-6 mt-6">
                         <p className="font-medium text-slate-700">{trendReasonMessage(trend.reason)}</p>
                         {trend.reason === "INSUFFICIENT_DATA" && (
                           <p className="mt-2 text-sm text-slate-500">Khoảng thời gian đã chọn chưa có đủ dữ liệu.</p>
                         )}
                       </div>
                     ) : trend ? (
-                      <div className="mt-6">
+                      <div className="mt-8 space-y-6">
                         {trendEscalated && (
-                          <div className="critical-report-notice mb-5" role="alert">
-                            <strong>Cần chú ý ngay</strong>
+                          <div className="bg-red-50 text-red-800 p-4 rounded-xl border border-red-200 mb-6" role="alert">
+                            <strong className="block mb-1">Cần chú ý ngay</strong>
                             Chỉ số này {trend.critical_status ? "đã đạt" : "đang tiến gần"} ngưỡng nguy kịch — vui lòng liên hệ bác sĩ sớm để được tư vấn kịp thời.
                           </div>
                         )}
-                        <div className="trend-chart-header">
-                          <div>
-                            <h3>{trend.display_name}</h3>
-                            <p>
-                              {trend.section_label ? `${trend.section_label} · ` : ""}
-                              Đơn vị: {trend.canonical_unit}
-                            </p>
-                          </div>
-                          <span className="status-badge status-normal">{trend.result_count} điểm</span>
+                        
+                        <div className="mb-2">
+                          <h3 className="text-xl font-bold text-slate-900">{trend.display_name}</h3>
+                          <p className="text-sm text-slate-500 mt-1">
+                            {trend.section_label ? `${trend.section_label} · ` : ""}
+                            Đơn vị: {trend.canonical_unit} · {dedupeTrendPoints(trend.points).length} lần đo
+                          </p>
                         </div>
-                        <TrendChart analyte={trend.display_name} unit={trend.canonical_unit} points={trend.points} />
 
-                        <section className="trend-explanation" aria-labelledby="trend-explanation-title">
-                          <h3 id="trend-explanation-title">Giải thích xu hướng</h3>
-                          {explanationLoading ? (
-                            <div className="loading-message mt-3" role="status">
-                              <span className="loading-dot" aria-hidden="true" />
-                              Đang tạo giải thích xu hướng...
+                        <div className="patient-glass-clinical p-4 sm:p-6">
+                          <TrendChart analyte={trend.display_name} unit={trend.canonical_unit} points={trend.points} />
+                          <p className="mt-4 text-xs text-slate-500 text-center">
+                            Mỗi điểm là một lần xét nghiệm đã ghi nhận. Đường nối chỉ giúp theo dõi sự thay đổi giữa các lần đo, không thể hiện dữ liệu trong khoảng thời gian giữa hai lần xét nghiệm.
+                          </p>
+                          <div className="sr-only">
+                            <h4>Dữ liệu các lần đo cho biểu đồ {trend.display_name}</h4>
+                            <ul>
+                              {trend.points.map((p, i) => (
+                                <li key={i}>
+                                  Ngày {p.test_date}: {p.value} {trend.canonical_unit}, trạng thái: {p.assessment || "Không có"}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-start">
+                          <button
+                            type="button"
+                            className="patient-btn-secondary"
+                            onClick={() => void loadExplanation()}
+                            disabled={explanationLoading || Boolean(explanation)}
+                          >
+                            {explanationLoading ? "Đang tạo..." : "Giải thích xu hướng"}
+                          </button>
+                        </div>
+
+                        {explanation || explanationError ? (
+                          <section className="patient-glass-clinical p-5 sm:p-6" aria-labelledby="trend-explanation-title">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 id="trend-explanation-title" className="text-sm font-semibold text-slate-800">Giải thích của AI</h3>
+                              <span className="text-xs text-slate-400">VMEC-05</span>
                             </div>
-                          ) : explanation ? (
-                            <p className="mt-3 text-sm leading-6 text-slate-600">{explanation}</p>
-                          ) : explanationError ? (
-                            <div role="status" className="info-message mt-3">{explanationError}</div>
-                          ) : null}
-                        </section>
+                            {explanation ? (
+                              <p className="text-sm leading-relaxed text-slate-700">{explanation}</p>
+                            ) : (
+                              <div role="status" className="text-sm text-slate-600">{explanationError}</div>
+                            )}
+                          </section>
+                        ) : null}
                       </div>
                     ) : null}
                   </>
                 )}
               </div>
 
-              <div id="group-panel" role="tabpanel" aria-labelledby="group-tab" className="trend-mode-panel" hidden={viewMode !== "group"}>
+              <div id="group-panel" role="tabpanel" aria-labelledby="group-tab" className="min-w-0" hidden={viewMode !== "group"}>
                 {viewMode === "group" &&
                   (groupSections.length === 0 ? (
-                    <div className="empty-metrics mt-5">
-                      <p className="font-medium text-slate-700">Chưa có nhóm chức năng nào đủ 2 chỉ số để giải thích cùng nhau.</p>
+                    <div className="patient-glass-clinical p-6 mt-6">
+                      <p className="font-medium text-slate-700">Chưa có nhóm chức năng nào đủ điều kiện để giải thích cùng nhau.</p>
                       <p className="mt-2 text-sm text-slate-500">
                         Hãy lưu thêm kết quả xét nghiệm cho các chỉ số trong cùng một nhóm (ví dụ HbA1c và LDL-C) để sử dụng chế độ này.
                       </p>
                     </div>
                   ) : (
                     <>
-                      <div className="trend-group-controls mt-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mt-2">
                         <label className="field-label" htmlFor="trend-section">
                           Nhóm chức năng
                           <select
                             id="trend-section"
-                            className="form-control mt-2"
+                            className="patient-control-clinical w-full min-h-[46px] px-3 py-2 mt-2"
                             value={selectedSection}
                             onChange={(event) => {
                               setSelectedSection(event.target.value);
@@ -393,51 +451,49 @@ export default function PatientTrendsPage() {
                             ))}
                           </select>
                         </label>
+                      </div>
+
+                      <div className="mt-8">
+                        <h3 className="text-sm font-semibold text-slate-800 mb-3">Chỉ số tham gia</h3>
+                        <div className="flex flex-wrap gap-2" aria-label="Chỉ số tham gia trong nhóm">
+                          {groupAnalyteItems.map((item) => (
+                            <span key={item.analyte_canonical} className="inline-flex items-center rounded-md bg-[rgba(255,255,255,0.7)] backdrop-blur-md px-2.5 py-1 text-sm font-medium text-slate-700 border border-[rgba(203,213,225,0.5)]">
+                              {item.display_name} · {item.canonical_unit}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex justify-start">
                         <button
                           type="button"
-                          className="primary-button"
+                          className="patient-btn-secondary"
                           onClick={() => void loadGroupExplanation()}
-                          disabled={groupExplanationLoading || !selectedSection}
+                          disabled={groupExplanationLoading || !selectedSection || Boolean(groupExplanation)}
                         >
                           {groupExplanationLoading ? "Đang tạo..." : "Giải thích cả nhóm"}
                         </button>
                       </div>
 
-                      <div className="analyte-chip-list mt-4" aria-label="Chỉ số tham gia trong nhóm">
-                        {groupAnalyteItems.map((item) => (
-                          <span key={item.analyte_canonical} className="analyte-chip">
-                            {item.display_name} · {item.canonical_unit}
-                          </span>
-                        ))}
-                      </div>
-
-                      <section className="trend-explanation" aria-labelledby="trend-group-explanation-title">
-                        <h3 id="trend-group-explanation-title">Giải thích theo nhóm chức năng</h3>
-                        <p className="mt-2 text-sm text-slate-500">
-                          Đọc các chỉ số cùng nhóm với nhau — ví dụ HbA1c và LDL-C — để thấy mối liên hệ trong dữ liệu,
-                          không phải chẩn đoán.
-                        </p>
-                        {groupExplanationLoading ? (
-                          <div className="loading-message mt-3" role="status">
-                            <span className="loading-dot" aria-hidden="true" />
-                            Đang tạo giải thích theo nhóm...
+                      {(groupExplanation || groupExplanationError) ? (
+                        <section className="patient-glass-clinical p-5 sm:p-6 mt-6" aria-labelledby="trend-group-explanation-title">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 id="trend-group-explanation-title" className="text-sm font-semibold text-slate-800">Giải thích của AI</h3>
+                            <span className="text-xs text-slate-400">VMEC-05</span>
                           </div>
-                        ) : groupExplanation ? (
-                          groupExplanation.fallback ? (
-                            <div role="status" className="info-message mt-3">
-                              {sectionFallbackReason(groupExplanation.reason)}
-                            </div>
+                          {groupExplanation ? (
+                            groupExplanation.fallback ? (
+                              <div role="status" className="text-sm text-slate-600">
+                                {sectionFallbackReason(groupExplanation.reason)}
+                              </div>
+                            ) : (
+                              <p className="text-sm leading-relaxed text-slate-700">{groupExplanation.explanation}</p>
+                            )
                           ) : (
-                            <p className="mt-3 text-sm leading-6 text-slate-600">{groupExplanation.explanation}</p>
-                          )
-                        ) : groupExplanationError ? (
-                          <div role="status" className="info-message mt-3">{groupExplanationError}</div>
-                        ) : (
-                          <p className="mt-3 text-sm text-slate-500">
-                            Chọn nhóm chức năng bên trên rồi bấm &ldquo;Giải thích cả nhóm&rdquo;.
-                          </p>
-                        )}
-                      </section>
+                            <div role="status" className="text-sm text-slate-600">{groupExplanationError}</div>
+                          )}
+                        </section>
+                      ) : null}
                     </>
                   ))}
               </div>
@@ -448,7 +504,6 @@ export default function PatientTrendsPage() {
             <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
             <p className="mt-1">{TREND_DISCLAIMER}</p>
           </div>
-      </section>
     </div>
   );
 }

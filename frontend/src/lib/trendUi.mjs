@@ -94,8 +94,8 @@ export function groupBySection(items) {
  */
 /**
  * Các nhóm chức năng đủ điều kiện giải thích "cả nhóm" (ADR-010 CRIT-TREND-07):
- * những nhóm có từ 2 chỉ số đủ điểm (`trend_available`) trở lên, vì 0 hoặc 1 chỉ
- * số thì backend fallback về dữ kiện đơn chỉ số — không còn ý nghĩa "đọc cùng nhau".
+ * những nhóm hợp lệ (khác "other") có từ 1 chỉ số đủ điểm (`trend_available`) trở lên.
+ * (Backend sẽ tự điều phối 1 chỉ số về luồng giải thích đơn chỉ số).
  *
  * @param {{ section?: string | null, section_label?: string | null, trend_available?: boolean }[] | null | undefined} analytes
  * @returns {{ key: string, label: string, eligible: number }[]}
@@ -111,7 +111,7 @@ export function groupableSections(analytes) {
     if (item.trend_available) byKey.get(key).eligible += 1;
   }
   return [...byKey.values()]
-    .filter((group) => group.eligible >= 2)
+    .filter((group) => group.eligible >= 1 && group.key !== "other")
     .sort(
       (a, b) =>
         (SECTION_LABEL_ORDER.indexOf(a.label) + 1 || Number.POSITIVE_INFINITY)
