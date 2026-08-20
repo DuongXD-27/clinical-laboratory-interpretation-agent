@@ -4,11 +4,11 @@
 
 **API version:** `v1`
 
-**Ngày cập nhật:** 2026-08-12
+**Ngày cập nhật:** 2026-08-20
 
 **Định dạng:** REST/JSON, UTF-8
 
-**Trạng thái tài liệu:** Kết hợp API hiện hành và API đích cho các tính năng nâng cao
+**Trạng thái tài liệu:** API hiện hành, Orchestrator V1 và các API đích được ghi rõ từng phần
 
 ## 1. Mục đích và phạm vi
 
@@ -55,6 +55,7 @@ Idempotency-Key: <required-for-selected-write-operations>
 ```
 
 - JWT hiện tại chứa `sub`, `role`, `exp`.
+- Token patient/doctor dùng `uid` phía server; token guest dùng `sid` và không có user row persistent.
 - Nếu client không gửi `X-Request-ID`, server tự sinh mã và trả lại trong response.
 - Response có thể trả `Server-Timing` để đo thời gian xử lý từng công đoạn.
 - `Accept-Language` chỉ là gợi ý. Với API phân tích hiện tại, trường `language` trong body là nguồn quyết định.
@@ -67,6 +68,7 @@ Idempotency-Key: <required-for-selected-write-operations>
 | Xem thông tin tài khoản của mình | ✓ | ✓ |  |
 | Phân tích phiếu mô phỏng | ✓ | ✓ |  |
 | OCR và xác nhận bản nháp | ✓ | ✓ |  |
+| Orchestrator Hybrid Assistant | ✓ | Deferred to V2 | Guest |
 | Xem policy/ảnh mẫu OCR | ✓ | ✓ | ✓ |
 | Xem report của chính mình | ✓ | ✓ |  |
 | Xem danh sách patient/report trong phòng khám |  | ✓ |  |
@@ -106,6 +108,8 @@ Response phân trang đề xuất:
 | `POST` | `/api/v1/auth/login` | Không | Đăng nhập, nhận JWT |
 | `GET` | `/api/v1/auth/me` | Bearer | Lấy tài khoản hiện tại |
 | `POST` | `/api/v1/analyze` | Bearer | Phân tích dữ liệu JSON/nhập tay |
+| `POST` | `/api/v1/orchestrator/message` | Bearer | Patient/Guest Hybrid Assistant |
+| `POST` | `/api/v1/orchestrator/onboarding/acknowledge` | Bearer | Ghi nhận onboarding Assistant |
 | `GET` | `/api/v1/ocr/policy` | Không | Chính sách upload và danh sách ảnh mẫu |
 | `GET` | `/api/v1/ocr/samples/{sample_id}` | Không | Lấy ảnh phiếu mẫu |
 | `POST` | `/api/v1/ocr/upload` | Bearer | OCR ảnh, trả bản nháp để review |
@@ -334,6 +338,141 @@ Khi không tra được chỉ số/đơn vị trong thư viện:
 - tên chỉ số có trong `out_of_scope_indicators`;
 - hệ thống không bịa khoảng tham chiếu hoặc giải thích;
 - câu hỏi fallback hướng bệnh nhân trao đổi với bác sĩ.
+
+## 6A. Orchestrator V1 API — hiện có
+
+Orchestrator V1 là API hội thoại cho Patient/Guest Hybrid Assistant. API này
+không thay thế `/api/v1/analyze`, không nhận `patient_id` từ client, và không cho
+LLM quyết định trạng thái y khoa.
+
+### 6A.1 Message
+
+`POST /api/v1/orchestrator/message`
+
+Auth: Bearer token của `guest` hoặc `patient`. Token `doctor` bị chặn trước
+router/workflow với `UNSUPPORTED_CAPABILITY`.
+
+Request:
+
+```json
+{
+  "message": "xem xu hướng WBC",
+  "ui_context": {
+    "screen": "patient",
+    "view": "trend",
+    "candidate_report_ref": "42",
+    "candidate_analyte": "WBC"
+  }
+}
+```
+
+`ui_context` chỉ được dùng để thu hẹp context giao diện. Trường định danh như
+`patient_id`, `user_id`, token hoặc dữ liệu OCR draft không thuộc schema hợp lệ.
+
+Response:
+
+```json
+{
+  "intent": "ANALYZE_TREND",
+  "status": "success",
+  "reason_code": null,
+  "message": "Đã mở dữ liệu xu hướng phù hợp.",
+  "data_type": "trend",
+  "data": {
+    "data_type": "trend",
+    "trend": {
+      "analyte_canonical": "WBC",
+      "display_name": "WBC",
+      "canonical_unit": "10^9/L",
+      "result_count": 3,
+      "trend_available": true,
+      "points": []
+    }
+  },
+  "suggested_actions": [
+    {"action": "VIEW_TREND", "analyte_id": "WBC"}
+  ],
+  "sources": [],
+  "safety_notice": null
+}
+```
+
+Server controls `intent`, `status`, `reason_code`, `data`, `data_type`,
+`sources`, `suggested_actions` and `safety_notice`. The LLM may generate only
+the display `message`, and final validation can block unsafe output.
+
+### 6A.2 Onboarding acknowledgement
+
+`POST /api/v1/orchestrator/onboarding/acknowledge`
+
+Auth: Bearer token của `guest` hoặc `patient`.
+
+Response is an `OrchestratorResponse` confirming the onboarding state for the
+current server-side session. Until this call succeeds, `/orchestrator/message`
+returns `ONBOARDING_REQUIRED` before router, workflow, DB or LLM dispatch.
+
+### 6A.3 Frozen V1 values
+
+Intents:
+
+```text
+UNSUPPORTED_OR_UNSAFE
+ANALYZE_REPORT
+EXPLAIN_CURRENT_RESULT
+VIEW_HISTORY
+ANALYZE_TREND
+GET_DOCTOR_QUESTIONS
+```
+
+Suggested actions:
+
+```text
+OPEN_REPORT
+VIEW_ABNORMAL
+VIEW_HISTORY
+VIEW_TREND
+VIEW_DOCTOR_QUESTIONS
+CONFIRM_OCR
+RETRY
+```
+
+Reason codes:
+
+```text
+ONBOARDING_REQUIRED
+OCR_REVIEW_REQUIRED
+OCR_CONFIRM_INVALID
+MEDICAL_DIAGNOSIS_REQUEST
+MEDICAL_CAUSE_REQUEST
+TREATMENT_REQUEST
+UNSUPPORTED_ANALYTE
+UNSUPPORTED_CAPABILITY
+AMBIGUOUS_CONTEXT
+AUTH_EXPIRED
+REPORT_NOT_FOUND_OR_UNAUTHORIZED
+DB_UNAVAILABLE
+LLM_UNAVAILABLE
+RAG_UNAVAILABLE
+TREND_INSUFFICIENT_POINTS
+TREND_UNIT_INCONSISTENT
+UNKNOWN_INTENT
+GUARDRAIL_BLOCKED
+INTERNAL_WORKFLOW_ERROR
+```
+
+### 6A.4 Safety and authorization policy
+
+- Doctor conversational support is deferred to V2.
+- Guest can ask general/manual-session questions but cannot use protected
+  history/trend wrappers.
+- Patient history/trend/report access is always resolved from the signed server
+  identity.
+- Missing and non-owned protected resources both return
+  `REPORT_NOT_FOUND_OR_UNAUTHORIZED`.
+- Pending OCR review blocks skip attempts with `OCR_REVIEW_REQUIRED`; medical
+  analysis from OCR still enters through `/api/v1/ocr/confirm` only.
+- Unknown/unsupported analytes fail closed and do not invoke general RAG or LLM
+  explanation generation.
 
 ## 7. OCR API — hiện có
 

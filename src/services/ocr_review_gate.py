@@ -12,12 +12,18 @@ admission to the analysis graph.
 
 from __future__ import annotations
 
+import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from typing import Literal
 
 from jose import JWTError, jwt
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session
 
 from src.config import get_settings
+from src.models.db import OCRReviewLifecycle
 from src.models.ocr_schemas import (
     OCRIndicatorDraft,
     OCRReviewedIndicator,
@@ -28,10 +34,21 @@ from src.services.reference_repository import (
 )
 
 _TOKEN_PURPOSE = "ocr-review"
+OCR_REVIEW_PENDING = "PENDING"
+OCR_REVIEW_CONSUMED = "CONSUMED"
+OCR_REVIEW_EXPIRED = "EXPIRED"
+OCRReviewStatus = Literal["PENDING", "CONSUMED", "EXPIRED", "INVALID", "NONE"]
 
 
 class OCRReviewGateError(ValueError):
     """OCR review evidence is invalid, incomplete, forged, or expired."""
+
+
+@dataclass(frozen=True)
+class OCRReviewState:
+    review_id: str | None
+    status: OCRReviewStatus
+    pending: bool
 
 
 @lru_cache(maxsize=1)
@@ -49,11 +66,191 @@ def _is_supported_analyte(name: str) -> bool:
     return canonical in repository.approved_analytes
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def _as_aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def review_token_expires_at() -> datetime:
+    settings = get_settings()
+    return _utcnow() + timedelta(minutes=settings.ocr_review_token_expire_minutes)
+
+
+def _identity_values(current_user: object) -> dict[str, object]:
+    username = getattr(current_user, "username", None)
+    role = getattr(current_user, "role", None)
+    if not isinstance(username, str) or not username or not isinstance(role, str) or not role:
+        raise OCRReviewGateError("Phiên đăng nhập không hợp lệ.")
+
+    session_id = getattr(current_user, "session_id", None)
+    account_key = getattr(current_user, "user_id", None)
+    if role == "guest":
+        if not isinstance(session_id, str) or not session_id:
+            raise OCRReviewGateError("Phiên khách không hợp lệ.")
+        account_key = None
+    elif not isinstance(account_key, int):
+        raise OCRReviewGateError("Phiên đăng nhập không hợp lệ.")
+    else:
+        session_id = None
+
+    return {
+        "owner_subject": username,
+        "owner_role": role,
+        "owner_user_id": account_key,
+        "owner_session_id": session_id,
+    }
+
+
+def _owner_predicates(current_user: object) -> list:
+    values = _identity_values(current_user)
+    predicates = [
+        OCRReviewLifecycle.owner_subject == values["owner_subject"],
+        OCRReviewLifecycle.owner_role == values["owner_role"],
+    ]
+    if values["owner_role"] == "guest":
+        predicates.append(OCRReviewLifecycle.owner_session_id == values["owner_session_id"])
+    else:
+        predicates.append(OCRReviewLifecycle.owner_user_id == values["owner_user_id"])
+    return predicates
+
+
+def create_review_lifecycle(
+    db: Session,
+    *,
+    current_user: object,
+    expires_at: datetime | None = None,
+) -> OCRReviewLifecycle:
+    values = _identity_values(current_user)
+    lifecycle = OCRReviewLifecycle(
+        review_id=secrets.token_urlsafe(32),
+        expires_at=expires_at or review_token_expires_at(),
+        status=OCR_REVIEW_PENDING,
+        **values,
+    )
+    db.add(lifecycle)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(lifecycle)
+    return lifecycle
+
+
+def _effective_status(lifecycle: OCRReviewLifecycle, *, now: datetime | None = None) -> OCRReviewStatus:
+    if lifecycle.status == OCR_REVIEW_CONSUMED:
+        return OCR_REVIEW_CONSUMED
+    current_time = now or _utcnow()
+    if _as_aware_utc(lifecycle.expires_at) <= _as_aware_utc(current_time):
+        return OCR_REVIEW_EXPIRED
+    if lifecycle.status == OCR_REVIEW_PENDING:
+        return OCR_REVIEW_PENDING
+    return "INVALID"
+
+
+def get_current_review_state(db: Session, *, current_user: object) -> OCRReviewState:
+    lifecycle = db.scalar(
+        select(OCRReviewLifecycle)
+        .where(
+            *_owner_predicates(current_user),
+            OCRReviewLifecycle.status == OCR_REVIEW_PENDING,
+        )
+        .order_by(OCRReviewLifecycle.created_at.desc())
+        .limit(1)
+    )
+    if lifecycle is None:
+        return OCRReviewState(review_id=None, status="NONE", pending=False)
+
+    status = _effective_status(lifecycle)
+    return OCRReviewState(
+        review_id=lifecycle.review_id,
+        status=status,
+        pending=status == OCR_REVIEW_PENDING,
+    )
+
+
+def has_pending_review(db: Session, *, current_user: object) -> bool:
+    return get_current_review_state(db, current_user=current_user).pending
+
+
+def _decode_review_payload(token: str, *, username: str) -> dict:
+    settings = get_settings()
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except JWTError as exc:
+        raise OCRReviewGateError(
+            "Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn."
+        ) from exc
+
+    if payload.get("purpose") != _TOKEN_PURPOSE:
+        raise OCRReviewGateError(
+            "Token không thuộc luồng xác nhận OCR."
+        )
+
+    if payload.get("sub") != username:
+        raise OCRReviewGateError(
+            "Phiên xác nhận OCR không thuộc người dùng hiện tại."
+        )
+
+    return payload
+
+
+def verify_review_lifecycle(db: Session, *, token: str, current_user: object) -> OCRReviewLifecycle:
+    payload = _decode_review_payload(token, username=str(getattr(current_user, "username", "")))
+    review_id = payload.get("review_id")
+    if not isinstance(review_id, str) or not review_id:
+        raise OCRReviewGateError("Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn.")
+
+    lifecycle = db.scalar(
+        select(OCRReviewLifecycle).where(
+            OCRReviewLifecycle.review_id == review_id,
+            *_owner_predicates(current_user),
+        )
+    )
+    if lifecycle is None or _effective_status(lifecycle) != OCR_REVIEW_PENDING:
+        raise OCRReviewGateError("Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn.")
+    return lifecycle
+
+
+def consume_review_lifecycle(db: Session, *, token: str, current_user: object) -> OCRReviewLifecycle:
+    lifecycle = verify_review_lifecycle(db, token=token, current_user=current_user)
+    consumed_at = _utcnow()
+    result = db.execute(
+        update(OCRReviewLifecycle)
+        .where(
+            OCRReviewLifecycle.id == lifecycle.id,
+            OCRReviewLifecycle.status == OCR_REVIEW_PENDING,
+            OCRReviewLifecycle.consumed_at.is_(None),
+            OCRReviewLifecycle.expires_at > consumed_at,
+        )
+        .values(status=OCR_REVIEW_CONSUMED, consumed_at=consumed_at)
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        db.rollback()
+        raise OCRReviewGateError("Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn.")
+    db.commit()
+    db.refresh(lifecycle)
+    return lifecycle
+
+
 def prepare_review(
     drafts: list[OCRIndicatorDraft],
     *,
     username: str,
     source_image: str = "",
+    review_id: str | None = None,
+    expires_at: datetime | None = None,
 ) -> tuple[list[OCRIndicatorDraft], str]:
     """Annotate OCR rows and issue a short-lived signed review token.
 
@@ -82,9 +279,7 @@ def prepare_review(
             )
         )
 
-    expires_at = datetime.now(UTC) + timedelta(
-        minutes=settings.ocr_review_token_expire_minutes
-    )
+    expires_at = expires_at or review_token_expires_at()
 
     payload = {
         "purpose": _TOKEN_PURPOSE,
@@ -110,6 +305,8 @@ def prepare_review(
             for draft in prepared
         ],
     }
+    if review_id is not None:
+        payload["review_id"] = review_id
 
     token = jwt.encode(
         payload,
@@ -144,32 +341,7 @@ def validate_review(
             Signed source filename originating from /ocr/upload.
     """
 
-    settings = get_settings()
-
-    try:
-        payload = jwt.decode(
-            token,
-            settings.jwt_secret,
-            algorithms=[settings.jwt_algorithm],
-        )
-    except JWTError as exc:
-        raise OCRReviewGateError(
-            "Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn."
-        ) from exc
-
-    # ------------------------------------------------------------------
-    # Token identity / purpose
-    # ------------------------------------------------------------------
-
-    if payload.get("purpose") != _TOKEN_PURPOSE:
-        raise OCRReviewGateError(
-            "Token không thuộc luồng xác nhận OCR."
-        )
-
-    if payload.get("sub") != username:
-        raise OCRReviewGateError(
-            "Phiên xác nhận OCR không thuộc người dùng hiện tại."
-        )
+    payload = _decode_review_payload(token, username=username)
 
     # ------------------------------------------------------------------
     # Signed review metadata

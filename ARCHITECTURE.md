@@ -16,6 +16,7 @@ flowchart LR
         USER["Patient / Guest"]
         INPUT["Lab Result Input<br/>Manual / JSON / Image"]
         REVIEW["OCR Review UI<br/>Confirm extracted values"]
+        ASSIST["Hybrid Assistant<br/>Patient / Guest"]
         RESULT["Result Screen<br/>Status · Explanation<br/>Critical Warning · Disclaimer"]
     end
 
@@ -24,6 +25,7 @@ flowchart LR
     %% =========================
     subgraph API["Backend — FastAPI"]
         ENDPOINT["Analysis API"]
+        ORCH["Orchestrator API"]
         OCR["OCR / Vision Service"]
         OCR_GATE["OCR Review Gate"]
         SCHEMA["Standard Lab Result Schema"]
@@ -72,9 +74,12 @@ flowchart LR
     %% MAIN INPUT FLOW
     %% =========================
     USER --> INPUT
+    USER --> ASSIST
 
     INPUT -->|"Manual / JSON"| ENDPOINT
     INPUT -->|"Image"| OCR
+    ASSIST --> ORCH
+    ORCH -->|"Approved wrappers"| ENDPOINT
 
     OCR --> VISION
     VISION --> OCR
@@ -137,12 +142,40 @@ flowchart LR
 - **Purpose:** API Gateway xử lý yêu cầu, điều phối pipeline AI Agent (LangGraph), quản lý phiên làm việc JWT, xác thực phân quyền và lưu trữ dữ liệu lịch sử xét nghiệm.
 - **API Design:** RESTful API có cấu trúc rõ ràng:
   - `/api/v1/analyze`: Phân tích và diễn giải phiếu xét nghiệm (Manual/Reviewed OCR).
+  - `/api/v1/orchestrator/message`: Patient/Guest Hybrid Assistant V1.
+  - `/api/v1/orchestrator/onboarding/acknowledge`: Ghi nhận onboarding Assistant cho phiên hiện tại.
   - `/api/v1/auth/*`: Đăng ký, đăng nhập, phiên khách (Guest session), thông tin người dùng (`/me`).
   - `/api/v1/ocr/*`: Tải ảnh trích xuất (`/ocr/upload`), xác nhận bản nháp (`/ocr/confirm`).
   - `/api/v1/patient/*`: Dashboard bệnh nhân, hồ sơ cá nhân, phân tích xu hướng (`/patient/me/trends`).
   - `/api/v1/history/*`: Danh sách phiếu xét nghiệm, chi tiết phiếu, ghi chú bác sĩ (Doctor Notes).
   - `/health` & `/ready`: Kiểm tra tình trạng hoạt động và độ sẵn sàng của RAG.
 - **Authentication:** JSON Web Tokens (JWT - HS256) hỗ trợ 3 vai trò: `patient`, `doctor`, và `guest` (phiên khách tạm thời, không lưu row persistent vào bảng users).
+
+### 2A. Orchestrator V1 (Patient/Guest Hybrid Assistant)
+- **Purpose:** Cung cấp lớp hội thoại để điều hướng các khả năng đã được phê duyệt: giải thích kết quả hiện tại, xem lịch sử, xem xu hướng, chuẩn bị câu hỏi cho bác sĩ và chuyển người dùng tới luồng OCR review hiện có.
+- **Roles:** Assistant V1 chỉ nhận `guest` và `patient`. `doctor` bị chặn trước router/workflow/DB với `UNSUPPORTED_CAPABILITY`; doctor-facing app/routes không thay đổi.
+- **Intents cố định:** `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
+- **SuggestedAction cố định:** `OPEN_REPORT`, `VIEW_ABNORMAL`, `VIEW_HISTORY`, `VIEW_TREND`, `VIEW_DOCTOR_QUESTIONS`, `CONFIRM_OCR`, `RETRY`.
+- **Runtime flow:**
+
+```text
+Patient/Guest UI
+-> Orchestrator API
+-> role/onboarding/OCR/policy gates
+-> Context Resolver
+-> Intent Router
+-> Workflow Dispatcher
+-> safe wrappers/services
+-> Response Composer
+-> Medical Safety Validation
+-> Schema Validation
+-> SuggestedAction Validation
+-> Frontend Assistant
+```
+
+- **Response authority:** LLM chỉ được sinh nội dung `message`. Server kiểm soát `intent`, `status`, `reason_code`, `data`, `data_type`, `sources`, `suggested_actions` và `safety_notice`.
+- **Context:** Session context chỉ giữ thông tin tối thiểu như report hiện tại, analyte hiện tại, intent gần nhất, onboarding và trạng thái OCR pending. Không có persistent long-term chat memory.
+- **OCR boundary:** Orchestrator chỉ đọc trạng thái pending review. Nó không đọc `ocr_drafts` để tạo input phân tích; dữ liệu OCR vào medical pipeline qua đúng `/api/v1/ocr/confirm`.
 
 ### 3. AI Agent (LangGraph)
 - **Agent Type:** StateGraph Pipeline có kiểm soát (Deterministic Directed Graph kết hợp Human-in-the-Loop Gate).
@@ -168,6 +201,10 @@ graph LR
     GEN_Q --> GUARD[guardrail<br/>Safety Validator]
     GUARD --> FINISH([End])
 ```
+
+The Orchestrator V1 is outside this LangGraph graph. It may call approved
+workflows/wrappers, but it does not reorder the medical graph and does not add a
+second route for OCR-derived medical input.
 
 ### 4. Database
 - **Type:** SQLite (mặc định tại `./data/app.db` cho dev/demo), hỗ trợ chuyển đổi PostgreSQL qua biến môi trường `DATABASE_URL`.
@@ -203,6 +240,31 @@ graph LR
    - `Doctor Question Generator` tạo câu hỏi định hướng cho bệnh nhân trao đổi với bác sĩ.
 5. **Kiểm duyệt an toàn (Medical Guardrail):** Toàn bộ nội dung do LLM sinh ra được kiểm duyệt qua Validator an toàn y tế; thay thế bằng câu dự phòng an toàn nếu phát hiện vi phạm quy tắc chẩn đoán/kê đơn.
 6. **Persistence & Phản hồi:** Nếu là tài khoản `patient` đã đăng nhập, phiếu kết quả được lưu trữ vào Database; trả về `AnalyzeResponse` JSON chuẩn cho Frontend hiển thị.
+
+## Orchestrator Data Flow
+
+1. **Assistant entry:** Frontend `AssistantWidget` gửi `OrchestratorRequest` tới `/api/v1/orchestrator/message`.
+2. **Admission gates:** Backend chặn token không hợp lệ, doctor conversational access, onboarding chưa xác nhận, lab values nhập qua chat, yêu cầu unsafe và OCR skip attempt.
+3. **Context resolution:** Resolver dùng session context, transient UI context và tên analyte được phê duyệt trong message để xác định report/analyte hiện tại. Client không được gửi identity fields.
+4. **Intent routing:** Router chọn một trong đúng 6 intent. Unsafe diagnosis/cause/treatment requests được route về blocked response.
+5. **Workflow dispatch:** Dispatcher gọi wrappers như `get_my_history`, `get_my_report`, `get_my_indicator_trend` và `get_report_questions`. Wrappers resolve identity từ JWT/current user.
+6. **Response composition:** Composer có thể gọi LLM để viết `message`, sau đó chạy medical safety validation, schema validation và SuggestedAction policy validation.
+7. **Frontend action execution:** Frontend sanitizer chỉ cho phép 7 SuggestedAction variants và không route từ prose, arbitrary URL hoặc `javascript:`.
+
+## OCR Lifecycle
+
+The authoritative OCR lifecycle is server-side:
+
+```text
+/ocr/upload -> PENDING -> /ocr/confirm -> CONSUMED
+PENDING -> EXPIRED
+```
+
+Upload creates a pending lifecycle artifact and signed review token. Confirm
+validates owner/session binding, expiry, reviewed rows and low-confidence
+acknowledgement before consuming the lifecycle and invoking analysis. Replay,
+expired review and cross-user review are rejected before another medical
+pipeline invocation.
 
 ## Deployment Architecture
 
@@ -240,6 +302,7 @@ graph LR
 - **Quản lý Secrets:** Toàn bộ API keys (OpenAI, Gemini, LangSmith) và `JWT_SECRET` được cấu hình qua biến môi trường (`.env`), không commit vào kho mã nguồn.
 - **Xác thực dữ liệu đầu vào:** Kiểm soát chặt chẽ kiểu dữ liệu, giới hạn độ tuổi, lọc chuỗi ký tự qua Pydantic v2 schemas.
 - **Phân quyền và bảo mật phiên:** JWT Token có thời hạn sống tách biệt (`120 phút` cho phiên khách vãng lai, `12 giờ` cho tài khoản đăng nhập).
+- **Orchestrator ownership boundary:** Patient identity for Assistant workflows comes only from the signed auth context. Missing and non-owned protected reports use the same `REPORT_NOT_FOUND_OR_UNAUTHORIZED` policy.
 - **CORS Protection:** Cấu hình danh sách domain tường minh (`CORS_ORIGINS`), chặn tuyệt đối wildcard `*` khi `allow_credentials=True`.
 - **Bảo mật thông tin y tế (PHI) & Xử lý lỗi:** Không lưu trữ ảnh gốc của bệnh nhân trên máy chủ; thông tin định danh cá nhân được tách biệt; che giấu stack trace và thông tin lỗi hệ thống nội bộ ra client.
 
