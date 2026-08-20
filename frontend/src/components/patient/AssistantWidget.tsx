@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   acknowledgeOrchestratorOnboarding,
   clearSession,
@@ -40,18 +40,21 @@ function messageId() {
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function uiContextForPath(pathname: string) {
+function uiContextForPath(pathname: string, searchParams: URLSearchParams) {
   const reportMatch = pathname.match(/^\/patient\/(?:reports|history)\/([A-Za-z0-9_.%+-]+)$/);
+  const isTrend = pathname.startsWith("/patient/trends");
+  const analyteParam = searchParams.get("analyte");
   return {
     screen: "patient",
     view: pathname.startsWith("/patient/analysis")
       ? "analysis"
       : pathname.startsWith("/patient/history") || pathname.startsWith("/patient/reports")
         ? "history"
-        : pathname.startsWith("/patient/trends")
+        : isTrend
           ? "trend"
           : "dashboard",
     ...(reportMatch ? { candidate_report_ref: reportMatch[1] } : {}),
+    ...(isTrend && analyteParam ? { candidate_analyte: analyteParam } : {}),
   };
 }
 
@@ -176,6 +179,7 @@ function StructuredPayload({ data }: { data: OrchestratorPayload }) {
 
 export default function AssistantWidget({ role }: Props) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const panelRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -240,7 +244,7 @@ export default function AssistantWidget({ role }: Props) {
     setDraft("");
     setMessages((current) => [...current, { id: messageId(), sender: "user", text: trimmed }]);
     try {
-      const response = await sendOrchestratorMessage(trimmed, uiContextForPath(pathname));
+      const response = await sendOrchestratorMessage(trimmed, uiContextForPath(pathname, searchParams));
       if (response.reason_code === "ONBOARDING_REQUIRED") {
         setOnboardingAccepted(false);
       }
