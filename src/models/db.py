@@ -370,6 +370,28 @@ class ReportIndicator(Base):
         return bool(self.critical_status) or self.status in _CRITICAL_STATUSES
 
 
+class OCRReviewLifecycle(Base):
+    """Authoritative lifecycle for an OCR HITL review artifact."""
+
+    __tablename__ = "ocr_review_lifecycle"
+
+    __table_args__ = (
+        Index("ix_ocr_review_lifecycle_user_status", "owner_user_id", "status", "expires_at"),
+        Index("ix_ocr_review_lifecycle_session_status", "owner_session_id", "status", "expires_at"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    review_id = Column(String, unique=True, nullable=False, index=True)
+    owner_subject = Column(String, nullable=False, index=True)
+    owner_role = Column(String, nullable=False)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    owner_session_id = Column(String, nullable=True, index=True)
+    status = Column(String, nullable=False, default="PENDING", index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    consumed_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class ReportCriticalAlert(Base):
     """Cảnh báo giá trị nguy kịch của một report."""
 
@@ -900,6 +922,7 @@ __all__ = [
     "DoctorNote",
     "IndicatorCatalog",
     "LabReport",
+    "OCRReviewLifecycle",
     "OutOfScopeLog",
     "PERSISTED_ROLES",
     "ROLE_DOCTOR",

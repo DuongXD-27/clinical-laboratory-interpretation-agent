@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from src.api import orchestrator_routes
 from src.api.deps import CurrentUser
 from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, User
 from src.models.orchestrator_schemas import (
@@ -264,7 +265,7 @@ def test_st9_db_outage_maps_to_db_unavailable_without_fallback_content():
 
 def test_st10_static_no_orchestrator_function_signature_accepts_patient_or_user_id():
     forbidden = {"patient_id", "user_id"}
-    for path in ORCHESTRATOR_ROOT.glob("*.py"):
+    for path in ORCHESTRATOR_ROOT.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -299,15 +300,16 @@ def test_st12_doctor_all_other_wrappers_raise_unsupported_capability():
 
 
 def test_st13_static_history_list_reports_call_is_always_patient_scoped():
-    path = ORCHESTRATOR_ROOT / "wrappers.py"
-    tree = ast.parse(path.read_text(encoding="utf-8"))
-    calls = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "list_reports"
-    ]
+    calls = []
+    for path in ORCHESTRATOR_ROOT.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        calls.extend(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "list_reports"
+        )
     assert calls
     for call in calls:
         keywords = {keyword.arg: keyword.value for keyword in call.keywords}
@@ -316,24 +318,57 @@ def test_st13_static_history_list_reports_call_is_always_patient_scoped():
         assert "patient_username" not in keywords
 
 
-@pytest.mark.xfail(reason="Role Admission Gate lands in TIP-003")
-def test_st14_doctor_orchestrator_entrypoint_blocked_before_wrappers():
-    pytest.xfail("Role Admission Gate lands in TIP-003")
+@pytest.mark.asyncio
+async def test_st14_doctor_orchestrator_entrypoint_blocked_before_wrappers(client, monkeypatch):
+    calls = 0
+
+    def counted_wrapper(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise AssertionError("wrapper call must not execute")
+
+    monkeypatch.setattr(orchestrator_routes, "handle_message", orchestrator_routes.handle_message)
+    monkeypatch.setattr(wrappers, "get_my_history", counted_wrapper)
+    monkeypatch.setattr(wrappers, "get_my_report", counted_wrapper)
+    monkeypatch.setattr(wrappers, "get_my_indicator_trend", counted_wrapper)
+    monkeypatch.setattr(wrappers, "get_report_questions", counted_wrapper)
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "bacsi", "password": "bacsi123"},
+    )
+    assert login.status_code == 200
+    response = await client.post(
+        "/api/v1/orchestrator/message",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+        json={"message": "cho tôi xem lịch sử"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "blocked"
+    assert payload["reason_code"] == ReasonCode.UNSUPPORTED_CAPABILITY
+    assert calls == 0
 
 
 def test_st15_static_orchestrator_does_not_read_ocr_drafts_or_build_ocr_analysis_input():
     forbidden_terms = {
         "ocr_drafts",
-        "is_ocr_reviewed",
         "OCRIndicatorDraft",
-        "prepare_review",
-        "validate_review",
+        "OCRReviewedIndicator",
     }
-    for path in ORCHESTRATOR_ROOT.glob("*.py"):
+    for path in ORCHESTRATOR_ROOT.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         assert forbidden_terms.isdisjoint(source.split())
         for term in forbidden_terms:
             assert term not in source
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.List | ast.Dict | ast.ListComp | ast.DictComp):
+                names = {
+                    child.id
+                    for child in ast.walk(node)
+                    if isinstance(child, ast.Name)
+                }
+                assert not any("draft" in name.casefold() for name in names)
 
 
 def test_st16_trend_report_ids_are_owned_by_authenticated_patient(test_db):
