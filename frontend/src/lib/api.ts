@@ -1,4 +1,11 @@
 import type {
+  RequestTrace,
+  RequestTraceListResponse,
+  TraceQuery,
+  TraceSummary,
+  TracingStatus,
+} from "@/types/admin";
+import type {
   DoctorQueueResponse,
   DoctorReportDetail,
   FindingReviewResponse,
@@ -14,7 +21,9 @@ import type { OrchestratorResponse, OrchestratorUiContext } from "@/types/orches
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export type Role = "patient" | "doctor" | "guest";
+// "admin" la role thu tu. Thieu no o day thi saveSession() ep kieu sai va
+// dieu huong sau dang nhap khong tim thay nhanh nao khop.
+export type Role = "patient" | "doctor" | "guest" | "admin";
 
 const TOKEN_KEY = "vmec05_token";
 const ROLE_KEY = "vmec05_role";
@@ -119,6 +128,22 @@ export async function authFetch(path: string, init: RequestInit = {}) {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+
+/** Máy chủ nói vai trò này không có quyền — phía client đang tin nhầm.
+ *
+ * Tách khỏi `UnauthorizedError` vì hai thứ này có ý nghĩa khác nhau: 401 là
+ * "phiên hỏng", 403 là "phiên đúng nhưng sai vai trò".
+ *
+ * Chỉ nhóm endpoint admin ném lỗi này. Không dùng chung cho `/history`: ở đó
+ * 403 nghĩa là "khách chưa đăng ký", và câu trả lời đúng là mời đăng ký chứ
+ * không phải xoá phiên của người ta.
+ */
+export class ForbiddenError extends Error {
+  constructor(detail?: string) {
+    super(detail || "Tài khoản của bạn không có quyền truy cập chức năng này");
+    this.name = "ForbiddenError";
+  }
 }
 
 /** Token hết hạn/không hợp lệ — người gọi nên xoá phiên và quay về màn đăng nhập. */
@@ -333,6 +358,72 @@ export async function acknowledgeOrchestratorOnboarding(): Promise<OrchestratorR
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Chưa ghi nhận được xác nhận sử dụng trợ lý"));
+  }
+  return response.json();
+}
+
+
+// ---------------------------------------------------------------------------
+// Admin — trace vận hành
+//
+// Không hàm nào dưới đây chạm vào bệnh án. Quyền của admin dừng ở dữ liệu vận
+// hành; `/history` vẫn chỉ nhận patient và doctor.
+// ---------------------------------------------------------------------------
+
+export async function fetchTracingStatus(): Promise<TracingStatus> {
+  const response = await authFetch("/api/v1/admin/tracing/status");
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không đọc được trạng thái tracing"));
+  }
+  return response.json();
+}
+
+export async function fetchTraceSummary(windowHours = 24): Promise<TraceSummary> {
+  const response = await authFetch(`/api/v1/admin/traces/summary?window_hours=${windowHours}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được số liệu tổng hợp"));
+  }
+  return response.json();
+}
+
+export async function fetchTraces(query: TraceQuery = {}): Promise<RequestTraceListResponse> {
+  const params = new URLSearchParams();
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  if (query.path) params.set("path", query.path);
+  if (query.minDurationMs !== undefined) params.set("min_duration_ms", String(query.minDurationMs));
+  if (query.statusCode !== undefined) params.set("status_code", String(query.statusCode));
+  if (query.onlyLlmErrors) params.set("only_llm_errors", "true");
+  if (query.windowHours !== undefined) params.set("window_hours", String(query.windowHours));
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await authFetch(`/api/v1/admin/traces${suffix}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được danh sách trace"));
+  }
+  return response.json();
+}
+
+/** Tra một trace theo request_id — chính là id người dùng đọc được từ màn lỗi. */
+export async function fetchTrace(requestId: string): Promise<RequestTrace> {
+  const response = await authFetch(`/api/v1/admin/traces/${encodeURIComponent(requestId)}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 404) {
+    throw new Error("Không tìm thấy trace với request_id này");
+  }
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không mở được trace"));
   }
   return response.json();
 }

@@ -76,6 +76,33 @@ class Settings(BaseSettings):
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
 
+    # Observability / Langfuse
+    #
+    # Trace LLM chay SONG SONG voi structured log JSON, khong thay the no.
+    # Langfuse lo phan ma log JSON khong lo duoc: prompt, completion, so token,
+    # chi phi tung lan goi. Con Server-Timing va X-Request-ID van do
+    # request_timing dam nhiem, nen Langfuse chet hay chua cau hinh thi kha nang
+    # tra loi nguoi dung van nguyen ven.
+    #
+    # Thieu key -> tat han, khong raise. Day la duong phu, khong duoc phep lam
+    # chet duong chinh.
+    langfuse_public_key: str = Field(default="", alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key: str = Field(default="", alias="LANGFUSE_SECRET_KEY")
+    langfuse_host: str = Field(default="https://cloud.langfuse.com", alias="LANGFUSE_HOST")
+
+    # Che noi dung truoc khi gui di. Mac dinh BAT.
+    #
+    # Prompt cua app nhung ten chi so, gia tri, don vi, tuoi va gioi tinh benh
+    # nhan. Gui nguyen sang may chu ben thu ba la dua du lieu suc khoe ra ngoai
+    # ha tang cua minh. Doi lai chi con xem duoc do tre, token va ma loi — du de
+    # biet LLM hong bao nhieu phan tram va o dau, khong du de doc noi dung.
+    langfuse_mask_payloads: bool = True
+
+    # Ghi mot dong trace gon cho moi request vao DB, phuc vu man hinh admin.
+    # Tach khoi Langfuse co chu y: admin van xem duoc khi Langfuse chua cau hinh.
+    trace_persistence_enabled: bool = True
+    trace_retention_days: int = Field(default=14, ge=1, le=365)
+
     # Auth (JWT)
     jwt_secret: str = Field(default=_INSECURE_DEFAULT_JWT_SECRET, alias="JWT_SECRET")
     jwt_algorithm: str = "HS256"
