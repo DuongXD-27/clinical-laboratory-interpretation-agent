@@ -128,7 +128,17 @@ class User(Base):
     full_name = Column(String, nullable=True)
     date_of_birth = Column(Date, nullable=True)
     sex = Column(String, nullable=True)
-    email = Column(String, nullable=True)
+    # Unique + index vi email la mot cach dang nhap, ngang hang username.
+    #
+    # Khong unique thi hai benh nhan dat trung email duoc — dung tinh trang cua
+    # `update_patient_profile` truoc day — va luc do "dang nhap bang email"
+    # khong biet phai vao tai khoan nao. Gia tri duoc ha chu thuong truoc khi
+    # ghi (xem `email_identity.normalise_email`), neu khong thi UNIQUE vo dung:
+    # `A@x.com` va `a@x.com` lot thanh hai dong.
+    #
+    # Nullable: tai khoan cu va tai khoan bac si/admin khong co email. UNIQUE
+    # chap nhan nhieu NULL o ca SQLite lan Postgres, nen khong sao.
+    email = Column(String(320), unique=True, nullable=True, index=True)
 
     created_at = Column(
     DateTime(timezone=True),
@@ -932,16 +942,67 @@ def seed_demo_users(db: Session) -> None:
 
 
 
+def add_missing_indexes() -> list[str]:
+    """Tao index model da khai nhung bang that chua co. Chay cho MOI dialect.
+
+    `create_all()` bo qua han bang da ton tai, ke ca khi bang do thieu index —
+    cung dung ly do no khong ALTER them cot. Nen them `index=True` hay
+    `unique=True` vao model la production khong co gi thay doi, va rang buoc
+    ma minh tuong da co thi thuc te chua bao gio ton tai.
+
+    Suy ra tu `Base.metadata` chu khong tu danh sach viet tay, giong het
+    `add_missing_columns()`: danh sach viet tay se lech ngay lan dau ai do them
+    index ma quen cap nhat no.
+
+    Index UNIQUE tren bang DA CO du lieu trung se that bai. Bat rieng truong hop
+    do, ghi log canh bao va di tiep thay vi lam sap luc khoi dong: mot rang buoc
+    chua ap duoc la van de du lieu can nguoi xem, con backend khong khoi dong
+    duoc thi ca he thong chet.
+    """
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    created: list[str] = []
+
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+
+        present = {index["name"] for index in inspector.get_indexes(table.name)}
+        for index in table.indexes:
+            if index.name in present:
+                continue
+            try:
+                index.create(bind=engine)
+                created.append(f"{table.name}.{index.name}")
+            except Exception as exc:
+                logger.warning(
+                    "Khong tao duoc index %s tren %s: %s. "
+                    "Neu la UNIQUE thi nhieu kha nang bang dang co gia tri trung — "
+                    "phai don du lieu truoc, rang buoc chua duoc ap.",
+                    index.name,
+                    table.name,
+                    exc,
+                )
+
+    if created:
+        logger.warning("Schema drift: da tao %d index con thieu -> %s", len(created), ", ".join(created))
+    return created
+
+
 def init_db() -> None:
     """Tạo bảng còn thiếu, bù cột còn thiếu, rồi seed tài khoản demo.
 
     Thứ tự bắt buộc: `create_all()` trước để bảng mới tồn tại, rồi
-    `add_missing_columns()` mới ALTER được những bảng cũ.
+    `add_missing_columns()` mới ALTER được những bảng cũ, và
+    `add_missing_indexes()` sau cùng vì index cần cột đã có mặt.
     """
 
     Base.metadata.create_all(bind=engine)
     add_missing_columns()
     backfill_added_column_defaults()
+    # Sau khi cot da du: index tren cot vua them thi cot phai ton tai truoc.
+    add_missing_indexes()
 
     with SessionLocal() as db:
         seed_demo_users(db)

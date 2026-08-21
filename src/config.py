@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
 
+    # Dang nhap bang Google (Google Identity Services)
+    #
+    # Chi can CLIENT ID, khong can client secret: luong dung o day la trinh
+    # duyet lay ID token roi backend tu kiem chu ky, khong phai authorization
+    # code flow. Client ID la thong tin cong khai — no nam san trong ma nguon
+    # trang web — nen dat o day khong phai la de lo bi mat.
+    #
+    # De trong -> tat nut Dang nhap bang Google, phan con lai chay binh thuong.
+    google_oauth_client_id: str = Field(default="", alias="GOOGLE_OAUTH_CLIENT_ID")
+
     # Observability / Langfuse
     #
     # Trace LLM chay SONG SONG voi structured log JSON, khong thay the no.
