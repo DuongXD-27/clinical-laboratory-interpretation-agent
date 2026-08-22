@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import HistoryPanel from "@/components/HistoryPanel";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import { mockScenarios } from "@/lib/mockData";
-import { authFetch, clearSession, getRole, getToken, getUsername } from "@/lib/api";
+import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import type { AnalysisResult } from "@/types/analysis";
 
 export default function DoctorSandboxPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [username, setUsername] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState(mockScenarios[0].id);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -25,14 +23,8 @@ export default function DoctorSandboxPage() {
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage session values are client-only.
-    setUsername(getUsername());
     setCheckingAuth(false);
   }, [router]);
-
-  function handleLogout() {
-    clearSession();
-    router.replace("/");
-  }
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -66,25 +58,15 @@ export default function DoctorSandboxPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 p-6 font-sans text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
+    <div className="bg-zinc-100 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 transition-colors duration-300 -m-4 lg:-m-6 p-4 lg:p-6 min-h-full">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <Link href="/doctor" className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
-              ‹ Hàng đợi kiểm chứng
-            </Link>
-            <h1 className="mt-2 text-xl font-bold text-zinc-800 dark:text-zinc-100">
-              Công cụ thử nghiệm bác sĩ
+            <h1 className="text-xl font-bold text-zinc-800 dark:text-zinc-100">
+              Môi trường kiểm thử
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Phân tích mock và OCR sandbox — {username}
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="ml-3 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-              >
-                Đăng xuất
-              </button>
+              Phân tích mock và OCR sandbox
             </p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">

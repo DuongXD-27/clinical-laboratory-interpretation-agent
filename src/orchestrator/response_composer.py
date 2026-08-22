@@ -21,6 +21,7 @@ from src.models.orchestrator_schemas import (
     ReasonCode,
     ResponseStatus,
     SuggestedAction,
+    TrendDataPayload,
 )
 from src.services.llm import get_llm
 from src.services.medical_safety_validator import MedicalSafetyValidator
@@ -37,26 +38,199 @@ class ComposedMessage(BaseModel):
 _ACTION_ADAPTER = TypeAdapter(SuggestedAction)
 
 
-def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum) -> str:
+_TREND_ASSESSMENT_LABELS = {
+    "low": "THẤP",
+    "normal": "BÌNH THƯỜNG",
+    "high": "CAO",
+    "unknown": "CHƯA XÁC ĐỊNH (UNKNOWN)",
+}
+
+
+def _format_trend_measurement(value: float, unit: str) -> str:
+    separator = "" if unit == "%" else " "
+    return f"{value}{separator}{unit}".rstrip()
+
+
+def _compose_trend_message(data: TrendDataPayload) -> str:
+    trend = data.trend
+    points = sorted(trend.points, key=lambda point: point.test_date)
+    analyte_name = trend.display_name or trend.analyte_canonical
+    lines = [f"Xu hướng {analyte_name} của bạn qua {len(points)} lần xét nghiệm:"]
+
+    for point in points:
+        measurement = _format_trend_measurement(point.value, trend.canonical_unit)
+        lines.append(f"- {point.test_date.strftime('%d/%m/%Y')}: {measurement}")
+
+    if trend.observed_direction == "increasing":
+        lines.append("\nCác giá trị tăng qua các lần đo được ghi nhận.")
+    elif trend.observed_direction == "decreasing":
+        lines.append("\nCác giá trị giảm qua các lần đo được ghi nhận.")
+
+    latest = points[-1]
+    latest_measurement = _format_trend_measurement(latest.value, trend.canonical_unit)
+    latest_assessment = _TREND_ASSESSMENT_LABELS.get(
+        latest.assessment.casefold(),
+        latest.assessment.upper(),
+    )
+    lines.append(
+        f"Giá trị gần nhất là {latest_measurement} và được đánh dấu {latest_assessment}."
+    )
+
+    if trend.critical_alert is not None:
+        lines.append(f"\n⚠️ CẢNH BÁO: {trend.critical_alert.message}")
+
+    return "\n".join(lines)
+
+
+def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str:
+    critical_names = {alert.indicator_name for alert in data.critical_alerts}
+    for ind in data.indicators:
+        if getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None):
+            critical_names.add(ind.name)
+            if ind.analyte_canonical:
+                critical_names.add(ind.analyte_canonical)
+
+    critical_indicators = [
+        ind for ind in data.indicators
+        if ind.name in critical_names or (ind.analyte_canonical and ind.analyte_canonical in critical_names)
+        or getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None)
+    ]
+    critical_ind_names = {ind.name for ind in critical_indicators} | {ind.analyte_canonical for ind in critical_indicators if ind.analyte_canonical}
+
+    abnormal_indicators = [
+        ind for ind in data.indicators
+        if str(ind.status).casefold() in {"high", "low"}
+        and ind.name not in critical_ind_names
+        and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
+        and not getattr(ind, "is_critical", False)
+        and not getattr(ind, "critical_status", None)
+    ]
+
+    unknown_indicators = [
+        ind for ind in data.indicators
+        if str(ind.status).casefold() == "unknown"
+        and ind.name not in critical_ind_names
+        and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
+    ]
+
+    normal_count = sum(
+        1 for ind in data.indicators
+        if str(ind.status).casefold() == "normal"
+        and ind.name not in critical_ind_names
+        and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
+    )
+
+    lines = ["Dưới đây là tổng hợp kết quả xét nghiệm của bạn:"]
+
+    if data.critical_alerts or critical_indicators:
+        lines.append("\n⚠️ CHỈ SỐ NGUY KỊCH:")
+        if data.critical_alerts:
+            for alert in data.critical_alerts:
+                lines.append(f"- {alert.indicator_name}: {alert.value} {alert.unit} - {alert.message}")
+        else:
+            for ind in critical_indicators:
+                name = ind.analyte_canonical or ind.name
+                lines.append(f"- {name}: {ind.value} {ind.unit} (NGUY KỊCH)")
+
+    if abnormal_indicators:
+        lines.append("\nCác chỉ số nằm ngoài khoảng tham chiếu:")
+        for ind in abnormal_indicators:
+            name = ind.analyte_canonical or ind.name
+            status_str = "CAO" if str(ind.status).casefold() == "high" else "THẤP"
+            ref_str = f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})" if ind.reference_low is not None and ind.reference_high is not None else ""
+            lines.append(f"- {name}: {ind.value} {ind.unit}{ref_str} [{status_str}]")
+
+    if unknown_indicators:
+        lines.append("\nCác chỉ số chưa xác định khoảng tham chiếu:")
+        for ind in unknown_indicators:
+            name = ind.analyte_canonical or ind.name
+            lines.append(f"- {name}: {ind.value} {ind.unit}")
+
+    if normal_count > 0:
+        lines.append(f"\nCó {normal_count} chỉ số nằm trong khoảng tham chiếu thông thường.")
+
+    if not critical_indicators and not abnormal_indicators and not unknown_indicators and normal_count > 0:
+        lines = ["Tất cả các chỉ số xét nghiệm đã phân tích đều nằm trong khoảng tham chiếu thông thường."]
+
+    if abnormal_indicators or critical_indicators:
+        first_notable = (critical_indicators + abnormal_indicators)[0]
+        name = first_notable.analyte_canonical or first_notable.name
+        lines.append(f"\nBạn có thể hỏi thêm về chỉ số cụ thể (ví dụ: 'Giải thích kỹ hơn {name}') nếu cần.")
+
+    return "\n".join(lines)
+
+
+def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum, data: DataPayload | None = None) -> str:
     if reason_code == ReasonCode.UNSUPPORTED_ANALYTE:
         return "Chỉ số này chưa nằm trong phạm vi hỗ trợ an toàn của hệ thống."
     if reason_code == ReasonCode.UNSUPPORTED_CAPABILITY:
         return "Chức năng này chưa được hỗ trợ cho phiên hiện tại."
     if reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED:
-        return "Không tìm thấy phiếu phù hợp trong phạm vi được phép."
+        return "Hiện mình chưa thấy phiếu xét nghiệm nào trong tài khoản của bạn. Bạn có thể gửi ảnh phiếu xét nghiệm hoặc nhập kết quả để mình hỗ trợ."
     if reason_code == ReasonCode.TREND_INSUFFICIENT_POINTS:
         return "Chưa đủ dữ liệu để tạo xu hướng cho chỉ số này."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.VIEW_HISTORY:
         return "Đây là phiếu xét nghiệm gần nhất trong lịch sử của bạn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.ANALYZE_TREND:
+        if (
+            isinstance(data, TrendDataPayload)
+            and data.trend.trend_available
+            and len(data.trend.points) >= 3
+        ):
+            return _compose_trend_message(data)
         return "Đây là xu hướng của chỉ số đã chọn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.GET_DOCTOR_QUESTIONS:
         return "Đây là các câu hỏi gợi ý để trao đổi với bác sĩ."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
+        if isinstance(data, AnalysisDataPayload):
+            return _format_whole_report_deterministic_summary(data)
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
     if status == ResponseStatus.SUCCESS:
+        if isinstance(data, AnalysisDataPayload):
+            return _format_whole_report_deterministic_summary(data)
         return "Đây là kết quả phân tích hiện có."
     return "Tôi cần thêm thông tin để tiếp tục an toàn."
+
+
+def _safety_refusal_message(reason_code: ReasonCode | None) -> str:
+    if reason_code == ReasonCode.MEDICAL_DIAGNOSIS_REQUEST:
+        return (
+            "Mình không thể đưa ra chẩn đoán bệnh hoặc khẳng định tình trạng bệnh lý của bạn. "
+            "Bạn nên trao đổi trực tiếp với bác sĩ chuyên khoa để được thăm khám chính xác. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa các chỉ số xét nghiệm hoặc gợi ý câu hỏi để bạn trao đổi cùng bác sĩ."
+        )
+    if reason_code == ReasonCode.MEDICAL_CAUSE_REQUEST:
+        return (
+            "Mình không thể xác định nguyên nhân cá nhân dẫn đến kết quả này. "
+            "Để hiểu rõ nguyên nhân, bác sĩ cần thăm khám kết hợp với các triệu chứng lâm sàng và tiền sử bệnh của bạn. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa tổng quan của chỉ số hoặc gợi ý câu hỏi cho bác sĩ."
+        )
+    if reason_code == ReasonCode.TREATMENT_REQUEST:
+        return (
+            "Mình không thể hướng dẫn phương pháp điều trị hay tư vấn sử dụng thuốc. "
+            "Bạn nên tham khảo ý kiến bác sĩ để có kế hoạch chăm sóc và điều trị phù hợp và an toàn nhất."
+        )
+    return "Tôi không thể hỗ trợ yêu cầu này an toàn."
+
+
+def map_needs_input_prompt(missing_fields: list[str], fallback: str) -> str:
+    if "current_report_ref" in missing_fields:
+        return (
+            "Hiện mình chưa thấy phiếu xét nghiệm nào trong tài khoản của bạn.\n\n"
+            "Bạn có thể gửi ảnh phiếu xét nghiệm hoặc nhập kết quả để mình hỗ trợ."
+        )
+    if "current_analyte" in missing_fields:
+        return (
+            "Bạn muốn xem chỉ số nào?\n\n"
+            "Bạn có thể chọn một chỉ số trong phiếu xét nghiệm hoặc nhập tên chỉ số, ví dụ:\n"
+            "- WBC\n"
+            "- Glucose\n"
+            "- HbA1c\n"
+            "- Cholesterol"
+        )
+    if "analysis_input" in missing_fields:
+        return "Bạn hãy gửi phiếu xét nghiệm bằng ảnh hoặc nhập kết quả thủ công để mình có thể phân tích."
+    return fallback
 
 
 def _normalize(value: str) -> str:
@@ -83,10 +257,38 @@ def _sources_from_data(data: DataPayload) -> list[str]:
 
 def _payload_summary(data: DataPayload) -> str:
     if isinstance(data, AnalysisDataPayload):
-        statuses = [str(indicator.status) for indicator in data.indicators[:5]]
+        critical_names = {alert.indicator_name for alert in data.critical_alerts}
+        for ind in data.indicators:
+            if getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None):
+                critical_names.add(ind.name)
+                if ind.analyte_canonical:
+                    critical_names.add(ind.analyte_canonical)
+
+        critical_list = [
+            f"{ind.name}: {ind.value} {ind.unit} (CRITICAL)"
+            for ind in data.indicators
+            if ind.name in critical_names or getattr(ind, "is_critical", False)
+        ]
+        abnormal_list = [
+            f"{ind.analyte_canonical or ind.name}: {ind.value} {ind.unit} ({ind.status.upper()}, ref: {ind.reference_low}-{ind.reference_high})"
+            for ind in data.indicators
+            if str(ind.status).casefold() in {"high", "low"} and ind.name not in critical_names and not getattr(ind, "is_critical", False)
+        ]
+        unknown_list = [
+            f"{ind.analyte_canonical or ind.name}: {ind.value} {ind.unit}"
+            for ind in data.indicators
+            if str(ind.status).casefold() == "unknown" and ind.name not in critical_names
+        ]
+        normal_count = sum(
+            1 for ind in data.indicators
+            if str(ind.status).casefold() == "normal" and ind.name not in critical_names
+        )
         return (
-            f"Payload: analysis. Indicator count: {len(data.indicators)}. "
-            f"Statuses: {', '.join(statuses)}. Has critical values: {data.has_critical_values}."
+            f"Payload: whole report analysis. Total indicators: {len(data.indicators)}. "
+            f"Critical findings ({len(critical_list)}): {', '.join(critical_list) or 'none'}. "
+            f"Abnormal High/Low findings ({len(abnormal_list)}): {', '.join(abnormal_list) or 'none'}. "
+            f"Unknown reference findings ({len(unknown_list)}): {', '.join(unknown_list) or 'none'}. "
+            f"Normal indicators count: {normal_count}."
         )
     if isinstance(data, ExplanationDataPayload):
         return f"Payload: explanation. Approved explanation: {data.explanation[:800]}"
@@ -119,6 +321,7 @@ def _composer_prompt(
         You may not recalculate medical status, reinterpret reference ranges,
         create diagnoses, infer causes, recommend treatment, invent facts,
         invent sources, invent actions, or change server fields.
+        If whole report analysis is provided, summarize findings by highlighting critical/abnormal indicators first, mentioning unknown/unresolved indicators separately, summarizing normal indicators, and offering a safe follow-up question.
 
         Server-controlled fields:
         intent={intent.value}
@@ -145,6 +348,8 @@ async def compose_message(
     fallback_message: str,
 ) -> str:
     if status != ResponseStatus.SUCCESS:
+        return fallback_message
+    if isinstance(data, TrendDataPayload):
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,
@@ -173,13 +378,36 @@ def _message_contradicts_canonical_data(message: str, data: DataPayload) -> bool
     normalized = _normalize(message)
     if not normalized:
         return False
-    for status in _canonical_statuses(data):
-        if status in {"high", "low", "critical_high", "critical_low", "unknown"} and (
-            "binh thuong" in normalized or "normal" in normalized
-        ):
-            return True
-        if status == "normal" and any(term in normalized for term in ("nguy kich", "critical", "cao", "thap")):
-            return True
+    if isinstance(data, AnalysisDataPayload) and data.indicators:
+        critical_count = len(data.critical_alerts) + sum(
+            1 for ind in data.indicators if getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None)
+        )
+        abnormal_count = sum(
+            1 for ind in data.indicators
+            if str(ind.status).casefold() in {"high", "low"}
+            and not getattr(ind, "is_critical", False)
+            and not getattr(ind, "critical_status", None)
+        )
+        normal_count = sum(
+            1 for ind in data.indicators
+            if str(ind.status).casefold() == "normal" and not getattr(ind, "is_critical", False)
+        )
+        total = len(data.indicators)
+
+        if total > 0 and normal_count == total:
+            if any(term in normalized for term in ("nguy kich", "critical", "cao", "thap", "bat thuong")):
+                return True
+
+        if total > 0 and normal_count == 0 and (abnormal_count > 0 or critical_count > 0):
+            if "tat ca binh thuong" in normalized or "hoan toan binh thuong" in normalized or (
+                "binh thuong" in normalized and not any(term in normalized for term in ("cao", "thap", "nguy kich", "bat thuong", "ngoai", "ngoai khoang"))
+            ):
+                return True
+
+        if critical_count > 0:
+            if "hoan toan binh thuong" in normalized or "khong co gi bat thuong" in normalized:
+                return True
+
     return False
 
 
@@ -227,7 +455,13 @@ async def build_final_response(
     reason_code: ReasonCode | None = None,
     suggested_actions: Sequence[object] = (),
 ) -> OrchestratorResponse:
-    fallback_message = deterministic_message_for(status, reason_code, intent)
+    fallback_message = deterministic_message_for(status, reason_code, intent, data)
+
+    if isinstance(data, NeedsInputPayload):
+        friendly_prompt = map_needs_input_prompt(data.missing_fields, fallback_message)
+        data = data.model_copy(update={"prompt": friendly_prompt})
+        fallback_message = friendly_prompt
+
     message = await compose_message(
         intent=intent,
         status=status,
@@ -259,4 +493,5 @@ __all__ = [
     "compose_message",
     "deterministic_message_for",
     "enforce_final_response",
+    "map_needs_input_prompt",
 ]

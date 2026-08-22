@@ -81,12 +81,12 @@ export default function TrendChart({
           />
           <Tooltip content={<TrendTooltip unit={unit} analyte={analyte} />} />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="value"
-            stroke="#1769e0"
-            strokeWidth={2.5}
-            dot={{ r: 4, strokeWidth: 2, fill: "#fff", stroke: "#1769e0" }}
-            activeDot={{ r: 6, strokeWidth: 2, fill: "#1769e0", stroke: "#fff" }}
+            stroke="#94a3b8"
+            strokeWidth={1.5}
+            dot={{ r: 5, strokeWidth: 2, fill: "#1769e0", stroke: "#fff" }}
+            activeDot={{ r: 7, strokeWidth: 2, fill: "#1769e0", stroke: "#fff" }}
             isAnimationActive={false}
           />
         </LineChart>

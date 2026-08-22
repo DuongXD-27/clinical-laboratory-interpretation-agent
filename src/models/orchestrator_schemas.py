@@ -12,6 +12,7 @@ Three distinct state surfaces must never be merged:
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 
@@ -32,7 +33,7 @@ ServerReference = Annotated[
     Field(
         min_length=1,
         max_length=256,
-        pattern=r"^[A-Za-z0-9_.%+-]+$",
+        pattern=r"^[A-Za-z0-9_.% +-]+$",
     ),
 ]
 
@@ -44,6 +45,7 @@ class IntentEnum(StrEnum):
     VIEW_HISTORY = "VIEW_HISTORY"
     ANALYZE_TREND = "ANALYZE_TREND"
     GET_DOCTOR_QUESTIONS = "GET_DOCTOR_QUESTIONS"
+    SAFE_GENERAL = "SAFE_GENERAL"
 
 
 class OrchestratorRole(StrEnum):
@@ -55,6 +57,22 @@ class ResponseStatus(StrEnum):
     SUCCESS = "success"
     NEEDS_INPUT = "needs_input"
     BLOCKED = "blocked"
+    ERROR = "error"
+
+
+class ProgressStage(StrEnum):
+    """Frozen patient-safe execution stages for the V1 event stream."""
+
+    ROUTING = "routing"
+    MEDICAL_CONTEXT = "medical_context"
+    LONGITUDINAL_RETRIEVAL = "longitudinal_retrieval"
+    RESPONSE_COMPOSITION = "response_composition"
+
+
+class StreamEventType(StrEnum):
+    MESSAGE_STARTED = "message.started"
+    PROGRESS = "progress"
+    MESSAGE_COMPLETED = "message.completed"
     ERROR = "error"
 
 
@@ -95,6 +113,30 @@ class UIContext(BaseModel):
     candidate_report_ref: ServerReference | None = None
 
 
+import time
+
+
+class ConversationState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pending_question: str | None = None
+    pending_question_timestamp: float | None = None
+    expected_entity: str | None = None
+    ttl_seconds: float = 300.0
+
+    def is_expired(self, current_time: float | None = None) -> bool:
+        if not self.pending_question:
+            return False
+        if self.pending_question_timestamp is None:
+            return False
+        now = time.time() if current_time is None else current_time
+        return (now - self.pending_question_timestamp) > self.ttl_seconds
+
+    def get_active_pending_question(self, current_time: float | None = None) -> str | None:
+        if self.is_expired(current_time):
+            return None
+        return self.pending_question
+
+
 class OrchestratorSessionContext(BaseModel):
     """Server-constructed conversational context; never accepted from clients."""
 
@@ -107,6 +149,7 @@ class OrchestratorSessionContext(BaseModel):
     current_analyte: ServerReference | None = None
     last_intent: IntentEnum | None = None
     transient_ui_context: UIContext | None = None
+    conversation_state: ConversationState = Field(default_factory=ConversationState)
 
     _pending_ocr_review: bool = PrivateAttr(default=False)
 
@@ -129,6 +172,7 @@ class OrchestratorSessionContext(BaseModel):
         last_intent: IntentEnum | None = None,
         pending_ocr_review: bool = False,
         transient_ui_context: UIContext | None = None,
+        conversation_state: ConversationState | None = None,
     ) -> OrchestratorSessionContext:
         context = cls(
             session_id=session_id,
@@ -138,6 +182,7 @@ class OrchestratorSessionContext(BaseModel):
             current_analyte=current_analyte,
             last_intent=last_intent,
             transient_ui_context=transient_ui_context,
+            conversation_state=conversation_state or ConversationState(),
         )
         context._pending_ocr_review = bool(pending_ocr_review)
         return context
@@ -342,10 +387,62 @@ class OrchestratorResponse(BaseModel):
         return self
 
 
+class MessageStartedPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ProgressPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    stage: ProgressStage
+
+
+class MessageCompletedPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response: OrchestratorResponse
+
+
+class StreamErrorPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str
+
+
+StreamPayload = MessageStartedPayload | ProgressPayload | MessageCompletedPayload | StreamErrorPayload
+
+
+class OrchestratorStreamEvent(BaseModel):
+    """Public SSE event; intentionally excludes internal execution metadata."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    contract_version: Literal["1.0"] = "1.0"
+    event_id: ServerReference
+    event_type: StreamEventType
+    turn_id: ServerReference
+    sequence: int = Field(ge=1)
+    occurred_at: datetime
+    payload: StreamPayload
+
+    @model_validator(mode="after")
+    def _payload_must_match_event_type(self) -> OrchestratorStreamEvent:
+        expected_payload = {
+            StreamEventType.MESSAGE_STARTED: MessageStartedPayload,
+            StreamEventType.PROGRESS: ProgressPayload,
+            StreamEventType.MESSAGE_COMPLETED: MessageCompletedPayload,
+            StreamEventType.ERROR: StreamErrorPayload,
+        }[self.event_type]
+        if not isinstance(self.payload, expected_payload):
+            raise ValueError("stream payload must match event_type")
+        return self
+
+
 __all__ = [
     "AnalysisDataPayload",
     "BlockedPayload",
     "ConfirmOcrAction",
+    "ConversationState",
     "DataPayload",
     "DataType",
     "DoctorQuestionsPayload",
@@ -356,11 +453,19 @@ __all__ = [
     "OpenReportAction",
     "OrchestratorRequest",
     "OrchestratorResponse",
+    "OrchestratorStreamEvent",
     "OrchestratorRole",
     "OrchestratorSessionContext",
+    "MessageCompletedPayload",
+    "MessageStartedPayload",
+    "ProgressPayload",
+    "ProgressStage",
     "ReasonCode",
     "ResponseStatus",
     "RetryAction",
+    "StreamErrorPayload",
+    "StreamEventType",
+    "StreamPayload",
     "SuggestedAction",
     "SuggestedActionType",
     "TrendDataPayload",

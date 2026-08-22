@@ -17,7 +17,12 @@ import type {
   LabReportListResponse,
   ReportQuestion,
 } from "@/types/history";
-import type { OrchestratorResponse, OrchestratorUiContext } from "@/types/orchestrator";
+import type {
+  OrchestratorResponse,
+  OrchestratorStreamEvent,
+  OrchestratorUiContext,
+} from "@/types/orchestrator";
+import { consumeSseStream } from "@/lib/orchestratorChat.mjs";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -352,6 +357,31 @@ export async function sendOrchestratorMessage(
     throw new Error(await readErrorDetail(response, "Trợ lý chưa thể phản hồi lúc này"));
   }
   return response.json();
+}
+
+export async function streamOrchestratorMessage(
+  message: string,
+  options: {
+    uiContext?: OrchestratorUiContext;
+    clientRequestId: string;
+    signal: AbortSignal;
+    onEvent: (event: OrchestratorStreamEvent) => void;
+  },
+): Promise<OrchestratorStreamEvent> {
+  const response = await authFetch("/api/v1/orchestrator/message/stream", {
+    method: "POST",
+    signal: options.signal,
+    headers: { Accept: "text/event-stream" },
+    body: JSON.stringify({
+      message,
+      client_request_id: options.clientRequestId,
+      ...(options.uiContext ? { ui_context: options.uiContext } : {}),
+    }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) throw new Error("Trợ lý chưa thể kết nối lúc này. Vui lòng thử lại.");
+  return consumeSseStream(response.body, options.onEvent) as Promise<OrchestratorStreamEvent>;
 }
 
 export async function acknowledgeOrchestratorOnboarding(): Promise<OrchestratorResponse> {

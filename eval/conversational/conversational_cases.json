@@ -1,0 +1,81 @@
+[
+  {
+    "id": "CONV-001",
+    "description": "Multi-turn follow-up analyte explanation without UI context",
+    "turns": [
+      {
+        "turn": 1,
+        "message": "Giải thích kết quả của tôi",
+        "expected_intent": "EXPLAIN_CURRENT_RESULT",
+        "expected_status": "needs_input",
+        "expected_reason_code": "AMBIGUOUS_CONTEXT"
+      },
+      {
+        "turn": 2,
+        "message": "WBC",
+        "expected_intent": "EXPLAIN_CURRENT_RESULT",
+        "expected_status": "success",
+        "expected_reason_code": null
+      }
+    ]
+  },
+  {
+    "id": "CONV-002",
+    "description": "Autonomous latest report fetch from Dashboard for doctor questions",
+    "turns": [
+      {
+        "turn": 1,
+        "message": "Gợi ý câu hỏi để tôi hỏi bác sĩ",
+        "expected_intent": "GET_DOCTOR_QUESTIONS",
+        "expected_status": "success",
+        "expected_reason_code": null
+      }
+    ]
+  },
+  {
+    "id": "CONV-003",
+    "description": "Independent trend query across reports without navigating to trend page",
+    "turns": [
+      {
+        "turn": 1,
+        "message": "Chỉ số Glucose của tôi có xu hướng thế nào?",
+        "expected_intent": "ANALYZE_TREND",
+        "expected_status": "success",
+        "expected_reason_code": null
+      }
+    ]
+  },
+  {
+    "id": "CONV-004",
+    "description": "Knowledge-only inquiry does not require report or trigger report fetching",
+    "turns": [
+      {
+        "turn": 1,
+        "message": "Bạn có thể giúp tôi những gì?",
+        "expected_intent": "SAFE_GENERAL",
+        "expected_status": "success",
+        "expected_reason_code": null
+      }
+    ]
+  },
+  {
+    "id": "CONV-005",
+    "description": "Multi-turn trend follow-up after generic trend request",
+    "turns": [
+      {
+        "turn": 1,
+        "message": "Xem xu hướng xét nghiệm",
+        "expected_intent": "ANALYZE_TREND",
+        "expected_status": "needs_input",
+        "expected_reason_code": "AMBIGUOUS_CONTEXT"
+      },
+      {
+        "turn": 2,
+        "message": "HbA1c",
+        "expected_intent": "ANALYZE_TREND",
+        "expected_status": "success",
+        "expected_reason_code": null
+      }
+    ]
+  }
+]

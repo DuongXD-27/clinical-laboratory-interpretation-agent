@@ -725,6 +725,7 @@ class SaveReportResponse(BaseModel):
 
 
 TrendFilter = Literal["latest5", "three_months"]
+ObservedDirection = Literal["increasing", "decreasing"]
 
 
 class TrendAnalyteSummary(BaseModel):
@@ -756,11 +757,13 @@ class TrendResponse(BaseModel):
     result_count: int
     trend_available: bool
     points: list[TrendPointResponse] = Field(default_factory=list)
+    observed_direction: ObservedDirection | None = None
     reason: str | None = None
     section: str | None = None
     section_label: str | None = None
     critical_status: str | None = None
     approaching_critical: bool = False
+    critical_alert: CriticalAlertSchema | None = None
 
 
 class TrendExplanationResponse(BaseModel):

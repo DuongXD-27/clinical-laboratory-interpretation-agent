@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import MetricInput from "@/components/MetricInput";
 import UploadDropzone from "@/components/UploadDropzone";
 import { API_BASE, authFetch } from "@/lib/api";
@@ -42,6 +42,47 @@ function friendlyUploadError(status: number, detail: unknown) {
   }
   if (typeof detail === "string" && detail.trim()) return detail;
   return "Không thể đọc rõ phiếu xét nghiệm này. Hãy thử ảnh rõ hơn hoặc nhập kết quả thủ công.";
+}
+
+function getConfirmReadiness(meta: { age: string; date: string }, rows: ReviewRow[]) {
+  const age = Number(meta.age);
+  const issues: string[] = [];
+  let originalError: string | null = null;
+
+  if (!Number.isInteger(age) || age < 0 || age > 120 || !meta.date) {
+    issues.push("Vui lòng nhập tuổi hợp lệ và chọn ngày xét nghiệm.");
+    originalError = "Vui lòng điền tuổi hợp lệ và ngày xét nghiệm.";
+  }
+
+  const invalidRow = rows.find(row => parseFiniteLabValue(row.value) === null);
+  if (invalidRow) {
+    issues.push(invalidRow.included ? "Có chỉ số có giá trị chưa hợp lệ." : "Có chỉ số (bị bỏ qua) có giá trị chưa hợp lệ.");
+    if (!originalError) originalError = `Giá trị của chỉ số ${invalidRow.name || "chưa có tên"} phải là một số hợp lệ.`;
+  }
+
+  const includedRows = rows.filter(r => r.included);
+  
+  if (includedRows.length > 0) {
+    const missingReview = includedRows.filter(r => !r.reviewed).length;
+    if (missingReview > 0) {
+      issues.push(`Còn ${missingReview} chỉ số cần bạn kiểm tra.`);
+      if (!originalError) originalError = "Vui lòng kiểm tra và xác nhận các chỉ số trước khi phân tích.";
+    }
+
+    const missingAck = includedRows.filter(r => r.needs_review && !r.low_confidence_acknowledged).length;
+    if (missingAck > 0) {
+      issues.push(`Còn ${missingAck} chỉ số cần xác nhận.`);
+      if (!originalError) originalError = "Một số giá trị cần được kiểm tra kỹ và xác nhận trước khi phân tích.";
+    }
+  } else {
+    issues.push("Không có chỉ số nào được đưa vào phân tích.");
+  }
+
+  return {
+    ready: originalError === null && includedRows.length > 0,
+    issues,
+    originalError,
+  };
 }
 
 export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
@@ -154,28 +195,14 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   };
 
   const confirm = async () => {
+    const readiness = getConfirmReadiness(meta, rows);
+    if (!readiness.ready) {
+      if (readiness.originalError) setError(readiness.originalError);
+      return;
+    }
+    
     const age = Number(meta.age);
-    if (!Number.isInteger(age) || age < 0 || age > 120 || !meta.date) {
-      setError("Vui lòng điền tuổi hợp lệ và ngày xét nghiệm.");
-      return;
-    }
-    const parsedValues: number[] = [];
-    for (const row of rows) {
-      const parsedValue = parseFiniteLabValue(row.value);
-      if (parsedValue === null) {
-        setError(`Giá trị của chỉ số ${row.name || "chưa có tên"} phải là một số hợp lệ.`);
-        return;
-      }
-      parsedValues.push(parsedValue);
-    }
-    if (rows.some((row) => row.included && !row.reviewed)) {
-      setError("Vui lòng kiểm tra và xác nhận các chỉ số trước khi phân tích.");
-      return;
-    }
-    if (rows.some((row) => row.included && row.needs_review && !row.low_confidence_acknowledged)) {
-      setError("Một số giá trị cần được kiểm tra kỹ và xác nhận trước khi phân tích.");
-      return;
-    }
+    const parsedValues = rows.map(r => parseFiniteLabValue(r.value) as number);
 
     setBusy(true);
     setBusyAction("confirm");
@@ -236,28 +263,30 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   const uploadUnavailable = policyLoaded && !uploadsAllowed;
   const currentStep = busyAction === "confirm" ? 3 : rows.length > 0 ? 2 : 1;
   const workflowSteps = ["Tải phiếu", "Kiểm tra dữ liệu", "Phân tích", "Xem kết quả"];
+  
+  const readiness = useMemo(() => getConfirmReadiness(meta, rows), [meta, rows]);
 
   return (
-    <section className="patient-card p-5 sm:p-7" aria-labelledby="upload-title">
-      <div className="section-heading">
-        <span className="eyebrow">Đọc kết quả từ ảnh</span>
-        <h2 id="upload-title">Tải ảnh phiếu xét nghiệm</h2>
-        <p>Tải ảnh phiếu xét nghiệm để hệ thống đọc các chỉ số giúp bạn.</p>
-      </div>
-
-      <ol className="ocr-stepper" aria-label="Quy trình phân tích ảnh phiếu xét nghiệm">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex items-center text-sm font-medium whitespace-nowrap overflow-x-auto pb-2 sm:pb-0 select-none" aria-label="Quy trình tải ảnh">
         {workflowSteps.map((label, index) => {
           const step = index + 1;
-          const complete = step < currentStep;
-          const active = step === currentStep;
+          const isActiveOrPast = currentStep >= step;
           return (
-            <li key={label} className={complete ? "complete" : active ? "active" : ""} aria-current={active ? "step" : undefined}>
-              <span aria-hidden="true">{complete ? "✓" : step}</span>
-              <strong>{label}</strong>
-            </li>
+            <Fragment key={label}>
+              <div className={`flex items-center gap-2 ${isActiveOrPast ? 'text-foreground' : 'text-muted-foreground/70'}`}>
+                <span className={`flex items-center justify-center w-6 h-6 rounded-full border text-xs font-semibold ${isActiveOrPast ? 'bg-[var(--surface)] border-[var(--border)] shadow-sm' : 'border-[var(--border)]/50'}`}>
+                  {step}
+                </span>
+                <span>{label}</span>
+              </div>
+              {index < workflowSteps.length - 1 && (
+                <div className="w-8 sm:w-12 h-px bg-[var(--border)]/60 mx-3 sm:mx-4" />
+              )}
+            </Fragment>
           );
         })}
-      </ol>
+      </div>
 
       <div className="mt-6">
         <UploadDropzone
@@ -303,6 +332,25 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
             <p>AI đã đọc các thông tin dưới đây từ ảnh. Hãy đối chiếu với phiếu gốc trước khi tiếp tục.</p>
           </div>
 
+          <div className="mt-6 mb-4 rounded-[1.25rem] bg-[var(--surface-subtle)] border border-[var(--border)]/60 px-5 py-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.01)]">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Đưa vào phân tích</span>
+                <span className="text-foreground font-semibold text-lg">{includedRows.length}</span>
+              </div>
+              <div className="w-px h-8 bg-[var(--border)]/60 hidden sm:block"></div>
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-0.5">Cần hoàn tất</span>
+                <span className="text-amber-700 font-semibold text-lg">{includedRows.filter(r => !r.reviewed || (r.needs_review && !r.low_confidence_acknowledged) || parseFiniteLabValue(r.value) === null).length}</span>
+              </div>
+              <div className="w-px h-8 bg-[var(--border)]/60 hidden sm:block"></div>
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider mb-0.5">Sẵn sàng</span>
+                <span className="text-emerald-700 font-semibold text-lg">{includedRows.filter(r => r.reviewed && (!r.needs_review || r.low_confidence_acknowledged) && parseFiniteLabValue(r.value) !== null).length}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-5 grid gap-3">
             {includedRows.map((row) => {
               const index = rows.indexOf(row);
@@ -321,7 +369,8 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
                     reviewed: true,
                     low_confidence_acknowledged: false,
                   })}
-                  attentionMessage={row.needs_review ? "Vui lòng kiểm tra kỹ lại giá trị này." : undefined}
+                  removeLabel="Không đưa vào phân tích"
+                  attentionMessage={row.needs_review ? "Cần bạn kiểm tra lại" : undefined}
                 >
                   {row.raw_text && <p className="mb-3 text-xs text-slate-500">Nội dung đọc được: “{row.raw_text}”</p>}
                   <label className="check-row">
@@ -348,18 +397,25 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
           </div>
 
           {excludedRows.length > 0 && (
-            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              {excludedRows.map((row) => {
-                const index = rows.indexOf(row);
-                return (
-                  <div key={row.draft_id} className="flex items-center justify-between gap-3 py-1">
-                    <span className="truncate">Đã bỏ qua {row.name}</span>
-                    <button type="button" className="text-button" onClick={() => updateRow(index, { included: true, reviewed: false })}>
-                      Hoàn tác
-                    </button>
-                  </div>
-                );
-              })}
+            <div className="mt-6 rounded-xl bg-slate-50 border border-slate-200 px-5 py-4">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-wider">Không đưa vào phân tích ({excludedRows.length} chỉ số)</h3>
+              <div className="grid gap-2">
+                {excludedRows.map((row) => {
+                  const index = rows.indexOf(row);
+                  const isInvalid = parseFiniteLabValue(row.value) === null;
+                  return (
+                    <div key={row.draft_id} className={`flex items-center justify-between gap-3 py-2.5 px-4 rounded-lg ${isInvalid ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-slate-100'} shadow-sm`}>
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate text-sm font-medium text-slate-700">{row.name}</span>
+                        {isInvalid && <span className="text-xs text-amber-700 font-medium mt-0.5">Giá trị OCR chưa hợp lệ - Cần sửa giá trị này trước khi tiếp tục.</span>}
+                      </div>
+                      <button type="button" className="text-sm font-medium text-[var(--brand)] hover:text-[var(--brand-strong)] shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] rounded transition-colors" onClick={() => updateRow(index, { included: true, reviewed: false })}>
+                        Đưa lại vào phân tích
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -398,9 +454,16 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
             </div>
           </div>
 
-          <button type="button" onClick={confirm} disabled={busy || includedRows.length === 0} className="primary-button mt-6 w-full">
-            {busyAction === "confirm" ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
-          </button>
+          <div className="mt-6">
+            <button type="button" onClick={confirm} disabled={busy || !readiness.ready} className="primary-button w-full">
+              {busyAction === "confirm" ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
+            </button>
+            {!readiness.ready && readiness.issues.length > 0 && !busy && (
+              <div className="mt-3 text-sm font-medium text-amber-700 text-center" role="status">
+                {readiness.issues[0]}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -412,6 +475,6 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
       )}
 
       {error && <div role="alert" className="error-message mt-4">{error}</div>}
-    </section>
+    </div>
   );
 }

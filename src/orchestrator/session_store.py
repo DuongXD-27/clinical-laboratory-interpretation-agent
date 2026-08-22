@@ -6,6 +6,7 @@ from typing import Protocol
 
 from src.models.db import ROLE_PATIENT
 from src.models.orchestrator_schemas import (
+    ConversationState,
     IntentEnum,
     OrchestratorRole,
     OrchestratorSessionContext,
@@ -22,6 +23,9 @@ class SessionStore(Protocol):
         ...
 
     def acknowledge_onboarding(self, current_user: object) -> OrchestratorSessionContext:
+        ...
+
+    def activate_report(self, current_user: object, report_ref: str) -> OrchestratorSessionContext:
         ...
 
 
@@ -80,6 +84,24 @@ class InMemorySessionStore:
             last_intent=context.last_intent,
             pending_ocr_review=context.pending_ocr_review,
             transient_ui_context=context.transient_ui_context,
+            conversation_state=context.conversation_state,
+        )
+        self.save(current_user, updated)
+        return updated
+
+    def activate_report(self, current_user: object, report_ref: str) -> OrchestratorSessionContext:
+        """Activate a server-persisted report and discard analyte context from the prior report."""
+        context = self.get_or_create(current_user)
+        updated = OrchestratorSessionContext.from_server(
+            session_id=context.session_id,
+            user_role=context.user_role,
+            onboarding_acknowledged=context.onboarding_acknowledged,
+            current_report_ref=report_ref,
+            current_analyte=None,
+            last_intent=context.last_intent,
+            pending_ocr_review=context.pending_ocr_review,
+            transient_ui_context=context.transient_ui_context,
+            conversation_state=context.conversation_state,
         )
         self.save(current_user, updated)
         return updated
@@ -100,6 +122,7 @@ class InMemorySessionStore:
             last_intent=context.last_intent,
             pending_ocr_review=pending_ocr_review,
             transient_ui_context=context.transient_ui_context,
+            conversation_state=context.conversation_state,
         )
         self.save(current_user, updated)
         return updated
@@ -113,16 +136,26 @@ class InMemorySessionStore:
         current_report_ref: str | None = None,
         current_analyte: str | None = None,
         transient_ui_context: UIContext | None = None,
+        conversation_state: ConversationState | None = None,
+        clear_analyte: bool = False,
     ) -> OrchestratorSessionContext:
+        report_changed = current_report_ref is not None and current_report_ref != context.current_report_ref
+        should_clear_analyte = clear_analyte or (report_changed and current_analyte is None)
+        resolved_analyte = (
+            None
+            if should_clear_analyte
+            else (current_analyte if current_analyte is not None else context.current_analyte)
+        )
         updated = OrchestratorSessionContext.from_server(
             session_id=context.session_id,
             user_role=context.user_role,
             onboarding_acknowledged=context.onboarding_acknowledged,
             current_report_ref=current_report_ref or context.current_report_ref,
-            current_analyte=current_analyte or context.current_analyte,
+            current_analyte=resolved_analyte,
             last_intent=last_intent,
             pending_ocr_review=context.pending_ocr_review,
             transient_ui_context=transient_ui_context or context.transient_ui_context,
+            conversation_state=conversation_state or context.conversation_state,
         )
         self.save(current_user, updated)
         return updated

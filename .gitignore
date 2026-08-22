@@ -66,3 +66,8 @@ data/chroma/
 AGENTS.md
 kilo.json
 docs/version-handoff/techdebt-v3-patient-history-handoff.md
+
+
+.agents/rules/vibecode-kit
+.agents/skills/
+.claude/

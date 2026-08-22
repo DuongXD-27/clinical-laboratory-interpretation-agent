@@ -1,0 +1,48 @@
+{
+    "suite": "clarification_quality",
+    "purpose": "Evaluate human-like clarification",
+    "cases": [
+        {
+            "id": "CLAR-001",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Giải thích kết quả của tôi"
+                }
+            ],
+            "expected": {
+                "behavior": "ask_for_needed_context",
+                "tone": "friendly",
+                "must_not_contain": [
+                    "current_analyte",
+                    "report_ref",
+                    "workflow"
+                ]
+            }
+        },
+        {
+            "id": "CLAR-002",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Chỉ số này nghĩa là gì?"
+                }
+            ],
+            "expected": {
+                "behavior": "use_previous_context_or_offer_options"
+            }
+        },
+        {
+            "id": "CLAR-003",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "So với trước thì sao?"
+                }
+            ],
+            "expected": {
+                "behavior": "resolve_previous_context_or_explain_need"
+            }
+        }
+    ]
+}
