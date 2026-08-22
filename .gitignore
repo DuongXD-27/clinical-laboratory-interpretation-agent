@@ -68,6 +68,9 @@ kilo.json
 docs/version-handoff/techdebt-v3-patient-history-handoff.md
 
 
+# Local debug / audit scratch files
+scratch/
+
 .agents/rules/vibecode-kit
 .agents/skills/
 .claude/
