@@ -5,7 +5,10 @@ from pydantic import BaseModel, Field
 
 IndicatorStatus = str
 
-SessionRole = Literal["patient", "doctor", "guest"]
+# "admin" nam trong day vi /auth/login tra ve role, va thieu no thi tai khoan
+# admin dang nhap dung mat khau van an 500 o buoc dung response — trieu chung
+# ("dang nhap that bai") khong he chi ve mot Literal thieu gia tri.
+SessionRole = Literal["patient", "doctor", "guest", "admin"]
 VerificationStatus = Literal["unverified", "pending_review", "verified"]
 ReviewOutcome = Literal["pending", "agreed", "corrected", "skipped"]
 ReviewFlagCode = Literal[
@@ -22,7 +25,14 @@ ReviewFlagSeverity = Literal["high", "medium"]
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=1)
+    """Đăng nhập bằng tên đăng nhập HOẶC email.
+
+    Giữ nguyên tên trường `username` dù nó nhận cả email: đổi tên trường là phá
+    hợp đồng API với frontend đã deploy và với mọi test hiện có, đổi lấy một cái
+    tên đẹp hơn. Backend tra cả hai cột trong một câu truy vấn.
+    """
+
+    username: str = Field(..., min_length=1, description="Tên đăng nhập hoặc email")
     password: str = Field(..., min_length=1)
 
 
@@ -45,6 +55,10 @@ class RegisterRequest(BaseModel):
         max_length=128,
         description="Tối thiểu 8 ký tự",
     )
+    # Không bắt buộc, có chủ ý. Bắt buộc email là chặn mọi người đang đăng ký
+    # bình thường hôm nay, đổi lấy một tính năng chưa ai dùng. Ai không điền thì
+    # đăng nhập bằng tên như cũ.
+    email: str | None = Field(default=None, max_length=320)
 
 
 class LoginResponse(BaseModel):
@@ -58,6 +72,7 @@ class RegisterResponse(BaseModel):
     id: int
     username: str
     role: Literal["patient"]
+    email: str | None = None
 
 
 class GuestSessionResponse(BaseModel):
@@ -710,6 +725,7 @@ class SaveReportResponse(BaseModel):
 
 
 TrendFilter = Literal["latest5", "three_months"]
+ObservedDirection = Literal["increasing", "decreasing"]
 
 
 class TrendAnalyteSummary(BaseModel):
@@ -741,14 +757,102 @@ class TrendResponse(BaseModel):
     result_count: int
     trend_available: bool
     points: list[TrendPointResponse] = Field(default_factory=list)
+    observed_direction: ObservedDirection | None = None
     reason: str | None = None
     section: str | None = None
     section_label: str | None = None
     critical_status: str | None = None
     approaching_critical: bool = False
+    critical_alert: CriticalAlertSchema | None = None
 
 
 class TrendExplanationResponse(BaseModel):
     explanation: str
     fallback: bool = False
     reason: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Admin — trace vận hành
+#
+# Không schema nào dưới đây mang dữ liệu bệnh nhân. Cùng nguyên tắc đã khiến
+# listener SQLAlchemy không bao giờ log `statement`/`parameters`: người lo hạ
+# tầng cần biết cái gì chậm và cái gì hỏng, không cần biết ai khám gì.
+# ---------------------------------------------------------------------------
+class RequestTraceSchema(BaseModel):
+    model_config = {
+        "from_attributes": True,
+    }
+
+    request_id: str
+    created_at: datetime
+    method: str
+    path: str
+    status_code: int
+    duration_ms: float
+    db_query_count: int
+    db_ms: float
+    llm_call_count: int
+    llm_ms: float
+    llm_error_count: int
+    user_role: str | None = None
+    server_timing: str | None = None
+
+
+class RequestTraceListResponse(BaseModel):
+    total: int
+    items: list[RequestTraceSchema] = Field(default_factory=list)
+
+
+class TraceSummarySchema(BaseModel):
+    """Vài con số tổng hợp cho đầu màn admin.
+
+    Cố ý không có ngưỡng cảnh báo nào. Ngưỡng phải chọn từ số đo thật; đặt bừa
+    rồi tô đỏ theo nó chỉ dạy người xem bỏ qua màu đỏ.
+    """
+
+    request_count: int
+    avg_duration_ms: float
+    max_duration_ms: float
+    llm_call_count: int
+    llm_error_count: int
+    server_error_count: int
+    window_hours: int
+
+
+class TracingStatusSchema(BaseModel):
+    """Langfuse đang bật hay tắt, và có che dữ liệu không.
+
+    Cần thiết vì "trace trống" có hai nguyên nhân hoàn toàn khác nhau: chưa cấu
+    hình key, hay đã cấu hình mà không có traffic. Không phơi key ra, chỉ phơi
+    trạng thái và host.
+    """
+
+    langfuse_configured: bool
+    langfuse_host: str
+    masked: bool
+    trace_persistence_enabled: bool
+    retention_days: int
+
+
+class GoogleLoginRequest(BaseModel):
+    """ID token do Google Identity Services trả cho trình duyệt.
+
+    Không có trường `email`, `role` hay bất cứ thứ gì mô tả người dùng: mọi
+    thông tin danh tính phải lấy từ token đã được server xác minh chữ ký. Nhận
+    thêm bất kỳ trường nào từ client là mở đường cho việc tự khai mình là ai.
+    """
+
+    credential: str = Field(..., min_length=1)
+
+
+class GoogleStatusResponse(BaseModel):
+    """Có bật đăng nhập bằng Google không, và client id nào.
+
+    Client id là thông tin công khai — nó nằm sẵn trong mã nguồn mọi trang dùng
+    Google Sign-In. Trả qua API thay vì nhúng vào bundle lúc build: biến
+    NEXT_PUBLIC_* bị Next.js dán cứng vào JS nên đổi là phải build lại.
+    """
+
+    enabled: bool
+    client_id: str | None = None

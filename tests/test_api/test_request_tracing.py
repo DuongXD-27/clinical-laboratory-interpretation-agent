@@ -238,3 +238,37 @@ def test_semaphore_wait_is_not_counted_as_an_llm_call():
 
     assert fields["llm_call_count"] == 1
     assert fields["llm_ms"] == pytest.approx(100.0)
+
+
+# --- Nối các dòng log của cùng một request --------------------------------
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_log_shares_the_request_id_with_the_http_log(client, caplog):
+    """Một lượt gọi HTTP chỉ được có MỘT request_id, dù sinh ra nhiều dòng log.
+
+    `orchestrator_turn` từng tự sinh `uuid.uuid4().hex` riêng. Hệ quả: một lượt
+    gọi đẻ ra hai dòng mang hai id khác nhau, không cách nào nối lại — đúng thứ
+    mà cả lớp trace tồn tại để làm. Cùng id đó còn đi ra header `X-Request-ID`
+    và vào bảng `request_traces`, nên admin dán một id là thấy cả chuỗi.
+    """
+
+    guest = await client.post("/api/v1/auth/guest")
+    headers = {"Authorization": f"Bearer {guest.json()['access_token']}"}
+
+    with caplog.at_level(logging.INFO, logger="src"):
+        response = await client.post(
+            "/api/v1/orchestrator/message",
+            headers=headers,
+            json={"message": "xin chao"},
+        )
+
+    assert response.status_code == 200
+    header_id = response.headers["X-Request-ID"]
+
+    turns = [record for record in caplog.records if record.getMessage() == "orchestrator_turn"]
+    assert turns, "không thấy dòng orchestrator_turn nào"
+
+    assert turns[-1].request_id == header_id, (
+        "orchestrator ghi một id khác với id của request — hai dòng log không nối được"
+    )

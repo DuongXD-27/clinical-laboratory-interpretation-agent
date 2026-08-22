@@ -1,4 +1,11 @@
 import type {
+  RequestTrace,
+  RequestTraceListResponse,
+  TraceQuery,
+  TraceSummary,
+  TracingStatus,
+} from "@/types/admin";
+import type {
   DoctorQueueResponse,
   DoctorReportDetail,
   FindingReviewResponse,
@@ -10,11 +17,18 @@ import type {
   LabReportListResponse,
   ReportQuestion,
 } from "@/types/history";
-import type { OrchestratorResponse, OrchestratorUiContext } from "@/types/orchestrator";
+import type {
+  OrchestratorResponse,
+  OrchestratorStreamEvent,
+  OrchestratorUiContext,
+} from "@/types/orchestrator";
+import { consumeSseStream } from "@/lib/orchestratorChat.mjs";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export type Role = "patient" | "doctor" | "guest";
+// "admin" la role thu tu. Thieu no o day thi saveSession() ep kieu sai va
+// dieu huong sau dang nhap khong tim thay nhanh nao khop.
+export type Role = "patient" | "doctor" | "guest" | "admin";
 
 const TOKEN_KEY = "vmec05_token";
 const ROLE_KEY = "vmec05_role";
@@ -82,11 +96,15 @@ export async function login(username: string, password: string) {
  * Không có tham số `role`: backend luôn tạo role `patient`, tài khoản bác sĩ do
  * admin cấp bằng script. Gửi kèm role ở đây cũng vô nghĩa.
  */
-export async function register(username: string, password: string) {
+export async function register(username: string, password: string, email?: string) {
+  const trimmed = email?.trim();
   const response = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    // Bỏ trống thì KHÔNG gửi khoá `email` chứ không gửi chuỗi rỗng: backend
+    // chuẩn hoá "" về null nên hai cách cùng kết quả, nhưng không gửi thì rõ
+    // ý hơn khi đọc log và khi ai đó soi request trong DevTools.
+    body: JSON.stringify(trimmed ? { username, password, email: trimmed } : { username, password }),
   });
 
   if (!response.ok) {
@@ -119,6 +137,22 @@ export async function authFetch(path: string, init: RequestInit = {}) {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+
+/** Máy chủ nói vai trò này không có quyền — phía client đang tin nhầm.
+ *
+ * Tách khỏi `UnauthorizedError` vì hai thứ này có ý nghĩa khác nhau: 401 là
+ * "phiên hỏng", 403 là "phiên đúng nhưng sai vai trò".
+ *
+ * Chỉ nhóm endpoint admin ném lỗi này. Không dùng chung cho `/history`: ở đó
+ * 403 nghĩa là "khách chưa đăng ký", và câu trả lời đúng là mời đăng ký chứ
+ * không phải xoá phiên của người ta.
+ */
+export class ForbiddenError extends Error {
+  constructor(detail?: string) {
+    super(detail || "Tài khoản của bạn không có quyền truy cập chức năng này");
+    this.name = "ForbiddenError";
+  }
 }
 
 /** Token hết hạn/không hợp lệ — người gọi nên xoá phiên và quay về màn đăng nhập. */
@@ -325,6 +359,31 @@ export async function sendOrchestratorMessage(
   return response.json();
 }
 
+export async function streamOrchestratorMessage(
+  message: string,
+  options: {
+    uiContext?: OrchestratorUiContext;
+    clientRequestId: string;
+    signal: AbortSignal;
+    onEvent: (event: OrchestratorStreamEvent) => void;
+  },
+): Promise<OrchestratorStreamEvent> {
+  const response = await authFetch("/api/v1/orchestrator/message/stream", {
+    method: "POST",
+    signal: options.signal,
+    headers: { Accept: "text/event-stream" },
+    body: JSON.stringify({
+      message,
+      client_request_id: options.clientRequestId,
+      ...(options.uiContext ? { ui_context: options.uiContext } : {}),
+    }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) throw new Error("Trợ lý chưa thể kết nối lúc này. Vui lòng thử lại.");
+  return consumeSseStream(response.body, options.onEvent) as Promise<OrchestratorStreamEvent>;
+}
+
 export async function acknowledgeOrchestratorOnboarding(): Promise<OrchestratorResponse> {
   const response = await authFetch("/api/v1/orchestrator/onboarding/acknowledge", {
     method: "POST",
@@ -335,4 +394,111 @@ export async function acknowledgeOrchestratorOnboarding(): Promise<OrchestratorR
     throw new Error(await readErrorDetail(response, "Chưa ghi nhận được xác nhận sử dụng trợ lý"));
   }
   return response.json();
+}
+
+
+// ---------------------------------------------------------------------------
+// Admin — trace vận hành
+//
+// Không hàm nào dưới đây chạm vào bệnh án. Quyền của admin dừng ở dữ liệu vận
+// hành; `/history` vẫn chỉ nhận patient và doctor.
+// ---------------------------------------------------------------------------
+
+export async function fetchTracingStatus(): Promise<TracingStatus> {
+  const response = await authFetch("/api/v1/admin/tracing/status");
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không đọc được trạng thái tracing"));
+  }
+  return response.json();
+}
+
+export async function fetchTraceSummary(windowHours = 24): Promise<TraceSummary> {
+  const response = await authFetch(`/api/v1/admin/traces/summary?window_hours=${windowHours}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được số liệu tổng hợp"));
+  }
+  return response.json();
+}
+
+export async function fetchTraces(query: TraceQuery = {}): Promise<RequestTraceListResponse> {
+  const params = new URLSearchParams();
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  if (query.path) params.set("path", query.path);
+  if (query.minDurationMs !== undefined) params.set("min_duration_ms", String(query.minDurationMs));
+  if (query.statusCode !== undefined) params.set("status_code", String(query.statusCode));
+  if (query.onlyLlmErrors) params.set("only_llm_errors", "true");
+  if (query.windowHours !== undefined) params.set("window_hours", String(query.windowHours));
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await authFetch(`/api/v1/admin/traces${suffix}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được danh sách trace"));
+  }
+  return response.json();
+}
+
+/** Tra một trace theo request_id — chính là id người dùng đọc được từ màn lỗi. */
+export async function fetchTrace(requestId: string): Promise<RequestTrace> {
+  const response = await authFetch(`/api/v1/admin/traces/${encodeURIComponent(requestId)}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 404) {
+    throw new Error("Không tìm thấy trace với request_id này");
+  }
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không mở được trace"));
+  }
+  return response.json();
+}
+
+
+// ---------------------------------------------------------------------------
+// Đăng nhập bằng Google
+// ---------------------------------------------------------------------------
+
+export type GoogleStatus = { enabled: boolean; client_id: string | null };
+
+/** Hỏi server xem có bật đăng nhập bằng Google không, và client id nào.
+ *
+ * Không dùng biến NEXT_PUBLIC_*: Next.js dán cứng chúng vào bundle lúc build,
+ * nên đổi client id là phải build và deploy lại frontend. Đọc từ API thì chỉ
+ * cần đổi biến môi trường rồi khởi động lại backend.
+ */
+export async function fetchGoogleStatus(): Promise<GoogleStatus> {
+  const response = await fetch(`${API_BASE}/api/v1/auth/google/status`);
+  if (!response.ok) return { enabled: false, client_id: null };
+  return response.json();
+}
+
+/** Đổi ID token của Google lấy phiên đăng nhập của hệ thống này.
+ *
+ * Chỉ gửi đúng `credential`. Mọi thông tin danh tính do server đọc ra từ token
+ * đã xác minh chữ ký — gửi kèm email hay tên từ đây là để client tự khai mình
+ * là ai.
+ */
+export async function loginWithGoogle(credential: string) {
+  const response = await fetch(`${API_BASE}/api/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không đăng nhập được bằng Google"));
+  }
+
+  const data = await response.json();
+  saveSession(data.access_token, data.role, data.username);
+  return data as { access_token: string; role: Role; username: string };
 }

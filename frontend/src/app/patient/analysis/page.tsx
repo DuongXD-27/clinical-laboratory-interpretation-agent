@@ -9,6 +9,7 @@ import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
+import { cn } from "@/lib/utils";
 
 function metricInputId(name: string) {
   return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -131,7 +132,7 @@ export default function PatientAnalysisPage() {
   const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
 
   return (
-    <div className="analysis-layout">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {result ? (
         <AnalysisResultView
           result={result}
@@ -146,78 +147,105 @@ export default function PatientAnalysisPage() {
         />
       ) : (
         <>
-          <div className="page-section-heading">
-            <div>
-              <span className="eyebrow">Phân tích mới</span>
-              <h2>Nhập kết quả xét nghiệm</h2>
-              <p>Chọn cách nhập phù hợp, kiểm tra thông tin và bắt đầu phân tích.</p>
-            </div>
-            <button type="button" onClick={resetAnalysis} className="secondary-button">Xóa dữ liệu đang nhập</button>
-          </div>
+          <section className="space-y-1">
+            <h1 className="text-2xl font-bold text-foreground">
+              Nhập kết quả xét nghiệm
+            </h1>
+            <p className="text-muted-foreground">
+              Tải phiếu xét nghiệm hoặc nhập các chỉ số để hệ thống giải thích kết quả.
+            </p>
+          </section>
 
           {isGuest && (
-            <div className="info-message" role="status">
-              <p className="font-semibold text-slate-800">Bạn đang dùng thử với tư cách khách</p>
-              <p className="mt-1">Kết quả phân tích không được lưu lại và sẽ mất khi bạn thoát phiên.</p>
+            <div className="p-4 rounded-xl bg-[var(--surface-subtle)] border border-[var(--border)] text-sm" role="status">
+              <p className="font-semibold text-foreground">Bạn đang dùng thử với tư cách khách</p>
+              <p className="mt-1 text-muted-foreground">Kết quả phân tích không được lưu lại và sẽ mất khi bạn thoát phiên.</p>
             </div>
           )}
 
-          <div className="input-workspace">
-            <div className="mode-tabs" role="tablist" aria-label="Cách nhập kết quả xét nghiệm">
-              <button
-                type="button"
-                role="tab"
-                id="manual-tab"
-                aria-selected={inputMode === "manual"}
-                aria-controls="manual-panel"
-                tabIndex={inputMode === "manual" ? 0 : -1}
-                onClick={() => setInputMode("manual")}
-                className={inputMode === "manual" ? "active" : ""}
-              >
-                Nhập tay
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id="ocr-tab"
-                aria-selected={inputMode === "ocr"}
-                aria-controls="upload-panel"
-                tabIndex={inputMode === "ocr" ? 0 : -1}
-                onClick={() => setInputMode("ocr")}
-                className={inputMode === "ocr" ? "active" : ""}
-              >
-                Tải ảnh phiếu
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2" aria-label="Cách nhập kết quả xét nghiệm" role="group">
+                <button
+                  type="button"
+                  aria-pressed={inputMode === "manual"}
+                  onClick={() => setInputMode("manual")}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    inputMode === "manual"
+                      ? "bg-[var(--glass-surface)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_2px_10px_rgba(0,0,0,0.05)] border border-[var(--holo-cyan)]/20 text-foreground"
+                      : "bg-[var(--surface)] border border-[var(--border)] text-muted-foreground hover:bg-[var(--surface-subtle)] hover:text-foreground"
+                  )}
+                >
+                  Nhập tay
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={inputMode === "ocr"}
+                  onClick={() => setInputMode("ocr")}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    inputMode === "ocr"
+                      ? "bg-[var(--glass-surface)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_2px_10px_rgba(0,0,0,0.05)] border border-[var(--holo-cyan)]/20 text-foreground"
+                      : "bg-[var(--surface)] border border-[var(--border)] text-muted-foreground hover:bg-[var(--surface-subtle)] hover:text-foreground"
+                  )}
+                >
+                  Tải ảnh phiếu
+                </button>
+              </div>
+              
+              <button type="button" onClick={resetAnalysis} className="px-4 py-2 text-sm font-medium text-destructive/90 bg-transparent hover:text-destructive hover:bg-destructive/5 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-destructive/30 rounded-xl outline-none">
+                Xóa dữ liệu đang nhập
               </button>
             </div>
 
             {inputMode === "manual" && (
-              <section id="manual-panel" role="tabpanel" aria-labelledby="manual-tab" className="patient-card p-5 sm:p-7">
-                <ol className="manual-flow" aria-label="Quy trình nhập tay">
-                  <li className="active"><span>1</span> Nhập chỉ số</li>
-                  <li><span>2</span> Thông tin chung</li>
-                  <li><span>3</span> Phân tích kết quả</li>
-                </ol>
-
-                <div className="section-heading mt-7">
-                  <span className="eyebrow">Bước 1</span>
-                  <h2>Chỉ số xét nghiệm</h2>
-                  <p>Chỉ thêm những chỉ số có trên phiếu của bạn. Số lượng chỉ số không bị giới hạn cố định.</p>
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-slate-500">Đã chọn {selectedMetrics.length} chỉ số</p>
-                  <button type="button" onClick={() => setSelectorOpen(true)} className="secondary-button w-full sm:w-auto">
-                    <span aria-hidden="true">+</span> Thêm chỉ số
-                  </button>
-                </div>
-
-                {selectedMetrics.length === 0 ? (
-                  <div className="empty-metrics mt-5">
-                    <div className="empty-metrics-icon" aria-hidden="true">+</div>
-                    <p className="font-medium text-slate-700">Bạn chưa thêm chỉ số xét nghiệm.</p>
-                    <button type="button" onClick={() => setSelectorOpen(true)} className="text-button mt-2">Thêm chỉ số đầu tiên</button>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex items-center text-sm font-medium whitespace-nowrap overflow-x-auto pb-2 sm:pb-0 select-none" aria-label="Quy trình nhập tay">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold shadow-sm">1</span>
+                    <span>Nhập kết quả</span>
                   </div>
-                ) : (
+                  <div className="w-8 sm:w-12 h-px bg-[var(--border)]/60 mx-3 sm:mx-4" />
+                  <div className="flex items-center gap-2 text-muted-foreground/70">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full border border-[var(--border)]/50 text-xs font-semibold">2</span>
+                    <span>Phân tích</span>
+                  </div>
+                  <div className="w-8 sm:w-12 h-px bg-[var(--border)]/60 mx-3 sm:mx-4" />
+                  <div className="flex items-center gap-2 text-muted-foreground/70">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full border border-[var(--border)]/50 text-xs font-semibold">3</span>
+                    <span>Kết quả</span>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground">Chỉ số xét nghiệm</h2>
+                      <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                        Chỉ thêm những chỉ số có trên phiếu của bạn. Số lượng chỉ số không bị giới hạn cố định.
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                      <button type="button" onClick={() => setSelectorOpen(true)} className="px-4 py-2 text-sm font-medium bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:bg-[var(--surface-subtle)] transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex items-center gap-2 justify-center w-full sm:w-auto">
+                        <span aria-hidden="true">+</span> Thêm chỉ số
+                      </button>
+                      <p className="text-xs font-medium text-muted-foreground">Đã chọn {selectedMetrics.length} chỉ số</p>
+                    </div>
+                  </div>
+
+                  {selectedMetrics.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-8 sm:p-10 bg-[var(--surface-subtle)] border border-[var(--border)]/60 border-dashed rounded-[1.25rem] text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.01)]">
+                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-background border border-[var(--border)] text-[var(--brand)] text-xl shadow-sm mb-4 transition-transform hover:scale-105 duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                      </div>
+                      <p className="text-base font-semibold text-foreground">Chưa có chỉ số xét nghiệm</p>
+                      <p className="text-sm text-muted-foreground mt-1 mb-4">Hãy thêm các chỉ số có trên phiếu kết quả của bạn.</p>
+                      <button type="button" onClick={() => setSelectorOpen(true)} className="text-sm font-medium text-[var(--brand)] hover:text-[var(--brand-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-ring rounded outline-none transition-colors duration-200">
+                        Thêm chỉ số đầu tiên
+                      </button>
+                    </div>
+                  ) : (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {selectedMetrics.map((metric) => (
                       <MetricInput
@@ -234,37 +262,41 @@ export default function PatientAnalysisPage() {
                   </div>
                 )}
 
-                <div className="manual-meta-section">
-                  <div className="section-heading">
-                    <span className="eyebrow">Bước 2</span>
-                    <h2>Thông tin chung</h2>
-                    <p>Thông tin này được gửi theo đúng payload hiện tại để đối chiếu khoảng tham chiếu.</p>
+                <div className="space-y-6 pt-4 border-t border-[var(--border)]/50">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Thông tin chung</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Thông tin này được dùng để đối chiếu khoảng tham chiếu.</p>
                   </div>
-                  <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <label className="field-label" htmlFor="manual-age">Tuổi
-                      <input id="manual-age" type="number" min="18" max="60" value={manualMeta.age} onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))} className="form-control mt-2" />
+                  
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 bg-[var(--surface-subtle)] p-5 sm:p-6 rounded-2xl border border-[var(--border)]">
+                    <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-age">Tuổi
+                      <input id="manual-age" type="number" min="18" max="60" value={manualMeta.age} onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground" />
                     </label>
-                    <label className="field-label" htmlFor="manual-gender">Giới tính
-                      <select id="manual-gender" value={manualMeta.gender} onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))} className="form-control mt-2">
+                    <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-gender">Giới tính
+                      <select id="manual-gender" value={manualMeta.gender} onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground">
                         <option value="male">Nam</option>
                         <option value="female">Nữ</option>
                       </select>
                     </label>
-                    <label className="field-label" htmlFor="manual-date">Ngày xét nghiệm
-                      <input id="manual-date" type="date" value={manualMeta.date} onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))} className="form-control mt-2" />
+                    <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-date">Ngày xét nghiệm
+                      <input id="manual-date" type="date" value={manualMeta.date} onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground" />
                     </label>
                   </div>
                 </div>
 
-                {error && <div role="alert" className="error-message">{error}</div>}
-                <button type="button" onClick={handleManualAnalyze} disabled={loading} className="primary-button mt-6 w-full">
-                  {loading ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
-                </button>
-              </section>
-            )}
+                {error && <div role="alert" className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">{error}</div>}
+                
+                <div className="pt-2">
+                  <button type="button" onClick={handleManualAnalyze} disabled={loading} className="w-full sm:w-auto px-8 py-3.5 bg-[var(--brand)] text-primary-foreground text-sm font-semibold rounded-xl hover:bg-[var(--brand-strong)] transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-sm shadow-[var(--brand-soft)] hover:shadow-md hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+                    {loading ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
             {inputMode === "ocr" && (
-              <div id="upload-panel" role="tabpanel" aria-labelledby="ocr-tab">
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <OcrReviewPanel
                   key={ocrPanelKey}
                   onResult={(data) => {

@@ -1,0 +1,84 @@
+{
+  "test_id": "TC-G2-01",
+  "purpose": "Normal supported flow",
+  "timestamp": "2026-08-15T07:09:02.055914+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "normal",
+    "critical": false
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 4.5,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.0,
+        "status": "normal",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Giá trị Kali là 4.5 mmol/L, nằm trong khoảng tham chiếu được hệ thống sử dụng, nên trạng thái là bình thường (normal).",
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": true,
+    "call_success": true,
+    "fallback_used": false,
+    "successful_call_count": 1,
+    "indicator_count": 1,
+    "request_id": "3c4e1af4953249969c9bc42b61043a5e",
+    "events": [
+      {
+        "name": "llm-explanation-call",
+        "duration_ms": 1606.708,
+        "analyte_id": "potassium",
+        "outcome": "success"
+      }
+    ]
+  },
+  "latency_ms": 4998.125,
+  "request_id": "3c4e1af4953249969c9bc42b61043a5e",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=7.413, analysis-critical-detector;dur=0.050, analysis-analyzer;dur=4962.609, analysis-generate-questions;dur=2.678, analysis-guardrail;dur=1.930, analysis-graph-total;dur=4990.532, analysis-response-map;dur=0.052, http-total;dur=4995.499",
+  "verdict": "PASS"
+}

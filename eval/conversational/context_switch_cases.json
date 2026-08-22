@@ -1,0 +1,64 @@
+{
+    "suite": "context_switch",
+    "purpose": "Evaluate context switching between analytes",
+    "cases": [
+        {
+            "id": "CTX-001",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Giải thích giúp em WBC"
+                },
+                {
+                    "role": "assistant",
+                    "expected_action": "explain_wbc"
+                },
+                {
+                    "role": "user",
+                    "message": "Còn HbA1c thì sao?"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "active_context": "HbA1c",
+                "not": "WBC"
+            }
+        },
+        {
+            "id": "CTX-002",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "So sánh WBC của tôi"
+                },
+                {
+                    "role": "user",
+                    "message": "À thôi xem đường huyết đi"
+                }
+            ],
+            "expected": {
+                "active_context": "glucose"
+            }
+        },
+        {
+            "id": "CTX-003",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Kết quả gần nhất của tôi sao rồi?"
+                },
+                {
+                    "role": "assistant",
+                    "expected_action": "show_report"
+                },
+                {
+                    "role": "user",
+                    "message": "Còn lần trước nữa?"
+                }
+            ],
+            "expected": {
+                "intent": "VIEW_HISTORY"
+            }
+        }
+    ]
+}

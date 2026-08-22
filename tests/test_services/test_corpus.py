@@ -24,6 +24,8 @@ from src.services.medical_knowledge_retriever import ChromaMedicalKnowledgeRetri
 from src.services.vector_store import VectorStore
 from src.scripts.ingest_kb import ingest, load_corpus
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 class FakeEmbeddingProvider:
     provider_name = "fake"
@@ -239,10 +241,18 @@ def test_ingestion_and_idempotency(tmp_path):
         embedding_provider=FakeEmbeddingProvider(),
     )
 
+    # manifest_path phai tro vao tmp_path. Mac dinh cua ingest() la
+    # data/reference/medical_kb_manifest.json — mot file DUOC TRACK, nen chay
+    # test se ghi de len no bang hash cua corpus dang co tren dia. Hau qua that:
+    # working tree ban sau moi lan chay suite, va manifest tu "chua lanh" chinh
+    # no nen pin toan ven khong con phat hien duoc corpus bi doi.
+    manifest = tmp_path / "medical_kb_manifest.json"
+
     doc_count_1 = ingest(
         json_path="data/reference/explanations.json",
         validation_mode="development",
         vector_store=store,
+        manifest_path=manifest,
     )
     assert doc_count_1 > 0
     assert store.get_collection().count() == doc_count_1
@@ -252,6 +262,7 @@ def test_ingestion_and_idempotency(tmp_path):
         json_path="data/reference/explanations.json",
         validation_mode="development",
         vector_store=store,
+        manifest_path=manifest,
     )
     assert doc_count_2 == doc_count_1
     assert store.get_collection().count() == doc_count_1
@@ -344,3 +355,36 @@ def test_retriever_status_and_critical_decoupling(tmp_path):
     assert "Mức rất cao" in res_tg[0]["text"]
     for chunk in res_tg:
         assert "Fake critical" not in chunk["text"], "CRITICAL NOTE WAS LEAKED INTO NON-CRITICAL BAND RETRIEVAL!"
+
+
+def test_ingest_never_writes_the_tracked_manifest(tmp_path):
+    """ingest() chi duoc ghi vao manifest_path duoc truyen vao.
+
+    Truoc day duong dan manifest bi hardcode trong ingest(), nen moi lan chay
+    suite la data/reference/medical_kb_manifest.json — file duoc track — bi ghi
+    de bang hash cua corpus dang co tren dia. Hai hau qua: working tree ban sau
+    moi lan chay test, va pin toan ven tu chuan lai theo corpus hien tai nen no
+    khong the phat hien corpus bi doi nua. Do la mot guard tu vo hieu hoa chinh
+    minh.
+    """
+
+    tracked = REPO_ROOT / "data/reference/medical_kb_manifest.json"
+    before = tracked.read_bytes()
+
+    store = VectorStore(
+        persist_dir=str(tmp_path / "chroma"),
+        collection_name="medical_kb_v4",
+        corpus_version="medical-kb-v4",
+        embedding_provider=FakeEmbeddingProvider(),
+    )
+    target = tmp_path / "manifest.json"
+
+    ingest(
+        json_path="data/reference/explanations.json",
+        validation_mode="development",
+        vector_store=store,
+        manifest_path=target,
+    )
+
+    assert target.exists(), "manifest phai duoc ghi vao duong dan truyen vao"
+    assert tracked.read_bytes() == before, "ingest() vua ghi de len file duoc track"

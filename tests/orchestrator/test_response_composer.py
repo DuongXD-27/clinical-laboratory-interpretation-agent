@@ -226,3 +226,35 @@ async def test_fail_closed_blocked_results_do_not_enter_composer(monkeypatch, re
     assert calls == 0
     assert response.status == ResponseStatus.BLOCKED
     assert response.reason_code == reason_code
+
+
+def test_needs_input_human_friendly_mapping():
+    from src.orchestrator.response_composer import map_needs_input_prompt
+
+    missing_fields = ["current_report_ref", "current_analyte"]
+    fallback = "Tôi cần thêm thông tin để tiếp tục an toàn."
+
+    mapped = map_needs_input_prompt(missing_fields, fallback)
+
+    assert "current_report_ref" not in mapped
+    assert "current_analyte" not in mapped
+    assert "Hiện mình chưa thấy phiếu xét nghiệm nào trong tài khoản của bạn" in mapped
+    assert "Bạn có thể gửi ảnh phiếu xét nghiệm" in mapped
+
+
+def test_safety_refusal_wording():
+    from src.orchestrator.response_composer import _safety_refusal_message
+
+    msg_diag = _safety_refusal_message(ReasonCode.MEDICAL_DIAGNOSIS_REQUEST)
+    assert "không thể đưa ra chẩn đoán bệnh" in msg_diag
+    assert "bác sĩ" in msg_diag
+    assert "MEDICAL_DIAGNOSIS_REQUEST" not in msg_diag
+    assert "UNSUPPORTED_OR_UNSAFE" not in msg_diag
+
+    msg_cause = _safety_refusal_message(ReasonCode.MEDICAL_CAUSE_REQUEST)
+    assert "không thể xác định nguyên nhân cá nhân" in msg_cause
+    assert "MEDICAL_CAUSE_REQUEST" not in msg_cause
+
+    msg_treat = _safety_refusal_message(ReasonCode.TREATMENT_REQUEST)
+    assert "không thể hướng dẫn phương pháp điều trị" in msg_treat
+    assert "TREATMENT_REQUEST" not in msg_treat

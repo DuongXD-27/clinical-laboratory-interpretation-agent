@@ -62,12 +62,15 @@ test("assistant never creates navigation from prose text", () => {
 test("patient shell mounts the assistant launcher and component owns onboarding UI", () => {
   const shell = readFileSync("src/components/patient/PatientShell.tsx", "utf8");
   const widget = readFileSync("src/components/patient/AssistantWidget.tsx", "utf8");
+  const panel = readFileSync("src/components/patient/assistant/ChatPanel.tsx", "utf8");
+  const controller = readFileSync("src/components/patient/assistant/useOrchestratorChat.ts", "utf8");
   const css = readFileSync("src/app/globals.css", "utf8");
 
   assert.match(shell, /<AssistantWidget role=\{session\.role\} \/>/);
   assert.match(widget, /aria-label=\{open \? "Đóng trợ lý AI" : "Mở trợ lý AI"\}/);
   assert.match(widget, /acknowledgeOrchestratorOnboarding/);
-  assert.match(widget, /ONBOARDING_REQUIRED/);
+  assert.match(controller, /ONBOARDING_REQUIRED/);
+  assert.match(panel, /Trước khi bắt đầu/);
   assert.match(css, /\.assistant-panel/);
-  assert.match(css, /calc\(100vw - 24px\)/);
+  assert.match(css, /height: 100dvh/);
 });

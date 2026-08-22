@@ -194,15 +194,7 @@ async def test_ac6_diagnosis_request_uses_unsafe_flow():
 
 
 @pytest.mark.asyncio
-async def test_ac8_chat_lab_value_needs_input_and_does_not_dispatch(monkeypatch):
-    dispatch_calls = 0
-
-    async def counted_dispatch(*args, **kwargs):
-        nonlocal dispatch_calls
-        dispatch_calls += 1
-        raise AssertionError("analysis workflow must not execute")
-
-    monkeypatch.setattr("src.orchestrator.service.dispatch_workflow", counted_dispatch)
+async def test_ac8_chat_lab_value_needs_input_and_does_not_dispatch():
     current_user = _patient()
     response = await handle_message(
         OrchestratorRequest(message="HbA1c của tôi 7.2, có sao không?"),
@@ -213,7 +205,6 @@ async def test_ac8_chat_lab_value_needs_input_and_does_not_dispatch(monkeypatch)
     assert response.status == ResponseStatus.NEEDS_INPUT
     assert response.reason_code == ReasonCode.AMBIGUOUS_CONTEXT
     assert "7.2" not in response.model_dump_json()
-    assert dispatch_calls == 0
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -29,11 +30,30 @@ def load_corpus(json_path: Path | str = "data/reference/explanations.json") -> l
         return json.load(f)
 
 
+
+def corpus_sha256(path: Path | str) -> str:
+    """SHA-256 của corpus, tính trên byte đã chuẩn hoá CRLF -> LF.
+
+    Cố tình KHÔNG hash byte thô trên đĩa. Repo không có `.gitattributes` và
+    `core.autocrlf=true` là mặc định phổ biến trên Windows, nên cùng một commit
+    cho ra file LF trên Linux và CRLF trên máy Windows. Hash byte thô vì thế
+    phụ thuộc vào máy checkout, không phụ thuộc vào nội dung — pin hash sẽ
+    xanh trên CI (Linux) và đỏ trên mọi máy Windows dù dữ liệu y hệt.
+
+    Chuẩn hoá dòng vẫn giữ trọn mục đích của pin: đổi một ký tự trong corpus
+    là hash đổi.
+    """
+
+    raw = Path(path).read_bytes()
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def ingest(
     json_path: Path | str = "data/reference/explanations.json",
     *,
     validation_mode: str = "development",
     vector_store: VectorStore | None = None,
+    manifest_path: Path | str = "data/reference/medical_kb_manifest.json",
 ) -> int:
     """Validate and ingest fine-grained corpus chunks into ChromaDB."""
     data = load_corpus(json_path)
@@ -90,10 +110,8 @@ def ingest(
     logger.info("Ingestion complete. Collection document count: %d", len(ids))
 
     # 4. Update manifest
-    import hashlib
-    manifest_path = Path("data/reference/medical_kb_manifest.json")
-    corpus_bytes = Path(json_path).read_bytes()
-    corpus_hash = hashlib.sha256(corpus_bytes).hexdigest()
+    manifest_path = Path(manifest_path)
+    corpus_hash = corpus_sha256(json_path)
     manifest_data = {
         "schema_version": 4,
         "corpus_version": "medical-kb-v4",

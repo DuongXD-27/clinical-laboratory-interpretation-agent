@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
-import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
-import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
-import { formatDate, reportTone, renderReferenceRange } from "@/lib/patientUi.mjs";
+import { formatDate, reportTone } from "@/lib/patientUi.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
@@ -146,46 +145,11 @@ export default function PatientReportDetail() {
         <div className="mt-6 flex flex-col gap-6">
           {indicatorGroups.map((group) => (
             <div key={group.label}>
-              <h4 className="indicator-group-title">{group.label}</h4>
+              <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
               <div className="mt-3 grid gap-3">
-                {group.items.map((indicator, index) => {
-                  const tone = reportTone(indicator.status);
-                  return (
-                    <article key={`${indicator.name}-${index}`} className={`result-card result-card-${tone}`}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <h3 className="font-semibold text-slate-950">{indicator.analyte_canonical ?? indicator.name}</h3>
-                          {indicator.analyte_raw && indicator.analyte_raw !== indicator.analyte_canonical && (
-                            <p className="mt-1 text-xs text-slate-500">Tên gốc: {indicator.analyte_raw}</p>
-                          )}
-                          <p className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-                            {indicator.value} <span className="text-sm font-medium text-slate-500">{indicator.unit}</span>
-                          </p>
-                          {renderReferenceRange(indicator) && (
-                            <p className="mt-1 text-xs text-slate-500">
-                              {renderReferenceRange(indicator)}
-                            </p>
-                          )}
-                        </div>
-                        <SeverityBadge level={tone} />
-                      </div>
-                      {indicator.explanation && (
-                        <div className="mt-4">
-                          <p className="finding-card__label text-slate-500">Giải thích của AI</p>
-                          <p className="text-sm leading-6 text-slate-600">{indicator.explanation}</p>
-                        </div>
-                      )}
-                      {indicator.doctor_note && (
-                        <DoctorNoteBlock
-                          note={indicator.doctor_note}
-                          doctorName={indicator.reviewed_by_username}
-                          reviewedAt={indicator.reviewed_at}
-                        />
-                      )}
-                      <SourcesDisclosure sources={indicator.sources} />
-                    </article>
-                  );
-                })}
+                {group.items.map((indicator, index) => (
+                  <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
+                ))}
               </div>
             </div>
           ))}

@@ -68,7 +68,7 @@ def resolve_context(
         return ResolvedContext(
             current_report_ref=current_report_ref,
             current_analyte=current_analyte,
-            reason_code=ReasonCode.AMBIGUOUS_CONTEXT,
+            forced_intent=IntentEnum.ANALYZE_TREND,
         )
 
     return ResolvedContext(

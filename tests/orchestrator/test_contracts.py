@@ -45,7 +45,7 @@ def _minimal_blocked_response(**updates):
     return payload
 
 
-def test_ac1_intent_enum_has_exactly_six_members():
+def test_ac1_intent_enum_has_exactly_seven_members():
     assert [member.name for member in IntentEnum] == [
         "UNSUPPORTED_OR_UNSAFE",
         "ANALYZE_REPORT",
@@ -53,6 +53,7 @@ def test_ac1_intent_enum_has_exactly_six_members():
         "VIEW_HISTORY",
         "ANALYZE_TREND",
         "GET_DOCTOR_QUESTIONS",
+        "SAFE_GENERAL",
     ]
 
 
@@ -281,6 +282,7 @@ def test_req_s02_session_context_declares_all_required_fields():
         "last_intent",
         "pending_ocr_review",
         "transient_ui_context",
+        "conversation_state",
     }
     declared = set(OrchestratorSessionContext.model_fields) | set(
         OrchestratorSessionContext.model_computed_fields

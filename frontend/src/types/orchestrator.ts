@@ -1,4 +1,4 @@
-import type { IndicatorResult, TrendResponse } from "./analysis";
+import type { CriticalAlert, IndicatorResult, TrendResponse } from "./analysis";
 
 export type OrchestratorStatus = "success" | "needs_input" | "blocked" | "error";
 
@@ -29,7 +29,8 @@ export type OrchestratorIntent =
   | "EXPLAIN_CURRENT_RESULT"
   | "VIEW_HISTORY"
   | "ANALYZE_TREND"
-  | "GET_DOCTOR_QUESTIONS";
+  | "GET_DOCTOR_QUESTIONS"
+  | "SAFE_GENERAL";
 
 export type OrchestratorDataType =
   | "analysis"
@@ -59,7 +60,7 @@ export type SuggestedAction =
 export type AnalysisPayload = {
   data_type: "analysis";
   indicators: IndicatorResult[];
-  critical_alerts?: unknown[];
+  critical_alerts?: CriticalAlert[];
   has_critical_values?: boolean;
 };
 
@@ -129,3 +130,36 @@ export type OrchestratorResponse = {
   sources?: string[];
   safety_notice?: string | null;
 };
+
+export type OrchestratorProgressStage =
+  | "routing"
+  | "medical_context"
+  | "longitudinal_retrieval"
+  | "response_composition";
+
+export type OrchestratorStreamEventType =
+  | "message.started"
+  | "progress"
+  | "message.completed"
+  | "error";
+
+type StreamEnvelope<TType extends OrchestratorStreamEventType, TPayload> = {
+  contract_version: "1.0";
+  event_id: string;
+  event_type: TType;
+  turn_id: string;
+  sequence: number;
+  occurred_at: string;
+  payload: TPayload;
+};
+
+export type MessageStartedEvent = StreamEnvelope<"message.started", Record<string, never>>;
+export type ProgressEvent = StreamEnvelope<"progress", { stage: OrchestratorProgressStage }>;
+export type MessageCompletedEvent = StreamEnvelope<"message.completed", { response: OrchestratorResponse }>;
+export type StreamErrorEvent = StreamEnvelope<"error", { message: string }>;
+
+export type OrchestratorStreamEvent =
+  | MessageStartedEvent
+  | ProgressEvent
+  | MessageCompletedEvent
+  | StreamErrorEvent;

@@ -4,14 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from src.models.db import ROLE_ADMIN, ROLE_DOCTOR, ROLE_PATIENT
 from src.services.auth import ROLE_GUEST, decode_access_token
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
-_VALID_ROLES = {"patient", "doctor", ROLE_GUEST}
+# Lay tu hang so thay vi go tay chuoi: doi ten mot role ma quen sua o day thi
+# moi token cua role do bi 401 hang loat, va trieu chung ("dang nhap duoc nhung
+# goi API nao cung 401") khong he chi ve file nay.
+_VALID_ROLES = {ROLE_PATIENT, ROLE_DOCTOR, ROLE_ADMIN, ROLE_GUEST}
 
 
 class CurrentUser:
@@ -40,6 +44,7 @@ class CurrentUser:
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> CurrentUser:
     if credentials is None:
@@ -62,6 +67,12 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Phiên đăng nhập đã cũ, vui lòng đăng nhập lại",
         )
+
+    # Gan role len request.state de middleware trace doc duoc ma khong phai giai
+    # ma JWT lan hai. Chi luu ROLE, khong luu username hay uid: bang trace co
+    # tinh khong gan voi ca nhan nao — du de biet "man bac si dang cham", khong
+    # du de lan ra ai da kham gi.
+    request.state.user_role = role
 
     return CurrentUser(
         username=payload["sub"],

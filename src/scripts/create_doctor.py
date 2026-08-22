@@ -58,6 +58,12 @@ def _resolve_password(args: argparse.Namespace) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Console Windows mac dinh cp1252 khong in duoc tieng Viet co dau; thieu dong
+    # nay thi script tao xong tai khoan roi chet o buoc print. Xem create_admin.py.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     args = _parse_args(argv)
     init_db()
 

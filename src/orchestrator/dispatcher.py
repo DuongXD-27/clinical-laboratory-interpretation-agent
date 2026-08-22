@@ -11,11 +11,14 @@ from src.models.orchestrator_schemas import (
     ExplanationDataPayload,
     IntentEnum,
     NeedsInputPayload,
+    ProgressStage,
     ReasonCode,
     ResponseStatus,
 )
 from src.orchestrator.errors import OrchestratorWrapperError
+from src.orchestrator.progress import ProgressCallback, emit_progress
 from src.orchestrator.wrappers import get_my_history, get_my_indicator_trend, get_my_report, get_report_questions
+from src.services.auth import ROLE_GUEST
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
@@ -25,6 +28,7 @@ class DispatchContext:
     db: object
     current_report_ref: str | None
     current_analyte: str | None
+    progress_callback: ProgressCallback | None = None
 
 
 @dataclass(frozen=True)
@@ -85,39 +89,54 @@ async def _dispatch_analyze_report(context: DispatchContext) -> WorkflowResult:
 
 
 async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
-    if not context.current_report_ref or not context.current_analyte:
+    if not context.current_report_ref:
+        role = getattr(context.current_user, "role", None)
+        if role == ROLE_GUEST:
+            return _blocked(ReasonCode.UNSUPPORTED_CAPABILITY)
         return _needs_input(
             ReasonCode.AMBIGUOUS_CONTEXT,
-            "Vui lòng chọn một chỉ số trong phiếu hiện tại.",
-            ["current_report_ref", "current_analyte"],
+            "Hiện mình chưa thấy phiếu xét nghiệm nào trong tài khoản của bạn.\n\nBạn có thể gửi ảnh phiếu xét nghiệm hoặc nhập kết quả để mình hỗ trợ.",
+            ["current_report_ref"],
         )
-    if not _is_supported_analyte(context.current_analyte):
-        return _blocked(ReasonCode.UNSUPPORTED_ANALYTE)
 
+    # Mode A: Single-analyte explanation
+    if context.current_analyte:
+        if not _is_supported_analyte(context.current_analyte):
+            return _blocked(ReasonCode.UNSUPPORTED_ANALYTE)
+
+        report = get_my_report(context.current_user, context.db, context.current_report_ref)
+        for indicator in report.indicators:
+            names = {
+                indicator.name,
+                indicator.analyte_canonical or "",
+                indicator.analyte_raw or "",
+            }
+            if context.current_analyte in names:
+                return WorkflowResult(
+                    status=ResponseStatus.SUCCESS,
+                    data=ExplanationDataPayload(
+                        explanation=indicator.explanation or "",
+                        sources=list(indicator.sources or []),
+                    ),
+                    workflow_selected="get_my_report",
+                )
+        return _needs_input(
+            ReasonCode.AMBIGUOUS_CONTEXT,
+            "Vui lòng chọn một chỉ số có trong phiếu hiện tại.",
+            ["current_analyte"],
+        )
+
+    # Mode B: Whole-report summary
     report = get_my_report(context.current_user, context.db, context.current_report_ref)
-    for indicator in report.indicators:
-        names = {
-            indicator.name,
-            indicator.analyte_canonical or "",
-            indicator.analyte_raw or "",
-        }
-        if context.current_analyte in names:
-            return WorkflowResult(
-                status=ResponseStatus.SUCCESS,
-                data=ExplanationDataPayload(
-                    explanation=indicator.explanation,
-                    sources=indicator.sources,
-                ),
-                workflow_selected="get_my_report",
-            )
-    return _needs_input(
-        ReasonCode.AMBIGUOUS_CONTEXT,
-        "Vui lòng chọn một chỉ số có trong phiếu hiện tại.",
-        ["current_analyte"],
+    return WorkflowResult(
+        status=ResponseStatus.SUCCESS,
+        data=report,
+        workflow_selected="get_my_report_summary",
     )
 
 
 async def _dispatch_history(context: DispatchContext) -> WorkflowResult:
+    await emit_progress(context.progress_callback, ProgressStage.LONGITUDINAL_RETRIEVAL)
     return WorkflowResult(
         status=ResponseStatus.SUCCESS,
         data=get_my_history(context.current_user, context.db),
@@ -130,6 +149,7 @@ async def _dispatch_trend(context: DispatchContext) -> WorkflowResult:
         return _needs_input(ReasonCode.AMBIGUOUS_CONTEXT, "Vui lòng chọn chỉ số cần xem xu hướng.", ["current_analyte"])
     if not _is_supported_analyte(context.current_analyte):
         return _blocked(ReasonCode.UNSUPPORTED_ANALYTE)
+    await emit_progress(context.progress_callback, ProgressStage.LONGITUDINAL_RETRIEVAL)
     return WorkflowResult(
         status=ResponseStatus.SUCCESS,
         data=get_my_indicator_trend(context.current_user, context.db, context.current_analyte),
@@ -155,6 +175,15 @@ async def _dispatch_questions(context: DispatchContext) -> WorkflowResult:
 async def _dispatch_unsupported(_: DispatchContext) -> WorkflowResult:
     return _blocked(ReasonCode.UNKNOWN_INTENT)
 
+async def _dispatch_safe_general(_: DispatchContext) -> WorkflowResult:
+    return WorkflowResult(
+        status=ResponseStatus.SUCCESS,
+        data=ExplanationDataPayload(
+            explanation="Chào bạn. Tôi có thể giúp bạn xem và hiểu các kết quả xét nghiệm đã có, xem xu hướng, hoặc chuẩn bị câu hỏi để trao đổi với bác sĩ.",
+            sources=[]
+        ),
+        workflow_selected="safe_general"
+    )
 
 WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {
     IntentEnum.ANALYZE_REPORT: _dispatch_analyze_report,
@@ -163,6 +192,7 @@ WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {
     IntentEnum.ANALYZE_TREND: _dispatch_trend,
     IntentEnum.GET_DOCTOR_QUESTIONS: _dispatch_questions,
     IntentEnum.UNSUPPORTED_OR_UNSAFE: _dispatch_unsupported,
+    IntentEnum.SAFE_GENERAL: _dispatch_safe_general,
 }
 
 

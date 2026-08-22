@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
+import { homeForRole } from "@/lib/roleHome.mjs";
 import { login, register, startGuestSession } from "@/lib/api";
 
 const DEMO_ACCOUNTS = [
@@ -16,6 +18,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +35,7 @@ export default function LoginPage() {
     setError(null);
     setPassword("");
     setConfirmPassword("");
+    setEmail("");
   }
 
   /** Kiểm tra trước những ràng buộc backend cũng kiểm.
@@ -46,6 +50,13 @@ export default function LoginPage() {
     }
     if (password.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự.";
     if (password !== confirmPassword) return "Hai lần nhập mật khẩu chưa khớp.";
+    // Bỏ trống thì bỏ qua — email không bắt buộc. Điền thì kiểm sơ bộ, backend
+    // vẫn là nơi chốt (`normalise_email`); ở đây chỉ để người dùng nhận thông
+    // báo tiếng Việt thay vì lỗi 422 của pydantic.
+    const typedEmail = email.trim();
+    if (typedEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(typedEmail)) {
+      return "Email chưa hợp lệ.";
+    }
     return null;
   }
 
@@ -64,8 +75,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // Đăng ký xong đăng nhập luôn, để người dùng không phải nhập lại.
-      const session = mode === "login" ? await login(username, password) : await register(username, password);
-      router.push(session.role === "doctor" ? "/doctor" : "/patient");
+      const session = mode === "login" ? await login(username, password) : await register(username, password, email);
+      router.push(homeForRole(session.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thực hiện được, vui lòng thử lại");
     } finally {
@@ -130,7 +141,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="username" className="text-sm font-medium text-slate-700">
-              Tên đăng nhập
+              {mode === "login" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"}
             </label>
             <input
               id="username"
@@ -146,6 +157,26 @@ export default function LoginPage() {
               </p>
             )}
           </div>
+
+          {mode === "register" && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-slate-700">
+                Email <span className="font-normal text-slate-500">(không bắt buộc)</span>
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                placeholder="ban@example.com"
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              />
+              <p className="text-xs leading-5 text-slate-600">
+                Điền email thì lần sau đăng nhập được bằng cả tên lẫn email.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium text-slate-700">
@@ -196,6 +227,12 @@ export default function LoginPage() {
           <span className="text-xs text-slate-500">hoặc</span>
           <span className="h-px flex-1 bg-slate-200" />
         </div>
+
+        {/* Tự ẩn khi máy chủ chưa cấu hình GOOGLE_OAUTH_CLIENT_ID. */}
+        <GoogleSignInButton
+          onSuccess={(role) => router.push(homeForRole(role))}
+          onError={(message) => setError(message)}
+        />
 
         <button
           type="button"

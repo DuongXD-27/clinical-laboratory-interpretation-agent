@@ -1,0 +1,104 @@
+{
+  "test_id": "TC-G2-03",
+  "purpose": "Critical high",
+  "timestamp": "2026-08-21T09:20:10.798235+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 6.5,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "high",
+    "response_status": "critical_high",
+    "critical": true,
+    "critical_direction": "high"
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 6.5,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "section": null,
+        "section_label": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.3,
+        "status": "high",
+        "critical_status": "critical_high",
+        "is_abnormal": true,
+        "is_critical": true,
+        "explanation": "Giá trị này vượt ngưỡng cảnh báo nguy kịch được hệ thống cấu hình. Giá trị Kali (Potassium) là 6.5 mmol/L, nằm trong trạng thái cao (high). Kali máu tăng nghiêm trọng (>6.1 mmol/L) có thể gây rối loạn hoạt động điện của tim, tiến triển thành nhịp nhanh thất, rung thất, ngừng tim và tử vong.",
+        "rule_type": "RI",
+        "band_id": null,
+        "upper_operator": null,
+        "evaluation_reason": null,
+        "review_outcome": "pending",
+        "doctor_note": null,
+        "ai_text_snapshot": null,
+        "reviewed_by_username": null,
+        "reviewed_at": null,
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
+          "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/",
+          "https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce",
+          "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
+          "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
+        ]
+      }
+    ],
+    "critical_alerts": [
+      {
+        "indicator_name": "Potassium",
+        "value": 6.5,
+        "unit": "mmol/L",
+        "message": "CẢNH BÁO: Potassium tăng tới ngưỡng nguy kịch (6.5 > 6.1 mmol/L). Yêu cầu can thiệp y tế."
+      }
+    ],
+    "has_critical_values": true,
+    "questions_for_doctor": [
+      "Chỉ số Potassium của tôi là 6.5 mmol/L, cao hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": null,
+    "events": []
+  },
+  "latency_ms": 7031.658,
+  "request_id": "9ac2be55e00547ea982c25448a7d0edd",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.195, analysis-critical-detector;dur=0.081, analysis-analyzer;dur=7011.725, analysis-generate-questions;dur=0.922, analysis-guardrail;dur=1.286, analysis-graph-total;dur=7022.885, analysis-response-map;dur=0.094, http-total;dur=7026.760",
+  "verdict": "FAIL"
+}

@@ -8,12 +8,14 @@ from urllib.parse import quote
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from src.api import routes
 from src.main import app
 from src.models import db as db_module
+from src.models.orchestrator_schemas import TrendDataPayload
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, TrendResponse
 from src.services import trend_service
 from src.services.auth import create_access_token
@@ -403,6 +405,7 @@ async def test_unit_inconsistency_fails_safe_without_chart_points(isolated_clien
     assert response.json()["trend_available"] is False
     assert response.json()["reason"] == "DATA_QUALITY_ERROR"
     assert response.json()["points"] == []
+    assert response.json()["observed_direction"] is None
 
 
 @pytest.mark.asyncio
@@ -850,3 +853,267 @@ async def test_section_trend_explanation_escalates_with_fixed_notice(isolated_cl
     assert payload["fallback"] is False
     assert payload["explanation"].startswith("Chỉ số này đang ở mức cần chú ý đặc biệt")
     assert payload["explanation"].endswith("Creatinine và Potassium cùng tăng qua các lần đo.")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("values", "expected_direction"),
+    [
+        ([6.5, 8.1, 12.0], "increasing"),
+        ([7.4, 7.1, 6.8], "decreasing"),
+        ([82.0, 88.0, 84.0], None),
+        ([82.0, 82.0, 82.0], None),
+        ([82.0, 83.0, 83.0], None),
+    ],
+)
+async def test_observed_direction_uses_strict_whole_series_monotonicity(
+    isolated_client,
+    values,
+    expected_direction,
+):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate(values, start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "LDL-C", "value": value, "unit": "mmol/L"}],
+        )
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["observed_direction"] == expected_direction
+
+
+@pytest.mark.asyncio
+async def test_observed_direction_is_none_when_two_points_are_insufficient(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate([6.5, 8.1], start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "LDL-C", "value": value, "unit": "mmol/L"}],
+        )
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["trend_available"] is False
+    assert response.json()["reason"] == "INSUFFICIENT_DATA"
+    assert response.json()["observed_direction"] is None
+    assert trend_service.MIN_TREND_POINTS == 3
+
+
+@pytest.mark.asyncio
+async def test_observed_direction_uses_returned_chronological_order_not_insertion_order(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for date_text, value in [
+        ("2026-08-03", 12.0),
+        ("2026-08-01", 6.5),
+        ("2026-08-02", 8.1),
+    ]:
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [{"name": "LDL-C", "value": value, "unit": "mmol/L"}],
+        )
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [point["value"] for point in payload["points"]] == [6.5, 8.1, 12.0]
+    assert payload["observed_direction"] == "increasing"
+
+
+@pytest.mark.asyncio
+async def test_observed_direction_uses_only_returned_latest5_series(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate([100.0, 50.0, 1.0, 2.0, 3.0, 4.0, 5.0], start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "LDL-C", "value": value, "unit": "mmol/L"}],
+        )
+
+    response = await client.get(_trend_url("LDL-C"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [point["value"] for point in payload["points"]] == [1.0, 2.0, 3.0, 4.0, 5.0]
+    assert payload["observed_direction"] == "increasing"
+
+
+@pytest.mark.asyncio
+async def test_unknown_assessment_does_not_change_numeric_observed_direction(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate([75.0, 80.0, 85.0], start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "Creatinine", "value": value, "unit": "umol/L", "status": "unknown"}],
+        )
+
+    response = await client.get(_trend_url("Creatinine"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["observed_direction"] == "increasing"
+    assert payload["points"][-1]["assessment"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_trend_runtime_critical_authority_uses_current_detector_not_persisted_snapshot(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [5.0, 4.8, 2.0])
+
+    response = await client.get(_trend_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] == "critical_low"
+    assert payload["critical_alert"]["indicator_name"] == "Fasting plasma glucose"
+    assert payload["critical_alert"]["value"] == 2.0
+    assert payload["critical_alert"]["unit"] == "mmol/L"
+    current_evaluation = trend_service.evaluate_critical("Fasting plasma glucose", 2.0, "mmol/L")
+    assert payload["critical_alert"]["message"] == current_evaluation.alert_message
+
+
+@pytest.mark.asyncio
+async def test_persisted_critical_snapshot_cannot_promote_current_noncritical_trend(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate([4.0, 4.1], start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "Potassium", "value": value, "unit": "mmol/L"}],
+        )
+    latest = _save(
+        session_local,
+        "benhnhan",
+        "2026-08-03",
+        [{"name": "Potassium", "value": 4.2, "unit": "mmol/L"}],
+    )
+    with session_local() as session:
+        report = session.get(db_module.LabReport, latest.report_id)
+        report.critical_alerts.append(
+            db_module.ReportCriticalAlert(
+                indicator_name="Potassium",
+                value=4.2,
+                unit="mmol/L",
+                message="Historical snapshot only.",
+            )
+        )
+        session.commit()
+
+    response = await client.get(_trend_url("Potassium"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] is None
+    assert payload["approaching_critical"] is False
+    assert payload["critical_alert"] is None
+
+
+@pytest.mark.asyncio
+async def test_high_assessment_does_not_imply_current_critical_alert(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, value in enumerate([4.5, 5.0, 5.5], start=1):
+        _save(
+            session_local,
+            "benhnhan",
+            f"2026-08-{index:02d}",
+            [{"name": "Potassium", "value": value, "unit": "mmol/L", "status": "high"}],
+        )
+
+    response = await client.get(_trend_url("Potassium"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["points"][-1]["assessment"] == "high"
+    assert payload["critical_status"] is None
+    assert payload["critical_alert"] is None
+
+
+@pytest.mark.asyncio
+async def test_current_critical_evaluation_applies_only_to_latest_returned_point(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    _save_glucose_series(session_local, [2.0, 4.8, 5.0])
+
+    response = await client.get(_trend_url("Fasting plasma glucose"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["critical_status"] is None
+    assert payload["critical_alert"] is None
+
+
+def _minimal_trend_response(**updates):
+    payload = {
+        "analyte_canonical": "WBC",
+        "display_name": "WBC",
+        "canonical_unit": "G/L",
+        "filter": "latest5",
+        "result_count": 3,
+        "trend_available": True,
+        "points": [
+            {"report_id": 1, "test_date": "2026-08-01", "value": 6.5, "assessment": "normal"},
+            {"report_id": 2, "test_date": "2026-08-02", "value": 8.1, "assessment": "normal"},
+            {"report_id": 3, "test_date": "2026-08-03", "value": 12.0, "assessment": "high"},
+        ],
+    }
+    payload.update(updates)
+    return payload
+
+
+@pytest.mark.parametrize("direction", ["increasing", "decreasing", None])
+def test_trend_response_accepts_only_approved_observed_directions(direction):
+    trend = TrendResponse.model_validate(_minimal_trend_response(observed_direction=direction))
+
+    assert trend.observed_direction == direction
+
+
+@pytest.mark.parametrize("direction", ["stable", "improving", "worsening", "up", "down"])
+def test_trend_response_rejects_unapproved_observed_directions(direction):
+    with pytest.raises(ValidationError):
+        TrendResponse.model_validate(_minimal_trend_response(observed_direction=direction))
+
+
+def test_trend_data_payload_serializes_current_detector_facts_unchanged():
+    trend = TrendResponse.model_validate(
+        _minimal_trend_response(
+            observed_direction="increasing",
+            critical_status="critical_high",
+            critical_alert={
+                "indicator_name": "WBC",
+                "value": 12.0,
+                "unit": "G/L",
+                "message": "Approved deterministic warning.",
+            },
+        )
+    )
+
+    payload = TrendDataPayload(trend=trend).model_dump(mode="json")
+
+    assert payload["trend"]["observed_direction"] == "increasing"
+    assert payload["trend"]["critical_alert"] == {
+        "indicator_name": "WBC",
+        "value": 12.0,
+        "unit": "G/L",
+        "message": "Approved deterministic warning.",
+    }
