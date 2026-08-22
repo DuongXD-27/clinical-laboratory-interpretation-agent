@@ -11,6 +11,7 @@ from src.models.db import LabReport, ReportIndicator
 from src.models.schemas import (
     CriticalAlertSchema,
     ObservedDirection,
+    SectionTrendsResponse,
     TrendAnalyteSummary,
     TrendFilter,
     TrendPointResponse,
@@ -342,4 +343,47 @@ def get_patient_trend(
         approaching_critical=approaching_critical,
         critical_alert=critical_alert,
         **section_fields,
+    )
+
+def get_patient_section_trends(
+    db: Session,
+    *,
+    username: str,
+    section: str,
+    trend_filter: TrendFilter,
+    today: date | None = None,
+) -> SectionTrendsResponse:
+    """Fetch trends for all trend-available analytes within a functional section.
+
+    Returns a SectionTrendsResponse containing trend data per analyte,
+    reusing the existing get_patient_trend logic for each analyte.
+    """
+    patient = get_patient_by_username(db, username)
+    rows = _query_candidate_rows(db, patient_id=patient.id)
+
+    analytes_in_section: list[str] = []
+    seen: set[str] = set()
+    for report, indicator in rows:
+        canonical = str(indicator.analyte_canonical)
+        analyte_section_key = analyte_section(canonical)
+        if analyte_section_key == section and canonical not in seen:
+            seen.add(canonical)
+            analytes_in_section.append(canonical)
+
+    trends: list[TrendResponse] = [
+        get_patient_trend(
+            db,
+            username=username,
+            analyte_canonical=analyte,
+            trend_filter=trend_filter,
+            today=today,
+        )
+        for analyte in analytes_in_section
+    ]
+    trends = [t for t in trends if t.trend_available]
+
+    return SectionTrendsResponse(
+        section=section,
+        section_label=section_label(section),
+        trends=trends,
     )

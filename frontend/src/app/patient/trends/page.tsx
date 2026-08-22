@@ -52,7 +52,9 @@ export default function PatientTrendsPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [trendError, setTrendError] = useState<string | null>(null);
   const [explanationError, setExplanationError] = useState<string | null>(null);
-
+  const [groupTrends, setGroupTrends] = useState<TrendResponse[] | null>(null);
+  const [groupTrendsLoading, setGroupTrendsLoading] = useState(false);
+  const [groupTrendsError, setGroupTrendsError] = useState<string | null>(null);
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
       router.replace("/login");
@@ -177,6 +179,40 @@ export default function PatientTrendsPage() {
     setGroupExplanation(null);
     setGroupExplanationError(null);
   }, [filter]);
+
+  useEffect(() => {
+    if (viewMode !== "group" || !selectedSection) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale group trends when scope changes
+      setGroupTrends(null);
+      setGroupTrendsError(null);
+      return;
+    }
+    const loadGroupTrends = async () => {
+      setGroupTrendsLoading(true);
+      setGroupTrendsError(null);
+      setGroupTrends(null);
+      try {
+        const response = await authFetch(
+          `/api/v1/patient/me/trends/sections/${encodeURIComponent(selectedSection)}/trends?filter=${filter}`,
+        );
+        if (response.status === 401) {
+          clearSession();
+          router.replace("/login");
+          return;
+        }
+        if (!response.ok) throw new Error("Chưa tải được dữ liệu biểu đồ nhóm.");
+        const data = await response.json();
+        setGroupTrends((data.trends ?? []) as TrendResponse[]);
+      } catch (caught: unknown) {
+        setGroupTrendsError(
+          caught instanceof Error ? caught.message : "Chưa tải được dữ liệu biểu đồ nhóm.",
+        );
+      } finally {
+        setGroupTrendsLoading(false);
+      }
+    };
+    void loadGroupTrends();
+  }, [viewMode, selectedSection, filter, router]);
 
   useEffect(() => {
     if (analytes.length === 0) return;
@@ -465,6 +501,73 @@ export default function PatientTrendsPage() {
                       </div>
 
                       <div className="mt-6 flex justify-start">
+                       {/* Small Multiples Grid */}
+                       {groupTrendsLoading ? (
+                         <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải biểu đồ nhóm">
+                           <span className="loading-dot mr-2" aria-hidden="true" />
+                           Đang tải biểu đồ nhóm...
+                         </div>
+                       ) : groupTrendsError ? (
+                         <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">
+                           {groupTrendsError}
+                         </div>
+                       ) : groupTrends && groupTrends.length > 0 ? (
+                         <>
+                           {/* Mobile Accordion for >5 analytes */}
+                           <div className="lg:hidden space-y-3">
+                             {groupTrends.map((trend, idx) => (
+                               <details key={trend.analyte_canonical} className="patient-glass-clinical p-4" open={idx < 2}>
+                                 <summary className="flex items-center justify-between cursor-pointer list-none select-none">
+                                   <div className="flex-1 min-w-0">
+                                     <h4 className="font-medium text-slate-900 truncate">{trend.display_name}</h4>
+                                     <p className="text-xs text-slate-500">{trend.canonical_unit} · {trend.result_count} điểm</p>
+                                   </div>
+                                   {(trend.critical_status || trend.approaching_critical) && (
+                                     <span className={`text-xs ml-2 ${trend.critical_status ? "text-red-600" : "text-orange-600"}`}>
+                                       {trend.critical_status ? "⚠ Nguy kịch" : "⚠ Tiếp cận"}
+                                     </span>
+                                   )}
+                                 </summary>
+                                 <div className="mt-3">
+                                   <TrendChart
+                                     analyte={trend.display_name}
+                                     unit={trend.canonical_unit}
+                                     points={trend.points}
+                                     height={220}
+                                   />
+                                 </div>
+                               </details>
+                             ))}
+                           </div>
+
+                           {/* Desktop/Tablet Grid */}
+                           <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                             {groupTrends.map((trend) => (
+                               <div key={trend.analyte_canonical} className="patient-glass-clinical p-4">
+                                 <div className="trend-mini-header mb-2">
+                                   <h4 className="font-medium text-slate-900">{trend.display_name}</h4>
+                                   <p className="text-xs text-slate-500">{trend.canonical_unit} · {trend.result_count} điểm</p>
+                                 </div>
+                                 {(trend.critical_status || trend.approaching_critical) && (
+                                   <div className={`trend-critical-badge mb-2 text-xs ${trend.critical_status ? "" : "approaching"}`}>
+                                     {trend.critical_status ? "⚠ Đã vượt ngưỡng nguy kịch" : "⚠ Đang tiến gần ngưỡng"}
+                                   </div>
+                                 )}
+                                 <TrendChart
+                                   analyte={trend.display_name}
+                                   unit={trend.canonical_unit}
+                                   points={trend.points}
+                                   height={220}
+                                 />
+                               </div>
+                             ))}
+                           </div>
+                         </>
+                       ) : (
+                         <div className="patient-glass-clinical p-6 mt-6 text-center text-slate-600">
+                           Chưa có chỉ số nào đủ dữ liệu (≥3 lần) trong nhóm này để hiển thị biểu đồ.
+                         </div>
+                       )}
                         <button
                           type="button"
                           className="patient-btn-secondary"

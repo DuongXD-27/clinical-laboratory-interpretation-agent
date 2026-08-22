@@ -47,10 +47,12 @@ export default function TrendChart({
   analyte,
   unit,
   points,
+  height = 340,
 }: {
   analyte: string;
   unit: string;
   points: TrendPoint[];
+  height?: number;
 }) {
   const chartData: ChartPoint[] = dedupeTrendPoints(points).map((point) => ({
     ...(point as TrendPoint),
@@ -59,7 +61,7 @@ export default function TrendChart({
 
   return (
     <div className="trend-chart-shell" role="img" aria-label={`Biểu đồ xu hướng ${analyte}`}>
-      <ResponsiveContainer width="100%" height={340}>
+      <ResponsiveContainer width="100%" height={height}>
         <LineChart data={chartData} margin={{ top: 18, right: 18, bottom: 18, left: 8 }}>
           <CartesianGrid stroke="#e5edf6" strokeDasharray="4 4" />
           <XAxis

@@ -772,6 +772,14 @@ class TrendExplanationResponse(BaseModel):
     reason: str | None = None
 
 
+class SectionTrendsResponse(BaseModel):
+    """Response wrapping all analyte trends within a functional section."""
+
+    section: str
+    section_label: str
+    trends: list[TrendResponse] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Admin — trace vận hành
 #
