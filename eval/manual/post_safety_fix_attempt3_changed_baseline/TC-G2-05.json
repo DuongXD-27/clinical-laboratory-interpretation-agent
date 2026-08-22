@@ -1,0 +1,89 @@
+{
+  "test_id": "TC-G2-05",
+  "purpose": "Generic Glucose fails closed",
+  "timestamp": "2026-08-21T09:20:32.894152+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Glucose",
+        "value": 5.2,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "unknown",
+    "critical": false,
+    "reference_bounds": null
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Glucose",
+        "value": 5.2,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "section": null,
+        "section_label": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": null,
+        "reference_high": null,
+        "status": "unknown",
+        "critical_status": null,
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Hệ thống chưa đủ cơ sở để phân loại giá trị này. Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+        "rule_type": null,
+        "band_id": null,
+        "upper_operator": null,
+        "evaluation_reason": "analyte_not_supported",
+        "review_outcome": "pending",
+        "doctor_note": null,
+        "ai_text_snapshot": null,
+        "reviewed_by_username": null,
+        "reviewed_at": null,
+        "sources": []
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [
+      "Chỉ số Glucose (5.2 mmol/L) chưa có trong dữ liệu đối chiếu của ứng dụng nên tôi không biết mức này có bình thường hay không. Bác sĩ đọc giúp tôi chỉ số này với ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": null,
+    "events": []
+  },
+  "latency_ms": 37.188,
+  "request_id": "2b1e93ba2cff4f29bd01c1b94851548d",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.070, analysis-critical-detector;dur=0.027, analysis-analyzer;dur=3.528, analysis-generate-questions;dur=0.726, analysis-guardrail;dur=1.270, analysis-graph-total;dur=12.935, analysis-response-map;dur=0.077, http-total;dur=16.292",
+  "verdict": "PASS"
+}

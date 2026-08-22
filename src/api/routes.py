@@ -21,6 +21,7 @@ from src.services.question_templates import (
     reconcile_after_guardrail,
 )
 from src.services.request_timing import timing_span
+from src.orchestrator.session_store import default_session_store
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +177,9 @@ async def run_analysis(
         refresh_review_flags(db, saved_report)
 
         response.saved_report_id = saved_report.id
+        # The persisted server ID is authoritative. Activating it prevents a
+        # prior chat turn from keeping an older report/analyte as the default.
+        default_session_store.activate_report(current_user, str(saved_report.id))
 
     return response
 

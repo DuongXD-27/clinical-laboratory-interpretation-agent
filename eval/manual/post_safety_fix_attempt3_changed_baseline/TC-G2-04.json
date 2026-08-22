@@ -1,0 +1,103 @@
+{
+  "test_id": "TC-G2-04",
+  "purpose": "Critical low fasting plasma glucose",
+  "timestamp": "2026-08-21T09:20:22.860417+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "low",
+    "response_status": "critical_low",
+    "critical": true,
+    "critical_direction": "low"
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "section": null,
+        "section_label": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": null,
+        "reference_high": 5.6,
+        "status": "normal",
+        "critical_status": "critical_low",
+        "is_abnormal": true,
+        "is_critical": true,
+        "explanation": "Giá trị này vượt ngưỡng cảnh báo nguy kịch được hệ thống cấu hình. Giá trị đường huyết lúc đói là 3.05 mmol/L, nằm trong khoảng tham chiếu được hệ thống sử dụng, và trạng thái là bình thường (normal).",
+        "rule_type": "CDL",
+        "band_id": null,
+        "upper_operator": null,
+        "evaluation_reason": null,
+        "review_outcome": "pending",
+        "doctor_note": null,
+        "ai_text_snapshot": null,
+        "reviewed_by_username": null,
+        "reviewed_at": null,
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/chi-so-glucose-khi-doi-la-gi-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/chi-so-glucose-khi-doi-la-gi-bao-nhieu-la-binh-thuong.html",
+          "https://medlineplus.gov/lab-tests/blood-glucose-test/",
+          "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
+          "https://diabetesjournals.org/care/issue/49/Supplement_1"
+        ]
+      }
+    ],
+    "critical_alerts": [
+      {
+        "indicator_name": "Fasting plasma glucose",
+        "value": 3.05,
+        "unit": "mmol/L",
+        "message": "CẢNH BÁO: Fasting plasma glucose giảm tới ngưỡng nguy kịch (54.9475495 < 55 mg/dL). Yêu cầu can thiệp y tế."
+      }
+    ],
+    "has_critical_values": true,
+    "questions_for_doctor": [
+      "Đường huyết của tôi là 3.05 mmol/L, thấp hơn nhiều so với khoảng tham chiếu. Tôi cần làm gì ngay bây giờ ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": null,
+    "events": []
+  },
+  "latency_ms": 1971.599,
+  "request_id": "91f5a017a3614e0b9812048c7a8d1659",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.223, analysis-critical-detector;dur=0.587, analysis-analyzer;dur=1953.860, analysis-generate-questions;dur=0.637, analysis-guardrail;dur=1.001, analysis-graph-total;dur=1963.454, analysis-response-map;dur=0.086, http-total;dur=1967.231",
+  "verdict": "FAIL"
+}

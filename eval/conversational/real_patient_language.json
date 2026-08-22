@@ -1,0 +1,173 @@
+{
+    "suite": "real_patient_language",
+    "purpose": "Evaluate whether the orchestrator understands natural patient language instead of developer-style commands.",
+    "principles": [
+        "Patients do not know internal workflow names.",
+        "Patients rarely ask with exact feature names.",
+        "The assistant should use available patient context instead of forcing page navigation."
+    ],
+    "cases": [
+        {
+            "id": "REAL-001",
+            "description": "Patient received a new laboratory result and wants help.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Em mới nhận kết quả xét nghiệm, xem giúp em với"
+                }
+            ],
+            "expected": {
+                "intent": "ANALYZE_REPORT",
+                "behavior": [
+                    "understand patient intention",
+                    "do not require internal workflow terminology",
+                    "do not ask user to choose a page"
+                ]
+            }
+        },
+        {
+            "id": "REAL-002",
+            "description": "Patient asks whether the result contains important findings.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Kết quả của em có gì cần chú ý không?"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "summarize available result information",
+                    "use existing medical context if available"
+                ]
+            }
+        },
+        {
+            "id": "REAL-003",
+            "description": "Very vague patient request.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Xem giúp em với"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "infer patient wants help with their medical result",
+                    "use available patient context",
+                    "if information is missing, ask naturally"
+                ],
+                "must_not": [
+                    "SAFE_GENERAL",
+                    "internal error explanation",
+                    "ask user to navigate to another page"
+                ]
+            }
+        },
+        {
+            "id": "REAL-004",
+            "description": "Patient expresses anxiety about result.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Em hơi lo, không biết kết quả có sao không"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "recognize medical-result concern",
+                    "provide educational explanation",
+                    "avoid diagnosis"
+                ]
+            }
+        },
+        {
+            "id": "REAL-005",
+            "description": "Patient asks for abnormal findings summary.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Có chỉ số nào bất thường không?"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "explain existing processed results",
+                    "not require user to manually identify analyte"
+                ]
+            }
+        },
+        {
+            "id": "REAL-006",
+            "description": "Casual Vietnamese expression.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Bạn coi dùm mình cái xét nghiệm này"
+                }
+            ],
+            "expected": {
+                "intent": "ANALYZE_REPORT",
+                "behavior": [
+                    "understand casual language",
+                    "treat as laboratory analysis request"
+                ]
+            }
+        },
+        {
+            "id": "REAL-007",
+            "description": "Regression case: vague request with available patient context.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Xem giúp em với"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "retrieve available patient context",
+                    "continue conversation naturally"
+                ]
+            }
+        },
+        {
+            "id": "REAL-008",
+            "description": "Regression case: patient worry should map to result explanation.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Em hơi lo, không biết kết quả có sao không"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "acknowledge concern",
+                    "explain result information",
+                    "do not diagnose"
+                ]
+            }
+        },
+        {
+            "id": "REAL-009",
+            "description": "Regression case: abnormality overview request.",
+            "conversation": [
+                {
+                    "role": "user",
+                    "message": "Có chỉ số nào bất thường không?"
+                }
+            ],
+            "expected": {
+                "intent": "EXPLAIN_CURRENT_RESULT",
+                "behavior": [
+                    "summarize abnormal or notable indicators",
+                    "avoid requiring analyte selection first"
+                ]
+            }
+        }
+    ]
+}

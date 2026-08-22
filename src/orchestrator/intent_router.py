@@ -5,7 +5,9 @@ import unicodedata
 from dataclasses import dataclass
 
 from src.models.orchestrator_schemas import IntentEnum, OrchestratorSessionContext, ReasonCode
+from src.orchestrator.medical_context import extract_explicit_analyte, extract_explicit_report_ref
 from src.services.llm import get_llm
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
 @dataclass(frozen=True)
@@ -31,67 +33,232 @@ def _sanitize_for_prompt(message: str) -> str:
 
 def contains_lab_value(message: str) -> bool:
     normalized = _normalize(message)
-    has_number = re.search(r"\d+(?:[.,]\d+)?", message) is not None
-    has_analyte = any(term in normalized for term in ("hba1c", "ldl", "wbc", "glucose", "cholesterol"))
+    has_number = re.search(r"(?<!\w)[+-]?\d+(?:[.,]\d+)?(?!\w)", message) is not None
+    analyte = extract_explicit_analyte(message) or extract_explicit_analyte(normalized)
+    try:
+        has_analyte = analyte in ReferenceRepository.from_default_files().approved_analytes
+    except ReferenceRepositoryError:
+        has_analyte = False
     has_unit = any(term in normalized for term in ("mmol", "mg", "dl", "g l", "u l", "10 9"))
     return has_number and (has_analyte or has_unit)
 
 
-def _unsafe_reason(normalized: str) -> ReasonCode | None:
-    if any(phrase in normalized for phrase in ("mac benh gi", "toi bi benh gi", "chan doan", "co benh khong")):
-        return ReasonCode.MEDICAL_DIAGNOSIS_REQUEST
-    if any(phrase in normalized for phrase in ("nguyen nhan", "tai sao", "co the do")):
-        return ReasonCode.MEDICAL_CAUSE_REQUEST
-    if any(phrase in normalized for phrase in ("uống thuốc", "uong thuoc", "dung thuoc", "ke don", "dieu tri")):
-        return ReasonCode.TREATMENT_REQUEST
-    return None
+def _is_trend_request(message: str, normalized: str) -> bool:
+    strong_trend_cues = (
+        "xu huong",
+        "trend",
+        "so voi",
+        "thay doi the nao",
+        "thay doi ra sao",
+        "thay doi gi",
+        "tang hay giam",
+        "co tang khong",
+        "co giam khong",
+        "qua cac lan xet nghiem",
+    )
+    if any(term in normalized for term in strong_trend_cues):
+        return True
+
+    has_explicit_analyte = extract_explicit_analyte(message) is not None
+    has_temporal_context = any(
+        term in normalized
+        for term in ("dao nay", "gan day", "thoi gian gan day")
+    )
+    asks_how_it_is_changing = any(
+        term in normalized
+        for term in ("ra sao", "the nao")
+    )
+    names_current_result = "ket qua" in normalized
+    return (
+        has_explicit_analyte
+        and has_temporal_context
+        and asks_how_it_is_changing
+        and not names_current_result
+    )
 
 
-def _deterministic_route(message: str) -> RouteDecision | None:
-    normalized = _normalize(message)
-    reason_code = _unsafe_reason(normalized)
-    if reason_code is not None:
-        return RouteDecision(
-            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=reason_code,
-            route_confidence=1.0,
+def _is_explicit_current_result_request(message: str, normalized: str) -> bool:
+    if extract_explicit_analyte(message) is None:
+        return False
+    return any(
+        term in normalized
+        for term in (
+            "hien tai",
+            "gan nhat",
+            "moi nhat",
+            "la bao nhieu",
         )
-    if any(term in normalized for term in ("lich su", "history", "lan truoc")):
+    )
+
+
+
+
+def _deterministic_route(
+    message: str,
+    session: OrchestratorSessionContext | None = None,
+    has_medical_context: bool = False,
+) -> RouteDecision | None:
+    normalized = _normalize(message)
+    original_lower = message.casefold()
+
+    # 1. VIEW_HISTORY
+    if any(term in normalized for term in ("lich su", "history", "lan truoc", "thang truoc", "xem lai", "lan truoc nua")):
         return RouteDecision(intent=IntentEnum.VIEW_HISTORY, route_confidence=0.95)
-    if any(term in normalized for term in ("xu huong", "trend", "so voi")):
+
+    # 2. ANALYZE_TREND: explicit longitudinal semantics take precedence over
+    # ingestion/current-value hints, including when the message has a value.
+    if _is_trend_request(message, normalized):
         return RouteDecision(intent=IntentEnum.ANALYZE_TREND, route_confidence=0.95)
+
+    # 3. GET_DOCTOR_QUESTIONS
     if any(term in normalized for term in ("hoi bac si", "cau hoi", "doctor question")):
         return RouteDecision(intent=IntentEnum.GET_DOCTOR_QUESTIONS, route_confidence=0.95)
-    if any(term in normalized for term in ("giai thich", "explain")):
-        return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
-    if any(term in normalized for term in ("phan tich", "analyze", "ket qua", "xet nghiem")):
+
+    # Ingestion / Active upload context detection
+    has_active_ingestion = session is not None and (
+        session.pending_ocr_review
+        or (session.conversation_state and session.conversation_state.pending_question == "ocr-review")
+    )
+    explicit_new_ingestion_markers = (
+        "phan tich", "analyze", "tai anh", "gui anh", "anh nay", "anh xet nghiem",
+        "doc giup toi phieu", "doc phieu", "doc anh",
+        "cai xet nghiem", "cai xet nghiem nay",
+        "toi co phieu moi", "vua nhan phieu", "moi nhan phieu", "moi nhan ket qua",
+        "nhan ket qua moi", "nhap ket qua", "nhap thu cong"
+    )
+    is_explicit_new_ingestion = any(term in normalized for term in explicit_new_ingestion_markers)
+
+    # Existing report review & summary cues
+    existing_report_cues = (
+        "phieu nay the nao", "phieu nay sao", "phieu nay sao roi",
+        "tom tat phieu nay", "tom tat phieu", "tom tat ket qua",
+        "co gi dang chu y trong phieu nay", "co gi can chu y trong phieu nay",
+        "nhin chung ca phieu", "xem tong the phieu", "xem tong quan phieu",
+        "xem phieu nay", "ket qua nay the nao",
+        "co gi dang chu y", "co gi can chu y", "nhin chung ca phieu cua em thi sao",
+        "xem tong the ket qua", "xem tong quan ket qua", "tong the phieu nay"
+    )
+    is_existing_report_overview = any(term in normalized for term in existing_report_cues)
+
+    # When active OCR review or explicit new ingestion is present, prioritize ANALYZE_REPORT
+    if is_explicit_new_ingestion or (has_active_ingestion and any(term in normalized for term in ("phieu nay", "anh nay", "phieu xet nghiem", "xem phieu"))):
         return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
+
+    # If it's an existing report overview, route to EXPLAIN_CURRENT_RESULT
+    if is_existing_report_overview:
+        return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+
+    # 4. EXPLAIN_CURRENT_RESULT (Explicit current-result markers or lab values)
+    explain_markers = ("giai thich", "explain", "nghia la gi", "y nghia", "mau do", "tai sao", "thap", "cao")
+    has_explicit_analyte = extract_explicit_analyte(message) is not None
+    is_analyte_switch = has_explicit_analyte and (
+        normalized.startswith("con ") or normalized.startswith("the con ") or "con " in normalized
+    )
+    if _is_explicit_current_result_request(message, normalized) or contains_lab_value(message) or is_analyte_switch or any(term in normalized for term in explain_markers) or any(term in original_lower for term in ("nghĩa là gì", "ý nghĩa", "màu đỏ")):
+        return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+
+    # 5. ANALYZE_REPORT (Fallback for new report phrases)
+    if any(term in normalized for term in ("cai xet nghiem", "nhan phieu", "phieu xet nghiem", "anh xet nghiem")):
+        if has_active_ingestion:
+            return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
+        elif has_medical_context:
+            return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+        else:
+            return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
+
+    # 6. Context-aware Vague Patient Expressions (Only active when patient has accessible medical data/session)
+    if has_medical_context:
+        vague_result_patterns = (
+            "xem giup em", "xem giup toi", "xem giup minh",
+            "coi giup em", "coi giup toi", "coi dum em", "coi dum minh",
+            "em hoi lo", "toi hoi lo", "lo lang", "co sao khong",
+            "co van de gi khong", "co can chu y", "dang chu y",
+            "co bat thuong khong", "chi so nao bat thuong", "bat thuong khong",
+            "chi so nay nghia la gi", "ket qua nay nghia la gi",
+            "ket qua gan nhat", "ket qua gan day", "ket qua cua em the nao",
+            "ket qua the nao", "ket qua the nao roi", "xem ket qua giup em",
+            "xem ket qua", "xem tong the", "tong the ket qua", "khong hieu ket qua",
+            "khong hieu ket qua nay", "em khong hieu ket qua",
+            "phieu nay", "phieu nay the nao", "ket qua nay",
+        )
+        if any(term in normalized for term in vague_result_patterns):
+            return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+
+    # 7. SAFE_GENERAL (Greetings and Capability Requests)
+    if any(term in normalized for term in (
+        "chao ban", "chao em", "xin chao", "hello", "cam on",
+        "ban lam duoc gi", "tro ly nay giup gi", "bat dau tu dau"
+    )) or "hi" in normalized.split():
+        return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
+
     return None
 
 
-def _prompt_for(message: str, session: OrchestratorSessionContext, role: str) -> str:
+def _deterministic_follow_up_route(message: str, session: OrchestratorSessionContext) -> RouteDecision | None:
+    active_pending = session.conversation_state.get_active_pending_question()
+    if not session.last_intent:
+        return None
+
+    normalized = _normalize(message)
+    explicit_analyte = extract_explicit_analyte(message)
+
+    # Follow-up with an explicit analyte
+    if session.last_intent in {IntentEnum.EXPLAIN_CURRENT_RESULT, IntentEnum.ANALYZE_TREND}:
+        if explicit_analyte is not None:
+            if active_pending or normalized.startswith("con ") or normalized.startswith("the con ") or len(normalized.split()) <= 3:
+                return RouteDecision(intent=session.last_intent, route_confidence=1.0)
+
+    # Follow-up with an explicit report reference
+    if session.last_intent in {IntentEnum.GET_DOCTOR_QUESTIONS, IntentEnum.EXPLAIN_CURRENT_RESULT}:
+        if extract_explicit_report_ref(message) is not None:
+            if active_pending or len(normalized.split()) <= 2:
+                return RouteDecision(intent=session.last_intent, route_confidence=1.0)
+
+    return None
+
+
+def _prompt_for(message: str, session: OrchestratorSessionContext, role: str, has_medical_context: bool = False) -> str:
+    active_pending = session.conversation_state.get_active_pending_question()
     context = {
         "has_current_report": session.current_report_ref is not None,
         "current_analyte_name": session.current_analyte,
         "last_intent": session.last_intent.value if session.last_intent is not None else None,
+        "pending_question": active_pending,
         "pending_ocr_review": session.pending_ocr_review,
+        "has_medical_context": has_medical_context,
         "role": role,
     }
     return (
         "Classify the user request into exactly one VMEC-05 V1 intent. "
         "Return only the intent name.\n"
         f"Allowed intents: {[intent.value for intent in IntentEnum]}\n"
+        "RULES:\n"
+        "- Prefer EXPLAIN_CURRENT_RESULT when the user asks about an existing indicator/analyte or asks to review/summarize an existing report (e.g. 'Phiếu này thế nào?', 'Tóm tắt phiếu này cho em', 'Có gì đáng chú ý trong phiếu này?').\n"
+        "- If the user is a patient with medical context and expresses general concern about their results (e.g. 'Em hơi lo', 'Có bất thường không?'), classify as EXPLAIN_CURRENT_RESULT.\n"
+        "- Route ANALYZE_TREND when the user asks about changes over time, history comparisons, or trends (e.g. 'thay đổi thế nào', 'thay đổi ra sao', 'tăng hay giảm').\n"
+        "- Route VIEW_HISTORY when asking about past reports (e.g. 'kết quả tháng trước', 'lần trước').\n"
+        "- Only route ANALYZE_REPORT when the user explicitly requests new report ingestion/processing or when there is an active pending OCR review (e.g. 'Phân tích phiếu này', 'Tôi có phiếu mới', 'Phân tích ảnh này').\n"
+        "- If `pending_question` is present and the user gives a short response answering it, rely heavily on `last_intent`.\n"
         f"Sanitized user utterance: {_sanitize_for_prompt(message)}\n"
         f"Sanitized context: {context}"
     )
 
 
-async def route_intent(message: str, session: OrchestratorSessionContext, role: str) -> RouteDecision:
-    deterministic = _deterministic_route(message)
+async def route_intent(
+    message: str,
+    session: OrchestratorSessionContext,
+    role: str,
+    has_medical_context: bool = False,
+) -> RouteDecision:
+    follow_up_route = _deterministic_follow_up_route(message, session)
+    if follow_up_route is not None:
+        return follow_up_route
+
+    deterministic = _deterministic_route(message, session=session, has_medical_context=has_medical_context)
     if deterministic is not None:
         return deterministic
 
-    prompt = _prompt_for(message, session, role)
+    prompt = _prompt_for(message, session, role, has_medical_context=has_medical_context)
     try:
         response = await get_llm().ainvoke(prompt)
     except Exception:

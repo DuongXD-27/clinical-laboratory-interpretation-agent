@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from src.models.db import LabReport, ReportIndicator
 from src.models.schemas import (
+    CriticalAlertSchema,
+    ObservedDirection,
     TrendAnalyteSummary,
     TrendFilter,
     TrendPointResponse,
@@ -130,22 +132,48 @@ def _latest_critical_state(
     analyte_canonical: str,
     unit: str,
     points: list[TrendPoint],
-) -> tuple[str | None, bool]:
+) -> tuple[str | None, bool, CriticalAlertSchema | None]:
     """ADR-010 CRIT-TREND-03: đánh giá điểm mới nhất bằng module ngưỡng nguy kịch dùng chung.
 
     Chỉ áp dụng cho các chỉ số có threshold active (glucose, potassium theo ADR-009) — với
     các chỉ số khác ``evaluate_critical`` trả ``evaluated=False`` và không có cảnh báo nào được sinh.
     """
     if len(points) < 2:
-        return None, False
+        return None, False, None
     latest, previous = points[-1], points[-2]
     evaluation = evaluate_critical(analyte_canonical, latest.canonical_value, unit)
     if evaluation.is_critical:
-        return evaluation.critical_status, False
+        critical_alert = (
+            CriticalAlertSchema(
+                indicator_name=analyte_canonical,
+                value=latest.canonical_value,
+                unit=unit,
+                message=evaluation.alert_message,
+            )
+            if evaluation.alert_message is not None
+            else None
+        )
+        return evaluation.critical_status, False, critical_alert
     if evaluation.evaluated:
         approaching = approaches_critical(evaluation, previous.canonical_value)
-        return None, approaching
-    return None, False
+        return None, approaching, None
+    return None, False, None
+
+
+def _observed_direction(points: list[TrendPoint]) -> ObservedDirection | None:
+    if len(points) < MIN_TREND_POINTS:
+        return None
+    if all(
+        points[index].canonical_value > points[index - 1].canonical_value
+        for index in range(1, len(points))
+    ):
+        return "increasing"
+    if all(
+        points[index].canonical_value < points[index - 1].canonical_value
+        for index in range(1, len(points))
+    ):
+        return "decreasing"
+    return None
 
 
 def get_patient_trend_analytes(db: Session, *, username: str) -> list[TrendAnalyteSummary]:
@@ -286,7 +314,12 @@ def get_patient_trend(
             **section_fields,
         )
 
-    critical_status, approaching_critical = _latest_critical_state(analyte_canonical, unit, filtered_points)
+    observed_direction = _observed_direction(filtered_points)
+    critical_status, approaching_critical, critical_alert = _latest_critical_state(
+        analyte_canonical,
+        unit,
+        filtered_points,
+    )
 
     return TrendResponse(
         analyte_canonical=analyte_canonical,
@@ -295,6 +328,7 @@ def get_patient_trend(
         filter=trend_filter,
         result_count=len(filtered_points),
         trend_available=True,
+        observed_direction=observed_direction,
         points=[
             TrendPointResponse(
                 report_id=point.report_id,
@@ -306,5 +340,6 @@ def get_patient_trend(
         ],
         critical_status=critical_status,
         approaching_critical=approaching_critical,
+        critical_alert=critical_alert,
         **section_fields,
     )

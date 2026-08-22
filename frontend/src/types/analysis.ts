@@ -80,6 +80,7 @@ export type TrendResponse = {
   result_count: number;
   trend_available: boolean;
   points: TrendPoint[];
+  observed_direction?: "increasing" | "decreasing" | "stable" | null;
   reason?: string | null;
   section?: string | null;
   section_label?: string | null;
@@ -87,6 +88,7 @@ export type TrendResponse = {
   critical_status?: "critical_low" | "critical_high" | null;
   /** ADR-010 CRIT-TREND-03: điểm mới nhất đang tiến gần ngưỡng nguy kịch (trong 10%). */
   approaching_critical?: boolean;
+  critical_alert?: CriticalAlert | null;
 };
 
 export type TrendExplanationResponse = {

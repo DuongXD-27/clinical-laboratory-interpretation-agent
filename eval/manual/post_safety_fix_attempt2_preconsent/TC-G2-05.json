@@ -1,0 +1,77 @@
+{
+  "test_id": "TC-G2-05",
+  "purpose": "Generic Glucose fails closed",
+  "timestamp": "2026-08-15T07:09:08.768576+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Glucose",
+        "value": 5.2,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "unknown",
+    "critical": false,
+    "reference_bounds": null
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Glucose",
+        "value": 5.2,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": null,
+        "reference_high": null,
+        "status": "unknown",
+        "is_abnormal": false,
+        "is_critical": false,
+        "explanation": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoán. Để đảm bảo an toàn, vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác.",
+        "sources": []
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [
+      "Chỉ số Glucose (5.2 mmol/L) chưa có trong dữ liệu đối chiếu của ứng dụng nên tôi không biết mức này có bình thường hay không. Bác sĩ đọc giúp tôi chỉ số này với ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": "c902e27241f94f2d8cc778e8675bef9a",
+    "events": []
+  },
+  "latency_ms": 15.489,
+  "request_id": "c902e27241f94f2d8cc778e8675bef9a",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.036, analysis-critical-detector;dur=0.020, analysis-analyzer;dur=4.298, analysis-generate-questions;dur=0.169, analysis-guardrail;dur=0.875, analysis-graph-total;dur=11.132, analysis-response-map;dur=0.043, http-total;dur=13.007",
+  "verdict": "PASS"
+}

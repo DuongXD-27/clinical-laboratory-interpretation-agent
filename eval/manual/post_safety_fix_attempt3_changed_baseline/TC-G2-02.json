@@ -1,0 +1,95 @@
+{
+  "test_id": "TC-G2-02",
+  "purpose": "Abnormal, non-critical",
+  "timestamp": "2026-08-21T09:19:53.763057+00:00",
+  "request": {
+    "patient_age": 35,
+    "patient_gender": "male",
+    "test_date": "2026-08-15",
+    "language": "vi",
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 5.8,
+        "unit": "mmol/L"
+      }
+    ]
+  },
+  "expected": {
+    "ri_status": "high",
+    "critical": false
+  },
+  "actual_response": {
+    "indicators": [
+      {
+        "name": "Potassium",
+        "value": 5.8,
+        "unit": "mmol/L",
+        "analyte_raw": null,
+        "analyte_canonical": null,
+        "section": null,
+        "section_label": null,
+        "raw_value": null,
+        "raw_unit": null,
+        "canonical_value": null,
+        "canonical_unit": null,
+        "reference_low": 3.5,
+        "reference_high": 5.3,
+        "status": "high",
+        "critical_status": null,
+        "is_abnormal": true,
+        "is_critical": false,
+        "explanation": "Giá trị này cao so với khoảng tham chiếu được hệ thống sử dụng. Giá trị kali là 5.8 mmol/L, thuộc trạng thái cao (high). Tan máu trong ống nghiệm (hemolysis) hoặc garo quá lâu khi lấy máu có thể gây tăng kali máu giả tạo (pseudohyperkalemia).",
+        "rule_type": "RI",
+        "band_id": null,
+        "upper_operator": null,
+        "evaluation_reason": null,
+        "review_outcome": "pending",
+        "doctor_note": null,
+        "ai_text_snapshot": null,
+        "reviewed_by_username": null,
+        "reviewed_at": null,
+        "sources": [
+          "https://www.vinmec.com/vie/bai-viet/kali-mau-bao-nhieu-la-binh-thuong-vi",
+          "https://nhathuoclongchau.com.vn/bai-viet/kali-mau-binh-thuong-co-chi-so-bao-nhieu.html",
+          "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/",
+          "https://medlatec.vn/tu-dien-benh-ly/tang-kali-mau-srsce",
+          "https://medlatec.vn/tu-dien-benh-ly/ha-kali-mau-sosia",
+          "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-kali-mau-vi"
+        ]
+      }
+    ],
+    "critical_alerts": [],
+    "has_critical_values": false,
+    "questions_for_doctor": [
+      "Chỉ số Potassium của tôi là 5.8 mmol/L, cao hơn khoảng tham chiếu. Mức này có ý nghĩa gì với tôi, và tôi nên lưu ý gì trong ăn uống ạ?"
+    ],
+    "summary": "",
+    "disclaimer": "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa. Vui lòng trao đổi với bác sĩ để được diễn giải chính xác cho tình trạng của bạn.",
+    "guardrail_passed": true,
+    "out_of_scope_indicators": [],
+    "saved": false,
+    "duplicate": false,
+    "report_id": null,
+    "existing_report_id": null,
+    "error": "",
+    "is_placeholder": false,
+    "saved_report_id": null
+  },
+  "llm_evidence": {
+    "provider": "OpenAI-compatible/ChatOpenAI",
+    "model": "gpt-4o-mini",
+    "call_attempted": false,
+    "call_success": false,
+    "fallback_used": true,
+    "successful_call_count": 0,
+    "indicator_count": 1,
+    "request_id": null,
+    "events": []
+  },
+  "latency_ms": 2594.776,
+  "request_id": "edf18b92d71640ec849c39fc2fe781e0",
+  "status_code": 200,
+  "server_timing_header": "analysis-reference-range;dur=0.205, analysis-critical-detector;dur=0.071, analysis-analyzer;dur=2555.696, analysis-generate-questions;dur=0.574, analysis-guardrail;dur=1.122, analysis-graph-total;dur=2566.061, analysis-response-map;dur=0.058, http-total;dur=2569.826",
+  "verdict": "FAIL"
+}

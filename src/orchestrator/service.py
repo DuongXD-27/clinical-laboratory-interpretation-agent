@@ -16,6 +16,7 @@ from src.models.orchestrator_schemas import (
     NeedsInputPayload,
     OrchestratorRequest,
     OrchestratorResponse,
+    ProgressStage,
     ReasonCode,
     ResponseStatus,
     RetryAction,
@@ -23,9 +24,10 @@ from src.models.orchestrator_schemas import (
 )
 from src.orchestrator.context_resolver import resolve_context
 from src.orchestrator.dispatcher import DispatchContext, WorkflowResult, dispatch_workflow
-from src.orchestrator.gates import onboarding_gate, policy_gate, role_admission_gate
+from src.orchestrator.gates import medical_safety_gate, onboarding_gate, policy_gate, role_admission_gate
 from src.orchestrator.intent_router import RouteDecision, contains_lab_value, route_intent
-from src.orchestrator.response_composer import build_final_response
+from src.orchestrator.progress import ProgressCallback, emit_progress
+from src.orchestrator.response_composer import _safety_refusal_message, build_final_response, map_needs_input_prompt
 from src.orchestrator.session_store import SessionStore, default_session_store
 from src.services.ocr_review_gate import get_current_review_state
 
@@ -64,18 +66,25 @@ def _blocked_response(intent: IntentEnum, reason_code: ReasonCode, message: str)
 
 
 def _needs_input_response(intent: IntentEnum, reason_code: ReasonCode, message: str, missing: list[str]) -> OrchestratorResponse:
+    friendly_message = map_needs_input_prompt(missing, message)
     return OrchestratorResponse(
         intent=intent,
         status=ResponseStatus.NEEDS_INPUT,
-        message=message,
+        message=friendly_message,
         data_type=DataType.NEEDS_INPUT,
-        data=NeedsInputPayload(prompt=message, missing_fields=missing),
+        data=NeedsInputPayload(prompt=friendly_message, missing_fields=missing),
         reason_code=reason_code,
         suggested_actions=[RetryAction(reason_code=reason_code)],
     )
 
 
-async def _response_from_workflow(intent: IntentEnum, result: WorkflowResult) -> OrchestratorResponse:
+async def _response_from_workflow(
+    intent: IntentEnum,
+    result: WorkflowResult,
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> OrchestratorResponse:
+    await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
     return await build_final_response(
         intent=intent,
         status=result.status,
@@ -98,6 +107,8 @@ def _context_after_workflow(
         next_report_ref = data.report_ref
     if result.status == ResponseStatus.SUCCESS and isinstance(data, TrendDataPayload):
         next_analyte = data.trend.analyte_canonical
+    if result.status == ResponseStatus.SUCCESS and result.workflow_selected == "get_my_report_summary":
+        next_analyte = None
 
     return next_report_ref, next_analyte
 
@@ -111,6 +122,8 @@ def _is_ocr_bypass_request(message: str) -> bool:
         "analyze now",
         "bỏ qua confirm",
         "bo qua confirm",
+        "bỏ qua xác nhận",
+        "bo qua xac nhan",
         "không cần xác nhận",
         "khong can xac nhan",
         "cứ phân tích",
@@ -120,6 +133,9 @@ def _is_ocr_bypass_request(message: str) -> bool:
 
 
 def _looks_like_gibberish(message: str) -> bool:
+    from src.orchestrator.medical_context import extract_explicit_analyte
+    if extract_explicit_analyte(message) is not None or contains_lab_value(message):
+        return False
     tokens = re.findall(r"[A-Za-zÀ-ỹ0-9]+", message)
     return bool(message.strip()) and len(tokens) <= 2 and not any(ch.isspace() for ch in message.strip())
 
@@ -158,6 +174,7 @@ async def handle_message(
     current_user: object,
     db: object,
     runtime: OrchestratorRuntime | None = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> OrchestratorResponse:
     runtime = runtime or OrchestratorRuntime()
     started_at = time.perf_counter()
@@ -189,13 +206,114 @@ async def handle_message(
         )
         return response
 
-    resolved = resolve_context(request.message, session, request.ui_context)
+    # 1. Medical safety gate
+    safety_reason = medical_safety_gate(request.message)
+    if safety_reason is not None:
+        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=safety_reason, route_confidence=1.0)
+        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
+
+    active_pending = session.conversation_state.get_active_pending_question()
+    if not active_pending and _looks_like_gibberish(request.message):
+        return _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            ReasonCode.UNKNOWN_INTENT,
+            "Tôi chưa hiểu yêu cầu này. Vui lòng diễn đạt lại.",
+        )
+
+    if _is_ocr_bypass_request(request.message):
+        route = RouteDecision(intent=IntentEnum.ANALYZE_REPORT, reason_code=ReasonCode.OCR_REVIEW_REQUIRED, route_confidence=1.0)
+        response = _blocked_response(
+            route.intent,
+            route.reason_code,
+            "Bạn cần xác nhận OCR trước khi phân tích phiếu từ ảnh.",
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
+
+    # 2. Intent router
+    from src.models.db import ROLE_PATIENT
+
+    has_medical_context = (
+        session.current_report_ref is not None
+        or session.current_analyte is not None
+        or (role == ROLE_PATIENT)
+    )
+    await emit_progress(progress_callback, ProgressStage.ROUTING)
+    route = await route_intent(request.message, session, role, has_medical_context=has_medical_context)
+    if route.reason_code == ReasonCode.UNKNOWN_INTENT:
+        response = _needs_input_response(
+            route.intent,
+            ReasonCode.UNKNOWN_INTENT,
+            "Tôi chưa chắc bạn muốn làm gì. Tôi có thể giúp bạn xem kết quả xét nghiệm, xem xu hướng hoặc chuẩn bị câu hỏi cho bác sĩ.",
+            []
+        )
+        from src.models.orchestrator_schemas import ConversationState
+        runtime.session_store.update_after_turn(
+            current_user,
+            session,
+            last_intent=route.intent,
+            conversation_state=ConversationState(
+                pending_question=response.message,
+                pending_question_timestamp=time.time(),
+            )
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=ReasonCode.UNKNOWN_INTENT,
+            started_at=started_at,
+        )
+        return response
+        
+    # 3. Medical context resolver (Autonomous context retrieval)
+    from src.orchestrator.medical_context import resolve_medical_context
+    await emit_progress(progress_callback, ProgressStage.MEDICAL_CONTEXT)
+    resolved = resolve_medical_context(
+        message=request.message,
+        session=session,
+        ui_context=request.ui_context,
+        current_user=current_user,
+        db=db,
+        intent=route.intent,
+    )
     if resolved.reason_code == ReasonCode.AMBIGUOUS_CONTEXT:
         response = _needs_input_response(
-            IntentEnum.ANALYZE_TREND,
+            route.intent,
             ReasonCode.AMBIGUOUS_CONTEXT,
-            "Vui lòng chọn chỉ số cần so sánh trước.",
+            "Bạn muốn nói đến chỉ số nào?",
             ["current_analyte"],
+        )
+        from src.models.orchestrator_schemas import ConversationState
+        runtime.session_store.update_after_turn(
+            current_user,
+            session,
+            last_intent=route.intent,
+            current_report_ref=resolved.current_report_ref,
+            conversation_state=ConversationState(
+                pending_question=response.message,
+                pending_question_timestamp=time.time(),
+            ),
         )
         _log_turn(
             request_id=request_id,
@@ -207,48 +325,15 @@ async def handle_message(
             started_at=started_at,
         )
         return response
+    if resolved.forced_intent:
+        route = RouteDecision(intent=resolved.forced_intent, route_confidence=1.0)
 
-    if contains_lab_value(request.message):
-        return _needs_input_response(
-            IntentEnum.ANALYZE_REPORT,
-            ReasonCode.AMBIGUOUS_CONTEXT,
-            "Vui lòng nhập chỉ số qua form phân tích hoặc xác nhận OCR trước.",
-            ["analysis_input"],
-        )
-
-    if _looks_like_gibberish(request.message):
-        return _blocked_response(
-            IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            ReasonCode.UNKNOWN_INTENT,
-            "Tôi chưa hiểu yêu cầu này. Vui lòng diễn đạt lại.",
-        )
-
-    if _is_ocr_bypass_request(request.message):
-        review_state = get_current_review_state(db, current_user=current_user)
-        session = runtime.session_store.replace_pending_review(
-            current_user,
-            session,
-            pending_ocr_review=review_state.pending,
-        )
-        if review_state.pending:
-            return _blocked_response(
-                IntentEnum.ANALYZE_REPORT,
-                ReasonCode.OCR_REVIEW_REQUIRED,
-                "Bạn cần xác nhận OCR trước khi phân tích phiếu từ ảnh.",
-            )
-
-    route = RouteDecision(intent=resolved.forced_intent, route_confidence=1.0) if resolved.forced_intent else await route_intent(
-        request.message,
-        session,
-        role,
-    )
     if route.reason_code in {
         ReasonCode.MEDICAL_DIAGNOSIS_REQUEST,
         ReasonCode.MEDICAL_CAUSE_REQUEST,
         ReasonCode.TREATMENT_REQUEST,
-        ReasonCode.UNKNOWN_INTENT,
     }:
-        response = _blocked_response(route.intent, route.reason_code, "Tôi không thể hỗ trợ yêu cầu này an toàn.")
+        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
         _log_turn(
             request_id=request_id,
             session_id=session.session_id,
@@ -281,6 +366,7 @@ async def handle_message(
             db=db,
             current_report_ref=resolved.current_report_ref,
             current_analyte=resolved.current_analyte,
+            progress_callback=progress_callback,
         ),
     )
     next_report_ref, next_analyte = _context_after_workflow(
@@ -288,6 +374,24 @@ async def handle_message(
         current_report_ref=resolved.current_report_ref,
         current_analyte=resolved.current_analyte,
     )
+    final_response = await _response_from_workflow(
+        route.intent,
+        result,
+        progress_callback=progress_callback,
+    )
+    
+    # Save conversation state with active timestamp
+    from src.models.orchestrator_schemas import ConversationState
+    new_state = ConversationState(
+        pending_question=final_response.message if final_response.status == ResponseStatus.NEEDS_INPUT else None,
+        pending_question_timestamp=time.time() if final_response.status == ResponseStatus.NEEDS_INPUT else None,
+    )
+
+    clear_analyte = (
+        result.status == ResponseStatus.SUCCESS
+        and result.workflow_selected == "get_my_report_summary"
+    )
+
     runtime.session_store.update_after_turn(
         current_user,
         session,
@@ -295,6 +399,8 @@ async def handle_message(
         current_report_ref=next_report_ref,
         current_analyte=next_analyte,
         transient_ui_context=request.ui_context,
+        conversation_state=new_state,
+        clear_analyte=clear_analyte,
     )
     _log_turn(
         request_id=request_id,
@@ -305,7 +411,7 @@ async def handle_message(
         failure_code=result.reason_code,
         started_at=started_at,
     )
-    return await _response_from_workflow(route.intent, result)
+    return final_response
 
 
 def acknowledge_onboarding(current_user: object, *, runtime: OrchestratorRuntime | None = None) -> OrchestratorResponse:
