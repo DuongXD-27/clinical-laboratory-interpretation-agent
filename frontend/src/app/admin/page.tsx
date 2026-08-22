@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, RefreshCw, Search } from "lucide-react";
 import {
   ForbiddenError,
   UnauthorizedError,
@@ -9,9 +10,12 @@ import {
   fetchTraceSummary,
   fetchTraces,
   fetchTracingStatus,
-  getRole,
-  getToken,
 } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { RequestTrace, TraceSummary, TracingStatus } from "@/types/admin";
 
 const WINDOW_OPTIONS = [
@@ -47,16 +51,45 @@ function formatDay(iso: string): string {
  * con số đoán bừa chỉ dạy người xem bỏ qua màu đỏ. Mã trạng thái thì không cần
  * đoán — 5xx là hỏng, 4xx là bị từ chối.
  */
-function statusTone(status: number): string {
-  if (status >= 500) return "trace-status trace-status--error";
-  if (status >= 400) return "trace-status trace-status--warn";
-  return "trace-status trace-status--ok";
+function statusVariant(status: number): "success" | "warning" | "destructive" {
+  if (status >= 500) return "destructive";
+  if (status >= 400) return "warning";
+  return "success";
+}
+
+type KpiProps = { label: string; value: string | number; hint: string; alert?: boolean };
+
+function Kpi({ label, value, hint, alert = false }: KpiProps) {
+  return (
+    <Card
+      className={cn(
+        "gap-0 py-4",
+        // Chỉ tô cảnh báo khi thật sự có lỗi. Tô sẵn thì màu mất hết ý nghĩa.
+        alert && "border-[var(--status-critical-border)] bg-[var(--status-critical-bg)]",
+      )}
+    >
+      <CardContent className="px-4">
+        <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
+        {/* tabular-nums để các thẻ không nhảy khi số đổi lúc làm mới */}
+        <strong
+          className={cn(
+            "mt-1.5 block text-2xl font-semibold leading-none tabular-nums tracking-tight",
+            alert ? "text-[var(--status-critical-fg)]" : "text-foreground",
+          )}
+        >
+          {value}
+        </strong>
+        <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function AdminTracePage() {
   const router = useRouter();
 
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [status, setStatus] = useState<TracingStatus | null>(null);
   const [summary, setSummary] = useState<TraceSummary | null>(null);
   const [traces, setTraces] = useState<RequestTrace[]>([]);
@@ -64,6 +97,7 @@ export default function AdminTracePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadedAt, setLoadedAt] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState("");
 
   const [windowHours, setWindowHours] = useState(24);
   const [onlyLlmErrors, setOnlyLlmErrors] = useState(false);
@@ -79,15 +113,6 @@ export default function AdminTracePage() {
   const [durationInput, setDurationInput] = useState("");
   const [appliedPath, setAppliedPath] = useState("");
   const [appliedDuration, setAppliedDuration] = useState("");
-
-  useEffect(() => {
-    if (!getToken() || getRole() !== "admin") {
-      router.replace("/login");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage auth is available only after mount.
-    setCheckingAuth(false);
-  }, [router]);
 
   const bounce = useCallback(() => {
     clearSession();
@@ -121,15 +146,9 @@ export default function AdminTracePage() {
       setTotal(listData.total);
       setLoadedAt(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
     } catch (err) {
-      // Máy chủ mới là nơi quyết định vai trò, không phải localStorage.
-      //
-      // Guard ở đầu trang đọc `getRole()`, tức là đọc một giá trị người dùng
-      // sửa được bằng DevTools. Sửa thành "admin" là guard cho qua, và trước
-      // bản vá này trang sẽ đứng nguyên ở màn admin kèm một dòng lỗi — không
-      // rò dữ liệu nào, nhưng trông y như phân quyền hỏng.
-      //
-      // 403 nghĩa là máy chủ đã phủ nhận vai trò đó. Xoá phiên và đá về đăng
-      // nhập, thay vì tiếp tục tin localStorage.
+      // Máy chủ mới là nơi quyết định vai trò, không phải localStorage. Guard ở
+      // AdminShell đọc `getRole()` — một giá trị người dùng sửa được bằng
+      // DevTools. 403 nghĩa là máy chủ đã phủ nhận vai trò đó.
       if (err instanceof UnauthorizedError || err instanceof ForbiddenError) {
         bounce();
         return;
@@ -141,20 +160,11 @@ export default function AdminTracePage() {
   }, [appliedDuration, appliedPath, bounce, offset, onlyLlmErrors, onlyServerErrors, windowHours]);
 
   useEffect(() => {
-    if (checkingAuth) return;
     // `load` đặt cờ loading ngay khi chạy — đây là nạp dữ liệu lúc mở trang và
     // khi bộ lọc đã áp dụng đổi, không phải đồng bộ state này theo state khác.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch lúc mở trang, không phải đồng bộ state
     void load();
-  }, [checkingAuth, load]);
-
-  if (checkingAuth) {
-    return (
-      <div className="loading-message" role="status">
-        Đang mở trang quản trị...
-      </div>
-    );
-  }
+  }, [load]);
 
   // Tỉ lệ thanh nền theo dòng chậm nhất của TRANG đang xem. Dùng ngưỡng tuyệt
   // đối thì phải bịa ra một con số, mà con số đó chưa chọn từ số đo thật.
@@ -162,114 +172,114 @@ export default function AdminTracePage() {
   const hasFilters = Boolean(appliedPath || appliedDuration || onlyLlmErrors || onlyServerErrors);
 
   return (
-    <div className="history-page-layout">
-      <div className="page-section-heading">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="eyebrow">Vận hành</span>
-          <h2>Trace hệ thống</h2>
-          <p>
-            Độ trễ, truy vấn CSDL và lời gọi LLM của từng request. Trang này không hiển thị dữ liệu
-            xét nghiệm của bệnh nhân.
+          <h2 className="m-0 text-xl font-semibold tracking-tight lg:text-2xl">Trace hệ thống</h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Độ trễ, truy vấn CSDL và lời gọi LLM của từng request. Trang này không hiển thị dữ liệu xét
+            nghiệm của bệnh nhân.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {loadedAt ? <span className="trace-updated">Cập nhật {loadedAt}</span> : null}
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            {loading ? "Đang tải..." : "Làm mới"}
-          </button>
-          {/* Bản đầu của trang này KHÔNG có nút đăng xuất — màn bệnh nhân có
-              (trong PatientShell), màn bác sĩ có, riêng admin thì không. Hệ quả
-              không phải chuyện thẩm mỹ: admin vào đây rồi thì không còn chỗ nào
-              để thoát, phiên nằm lại trong localStorage, và người dùng tưởng
-              mình đã đăng xuất trong khi chưa. */}
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              clearSession();
-              router.replace("/login");
+        <div className="flex items-center gap-3">
+          {loadedAt ? (
+            <span className="text-xs tabular-nums text-muted-foreground">Cập nhật {loadedAt}</span>
+          ) : null}
+          {/* Đường đi thật của tính năng này: người dùng đọc `request_id` từ màn
+              lỗi rồi đọc cho admin. Bắt admin tự lọc trong bảng là bỏ mất chính
+              lý do id đó tồn tại. */}
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const id = lookupId.trim();
+              if (id) router.push(`/admin/traces/${encodeURIComponent(id)}`);
             }}
           >
-            Đăng xuất
-          </button>
+            <Input
+              value={lookupId}
+              onChange={(event) => setLookupId(event.target.value)}
+              placeholder="Dán request_id..."
+              aria-label="Tra cứu theo request_id"
+              className="h-9 w-48 font-mono text-xs"
+            />
+            <Button type="submit" variant="outline" size="sm" disabled={!lookupId.trim()}>
+              <Search className="h-4 w-4" aria-hidden="true" />
+              Tra
+            </Button>
+          </form>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden="true" />
+            {loading ? "Đang tải..." : "Làm mới"}
+          </Button>
         </div>
       </div>
 
       {error ? (
-        <p className="error-message" role="alert">
-          {error}
-        </p>
+        <Card className="border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] py-3">
+          <CardContent className="px-4 text-sm text-[var(--status-critical-fg)]" role="alert">
+            {error}
+          </CardContent>
+        </Card>
       ) : null}
 
       {status ? (
-        <section className="admin-surface trace-config">
-          <span className="trace-config__item">
-            <span className={`trace-dot ${status.langfuse_configured ? "trace-dot--on" : "trace-dot--off"}`} />
-            Langfuse
-            <strong className="trace-config__value">
-              {status.langfuse_configured ? "đang bật" : "chưa cấu hình"}
-            </strong>
-          </span>
-          <span className="trace-config__item">
-            Máy chủ
-            <span className="trace-config__value trace-config__value--mono">{status.langfuse_host}</span>
-          </span>
-          <span className="trace-config__item">
-            Che dữ liệu
-            <strong className="trace-config__value">{status.masked ? "bật" : "tắt"}</strong>
-          </span>
-          <span className="trace-config__item">
-            Giữ trace
-            <strong className="trace-config__value">{status.retention_days} ngày</strong>
-          </span>
-          {status.langfuse_configured ? null : (
-            /* Phân biệt "chưa cấu hình" với "chưa có traffic". Thiếu dòng này
-               thì một bảng rỗng có hai cách hiểu và không cách nào loại trừ. */
-            <p className="trace-config__note">
-              Chưa đặt LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY. Bảng dưới vẫn chạy bình thường vì nó
-              đọc CSDL của hệ thống; chỉ thiếu phần token và chi phí từng lời gọi LLM.
-            </p>
-          )}
-        </section>
+        <Card className="py-3">
+          <CardContent className="flex flex-wrap items-center gap-x-7 gap-y-2 px-4 text-sm">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  status.langfuse_configured
+                    ? "bg-[var(--status-normal-fg)] shadow-[0_0_0_3px_var(--status-normal-bg)]"
+                    : "bg-[var(--foreground-muted)] shadow-[0_0_0_3px_var(--surface-subtle)]",
+                )}
+                aria-hidden="true"
+              />
+              Langfuse
+              <strong className="font-medium text-foreground">
+                {status.langfuse_configured ? "đang bật" : "chưa cấu hình"}
+              </strong>
+            </span>
+            <span className="text-muted-foreground">
+              Máy chủ <span className="font-mono text-xs text-foreground">{status.langfuse_host}</span>
+            </span>
+            <span className="text-muted-foreground">
+              Che dữ liệu <strong className="font-medium text-foreground">{status.masked ? "bật" : "tắt"}</strong>
+            </span>
+            <span className="text-muted-foreground">
+              Giữ trace <strong className="font-medium text-foreground">{status.retention_days} ngày</strong>
+            </span>
+            {status.langfuse_configured ? null : (
+              /* Phân biệt "chưa cấu hình" với "chưa có traffic". Thiếu dòng này
+                 thì một bảng rỗng có hai cách hiểu và không cách nào loại trừ. */
+              <p className="m-0 basis-full text-xs leading-relaxed text-muted-foreground">
+                Chưa đặt LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY. Bảng dưới vẫn chạy bình thường vì nó đọc
+                CSDL của hệ thống; chỉ thiếu phần token và chi phí từng lời gọi LLM.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : null}
 
       {summary ? (
-        <section className="trace-kpis">
-          <div className="trace-kpi">
-            <span className="trace-kpi__label">Request</span>
-            <strong className="trace-kpi__value">{summary.request_count}</strong>
-            <span className="trace-kpi__unit">trong khoảng đang xem</span>
-          </div>
-          <div className="trace-kpi">
-            <span className="trace-kpi__label">Trung bình</span>
-            <strong className="trace-kpi__value">{formatMs(summary.avg_duration_ms)}</strong>
-            <span className="trace-kpi__unit">mỗi request</span>
-          </div>
-          <div className="trace-kpi">
-            <span className="trace-kpi__label">Chậm nhất</span>
-            <strong className="trace-kpi__value">{formatMs(summary.max_duration_ms)}</strong>
-            <span className="trace-kpi__unit">một lượt</span>
-          </div>
-          <div className="trace-kpi">
-            <span className="trace-kpi__label">Gọi LLM</span>
-            <strong className="trace-kpi__value">{summary.llm_call_count}</strong>
-            <span className="trace-kpi__unit">lượt</span>
-          </div>
-          <div className={`trace-kpi${summary.llm_error_count > 0 ? " trace-kpi--alert" : ""}`}>
-            <span className="trace-kpi__label">LLM lỗi</span>
-            <strong className="trace-kpi__value">{summary.llm_error_count}</strong>
-            <span className="trace-kpi__unit">vẫn trả về 200</span>
-          </div>
-          <div className={`trace-kpi${summary.server_error_count > 0 ? " trace-kpi--alert" : ""}`}>
-            <span className="trace-kpi__label">Lỗi 5xx</span>
-            <strong className="trace-kpi__value">{summary.server_error_count}</strong>
-            <span className="trace-kpi__unit">request hỏng</span>
-          </div>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          <Kpi label="Request" value={summary.request_count} hint="trong khoảng đang xem" />
+          <Kpi label="Trung bình" value={formatMs(summary.avg_duration_ms)} hint="mỗi request" />
+          <Kpi label="Chậm nhất" value={formatMs(summary.max_duration_ms)} hint="một lượt" />
+          <Kpi label="Gọi LLM" value={summary.llm_call_count} hint="lượt" />
+          <Kpi
+            label="LLM lỗi"
+            value={summary.llm_error_count}
+            hint="vẫn trả về 200"
+            alert={summary.llm_error_count > 0}
+          />
+          <Kpi
+            label="Lỗi 5xx"
+            value={summary.server_error_count}
+            hint="request hỏng"
+            alert={summary.server_error_count > 0}
+          />
         </section>
       ) : null}
 
@@ -277,123 +287,166 @@ export default function AdminTracePage() {
           200, và chỉ bệnh nhân nhận ra chất lượng đi xuống. Nên nhắc chủ động,
           kèm sẵn nút lọc — thấy vấn đề mà phải tự đi tìm thì phần lớn sẽ bỏ qua. */}
       {summary && summary.llm_error_count > 0 && !onlyLlmErrors ? (
-        <div className="trace-alert">
-          <span>
-            <strong>{summary.llm_error_count} lời gọi LLM lỗi</strong> trong khoảng này. Những request đó
-            vẫn trả 200 nhưng nội dung đã rơi về bản dựng sẵn.
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setOnlyLlmErrors(true);
-              setOffset(0);
-            }}
-          >
-            Xem ngay
-          </button>
-        </div>
+        <Card className="border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] py-3">
+          <CardContent className="flex flex-wrap items-center gap-3 px-4">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--status-critical-fg)]" aria-hidden="true" />
+            <span className="flex-1 text-sm text-[var(--status-critical-fg)]">
+              <strong>{summary.llm_error_count} lời gọi LLM lỗi</strong> trong khoảng này. Những request đó vẫn
+              trả 200 nhưng nội dung đã rơi về bản dựng sẵn.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setOnlyLlmErrors(true);
+                setOffset(0);
+              }}
+            >
+              Xem ngay
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <form
-        className="admin-surface trace-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setAppliedPath(pathInput);
-          setAppliedDuration(durationInput);
-          setOffset(0);
-        }}
-      >
-        <label className="trace-field">
-          <span className="trace-field__label">Khoảng thời gian</span>
-          <select
-            value={windowHours}
-            onChange={(event) => {
-              setWindowHours(Number(event.target.value));
+      <Card className="py-4">
+        <CardContent className="px-4">
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setAppliedPath(pathInput);
+              setAppliedDuration(durationInput);
               setOffset(0);
             }}
           >
-            {WINDOW_OPTIONS.map((option) => (
-              <option key={option.hours} value={option.hours}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Khoảng thời gian
+              </span>
+              <select
+                value={windowHours}
+                onChange={(event) => {
+                  setWindowHours(Number(event.target.value));
+                  setOffset(0);
+                }}
+                className="h-9 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-foreground"
+              >
+                {WINDOW_OPTIONS.map((option) => (
+                  <option key={option.hours} value={option.hours}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className="trace-field trace-field--path">
-          <span className="trace-field__label">Đường dẫn chứa</span>
-          <input
-            type="text"
-            value={pathInput}
-            placeholder="/api/v1/analyze"
-            onChange={(event) => setPathInput(event.target.value)}
-          />
-        </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Đường dẫn chứa
+              </span>
+              <Input
+                type="text"
+                value={pathInput}
+                placeholder="/api/v1/analyze"
+                onChange={(event) => setPathInput(event.target.value)}
+                className="h-9 w-56"
+              />
+            </label>
 
-        <label className="trace-field trace-field--num">
-          <span className="trace-field__label">Chậm hơn</span>
-          <input
-            type="number"
-            min={0}
-            value={durationInput}
-            placeholder="3000 ms"
-            onChange={(event) => setDurationInput(event.target.value)}
-          />
-        </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Chậm hơn
+              </span>
+              <Input
+                type="number"
+                min={0}
+                value={durationInput}
+                placeholder="3000 ms"
+                onChange={(event) => setDurationInput(event.target.value)}
+                className="h-9 w-32"
+              />
+            </label>
 
-        <label className={`trace-toggle${onlyLlmErrors ? " trace-toggle--on" : ""}`}>
-          <input
-            type="checkbox"
-            checked={onlyLlmErrors}
-            onChange={(event) => {
-              setOnlyLlmErrors(event.target.checked);
-              setOffset(0);
-            }}
-          />
-          Chỉ request có LLM lỗi
-        </label>
+            {/* Bật lên thì thấy ngay là đang lọc, khỏi phải soi ô tick. */}
+            <label
+              className={cn(
+                "flex h-9 cursor-pointer select-none items-center gap-2 rounded-md border px-3 text-sm transition-colors",
+                onlyLlmErrors
+                  ? "border-[var(--brand)] bg-[var(--brand-soft)] font-medium text-[var(--brand-strong)]"
+                  : "border-[var(--border)] text-[var(--foreground-secondary)] hover:border-[var(--border-strong)]",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={onlyLlmErrors}
+                onChange={(event) => {
+                  setOnlyLlmErrors(event.target.checked);
+                  setOffset(0);
+                }}
+                className="h-3.5 w-3.5 accent-[var(--brand)]"
+              />
+              Chỉ request có LLM lỗi
+            </label>
 
-        <label className={`trace-toggle${onlyServerErrors ? " trace-toggle--on" : ""}`}>
-          <input
-            type="checkbox"
-            checked={onlyServerErrors}
-            onChange={(event) => {
-              setOnlyServerErrors(event.target.checked);
-              setOffset(0);
-            }}
-          />
-          Chỉ lỗi 500
-        </label>
+            <label
+              className={cn(
+                "flex h-9 cursor-pointer select-none items-center gap-2 rounded-md border px-3 text-sm transition-colors",
+                onlyServerErrors
+                  ? "border-[var(--brand)] bg-[var(--brand-soft)] font-medium text-[var(--brand-strong)]"
+                  : "border-[var(--border)] text-[var(--foreground-secondary)] hover:border-[var(--border-strong)]",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={onlyServerErrors}
+                onChange={(event) => {
+                  setOnlyServerErrors(event.target.checked);
+                  setOffset(0);
+                }}
+                className="h-3.5 w-3.5 accent-[var(--brand)]"
+              />
+              Chỉ lỗi 500
+            </label>
 
-        <button type="submit" className="secondary-button trace-filters__submit" disabled={loading}>
-          Lọc
-        </button>
-      </form>
+            <Button type="submit" size="sm" className="ml-auto" disabled={loading}>
+              Lọc
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-      <section className="admin-surface trace-table-wrap">
-        <div className="trace-scroll">
-          <table className="trace-table">
+      <Card className="overflow-hidden py-0">
+        {/* Bảng rộng hơn màn hình hẹp là bình thường — cho nó cuộn trong khung
+            của chính nó thay vì đẩy cả trang cuộn ngang. */}
+        <div className="max-h-[62vh] overflow-auto">
+          <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
-                <th>Thời điểm</th>
-                <th>Request</th>
-                <th>Mã</th>
-                <th className="trace-num">Thời lượng</th>
-                <th className="trace-num">CSDL</th>
-                <th className="trace-num">LLM</th>
-                <th>Vai trò</th>
-                <th>request_id</th>
+                {["Thời điểm", "Request", "Mã", "Thời lượng", "CSDL", "LLM", "Vai trò", "request_id"].map(
+                  (head, index) => (
+                    <th
+                      key={head}
+                      className={cn(
+                        "sticky top-0 z-10 whitespace-nowrap border-b border-[var(--border)] bg-[var(--surface-subtle)] px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+                        index >= 3 && index <= 5 ? "text-right" : "text-left",
+                      )}
+                    >
+                      {head}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
               {traces.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="trace-empty">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {loading ? (
                       "Đang tải..."
                     ) : (
                       <>
-                        <strong>Không có request nào khớp bộ lọc</strong>
+                        <strong className="mb-1 block text-sm text-[var(--foreground-secondary)]">
+                          Không có request nào khớp bộ lọc
+                        </strong>
                         {hasFilters
                           ? "Nới bộ lọc hoặc chọn khoảng thời gian rộng hơn."
                           : "Hệ thống chưa nhận request nào trong khoảng này."}
@@ -405,49 +458,87 @@ export default function AdminTracePage() {
                 traces.map((trace) => {
                   const share = Math.max(4, Math.round((trace.duration_ms / slowest) * 100));
                   return (
-                    <tr key={`${trace.request_id}-${trace.created_at}`}>
-                      <td className="trace-time">
+                    <tr
+                      key={`${trace.request_id}-${trace.created_at}`}
+                      onClick={() => router.push(`/admin/traces/${encodeURIComponent(trace.request_id)}`)}
+                      className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)]"
+                    >
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-xs tabular-nums text-muted-foreground">
                         {formatClock(trace.created_at)}
-                        <div className="trace-sub">{formatDay(trace.created_at)}</div>
+                        <div className="text-[11px] text-[var(--foreground-muted)]">
+                          {formatDay(trace.created_at)}
+                        </div>
                       </td>
-                      <td>
-                        <span className="trace-method">{trace.method}</span>
-                        <div className="trace-path" title={trace.path}>
+                      <td className="border-b border-[var(--border)]/60 px-3.5 py-2.5">
+                        <span className="font-mono text-[11px] font-semibold tracking-wide text-muted-foreground">
+                          {trace.method}
+                        </span>
+                        <div
+                          className="max-w-[300px] truncate font-mono text-xs text-foreground"
+                          title={trace.path}
+                        >
                           {trace.path}
                         </div>
                       </td>
-                      <td>
-                        <span className={statusTone(trace.status_code)}>{trace.status_code}</span>
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5">
+                        <Badge variant={statusVariant(trace.status_code)} className="tabular-nums">
+                          {trace.status_code}
+                        </Badge>
                       </td>
-                      <td className="trace-num">
-                        <span className="trace-bar">
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-right">
+                        {/* Thanh nền sau cột thời lượng: quét mắt một cái là thấy
+                            dòng nào chậm, không phải đọc từng con số. Tỉ lệ theo
+                            dòng chậm nhất của TRANG đang xem. */}
+                        <span className="relative inline-block min-w-[64px] overflow-hidden rounded px-2 py-1 text-right tabular-nums">
                           <span
-                            className={`trace-bar__fill${trace.duration_ms >= 3000 ? " trace-bar__fill--slow" : ""}`}
+                            className={cn(
+                              "absolute inset-y-0 left-0",
+                              trace.duration_ms >= 3000
+                                ? "bg-[var(--status-abnormal-bg)]"
+                                : "bg-[var(--brand-soft)]",
+                            )}
                             style={{ width: `${share}%` }}
+                            aria-hidden="true"
                           />
-                          <span className="trace-bar__text">{formatMs(trace.duration_ms)}</span>
+                          <span className="relative font-medium text-foreground">
+                            {formatMs(trace.duration_ms)}
+                          </span>
                         </span>
                       </td>
-                      <td className="trace-num">
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-right tabular-nums">
                         {trace.db_query_count}
-                        <div className="trace-sub">{formatMs(trace.db_ms)}</div>
+                        <div className="text-[11px] text-[var(--foreground-muted)]">{formatMs(trace.db_ms)}</div>
                       </td>
-                      <td className="trace-num">
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-right tabular-nums">
                         {trace.llm_call_count > 0 ? (
                           <>
                             {trace.llm_call_count}
                             {trace.llm_error_count > 0 ? (
-                              <span className="trace-llm-error"> · {trace.llm_error_count} lỗi</span>
+                              <span className="font-semibold text-[var(--status-critical-fg)]">
+                                {" "}
+                                · {trace.llm_error_count} lỗi
+                              </span>
                             ) : null}
-                            <div className="trace-sub">{formatMs(trace.llm_ms)}</div>
+                            <div className="text-[11px] text-[var(--foreground-muted)]">
+                              {formatMs(trace.llm_ms)}
+                            </div>
                           </>
                         ) : (
-                          <span className="trace-sub">—</span>
+                          <span className="text-[var(--foreground-muted)]">—</span>
                         )}
                       </td>
-                      <td className="trace-role">{trace.user_role ?? "—"}</td>
-                      <td>
-                        <code className="trace-id" title={trace.request_id}>
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-xs text-muted-foreground">
+                        {trace.user_role ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5">
+                        {/* Cắt bằng CSS chứ KHÔNG cắt chuỗi trong JSX: select-all
+                            chỉ copy được phần đã render, nên render 12 ký tự là
+                            dán ra 12 ký tự vô dụng. */}
+                        <code
+                          className="inline-block max-w-[104px] cursor-text select-all truncate align-middle font-mono text-[11px] text-[var(--foreground-muted)]"
+                          title={trace.request_id}
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {trace.request_id}
                         </code>
                       </td>
@@ -459,28 +550,32 @@ export default function AdminTracePage() {
           </table>
         </div>
 
-        <div className="trace-footer">
+        <div className="flex items-center justify-between gap-4 border-t border-[var(--border)] px-4 py-3 text-xs tabular-nums text-muted-foreground">
           <span>
-            {total === 0 ? "0 request" : `${offset + 1}–${Math.min(offset + PAGE_SIZE, total)} trên ${total} request`}
+            {total === 0
+              ? "0 request"
+              : `${offset + 1}–${Math.min(offset + PAGE_SIZE, total)} trên ${total} request`}
           </span>
-          <div className="trace-pager">
-            <button
-              type="button"
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
               disabled={offset === 0 || loading}
               onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
             >
               Trước
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={offset + PAGE_SIZE >= total || loading}
               onClick={() => setOffset(offset + PAGE_SIZE)}
             >
               Sau
-            </button>
+            </Button>
           </div>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
