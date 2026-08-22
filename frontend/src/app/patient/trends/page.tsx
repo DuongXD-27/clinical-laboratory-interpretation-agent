@@ -557,7 +557,7 @@ export default function PatientTrendsPage() {
                                         analyte={trends[0].display_name}
                                         unit={unit}
                                         points={trends[0].points}
-                                        height={280}
+                                        height={320}
                                       />
                                     ) : (
                                       <TrendChart
@@ -568,7 +568,7 @@ export default function PatientTrendsPage() {
                                           points: t.points,
                                           color: CHART_COLORS[i % CHART_COLORS.length],
                                         }))}
-                                        height={280}
+                                        height={320}
                                       />
                                     )}
                                   </div>
@@ -599,7 +599,7 @@ export default function PatientTrendsPage() {
                                         analyte={trends[0].display_name}
                                         unit={unit}
                                         points={trends[0].points}
-                                        height={280}
+                                        height={320}
                                       />
                                     ) : (
                                       <TrendChart
@@ -610,7 +610,7 @@ export default function PatientTrendsPage() {
                                           points: t.points,
                                           color: CHART_COLORS[i % CHART_COLORS.length],
                                         }))}
-                                        height={280}
+                                        height={320}
                                       />
                                     )}
                                   </div>
