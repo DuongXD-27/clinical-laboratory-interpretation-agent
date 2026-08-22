@@ -20,6 +20,7 @@ from src.scripts.extract_explanation_reference_ranges import (
     canonical_analyte,
     extract_supplemental_rules,
 )
+from src.scripts.ingest_kb import corpus_sha256
 from src.services.reference_repository import ReferenceRepository
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -402,10 +403,16 @@ def _load_csv_from(path: Path) -> list[dict]:
 # SYNC-20: RAGAS datasets/results unchanged
 # ---------------------------------------------------------------------------
 def test_sync_20_ragas_unchanged():
-    import hashlib
+    """Pin hash tren byte DA CHUAN HOA dong, khong phai byte tho.
 
-    dataset_hash = hashlib.sha256(RAGAS_DATASET.read_bytes()).hexdigest().upper()
-    result_hash = hashlib.sha256(RAGAS_RESULT.read_bytes()).hexdigest().upper()
+    Repo khong co `.gitattributes`; voi `core.autocrlf=true` (mac dinh pho bien
+    tren Windows) cung mot commit cho ra LF tren Linux va CRLF tren Windows.
+    Hash byte tho vi the do vao may checkout chu khong do vao noi dung: pin nay
+    xanh tren CI self-hosted va do tren moi may Windows du dataset y het.
+    """
+
+    dataset_hash = corpus_sha256(RAGAS_DATASET).upper()
+    result_hash = corpus_sha256(RAGAS_RESULT).upper()
 
     assert dataset_hash == "88401E146F2C46DCDD58450B13F93002639D8865E692AD80E21F9B4297F74721"
     assert result_hash == "EE7EF10A22EC815263FDB8B7D6775536451D65E26B143F39C80BB8F947B91E9A"
