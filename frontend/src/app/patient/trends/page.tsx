@@ -29,6 +29,17 @@ const FILTERS: { value: TrendFilter; label: string }[] = [
   { value: "three_months", label: "3 tháng gần nhất" },
 ];
 
+const CHART_COLORS = [
+  "#1769e0",
+  "#dc2626",
+  "#16a34a",
+  "#ea580c",
+  "#9333ea",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
+];
+
 export default function PatientTrendsPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -165,6 +176,18 @@ export default function PatientTrendsPage() {
     [analytes, selectedSection],
   );
   const trendEscalated = Boolean(trend?.critical_status || trend?.approaching_critical);
+
+  // Group trends by canonical_unit for hybrid rendering (same unit → 1 chart)
+  const unitGroups = useMemo(() => {
+    if (!groupTrends) return [];
+    const map = new Map<string, TrendResponse[]>();
+    for (const trend of groupTrends) {
+      const key = trend.canonical_unit;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(trend);
+    }
+    return Array.from(map.entries()).map(([unit, trends]) => ({ unit, trends }));
+  }, [groupTrends]);
 
   useEffect(() => {
     if (groupSections.length === 0) return;
@@ -501,73 +524,106 @@ export default function PatientTrendsPage() {
                       </div>
 
                       <div className="mt-6 flex justify-start">
-                       {/* Small Multiples Grid */}
-                       {groupTrendsLoading ? (
-                         <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải biểu đồ nhóm">
-                           <span className="loading-dot mr-2" aria-hidden="true" />
-                           Đang tải biểu đồ nhóm...
-                         </div>
-                       ) : groupTrendsError ? (
-                         <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">
-                           {groupTrendsError}
-                         </div>
-                       ) : groupTrends && groupTrends.length > 0 ? (
-                         <>
-                           {/* Mobile Accordion for >5 analytes */}
-                           <div className="lg:hidden space-y-3">
-                             {groupTrends.map((trend, idx) => (
-                               <details key={trend.analyte_canonical} className="patient-glass-clinical p-4" open={idx < 2}>
-                                 <summary className="flex items-center justify-between cursor-pointer list-none select-none">
-                                   <div className="flex-1 min-w-0">
-                                     <h4 className="font-medium text-slate-900 truncate">{trend.display_name}</h4>
-                                     <p className="text-xs text-slate-500">{trend.canonical_unit} · {trend.result_count} điểm</p>
-                                   </div>
-                                   {(trend.critical_status || trend.approaching_critical) && (
-                                     <span className={`text-xs ml-2 ${trend.critical_status ? "text-red-600" : "text-orange-600"}`}>
-                                       {trend.critical_status ? "⚠ Nguy kịch" : "⚠ Tiếp cận"}
-                                     </span>
-                                   )}
-                                 </summary>
-                                 <div className="mt-3">
-                                   <TrendChart
-                                     analyte={trend.display_name}
-                                     unit={trend.canonical_unit}
-                                     points={trend.points}
-                                     height={220}
-                                   />
-                                 </div>
-                               </details>
-                             ))}
-                           </div>
+{/* Small Multiples Grid (Hybrid: same-unit analytes → 1 multi-line chart) */}
+                        {groupTrendsLoading ? (
+                          <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải biểu đồ nhóm">
+                            <span className="loading-dot mr-2" aria-hidden="true" />
+                            Đang tải biểu đồ nhóm...
+                          </div>
+                        ) : groupTrendsError ? (
+                          <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">
+                            {groupTrendsError}
+                          </div>
+                        ) : unitGroups.length > 0 ? (
+                          <>
+                            {/* Mobile Accordion — triggered when >5 unit-groups */}
+                            <div className="lg:hidden space-y-3">
+                              {unitGroups.map(({ unit, trends }, idx) => (
+                                <details key={unit} className="patient-glass-clinical p-4" open={idx < 2}>
+                                  <summary className="flex items-center justify-between cursor-pointer list-none select-none">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-medium text-slate-900 truncate">{unit}</h4>
+                                      <p className="text-xs text-slate-500 truncate">
+                                        {trends.map((t) => t.display_name).join(", ")} · {trends.length} chỉ số
+                                      </p>
+                                    </div>
+                                    {trends.some((t) => t.critical_status || t.approaching_critical) && (
+                                      <span className="text-xs ml-2 text-red-600">⚠ Nguy kịch</span>
+                                    )}
+                                  </summary>
+                                  <div className="mt-3">
+                                    {trends.length === 1 ? (
+                                      <TrendChart
+                                        analyte={trends[0].display_name}
+                                        unit={unit}
+                                        points={trends[0].points}
+                                        height={200}
+                                      />
+                                    ) : (
+                                      <TrendChart
+                                        analytes={trends.map((t, i) => ({
+                                          analyte: t.display_name,
+                                          display_name: t.display_name,
+                                          unit,
+                                          points: t.points,
+                                          color: CHART_COLORS[i % CHART_COLORS.length],
+                                        }))}
+                                        height={200}
+                                      />
+                                    )}
+                                  </div>
+                                </details>
+                              ))}
+                            </div>
 
-                           {/* Desktop/Tablet Grid */}
-                           <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                             {groupTrends.map((trend) => (
-                               <div key={trend.analyte_canonical} className="patient-glass-clinical p-4">
-                                 <div className="trend-mini-header mb-2">
-                                   <h4 className="font-medium text-slate-900">{trend.display_name}</h4>
-                                   <p className="text-xs text-slate-500">{trend.canonical_unit} · {trend.result_count} điểm</p>
-                                 </div>
-                                 {(trend.critical_status || trend.approaching_critical) && (
-                                   <div className={`trend-critical-badge mb-2 text-xs ${trend.critical_status ? "" : "approaching"}`}>
-                                     {trend.critical_status ? "⚠ Đã vượt ngưỡng nguy kịch" : "⚠ Đang tiến gần ngưỡng"}
-                                   </div>
-                                 )}
-                                 <TrendChart
-                                   analyte={trend.display_name}
-                                   unit={trend.canonical_unit}
-                                   points={trend.points}
-                                   height={220}
-                                 />
-                               </div>
-                             ))}
-                           </div>
-                         </>
-                       ) : (
-                         <div className="patient-glass-clinical p-6 mt-6 text-center text-slate-600">
-                           Chưa có chỉ số nào đủ dữ liệu (≥3 lần) trong nhóm này để hiển thị biểu đồ.
-                         </div>
-                       )}
+                            {/* Desktop/Tablet Grid — same-unit analytes → 1 multi-line chart */}
+                            <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {unitGroups.map(({ unit, trends }) => {
+                                const anyCritical = trends.some((t) => t.critical_status);
+                                const anyApproaching = trends.some((t) => t.approaching_critical);
+                                return (
+                                  <div key={unit} className="patient-glass-clinical p-4">
+                                    <div className="trend-mini-header mb-2">
+                                      <h4 className="font-medium text-slate-900">{unit}</h4>
+                                      <p className="text-xs text-slate-500">
+                                        {trends.map((t) => t.display_name).join(", ")} · {trends.length} chỉ số
+                                      </p>
+                                    </div>
+                                    {(anyCritical || anyApproaching) && (
+                                      <div className={`trend-critical-badge mb-2 text-xs ${anyCritical ? "" : "approaching"}`}>
+                                        {anyCritical ? "⚠ Đã vượt ngưỡng nguy kịch" : "⚠ Đang tiến gần ngưỡng"}
+                                      </div>
+                                    )}
+                                    {trends.length === 1 ? (
+                                      <TrendChart
+                                        analyte={trends[0].display_name}
+                                        unit={unit}
+                                        points={trends[0].points}
+                                        height={200}
+                                      />
+                                    ) : (
+                                      <TrendChart
+                                        analytes={trends.map((t, i) => ({
+                                          analyte: t.display_name,
+                                          display_name: t.display_name,
+                                          unit,
+                                          points: t.points,
+                                          color: CHART_COLORS[i % CHART_COLORS.length],
+                                        }))}
+                                        height={200}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="patient-glass-clinical p-6 mt-6 text-center text-slate-600">
+                            Chưa có chỉ số nào đủ dữ liệu (≥3 lần) trong nhóm này để hiển thị biểu đồ.
+                          </div>
+                        )}
+
                         <button
                           type="button"
                           className="patient-btn-secondary"

@@ -1301,6 +1301,29 @@ textarea::placeholder {
   background-color: #fff7ed; /* orange-50 */
 }
 
+/* Small Multiples Legend */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #475569; /* slate-400 */
+}
+
+.trend-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 
 .trend-explanation {
   margin-top: 18px;
@@ -1369,6 +1392,29 @@ textarea::placeholder {
 .trend-critical-badge.approaching {
   color: #ea580c; /* orange-600 */
   background-color: #fff7ed; /* orange-50 */
+}
+
+/* Small Multiples Legend */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #475569; /* slate-400 */
+}
+
+.trend-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 
@@ -4371,6 +4417,29 @@ body.assistant-mobile-open {
 .trend-critical-badge.approaching {
   color: #ea580c; /* orange-600 */
   background-color: #fff7ed; /* orange-50 */
+}
+
+/* Small Multiples Legend */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #475569; /* slate-400 */
+}
+
+.trend-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 
