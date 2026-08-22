@@ -33,6 +33,43 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
+# Hash cua mot mat khau ngau nhien khong ai biet, bam mot lan roi dung lai.
+# Chi phuc vu `verify_password_or_dummy` — khong tai khoan nao co hash nay.
+_DUMMY_HASH: str | None = None
+
+
+def verify_password_or_dummy(plain: str, hashed: str | None) -> bool:
+    """Kiem mat khau, va khi khong co tai khoan thi VAN chay bcmt mot lan.
+
+    Do that truoc khi sua, tren server dang chay:
+
+        email co tai khoan   315 ms
+        email khong ton tai   10 ms
+
+    Chenh 31 lan. `if user is None or not verify_password(...)` ngan mach o ve
+    trai, nen khong co tai khoan la tra ve gan nhu tuc thi, con co tai khoan thi
+    ton ~300ms cho bcrypt. Bat ky ai cung liet ke duoc email nao da co tai khoan
+    o day chi bang cach bam gio — va "nguoi nay co kham o day" tu no da la thong
+    tin khong nen de lo.
+
+    Thong bao loi giong nhau la chua du: no chi bit kenh ro thu nhat. Ham nay
+    bit kenh thu hai bang cach luon tra gia bcrypt nhu nhau.
+    """
+
+    global _DUMMY_HASH
+
+    if hashed is not None:
+        return verify_password(plain, hashed)
+
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = hash_password(secrets.token_urlsafe(32))
+
+    # Ket qua chac chan False; goi de tieu ton dung luong thoi gian cua mot lan
+    # kiem that. KHONG duoc bo qua "cho nhanh".
+    verify_password(plain, _DUMMY_HASH)
+    return False
+
+
 def create_access_token(*, username: str, role: str, user_id: int | None = None) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
     payload: dict = {"sub": username, "role": role, "exp": expire}

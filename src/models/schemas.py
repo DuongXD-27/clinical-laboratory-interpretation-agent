@@ -55,6 +55,10 @@ class RegisterRequest(BaseModel):
         max_length=128,
         description="Tối thiểu 8 ký tự",
     )
+    # Không bắt buộc, có chủ ý. Bắt buộc email là chặn mọi người đang đăng ký
+    # bình thường hôm nay, đổi lấy một tính năng chưa ai dùng. Ai không điền thì
+    # đăng nhập bằng tên như cũ.
+    email: str | None = Field(default=None, max_length=320)
 
 
 class LoginResponse(BaseModel):
@@ -68,6 +72,7 @@ class RegisterResponse(BaseModel):
     id: int
     username: str
     role: Literal["patient"]
+    email: str | None = None
 
 
 class GuestSessionResponse(BaseModel):
@@ -825,3 +830,26 @@ class TracingStatusSchema(BaseModel):
     masked: bool
     trace_persistence_enabled: bool
     retention_days: int
+
+
+class GoogleLoginRequest(BaseModel):
+    """ID token do Google Identity Services trả cho trình duyệt.
+
+    Không có trường `email`, `role` hay bất cứ thứ gì mô tả người dùng: mọi
+    thông tin danh tính phải lấy từ token đã được server xác minh chữ ký. Nhận
+    thêm bất kỳ trường nào từ client là mở đường cho việc tự khai mình là ai.
+    """
+
+    credential: str = Field(..., min_length=1)
+
+
+class GoogleStatusResponse(BaseModel):
+    """Có bật đăng nhập bằng Google không, và client id nào.
+
+    Client id là thông tin công khai — nó nằm sẵn trong mã nguồn mọi trang dùng
+    Google Sign-In. Trả qua API thay vì nhúng vào bundle lúc build: biến
+    NEXT_PUBLIC_* bị Next.js dán cứng vào JS nên đổi là phải build lại.
+    """
+
+    enabled: bool
+    client_id: str | None = None

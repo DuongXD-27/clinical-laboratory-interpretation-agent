@@ -91,11 +91,15 @@ export async function login(username: string, password: string) {
  * Không có tham số `role`: backend luôn tạo role `patient`, tài khoản bác sĩ do
  * admin cấp bằng script. Gửi kèm role ở đây cũng vô nghĩa.
  */
-export async function register(username: string, password: string) {
+export async function register(username: string, password: string, email?: string) {
+  const trimmed = email?.trim();
   const response = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    // Bỏ trống thì KHÔNG gửi khoá `email` chứ không gửi chuỗi rỗng: backend
+    // chuẩn hoá "" về null nên hai cách cùng kết quả, nhưng không gửi thì rõ
+    // ý hơn khi đọc log và khi ai đó soi request trong DevTools.
+    body: JSON.stringify(trimmed ? { username, password, email: trimmed } : { username, password }),
   });
 
   if (!response.ok) {
@@ -426,4 +430,45 @@ export async function fetchTrace(requestId: string): Promise<RequestTrace> {
     throw new Error(await readErrorDetail(response, "Không mở được trace"));
   }
   return response.json();
+}
+
+
+// ---------------------------------------------------------------------------
+// Đăng nhập bằng Google
+// ---------------------------------------------------------------------------
+
+export type GoogleStatus = { enabled: boolean; client_id: string | null };
+
+/** Hỏi server xem có bật đăng nhập bằng Google không, và client id nào.
+ *
+ * Không dùng biến NEXT_PUBLIC_*: Next.js dán cứng chúng vào bundle lúc build,
+ * nên đổi client id là phải build và deploy lại frontend. Đọc từ API thì chỉ
+ * cần đổi biến môi trường rồi khởi động lại backend.
+ */
+export async function fetchGoogleStatus(): Promise<GoogleStatus> {
+  const response = await fetch(`${API_BASE}/api/v1/auth/google/status`);
+  if (!response.ok) return { enabled: false, client_id: null };
+  return response.json();
+}
+
+/** Đổi ID token của Google lấy phiên đăng nhập của hệ thống này.
+ *
+ * Chỉ gửi đúng `credential`. Mọi thông tin danh tính do server đọc ra từ token
+ * đã xác minh chữ ký — gửi kèm email hay tên từ đây là để client tự khai mình
+ * là ai.
+ */
+export async function loginWithGoogle(credential: string) {
+  const response = await fetch(`${API_BASE}/api/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không đăng nhập được bằng Google"));
+  }
+
+  const data = await response.json();
+  saveSession(data.access_token, data.role, data.username);
+  return data as { access_token: string; role: Role; username: string };
 }
