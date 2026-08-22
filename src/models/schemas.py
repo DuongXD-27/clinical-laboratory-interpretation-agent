@@ -5,7 +5,10 @@ from pydantic import BaseModel, Field
 
 IndicatorStatus = str
 
-SessionRole = Literal["patient", "doctor", "guest"]
+# "admin" nam trong day vi /auth/login tra ve role, va thieu no thi tai khoan
+# admin dang nhap dung mat khau van an 500 o buoc dung response — trieu chung
+# ("dang nhap that bai") khong he chi ve mot Literal thieu gia tri.
+SessionRole = Literal["patient", "doctor", "guest", "admin"]
 VerificationStatus = Literal["unverified", "pending_review", "verified"]
 ReviewOutcome = Literal["pending", "agreed", "corrected", "skipped"]
 ReviewFlagCode = Literal[
@@ -22,7 +25,14 @@ ReviewFlagSeverity = Literal["high", "medium"]
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=1)
+    """Đăng nhập bằng tên đăng nhập HOẶC email.
+
+    Giữ nguyên tên trường `username` dù nó nhận cả email: đổi tên trường là phá
+    hợp đồng API với frontend đã deploy và với mọi test hiện có, đổi lấy một cái
+    tên đẹp hơn. Backend tra cả hai cột trong một câu truy vấn.
+    """
+
+    username: str = Field(..., min_length=1, description="Tên đăng nhập hoặc email")
     password: str = Field(..., min_length=1)
 
 
@@ -752,3 +762,66 @@ class TrendExplanationResponse(BaseModel):
     explanation: str
     fallback: bool = False
     reason: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Admin — trace vận hành
+#
+# Không schema nào dưới đây mang dữ liệu bệnh nhân. Cùng nguyên tắc đã khiến
+# listener SQLAlchemy không bao giờ log `statement`/`parameters`: người lo hạ
+# tầng cần biết cái gì chậm và cái gì hỏng, không cần biết ai khám gì.
+# ---------------------------------------------------------------------------
+class RequestTraceSchema(BaseModel):
+    model_config = {
+        "from_attributes": True,
+    }
+
+    request_id: str
+    created_at: datetime
+    method: str
+    path: str
+    status_code: int
+    duration_ms: float
+    db_query_count: int
+    db_ms: float
+    llm_call_count: int
+    llm_ms: float
+    llm_error_count: int
+    user_role: str | None = None
+    server_timing: str | None = None
+
+
+class RequestTraceListResponse(BaseModel):
+    total: int
+    items: list[RequestTraceSchema] = Field(default_factory=list)
+
+
+class TraceSummarySchema(BaseModel):
+    """Vài con số tổng hợp cho đầu màn admin.
+
+    Cố ý không có ngưỡng cảnh báo nào. Ngưỡng phải chọn từ số đo thật; đặt bừa
+    rồi tô đỏ theo nó chỉ dạy người xem bỏ qua màu đỏ.
+    """
+
+    request_count: int
+    avg_duration_ms: float
+    max_duration_ms: float
+    llm_call_count: int
+    llm_error_count: int
+    server_error_count: int
+    window_hours: int
+
+
+class TracingStatusSchema(BaseModel):
+    """Langfuse đang bật hay tắt, và có che dữ liệu không.
+
+    Cần thiết vì "trace trống" có hai nguyên nhân hoàn toàn khác nhau: chưa cấu
+    hình key, hay đã cấu hình mà không có traffic. Không phơi key ra, chỉ phơi
+    trạng thái và host.
+    """
+
+    langfuse_configured: bool
+    langfuse_host: str
+    masked: bool
+    trace_persistence_enabled: bool
+    retention_days: int

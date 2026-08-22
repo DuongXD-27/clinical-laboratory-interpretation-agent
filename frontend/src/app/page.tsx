@@ -1,9 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getRole, getToken } from "@/lib/api";
 
 const features = [
   {
@@ -45,13 +42,6 @@ const steps = [
 ];
 
 export default function LandingPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const role = getRole();
-    if (!getToken() || !role) return;
-    router.replace(role === "doctor" ? "/doctor" : "/patient");
-  }, [router]);
 
   return (
     <main className="landing-page">
@@ -66,6 +56,14 @@ export default function LandingPage() {
             <a href="#how-it-works">Cách hoạt động</a>
             <a href="#doctor">Dành cho bác sĩ</a>
           </div>
+          {/* Thanh này KHÔNG đổi theo phiên đăng nhập, có chủ ý.
+              Trang giới thiệu là trang công khai; hiện tên tài khoản ở đây là
+              để lộ danh tính người dùng cho bất kỳ ai đi ngang qua màn hình —
+              với một ứng dụng y tế thì riêng việc "người này có tài khoản" đã
+              là thông tin không nên khoe.
+              Cũng KHÔNG tự chuyển hướng người đã đăng nhập: trước đây trang
+              này `router.replace()` sang trang của vai trò, nên link "Về trang
+              giới thiệu" ở màn đăng nhập bấm vào là bị đá đi ngay. */}
           <div className="landing-nav-actions">
             <Link href="/login" className="text-button">Đăng nhập</Link>
             <Link href="/login?tab=register" className="landing-primary-link">Bắt đầu miễn phí</Link>

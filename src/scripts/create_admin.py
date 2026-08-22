@@ -1,15 +1,19 @@
-"""Cấp tài khoản bác sĩ (chỉ admin chạy được, không có endpoint public).
+"""Cấp tài khoản admin — không có endpoint public, giống hệt đường của bác sĩ.
 
-Theo ma trận phân quyền đã chốt: bệnh nhân tự đăng ký, bác sĩ "được cấp sẵn bởi
-admin". Nếu để `/auth/register` nhận `role` từ client thì bất kỳ ai cũng tự khai
-mình là bác sĩ và đọc được lịch sử của mọi bệnh nhân — nên đường tạo tài khoản
-bác sĩ nằm ở đây, chạy trên máy/container có quyền truy cập DB.
+Admin xem được màn hình trace vận hành: độ trễ, số lần gọi LLM, mã lỗi của mọi
+request. Nếu để `/auth/register` nhận `role` từ client thì bất kỳ ai cũng tự
+khai mình là admin, nên đường tạo tài khoản nằm ở đây, chạy trên máy hoặc
+container có quyền truy cập DB.
 
-    python -m src.scripts.create_doctor --username bs.nam
-    python -m src.scripts.create_doctor --username bs.nam --password '...'
-    python -m src.scripts.create_doctor --username bs.nam --reset-password
+    python -m src.scripts.create_admin --username admin.duy --random-password
+    python -m src.scripts.create_admin --username admin.duy --reset-password
 
-Không truyền --password thì script sinh mật khẩu ngẫu nhiên và in ra một lần.
+Cố ý KHÔNG seed sẵn tài khoản admin nào trong `DEMO_USERS`: mật khẩu demo là
+công khai với cả cohort, một admin seed sẵn là cửa hậu ai cũng đăng nhập được.
+
+Quyền của admin dừng ở dữ liệu vận hành. Không endpoint nào cho admin đọc bệnh
+án — `/history` vẫn chỉ nhận `patient` và `doctor`. Người lo hạ tầng không cần,
+và không nên, đọc được kết quả xét nghiệm của bệnh nhân.
 """
 
 from __future__ import annotations
@@ -19,13 +23,13 @@ import getpass
 import secrets
 import sys
 
-from src.models.db import ROLE_DOCTOR, SessionLocal, User, init_db
+from src.models.db import ROLE_ADMIN, SessionLocal, User, init_db
 from src.services.auth import hash_password
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Tạo hoặc đặt lại tài khoản bác sĩ")
-    parser.add_argument("--username", required=True, help="Tên đăng nhập của bác sĩ")
+    parser = argparse.ArgumentParser(description="Tạo hoặc đặt lại tài khoản admin")
+    parser.add_argument("--username", required=True, help="Tên đăng nhập của admin")
     parser.add_argument(
         "--password",
         default=None,
@@ -49,7 +53,7 @@ def _resolve_password(args: argparse.Namespace) -> str:
         return args.password
     if args.random_password:
         return secrets.token_urlsafe(12)
-    pw = getpass.getpass("Mật khẩu cho tài khoản bác sĩ: ")
+    pw = getpass.getpass("Mật khẩu cho tài khoản admin: ")
     if len(pw) < 6:
         raise SystemExit("Mật khẩu phải có ít nhất 6 ký tự.")
     if pw != getpass.getpass("Nhập lại mật khẩu: "):
@@ -58,8 +62,10 @@ def _resolve_password(args: argparse.Namespace) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    # Console Windows mac dinh cp1252 khong in duoc tieng Viet co dau; thieu dong
-    # nay thi script tao xong tai khoan roi chet o buoc print. Xem create_admin.py.
+    # Console Windows mac dinh la cp1252, khong in duoc tieng Viet co dau. Thieu
+    # dong nay thi script TAO XONG tai khoan roi moi chet o buoc print — nguoi
+    # chay thay traceback va tuong that bai, chay lai lan nua thi dinh "da ton
+    # tai". Ca nhom deu dung Windows nen day khong phai truong hop hiem.
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -82,21 +88,21 @@ def main(argv: list[str] | None = None) -> int:
 
         if existing is not None:
             existing.password_hash = hash_password(password)
-            existing.role = ROLE_DOCTOR
+            existing.role = ROLE_ADMIN
             action = "Đã đặt lại mật khẩu"
         else:
             db.add(
                 User(
                     username=args.username,
                     password_hash=hash_password(password),
-                    role=ROLE_DOCTOR,
+                    role=ROLE_ADMIN,
                 )
             )
-            action = "Đã tạo tài khoản bác sĩ"
+            action = "Đã tạo tài khoản admin"
 
         db.commit()
 
-    print(f"{action}: {args.username} (role={ROLE_DOCTOR})")
+    print(f"{action}: {args.username} (role={ROLE_ADMIN})")
     if args.random_password:
         # In đúng một lần: mật khẩu chỉ tồn tại ở dạng hash trong DB, mất là
         # phải chạy lại với --reset-password.

@@ -88,7 +88,14 @@ SessionLocal = sessionmaker(
 
 ROLE_PATIENT = "patient"
 ROLE_DOCTOR = "doctor"
-PERSISTED_ROLES = (ROLE_PATIENT, ROLE_DOCTOR)
+
+# Admin chi xem duoc du lieu VAN HANH: do tre, so lan goi LLM, ma loi. Khong
+# co endpoint nao cho admin doc benh an — `/history` van chi nhan patient va
+# doctor. Tach nhu vay co chu y: nguoi lo ha tang khong can, va khong nen, doc
+# duoc ket qua xet nghiem cua benh nhan.
+ROLE_ADMIN = "admin"
+
+PERSISTED_ROLES = (ROLE_PATIENT, ROLE_DOCTOR, ROLE_ADMIN)
 
 
 def _utcnow() -> datetime:
@@ -709,6 +716,69 @@ class OutOfScopeLog(Base):
     )
 
 
+# Co tinh KHONG co tai khoan admin trong day. Mat khau demo la cong khai voi
+# ca cohort; mot admin seed san la mot cua hau ai cung dang nhap duoc. Admin
+# chi tao bang `python -m src.scripts.create_admin`, giong cach doctor duoc
+# cap phat.
+
+class RequestTrace(Base):
+    """Một dòng vận hành cho mỗi request HTTP, phục vụ màn hình admin.
+
+    Vì sao lưu vào DB của mình thay vì đọc ngược từ Langfuse: màn hình admin
+    phải xem được kể cả khi Langfuse chưa cấu hình, hết hạn key, hoặc không gọi
+    ra ngoài được. Langfuse lo phần sâu (prompt, token, chi phí từng lần gọi);
+    bảng này lo phần rộng — mọi request, kể cả request không đụng tới LLM.
+
+    **Bảng này không được chứa dữ liệu bệnh nhân.** Không tên chỉ số, không giá
+    trị, không username, không nội dung prompt. Cùng nguyên tắc đã khiến
+    listener SQLAlchemy không bao giờ log `statement`/`parameters`. `path` là
+    khuôn đường dẫn nên `/history/12` có lộ một id — id đó vô nghĩa nếu không
+    có token của đúng chủ nhân, và không có nó thì không phân biệt được request
+    chậm thuộc màn hình nào.
+
+    `user_role` lưu vai trò chứ không lưu người: đủ để biết "màn bác sĩ đang
+    chậm", không đủ để lần ra ai đã khám gì.
+    """
+
+    __tablename__ = "request_traces"
+
+    __table_args__ = (
+        # Truy vấn duy nhất màn admin thực sự chạy: lọc theo thời gian, mới
+        # nhất trước.
+        Index("ix_request_traces_created_at", "created_at"),
+        Index("ix_request_traces_request_id", "request_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Chính là id trả về trong header X-Request-ID và trong body lỗi 500. Đây
+    # là thứ duy nhất nối "tôi bấm bị lỗi" với một dòng cụ thể ở đây.
+    request_id = Column(String(64), nullable=False)
+
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+
+    method = Column(String(10), nullable=False)
+    path = Column(String(255), nullable=False)
+    status_code = Column(Integer, nullable=False)
+    duration_ms = Column(Float, nullable=False, default=0.0)
+
+    db_query_count = Column(Integer, nullable=False, default=0)
+    db_ms = Column(Float, nullable=False, default=0.0)
+
+    llm_call_count = Column(Integer, nullable=False, default=0)
+    llm_ms = Column(Float, nullable=False, default=0.0)
+    # Field đáng giá nhất: LLM hỏng thì response vẫn 200 và nội dung âm thầm
+    # xuống cấp, chỉ bệnh nhân nhận ra.
+    llm_error_count = Column(Integer, nullable=False, default=0)
+
+    user_role = Column(String(20), nullable=True)
+
+    # Chuỗi Server-Timing, giữ nguyên để màn chi tiết dựng lại được cây span mà
+    # không cần thêm bảng con.
+    server_timing = Column(Text, nullable=True)
+
+
+
 DEMO_USERS = [
     {
         "username": "benhnhan",
@@ -861,6 +931,7 @@ def seed_demo_users(db: Session) -> None:
         db.rollback()
 
 
+
 def init_db() -> None:
     """Tạo bảng còn thiếu, bù cột còn thiếu, rồi seed tài khoản demo.
 
@@ -925,11 +996,13 @@ __all__ = [
     "OCRReviewLifecycle",
     "OutOfScopeLog",
     "PERSISTED_ROLES",
+    "ROLE_ADMIN",
     "ROLE_DOCTOR",
     "ROLE_PATIENT",
     "ReportCriticalAlert",
     "ReportIndicator",
     "ReportQuestion",
+    "RequestTrace",
     "ReviewFlag",
     "SessionLocal",
     "User",

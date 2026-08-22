@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { homeForRole } from "@/lib/roleHome.mjs";
 import { login, register, startGuestSession } from "@/lib/api";
 
 const DEMO_ACCOUNTS = [
@@ -65,7 +66,7 @@ export default function LoginPage() {
     try {
       // Đăng ký xong đăng nhập luôn, để người dùng không phải nhập lại.
       const session = mode === "login" ? await login(username, password) : await register(username, password);
-      router.push(session.role === "doctor" ? "/doctor" : "/patient");
+      router.push(homeForRole(session.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thực hiện được, vui lòng thử lại");
     } finally {
@@ -146,6 +147,7 @@ export default function LoginPage() {
               </p>
             )}
           </div>
+
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium text-slate-700">

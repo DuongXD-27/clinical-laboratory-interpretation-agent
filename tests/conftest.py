@@ -6,8 +6,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from src.config import get_settings
 from src.main import app
 from src.models.db import DEMO_USERS, Base, User, get_db
+from src.services import langfuse_tracing
 from src.services.auth import hash_password
 
 
@@ -106,3 +108,30 @@ def mock_llm():
     mock = AsyncMock()
     mock.ainvoke.return_value = AsyncMock(content="Mocked LLM response")
     return mock
+
+
+@pytest.fixture(autouse=True)
+def langfuse_off_by_default(monkeypatch):
+    """Tắt Langfuse cho mọi test, trừ test tự bật lại.
+
+    Máy dev có key thật trong `.env`. Không có fixture này thì bất kỳ test nào
+    dựng `get_llm()` cũng gắn callback thật và bắn span lên project Langfuse
+    của nhóm — dữ liệu test lẫn vào dữ liệu production, và bộ test âm thầm gọi
+    ra Internet ở mỗi lần chạy.
+
+    Cùng nguyên tắc với fixture `test_db`: bộ test không được chạm vào bất cứ
+    thứ gì sống ngoài thư mục tạm của chính nó. Test nào cần Langfuse thì tự
+    `monkeypatch.setenv` đè lên — `monkeypatch` của test chạy sau fixture này.
+    """
+
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "")
+    # LangSmith cũng vậy: `.env.example` bật sẵn LANGCHAIN_TRACING_V2=true, nên
+    # mọi lời gọi LLM trong test sẽ cố gửi prompt sang smith.langchain.com.
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+
+    get_settings.cache_clear()
+    langfuse_tracing.reset_for_tests()
+    yield
+    get_settings.cache_clear()
+    langfuse_tracing.reset_for_tests()

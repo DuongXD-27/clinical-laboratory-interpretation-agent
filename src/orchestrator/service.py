@@ -28,6 +28,7 @@ from src.orchestrator.intent_router import RouteDecision, contains_lab_value, ro
 from src.orchestrator.response_composer import build_final_response
 from src.orchestrator.session_store import SessionStore, default_session_store
 from src.services.ocr_review_gate import get_current_review_state
+from src.services.request_timing import get_current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,18 @@ async def handle_message(
 ) -> OrchestratorResponse:
     runtime = runtime or OrchestratorRuntime()
     started_at = time.perf_counter()
-    request_id = uuid.uuid4().hex
+    # Dung request_id CUA REQUEST dang phuc vu, khong sinh id moi.
+    #
+    # Mot luot goi HTTP sinh ra hai dong log: `request_timing` tu middleware va
+    # `orchestrator_turn` tu day. Sinh uuid rieng o day nghia la hai dong mang
+    # hai id khac nhau va khong cach nao noi lai — dung thu ma ca lop trace ton
+    # tai de lam. Cung id do con di ra header X-Request-ID va vao bang
+    # request_traces, nen admin dan mot id la thay ca chuoi.
+    #
+    # Fallback ve uuid moi cho truong hop goi ngoai vong doi request (test goi
+    # thang `handle_message`), luc do khong co timing nao trong context.
+    timing = get_current_timing()
+    request_id = timing.request_id if timing is not None else uuid.uuid4().hex
     role = str(getattr(current_user, "role", ""))
 
     reason = role_admission_gate(current_user)

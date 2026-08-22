@@ -29,6 +29,12 @@ opencv-python-headless>=4.9.0
 openai>=1.0.0
 python-multipart>=0.0.9
 
+# Observability
+#
+# Trace LLM (prompt, completion, token, chi phi). Chay song song voi structured
+# log JSON chu khong thay the: thieu key thi tat han, khong lam chet request.
+langfuse>=4.14.0
+
 # Dev tools
 ruff>=0.8.0
 pytest>=8.0.0
