@@ -218,7 +218,7 @@ def test_ac8_request_rejects_server_authority_fields(extra):
         OrchestratorRequest.model_validate({"message": "hello", **extra})
 
 
-def test_ac9_reason_code_has_exactly_nineteen_members():
+def test_ac9_reason_code_has_exact_contract_members():
     assert [member.name for member in ReasonCode] == [
         "ONBOARDING_REQUIRED",
         "OCR_REVIEW_REQUIRED",
@@ -237,6 +237,8 @@ def test_ac9_reason_code_has_exactly_nineteen_members():
         "TREND_INSUFFICIENT_POINTS",
         "TREND_UNIT_INCONSISTENT",
         "UNKNOWN_INTENT",
+        "OUT_OF_SCOPE",
+        "SENSITIVE_SYSTEM_REQUEST",
         "GUARDRAIL_BLOCKED",
         "INTERNAL_WORKFLOW_ERROR",
     ]

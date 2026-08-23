@@ -22,14 +22,12 @@ from src.models.orchestrator_schemas import (
     RetryAction,
     TrendDataPayload,
 )
-from src.orchestrator.context_resolver import resolve_context
 from src.orchestrator.dispatcher import DispatchContext, WorkflowResult, dispatch_workflow
 from src.orchestrator.gates import medical_safety_gate, onboarding_gate, policy_gate, role_admission_gate
 from src.orchestrator.intent_router import RouteDecision, contains_lab_value, route_intent
 from src.orchestrator.progress import ProgressCallback, emit_progress
 from src.orchestrator.response_composer import _safety_refusal_message, build_final_response, map_needs_input_prompt
 from src.orchestrator.session_store import SessionStore, default_session_store
-from src.services.ocr_review_gate import get_current_review_state
 from src.services.request_timing import get_current_timing
 
 logger = logging.getLogger(__name__)
@@ -133,12 +131,84 @@ def _is_ocr_bypass_request(message: str) -> bool:
     return any(pattern in lowered for pattern in patterns)
 
 
-def _looks_like_gibberish(message: str) -> bool:
-    from src.orchestrator.medical_context import extract_explicit_analyte
-    if extract_explicit_analyte(message) is not None or contains_lab_value(message):
+UNCLEAR_INPUT_MESSAGE = "Tôi chưa hiểu yêu cầu của bạn. Bạn vui lòng nhập lại hoặc mô tả rõ hơn điều bạn muốn hỏi."
+
+OUT_OF_SCOPE_MESSAGE = (
+    "Tôi được thiết kế để hỗ trợ bạn về kết quả xét nghiệm và các chức năng liên quan trong VMEC. "
+    "Tôi chưa thể hỗ trợ yêu cầu này. "
+    "Bạn có thể hỏi tôi về phiếu xét nghiệm, một chỉ số cụ thể, lịch sử hoặc xu hướng xét nghiệm."
+)
+
+SENSITIVE_SYSTEM_MESSAGE = (
+    "Tôi không thể cung cấp khóa API, thông tin đăng nhập, prompt hệ thống hoặc thông tin nội bộ của VMEC. "
+    "Tôi có thể hỗ trợ bạn về kết quả xét nghiệm và các chức năng được phép trong ứng dụng."
+)
+
+
+def _is_unclear_input(message: str) -> bool:
+    from src.orchestrator.medical_context import (
+        _is_referential_analyte,
+        _normalize_no_accents,
+        extract_explicit_analyte,
+        extract_explicit_report_date,
+        extract_explicit_report_ref,
+    )
+
+    raw = message.strip()
+    if not raw:
+        return True
+
+    # 1. Any medical safety trigger (diagnosis, cause, treatment) is coherent
+    if medical_safety_gate(message) is not None:
         return False
+
+    # 2. Any explicit analyte or lab value or OCR bypass is coherent
+    if extract_explicit_analyte(message) is not None or contains_lab_value(message) or _is_ocr_bypass_request(message):
+        return False
+
+    # 3. Explicit report ref or report date is coherent
+    if extract_explicit_report_ref(message) is not None or extract_explicit_report_date(message) is not None:
+        return False
+
+    norm_no_acc = _normalize_no_accents(message)
+
+    # 4. Referential terms ("chỉ số này", "nó") are coherent
+    if _is_referential_analyte(norm_no_acc):
+        return False
+
+    # 5. Pure punctuation / non-alphanumeric
     tokens = re.findall(r"[A-Za-zÀ-ỹ0-9]+", message)
-    return bool(message.strip()) and len(tokens) <= 2 and not any(ch.isspace() for ch in message.strip())
+    if not tokens:
+        return True
+
+    # 6. Check for pure numbers without context (e.g. "123 456")
+    if all(t.isdigit() for t in tokens) and len(tokens) >= 2:
+        return True
+
+    # 7. Check for repetitive nonsense tokens (e.g. "test test test", "blah blah", "bla bla bla")
+    lower_tokens = [t.lower() for t in tokens]
+    if len(lower_tokens) >= 2 and len(set(lower_tokens)) == 1:
+        return True
+
+    # 8. Check for random consonant clusters / keyboard mash (e.g. "asdfgh", "xqz", "qwerty", "zxcv", "asdf")
+    vowels = set("aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ")
+    for t in lower_tokens:
+        if not t.isdigit() and len(t) >= 3 and not any(ch in vowels for ch in t):
+            return True
+        if t in {"asdf", "asdfg", "asdfgh", "qwerty", "zxcv", "zxcvb", "qwer", "hjkl"}:
+            return True
+
+    # 9. Short nonsense tokens combination (e.g. "abc xyz", "123 abc")
+    if len(lower_tokens) <= 2:
+        if all(t in {"abc", "xyz", "qwe", "asd", "zxc", "123", "456", "789", "bla", "blah", "test"} for t in lower_tokens):
+            return True
+        if norm_no_acc in {"o kia", "noi gi do", "abc xyz", "123 abc", "blah blah", "test test"}:
+            return True
+
+    return False
+
+
+_looks_like_gibberish = _is_unclear_input
 
 
 def _log_turn(
@@ -163,7 +233,7 @@ def _log_turn(
             "workflow_outcome": "blocked" if failure_code else "completed",
             "failure_code": failure_code.value if failure_code is not None else None,
             "guardrail_triggered": False,
-            "authorization_outcome": "denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
+            "authorization_outcome":"denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
     )
@@ -234,14 +304,72 @@ async def handle_message(
         )
         return response
 
-    active_pending = session.conversation_state.get_active_pending_question()
-    if not active_pending and _looks_like_gibberish(request.message):
-        return _blocked_response(
-            IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            ReasonCode.UNKNOWN_INTENT,
-            "Tôi chưa hiểu yêu cầu này. Vui lòng diễn đạt lại.",
+    # 2. Sensitive system / security gate
+    from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+    sensitive_reason = sensitive_system_gate(request.message)
+    if sensitive_reason is not None:
+        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=sensitive_reason, route_confidence=1.0)
+        response = _blocked_response(route.intent, route.reason_code, SENSITIVE_SYSTEM_MESSAGE)
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
         )
+        return response
 
+    # 3. Unclear / gibberish input gate
+    active_pending = session.conversation_state.get_active_pending_question()
+    if not active_pending and _is_unclear_input(request.message):
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            reason_code=ReasonCode.UNKNOWN_INTENT,
+            route_confidence=1.0,
+        )
+        response = _blocked_response(
+            route.intent,
+            route.reason_code,
+            UNCLEAR_INPUT_MESSAGE,
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
+
+    # 4. Out of scope gate (deterministic high-confidence)
+    out_of_scope_reason = out_of_scope_gate(request.message)
+    if out_of_scope_reason is not None:
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            reason_code=out_of_scope_reason,
+            route_confidence=1.0,
+        )
+        response = _blocked_response(
+            route.intent,
+            route.reason_code,
+            OUT_OF_SCOPE_MESSAGE,
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
+
+    # 5. OCR bypass check
     if _is_ocr_bypass_request(request.message):
         route = RouteDecision(intent=IntentEnum.ANALYZE_REPORT, reason_code=ReasonCode.OCR_REVIEW_REQUIRED, route_confidence=1.0)
         response = _blocked_response(
@@ -260,7 +388,7 @@ async def handle_message(
         )
         return response
 
-    # 2. Intent router
+    # 6. Intent router
     from src.models.db import ROLE_PATIENT
 
     has_medical_context = (
@@ -271,21 +399,10 @@ async def handle_message(
     await emit_progress(progress_callback, ProgressStage.ROUTING)
     route = await route_intent(request.message, session, role, has_medical_context=has_medical_context)
     if route.reason_code == ReasonCode.UNKNOWN_INTENT:
-        response = _needs_input_response(
-            route.intent,
+        response = _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE,
             ReasonCode.UNKNOWN_INTENT,
-            "Tôi chưa chắc bạn muốn làm gì. Tôi có thể giúp bạn xem kết quả xét nghiệm, xem xu hướng hoặc chuẩn bị câu hỏi cho bác sĩ.",
-            []
-        )
-        from src.models.orchestrator_schemas import ConversationState
-        runtime.session_store.update_after_turn(
-            current_user,
-            session,
-            last_intent=route.intent,
-            conversation_state=ConversationState(
-                pending_question=response.message,
-                pending_question_timestamp=time.time(),
-            )
+            UNCLEAR_INPUT_MESSAGE,
         )
         _log_turn(
             request_id=request_id,
@@ -297,8 +414,40 @@ async def handle_message(
             started_at=started_at,
         )
         return response
-        
-    # 3. Medical context resolver (Autonomous context retrieval)
+    if route.reason_code == ReasonCode.OUT_OF_SCOPE:
+        response = _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            ReasonCode.OUT_OF_SCOPE,
+            OUT_OF_SCOPE_MESSAGE,
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=ReasonCode.OUT_OF_SCOPE,
+            started_at=started_at,
+        )
+        return response
+    if route.reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
+        response = _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            ReasonCode.SENSITIVE_SYSTEM_REQUEST,
+            SENSITIVE_SYSTEM_MESSAGE,
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=ReasonCode.SENSITIVE_SYSTEM_REQUEST,
+            started_at=started_at,
+        )
+        return response
+
+    # 7. Medical context resolver (Autonomous context retrieval)
     from src.orchestrator.medical_context import resolve_medical_context
     await emit_progress(progress_callback, ProgressStage.MEDICAL_CONTEXT)
     resolved = resolve_medical_context(
@@ -391,7 +540,7 @@ async def handle_message(
         result,
         progress_callback=progress_callback,
     )
-    
+
     # Save conversation state with active timestamp
     from src.models.orchestrator_schemas import ConversationState
     new_state = ConversationState(

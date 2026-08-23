@@ -161,6 +161,12 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str
 
 
 def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum, data: DataPayload | None = None) -> str:
+    if reason_code == ReasonCode.OUT_OF_SCOPE:
+        from src.orchestrator.service import OUT_OF_SCOPE_MESSAGE
+        return OUT_OF_SCOPE_MESSAGE
+    if reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
+        from src.orchestrator.service import SENSITIVE_SYSTEM_MESSAGE
+        return SENSITIVE_SYSTEM_MESSAGE
     if reason_code == ReasonCode.UNSUPPORTED_ANALYTE:
         return "Chỉ số này chưa nằm trong phạm vi hỗ trợ an toàn của hệ thống."
     if reason_code == ReasonCode.UNSUPPORTED_CAPABILITY:
