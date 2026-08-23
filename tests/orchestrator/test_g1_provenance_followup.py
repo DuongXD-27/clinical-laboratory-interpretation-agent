@@ -38,11 +38,13 @@ from src.models.orchestrator_schemas import (
 )
 from src.models.schemas import IndicatorResultSchema, LabReportDetailSchema
 from src.orchestrator import response_composer
+from src.orchestrator import service as service_module
 from src.orchestrator.dispatcher import (
     NO_STORED_SOURCE_MESSAGE,
     DispatchContext,
     dispatch_provenance_followup,
 )
+from src.orchestrator.errors import OrchestratorWrapperError
 from src.orchestrator.gates import is_provenance_request
 from src.orchestrator.response_composer import build_provenance_response
 from src.orchestrator.service import OrchestratorRuntime, handle_message
@@ -421,3 +423,155 @@ async def test_regression_contract_safety_sentences_unchanged(monkeypatch) -> No
         current_user=user, db=mock_db, runtime=runtime,
     )
     assert python_req.reason_code == ReasonCode.OUT_OF_SCOPE
+
+
+# ---------------------------------------------------------------------------
+# HOTFIX-001 — non-success provenance dispatch results fail closed cleanly
+# ---------------------------------------------------------------------------
+
+
+def _foreign_setup(monkeypatch, detail):
+    """Patient 8002 (B) with a session ref pointing at patient A's report."""
+    store = InMemorySessionStore()
+    user = SimpleNamespace(user_id=8002, role=ROLE_PATIENT, username="probe_b")
+    store.get_or_create(user)
+    session = store.acknowledge_onboarding(user)
+    session.current_report_ref = "401"
+    runtime = OrchestratorRuntime(session_store=store)
+    # Report 401 is owned by patient A (971), not by B.
+    mock_db = _mock_db(monkeypatch, detail, owner_id=971)
+    return user, runtime, mock_db
+
+
+@pytest.mark.asyncio
+async def test_h2_foreign_report_provenance_fails_closed_no_crash(monkeypatch) -> None:
+    detail = _detail(indicators=[_indicator(sources=["SECRET-Foreign-Source"])])
+    user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
+
+    r = await handle_message(
+        OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
+        current_user=user_b, db=mock_db, runtime=runtime,
+    )
+    assert r.status == ResponseStatus.BLOCKED
+    assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
+    assert "SECRET-Foreign-Source" not in r.message
+
+
+@pytest.mark.asyncio
+async def test_h3_ui_context_hint_foreign_report_fail_closed(monkeypatch) -> None:
+    from src.models.orchestrator_schemas import UIContext
+
+    detail = _detail(indicators=[_indicator(sources=["SECRET-Foreign-Source"])])
+    user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
+    # Fresh session: the untrusted hint is what injects the foreign reference.
+    session = runtime.session_store.get_or_create(user_b)
+    session.current_report_ref = None
+
+    r = await handle_message(
+        OrchestratorRequest(
+            message="Thông tin này dựa trên đâu?",
+            ui_context=UIContext(screen="analysis", candidate_report_ref="401"),
+        ),
+        current_user=user_b, db=mock_db, runtime=runtime,
+    )
+    assert r.status == ResponseStatus.BLOCKED
+    assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
+    assert "SECRET-Foreign-Source" not in r.message
+
+
+@pytest.mark.asyncio
+async def test_h4_nonexistent_report_provenance_fails_closed(monkeypatch) -> None:
+    detail = _detail()
+    mock_db = _mock_db(monkeypatch, detail)
+    monkeypatch.setattr(
+        history_repository, "get_report",
+        MagicMock(side_effect=OrchestratorWrapperError(
+            ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED)),
+    )
+    store = InMemorySessionStore()
+    user = SimpleNamespace(user_id=8003, role=ROLE_PATIENT, username="probe_c")
+    store.get_or_create(user)
+    session = store.acknowledge_onboarding(user)
+    session.current_report_ref = "404"
+    runtime = OrchestratorRuntime(session_store=store)
+
+    r = await handle_message(
+        OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
+        current_user=user, db=mock_db, runtime=runtime,
+    )
+    assert r.status == ResponseStatus.BLOCKED
+    assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
+
+
+@pytest.mark.asyncio
+async def test_h5_blocked_result_never_reaches_provenance_builder(monkeypatch) -> None:
+    calls = {"count": 0}
+    original = service_module.build_provenance_response
+
+    def spy(data):
+        calls["count"] += 1
+        return original(data)
+
+    monkeypatch.setattr(service_module, "build_provenance_response", spy)
+
+    detail = _detail(indicators=[_indicator(sources=["SECRET-Foreign-Source"])])
+    user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
+    r = await handle_message(
+        OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
+        current_user=user_b, db=mock_db, runtime=runtime,
+    )
+
+    assert calls["count"] == 0
+    assert r.status == ResponseStatus.BLOCKED
+
+
+@pytest.mark.asyncio
+async def test_h6_no_foreign_data_in_cross_patient_response(monkeypatch) -> None:
+    detail = _detail(indicators=[_indicator(sources=["SECRET-Foreign-Source"])])
+    user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
+    r = await handle_message(
+        OrchestratorRequest(message="Nguồn nào vậy?"),
+        current_user=user_b, db=mock_db, runtime=runtime,
+    )
+    for forbidden in ("SECRET-Foreign-Source", "12.0", "WBC"):
+        assert forbidden not in r.message
+
+
+@pytest.mark.asyncio
+async def test_h1_authorized_provenance_success_unchanged(monkeypatch) -> None:
+    user, runtime, mock_db = _build_e2e_setup(monkeypatch, _detail())
+
+    r = await handle_message(
+        OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
+        current_user=user, db=mock_db, runtime=runtime,
+    )
+    assert r.status == ResponseStatus.SUCCESS
+    assert "nguồn tham chiếu đã được duyệt" in r.message
+    assert r.sources == ["Approved WBC educational reference"]
+
+
+@pytest.mark.asyncio
+async def test_h7_crq014_flow_unchanged_after_hotfix(monkeypatch) -> None:
+    user, runtime, mock_db = _build_e2e_setup(monkeypatch, _detail())
+    t1 = await handle_message(OrchestratorRequest(message="Giải thích WBC giúp em"),
+                              current_user=user, db=mock_db, runtime=runtime)
+    t2 = await handle_message(OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
+                              current_user=user, db=mock_db, runtime=runtime)
+    assert t1.status == ResponseStatus.SUCCESS
+    assert t2.status == ResponseStatus.SUCCESS
+    assert "nguồn tham chiếu đã được duyệt" in t2.message
+    assert t2.sources == ["Approved WBC educational reference"]
+
+
+@pytest.mark.asyncio
+async def test_h8_llm_down_authorized_provenance_still_deterministic(monkeypatch) -> None:
+    llm = HostileComposerLlm()
+    monkeypatch.setattr(response_composer, "get_llm", lambda: llm)
+    mock_db = _mock_db(monkeypatch, _detail())
+    result = await dispatch_provenance_followup(
+        _context(mock_db, message="Thông tin này dựa trên đâu?")
+    )
+    response = build_provenance_response(result.data)
+    assert llm.invocations == 0
+    assert response.status == ResponseStatus.SUCCESS
+    assert response.sources == ["Approved WBC educational reference"]

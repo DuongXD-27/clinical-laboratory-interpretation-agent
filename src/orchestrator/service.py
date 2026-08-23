@@ -591,7 +591,13 @@ async def handle_message(
         current_report_ref=resolved.current_report_ref,
         current_analyte=resolved.current_analyte,
     )
-    if provenance_turn:
+    if provenance_turn and result.status == ResponseStatus.SUCCESS:
+        # CHAT-V1.5-R1-G1: the provenance-specific deterministic builder only
+        # accepts a successful provenance payload. Any non-success dispatch
+        # outcome (ownership BLOCKED, DB unavailable, ...) flows through the
+        # existing generic composition path instead, so unauthorized or stale
+        # report references fail closed without a runtime error.
+        # HOTFIX-001.
         await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
         final_response = build_provenance_response(result.data)
     else:
