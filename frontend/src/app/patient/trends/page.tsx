@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TrendChart from "@/components/TrendChart";
 import TrendDoctorReviewPanel from "@/components/patient/TrendDoctorReviewPanel";
+import TrendHeatmap from "@/components/TrendHeatmap";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import {
   canRenderTrendChart,
@@ -16,6 +17,7 @@ import {
   dedupeTrendPoints,
 } from "@/lib/trendUi.mjs";
 import type {
+  SectionHeatmapResponse,
   TrendAnalyteSummary,
   TrendExplanationResponse,
   TrendFilter,
@@ -67,6 +69,10 @@ export default function PatientTrendsPage() {
   const [groupTrends, setGroupTrends] = useState<TrendResponse[] | null>(null);
   const [groupTrendsLoading, setGroupTrendsLoading] = useState(false);
   const [groupTrendsError, setGroupTrendsError] = useState<string | null>(null);
+  const [groupViewMode, setGroupViewMode] = useState<"chart" | "heatmap">("chart");
+  const [sectionHeatmap, setSectionHeatmap] = useState<SectionHeatmapResponse | null>(null);
+  const [sectionHeatmapLoading, setSectionHeatmapLoading] = useState(false);
+  const [sectionHeatmapError, setSectionHeatmapError] = useState<string | null>(null);
   useEffect(() => {
     if (!getToken() || getRole() !== "patient") {
       router.replace("/login");
@@ -237,6 +243,39 @@ export default function PatientTrendsPage() {
     };
     void loadGroupTrends();
   }, [viewMode, selectedSection, filter, router]);
+
+  useEffect(() => {
+    if (viewMode !== "group" || groupViewMode !== "heatmap" || !selectedSection) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale heatmap when scope changes
+      setSectionHeatmap(null);
+      setSectionHeatmapError(null);
+      return;
+    }
+    const loadSectionHeatmap = async () => {
+      setSectionHeatmapLoading(true);
+      setSectionHeatmapError(null);
+      setSectionHeatmap(null);
+      try {
+        const response = await authFetch(
+          `/api/v1/patient/me/trends/sections/${encodeURIComponent(selectedSection)}/heatmap?filter=${filter}`,
+        );
+        if (response.status === 401) {
+          clearSession();
+          router.replace("/login");
+          return;
+        }
+        if (!response.ok) throw new Error("Chưa tải được dữ liệu ma trận nhiệt.");
+        setSectionHeatmap((await response.json()) as SectionHeatmapResponse);
+      } catch (caught: unknown) {
+        setSectionHeatmapError(
+          caught instanceof Error ? caught.message : "Chưa tải được dữ liệu ma trận nhiệt.",
+        );
+      } finally {
+        setSectionHeatmapLoading(false);
+      }
+    };
+    void loadSectionHeatmap();
+  }, [viewMode, groupViewMode, selectedSection, filter, router]);
 
   useEffect(() => {
     if (analytes.length === 0) return;
@@ -541,9 +580,43 @@ export default function PatientTrendsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-6 flex flex-col gap-4 w-full">
+                      <div className="mt-6 inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs" role="tablist" aria-label="Kiểu hiển thị nhóm chức năng">
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={groupViewMode === "chart"}
+                          onClick={() => setGroupViewMode("chart")}
+                          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${groupViewMode === "chart" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+                        >
+                          Biểu đồ đường
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={groupViewMode === "heatmap"}
+                          onClick={() => setGroupViewMode("heatmap")}
+                          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${groupViewMode === "heatmap" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+                        >
+                          Ma trận nhiệt
+                        </button>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-4 w-full">
 {/* Small Multiples Grid (Hybrid: same-unit analytes → 1 multi-line chart) */}
-                        {groupTrendsLoading ? (
+                        {groupViewMode === "heatmap" ? (
+                          sectionHeatmapLoading ? (
+                            <div className="patient-glass-clinical p-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải ma trận nhiệt">
+                              <span className="loading-dot mr-2" aria-hidden="true" />
+                              Đang tải ma trận nhiệt...
+                            </div>
+                          ) : sectionHeatmapError ? (
+                            <div role="alert" className="patient-glass-clinical p-6 text-red-700">
+                              {sectionHeatmapError}
+                            </div>
+                          ) : sectionHeatmap ? (
+                            <TrendHeatmap data={sectionHeatmap} />
+                          ) : null
+                        ) : groupTrendsLoading ? (
                           <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải biểu đồ nhóm">
                             <span className="loading-dot mr-2" aria-hidden="true" />
                             Đang tải biểu đồ nhóm...
