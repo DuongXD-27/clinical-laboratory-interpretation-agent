@@ -4,6 +4,7 @@ import type {
   TrendFilter,
   TrendReview,
   TrendReviewAssessment,
+  TrendReviewHistoryResponse,
   TrendReviewPatientState,
   TrendReviewRequestResponse,
   TrendReviewStatus,
@@ -361,6 +362,21 @@ export async function fetchPatientTrendReviewState(
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không tải được trạng thái review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function fetchPatientTrendReviewHistory(
+  analyteCanonical: string,
+  trendFilter: TrendFilter,
+): Promise<TrendReviewHistoryResponse> {
+  const response = await authFetch(
+    `/api/v1/patient/me/trends/${encodeURIComponent(analyteCanonical)}/review-history?filter=${trendFilter}`,
+  );
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được lịch sử review xu hướng"));
   }
   return response.json();
 }

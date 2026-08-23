@@ -11,6 +11,7 @@ from src.models.schemas import (
     DoctorTrendReviewSubmitRequest,
     TrendFilter,
     TrendReviewCreateRequest,
+    TrendReviewHistoryResponse,
     TrendReviewPatientStateResponse,
     TrendReviewRequestResponse,
     TrendReviewSchema,
@@ -45,6 +46,27 @@ async def patient_trend_review_state(
 ) -> TrendReviewPatientStateResponse:
     try:
         return service.get_patient_trend_review_state(
+            db,
+            username=current_user.username,
+            analyte_canonical=analyte_canonical,
+            trend_filter=filter,
+        )
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/patient/me/trends/{analyte_canonical}/review-history",
+    response_model=TrendReviewHistoryResponse,
+)
+async def patient_trend_review_history(
+    analyte_canonical: str,
+    filter: TrendFilter = "latest5",
+    current_user: CurrentUser = Depends(_patient_only),
+    db: Session = Depends(get_db),
+) -> TrendReviewHistoryResponse:
+    try:
+        return service.list_patient_trend_review_history(
             db,
             username=current_user.username,
             analyte_canonical=analyte_canonical,

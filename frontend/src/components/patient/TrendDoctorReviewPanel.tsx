@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { TrendResponse, TrendReviewPatientState } from "@/types/analysis";
+import TrendReviewHistoryPanel from "./TrendReviewHistoryPanel";
 
 type Props = {
   trend: TrendResponse;
@@ -27,6 +28,7 @@ function requestReason(state: TrendReviewPatientState | null, hasExplanation: bo
   if (!state) return "";
   if (state.reason === "PENDING_EXISTS") return "Yêu cầu review đang chờ bác sĩ xử lý.";
   if (state.reason === "LATEST_REVIEW_STILL_CURRENT") return "Review mới nhất vẫn khớp dữ liệu xu hướng hiện tại.";
+  if (state.reason === "CURRENT_TREND_CHANGED") return "Biểu đồ hiện tại đã thay đổi từ lần bác sĩ review gần nhất.";
   if (state.reason === "TREND_UNAVAILABLE") return "Xu hướng này chưa đủ dữ liệu để gửi review.";
   return "";
 }
@@ -35,6 +37,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
   const [state, setState] = useState<TrendReviewPatientState | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -70,10 +73,12 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
       );
       setState((current) => ({
         latest_review: current?.latest_review ?? null,
+        latest_historical_review: current?.latest_historical_review ?? null,
         pending_request: response.review,
         can_request_review: false,
         reason: "PENDING_EXISTS",
         current_trend_hash: response.review.trend_snapshot_hash,
+        history_count: current?.history_count ?? 0,
       }));
     } catch (caught) {
       if (caught instanceof UnauthorizedError) {
@@ -88,11 +93,13 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
 
   const latest = state?.latest_review;
   const pending = state?.pending_request;
+  const hasHistory = Boolean((state?.history_count ?? 0) > 0 || state?.latest_historical_review);
   const hasExplanation = Boolean(explanation?.trim());
   const canSend = Boolean(state?.can_request_review && hasExplanation && !sending);
   const reason = requestReason(state, hasExplanation);
 
   return (
+    <>
     <section className="patient-glass-clinical p-5 sm:p-6" aria-labelledby="trend-doctor-review-title">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
@@ -106,19 +113,36 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
                 ? "Yêu cầu đã được gửi tới bác sĩ."
                 : latest
                   ? assessmentText(latest.doctor_assessment)
-                  : "Chưa có nhận xét của bác sĩ"}
+                  : state?.latest_historical_review
+                    ? "Chưa có nhận xét của bác sĩ cho biểu đồ hiện tại"
+                    : "Chưa có nhận xét của bác sĩ"}
           </p>
         </div>
-        {!pending && (
-          <button
-            type="button"
-            className="patient-btn-secondary shrink-0"
-            disabled={!canSend}
-            onClick={() => void sendRequest()}
-          >
-            {sending ? "Đang gửi..." : latest ? "Gửi yêu cầu review lại" : "Gửi yêu cầu tới bác sĩ"}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          {hasHistory && (
+            <button
+              type="button"
+              className="patient-btn-secondary shrink-0"
+              onClick={() => setShowHistory((value) => !value)}
+            >
+              {showHistory ? "Ẩn lịch sử review" : "Xem lịch sử review"}
+            </button>
+          )}
+          {!pending && (
+            <button
+              type="button"
+              className="patient-btn-secondary shrink-0"
+              disabled={!canSend}
+              onClick={() => void sendRequest()}
+            >
+              {sending
+                ? "Đang gửi..."
+                : hasHistory
+                  ? "Gửi yêu cầu review lại"
+                  : "Gửi yêu cầu tới bác sĩ"}
+            </button>
+          )}
+        </div>
       </div>
 
       {pending && (
@@ -139,6 +163,15 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
 
       {reason && !pending && <p className="mt-3 text-xs text-slate-500">{reason}</p>}
       {error && <div className="error-message mt-4" role="alert">{error}</div>}
+
     </section>
+      {showHistory && (
+        <TrendReviewHistoryPanel
+          trend={trend}
+          onUnauthorized={onUnauthorized}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+    </>
   );
 }

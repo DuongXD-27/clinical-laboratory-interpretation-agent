@@ -88,6 +88,17 @@ async def _create_review_request(client, headers, llm_text="AI nhận xét LDL-C
     )
 
 
+async def _submit_review(client, doctor_headers, request_id: int):
+    return await client.post(
+        f"/api/v1/doctor/trend-reviews/{request_id}/review",
+        headers=doctor_headers,
+        json={
+            "doctor_assessment": "corrected",
+            "doctor_comment": "LDL-C tăng nhẹ, cần đối chiếu mục tiêu điều trị và yếu tố nguy cơ.",
+        },
+    )
+
+
 @pytest.mark.asyncio
 async def test_patient_creates_trend_review_request_and_duplicate_pending_is_blocked(client, test_db):
     patient = await _patient_headers(client)
@@ -128,14 +139,7 @@ async def test_doctor_reviews_trend_request_and_patient_sees_latest_review(clien
     assert detail.json()["patient"]["name"] == "benhnhan"
     assert detail.json()["review"]["llm_explanation_snapshot"] == "AI nhận xét LDL-C tăng qua các lần xét nghiệm."
 
-    reviewed = await client.post(
-        f"/api/v1/doctor/trend-reviews/{request_id}/review",
-        headers=doctor,
-        json={
-            "doctor_assessment": "corrected",
-            "doctor_comment": "LDL-C tăng nhẹ, cần đối chiếu mục tiêu điều trị và yếu tố nguy cơ.",
-        },
-    )
+    reviewed = await _submit_review(client, doctor, request_id)
 
     assert reviewed.status_code == 200, reviewed.text
     reviewed_payload = reviewed.json()
@@ -154,6 +158,43 @@ async def test_doctor_reviews_trend_request_and_patient_sees_latest_review(clien
     assert state["latest_review"]["doctor_comment"] == reviewed_payload["doctor_comment"]
     assert state["can_request_review"] is False
     assert state["reason"] == "LATEST_REVIEW_STILL_CURRENT"
+
+
+@pytest.mark.asyncio
+async def test_reviewed_trend_moves_to_history_when_current_chart_changes(client, test_db):
+    patient = await _patient_headers(client)
+    doctor = await _doctor_headers(client)
+    _save_ldl_series(test_db.session)
+    created = await _create_review_request(client, patient, "AI nhận xét cho biểu đồ P1.")
+    request_id = created.json()["review"]["id"]
+    reviewed = await _submit_review(client, doctor, request_id)
+    assert reviewed.status_code == 200, reviewed.text
+
+    _save_report(test_db.session, "benhnhan", "2026-08-04", 3.4)
+
+    state_response = await client.get(_review_url("LDL-C"), headers=patient)
+
+    assert state_response.status_code == 200, state_response.text
+    state = state_response.json()
+    assert state["latest_review"] is None
+    assert state["latest_historical_review"]["id"] == request_id
+    assert state["can_request_review"] is True
+    assert state["reason"] == "CURRENT_TREND_CHANGED"
+    assert state["history_count"] == 1
+
+    history_response = await client.get(_review_url("LDL-C", "-history"), headers=patient)
+
+    assert history_response.status_code == 200, history_response.text
+    history = history_response.json()
+    assert history["total"] == 1
+    assert history["items"][0]["id"] == request_id
+    assert history["items"][0]["llm_explanation_snapshot"] == "AI nhận xét cho biểu đồ P1."
+    assert len(history["items"][0]["trend_snapshot"]["points"]) == 3
+
+    repeated = await _create_review_request(client, patient, "AI nhận xét cho biểu đồ P2.")
+
+    assert repeated.status_code == 201, repeated.text
+    assert repeated.json()["review"]["trend_snapshot_hash"] != reviewed.json()["trend_snapshot_hash"]
 
 
 @pytest.mark.asyncio
@@ -188,3 +229,8 @@ async def test_trend_review_permissions_and_patient_isolation(client, test_db):
     assert state.json()["pending_request"] is None
     assert state.json()["latest_review"] is None
     assert state.json()["can_request_review"] is True
+
+    history = await client.get(_review_url("LDL-C", "-history"), headers=patient2)
+
+    assert history.status_code == 200, history.text
+    assert history.json()["total"] == 0

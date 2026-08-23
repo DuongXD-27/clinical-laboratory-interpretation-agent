@@ -17,6 +17,7 @@ from src.models.schemas import (
     TrendFilter,
     TrendResponse,
     TrendReviewAssessment,
+    TrendReviewHistoryResponse,
     TrendReviewPatientStateResponse,
     TrendReviewSchema,
 )
@@ -134,7 +135,7 @@ def get_patient_trend_review_state(
         .scalars()
         .first()
     )
-    latest_review = (
+    reviewed_rows = (
         db.execute(
             select(TrendReviewRequest)
             .where(
@@ -147,7 +148,7 @@ def get_patient_trend_review_state(
             .order_by(TrendReviewRequest.reviewed_at.desc(), TrendReviewRequest.id.desc())
         )
         .scalars()
-        .first()
+        .all()
     )
 
     current_hash: str | None = None
@@ -164,23 +165,37 @@ def get_patient_trend_review_state(
     except TrendReviewNotAllowedError:
         reason = "TREND_UNAVAILABLE"
 
+    latest_current_review: TrendReviewRequest | None = None
+    latest_historical_review: TrendReviewRequest | None = None
+    for row in reviewed_rows:
+        if current_hash is not None and row.trend_snapshot_hash == current_hash:
+            if latest_current_review is None:
+                latest_current_review = row
+            continue
+        if latest_historical_review is None:
+            latest_historical_review = row
+
     if pending is not None:
         can_request = False
         reason = "PENDING_EXISTS"
     elif reason == "TREND_UNAVAILABLE":
         can_request = False
-    elif latest_review is not None and latest_review.trend_snapshot_hash == current_hash:
+    elif latest_current_review is not None:
         can_request = False
         reason = "LATEST_REVIEW_STILL_CURRENT"
     else:
         can_request = True
+        if latest_historical_review is not None:
+            reason = "CURRENT_TREND_CHANGED"
 
     return TrendReviewPatientStateResponse(
-        latest_review=_schema(latest_review) if latest_review is not None else None,
+        latest_review=_schema(latest_current_review) if latest_current_review is not None else None,
+        latest_historical_review=_schema(latest_historical_review) if latest_historical_review is not None else None,
         pending_request=_schema(pending) if pending is not None else None,
         can_request_review=can_request,
         reason=reason,
         current_trend_hash=current_hash,
+        history_count=len(reviewed_rows),
     )
 
 
@@ -232,6 +247,35 @@ def create_patient_trend_review_request(
         raise
     db.refresh(row)
     return _schema(row)
+
+
+def list_patient_trend_review_history(
+    db: Session,
+    *,
+    username: str,
+    analyte_canonical: str,
+    trend_filter: TrendFilter,
+) -> TrendReviewHistoryResponse:
+    patient = get_patient_by_username(db, username)
+    rows = (
+        db.execute(
+            select(TrendReviewRequest)
+            .where(
+                TrendReviewRequest.patient_id == patient.id,
+                TrendReviewRequest.analyte_canonical == analyte_canonical,
+                TrendReviewRequest.trend_filter == trend_filter,
+                TrendReviewRequest.status == TrendReviewRequest.STATUS_REVIEWED,
+            )
+            .options(selectinload(TrendReviewRequest.reviewed_by))
+            .order_by(TrendReviewRequest.reviewed_at.desc(), TrendReviewRequest.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+    return TrendReviewHistoryResponse(
+        total=len(rows),
+        items=[_schema(row) for row in rows],
+    )
 
 
 def list_doctor_trend_reviews(

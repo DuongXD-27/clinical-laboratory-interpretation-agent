@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Stethoscope } from "lucide-react";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import { homeForRole } from "@/lib/roleHome.mjs";
 import { login, register, startGuestSession } from "@/lib/api";
@@ -104,33 +105,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-7 bg-[linear-gradient(180deg,#f8fbff_0%,#f3f7fc_100%)] px-6 py-10">
+    <div className="flex flex-1 flex-col items-center justify-center gap-7 bg-[var(--background)] px-6 py-10 text-foreground">
       <div className="text-center">
-        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-blue-600 text-3xl font-light text-white shadow-lg shadow-blue-600/20" aria-hidden="true">
-          +
+        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-[var(--brand)] text-white shadow-[0_8px_24px_rgba(8,126,139,0.18)]" aria-hidden="true">
+          <Stethoscope className="h-6 w-6" />
         </div>
-        <h1 className="text-2xl font-semibold text-slate-950">
-          VMEC-05 - Giải thích kết quả xét nghiệm
+        <h1 className="text-2xl font-semibold text-foreground">
+          VMEC - Giải thích kết quả xét nghiệm
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Đăng nhập, đăng ký, hoặc dùng thử ngay không cần tài khoản
         </p>
-        <Link href="/" className="mt-3 inline-flex text-sm font-medium text-blue-700 hover:underline">
-          ← Về trang giới thiệu
+        <Link href="/" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-strong)] hover:underline">
+          <ArrowLeft className="h-4 w-4" />
+          Về trang giới thiệu
         </Link>
       </div>
 
-      <div className="flex min-h-[438px] w-full max-w-sm flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(28,55,91,0.08)]">
-        <div className="grid grid-cols-2 gap-1 rounded-full bg-slate-100 p-1">
+      <div className="flex min-h-[438px] w-full max-w-sm flex-col gap-4 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-surface)] p-6 shadow-[var(--shadow-glass)] backdrop-blur-md">
+        <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] p-1">
           {(["login", "register"] as const).map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => switchMode(value)}
-              className={`h-9 rounded-full text-sm font-medium transition-colors ${
+              className={`h-9 rounded-md text-sm font-medium transition-colors ${
                 mode === value
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[var(--surface)] text-[var(--brand-strong)] shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {value === "login" ? "Đăng nhập" : "Đăng ký"}
@@ -140,7 +142,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="username" className="text-sm font-medium text-slate-700">
+            <label htmlFor="username" className="text-sm font-medium text-foreground">
               {mode === "login" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"}
             </label>
             <input
@@ -149,10 +151,10 @@ export default function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               required
               autoComplete="username"
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
             />
             {mode === "register" && (
-              <p className="text-xs leading-5 text-slate-600">
+              <p className="text-xs leading-5 text-muted-foreground">
                 Từ 3 ký tự, chỉ dùng chữ, số và các ký tự _ . -
               </p>
             )}
@@ -160,8 +162,8 @@ export default function LoginPage() {
 
           {mode === "register" && (
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-slate-700">
-                Email <span className="font-normal text-slate-500">(không bắt buộc)</span>
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email <span className="font-normal text-muted-foreground">(không bắt buộc)</span>
               </label>
               <input
                 id="email"
@@ -170,16 +172,16 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 placeholder="ban@example.com"
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
               />
-              <p className="text-xs leading-5 text-slate-600">
+              <p className="text-xs leading-5 text-muted-foreground">
                 Điền email thì lần sau đăng nhập được bằng cả tên lẫn email.
               </p>
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-slate-700">
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
               Mật khẩu
             </label>
             <input
@@ -189,14 +191,14 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
             />
-            {mode === "register" && <p className="text-xs leading-5 text-slate-600">Ít nhất 8 ký tự.</p>}
+            {mode === "register" && <p className="text-xs leading-5 text-muted-foreground">Ít nhất 8 ký tự.</p>}
           </div>
 
           {mode === "register" && (
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="confirm" className="text-sm font-medium text-slate-700">
+              <label htmlFor="confirm" className="text-sm font-medium text-foreground">
                 Nhập lại mật khẩu
               </label>
               <input
@@ -206,7 +208,7 @@ export default function LoginPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
               />
             </div>
           )}
@@ -216,16 +218,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 h-11 rounded-full bg-blue-600 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="mt-1 h-11 rounded-lg bg-[var(--brand)] font-medium text-white transition-colors hover:bg-[var(--brand-strong)] disabled:opacity-50"
           >
             {loading ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản bệnh nhân"}
           </button>
         </form>
 
         <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs text-slate-500">hoặc</span>
-          <span className="h-px flex-1 bg-slate-200" />
+          <span className="h-px flex-1 bg-[var(--border)]" />
+          <span className="text-xs text-muted-foreground">hoặc</span>
+          <span className="h-px flex-1 bg-[var(--border)]" />
         </div>
 
         {/* Tự ẩn khi máy chủ chưa cấu hình GOOGLE_OAUTH_CLIENT_ID. */}
@@ -238,24 +240,24 @@ export default function LoginPage() {
           type="button"
           onClick={handleGuest}
           disabled={loading}
-          className="h-11 rounded-full border border-slate-300 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
+          className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] font-medium text-[var(--brand-strong)] transition-colors hover:bg-[var(--surface-subtle)] disabled:opacity-50"
         >
           Dùng thử với tư cách khách
         </button>
-        <p className="text-center text-xs leading-5 text-slate-600">
+        <p className="text-center text-xs leading-5 text-muted-foreground">
           Chế độ khách dùng thử được ngay, nhưng không lưu lịch sử xét nghiệm.
         </p>
       </div>
 
       <div className="flex flex-col items-center gap-2 pt-1">
-        <p className="text-xs text-slate-600">Tài khoản demo (chỉ điền nhanh vào form):</p>
+        <p className="text-xs text-muted-foreground">Tài khoản demo (chỉ điền nhanh vào form):</p>
         <div className="flex flex-wrap justify-center gap-3">
           {DEMO_ACCOUNTS.map((account) => (
             <button
               key={account.username}
               type="button"
               onClick={() => fillDemo(account)}
-              className="rounded-full border border-slate-300 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-xs font-medium text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-foreground"
             >
               {account.label}
             </button>

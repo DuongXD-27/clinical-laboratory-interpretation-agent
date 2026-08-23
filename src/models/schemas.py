@@ -818,15 +818,22 @@ class TrendReviewSchema(BaseModel):
 
 class TrendReviewPatientStateResponse(BaseModel):
     latest_review: TrendReviewSchema | None = None
+    latest_historical_review: TrendReviewSchema | None = None
     pending_request: TrendReviewSchema | None = None
     can_request_review: bool
     reason: str | None = None
     current_trend_hash: str | None = None
+    history_count: int = 0
 
 
 class TrendReviewRequestResponse(BaseModel):
     review: TrendReviewSchema
     created: bool = True
+
+
+class TrendReviewHistoryResponse(BaseModel):
+    total: int
+    items: list[TrendReviewSchema] = Field(default_factory=list)
 
 
 class DoctorTrendReviewSummary(BaseModel):

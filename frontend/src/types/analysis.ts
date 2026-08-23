@@ -127,15 +127,22 @@ export type TrendReview = {
 
 export type TrendReviewPatientState = {
   latest_review: TrendReview | null;
+  latest_historical_review: TrendReview | null;
   pending_request: TrendReview | null;
   can_request_review: boolean;
   reason?: string | null;
   current_trend_hash?: string | null;
+  history_count: number;
 };
 
 export type TrendReviewRequestResponse = {
   review: TrendReview;
   created: boolean;
+};
+
+export type TrendReviewHistoryResponse = {
+  total: number;
+  items: TrendReview[];
 };
 
 export type DoctorTrendReviewSummary = {
