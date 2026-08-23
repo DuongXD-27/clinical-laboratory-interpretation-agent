@@ -89,6 +89,12 @@ export type TrendResponse = {
   /** ADR-010 CRIT-TREND-03: điểm mới nhất đang tiến gần ngưỡng nguy kịch (trong 10%). */
   approaching_critical?: boolean;
   critical_alert?: CriticalAlert | null;
+  /** ADR-010 CRIT-TREND-02: khoảng "bình thường" khớp theo sex/age tại lần đo gần nhất. */
+  reference_low?: number | null;
+  reference_high?: number | null;
+  /** ADR-010 CRIT-TREND-03/05: ngưỡng nguy kịch active, cùng đơn vị với `canonical_unit`. */
+  critical_low?: number | null;
+  critical_high?: number | null;
 };
 
 export type TrendExplanationResponse = {

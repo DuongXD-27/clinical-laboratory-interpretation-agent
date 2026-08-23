@@ -433,7 +433,15 @@ export default function PatientTrendsPage() {
                         </div>
 
                         <div className="patient-glass-clinical p-4 sm:p-6">
-                          <TrendChart analyte={trend.display_name} unit={trend.canonical_unit} points={trend.points} />
+                          <TrendChart
+                            analyte={trend.display_name}
+                            unit={trend.canonical_unit}
+                            points={trend.points}
+                            referenceLow={trend.reference_low}
+                            referenceHigh={trend.reference_high}
+                            criticalLow={trend.critical_low}
+                            criticalHigh={trend.critical_high}
+                          />
                           <p className="mt-4 text-xs text-slate-500 text-center">
                             Mỗi điểm là một lần xét nghiệm đã ghi nhận. Đường nối chỉ giúp theo dõi sự thay đổi giữa các lần đo, không thể hiện dữ liệu trong khoảng thời gian giữa hai lần xét nghiệm.
                           </p>
@@ -558,6 +566,10 @@ export default function PatientTrendsPage() {
                                         unit={unit}
                                         points={trends[0].points}
                                         height={320}
+                                        referenceLow={trends[0].reference_low}
+                                        referenceHigh={trends[0].reference_high}
+                                        criticalLow={trends[0].critical_low}
+                                        criticalHigh={trends[0].critical_high}
                                       />
                                     ) : (
                                       <TrendChart
@@ -605,6 +617,10 @@ export default function PatientTrendsPage() {
                                         unit={unit}
                                         points={trends[0].points}
                                         height={320}
+                                        referenceLow={trends[0].reference_low}
+                                        referenceHigh={trends[0].reference_high}
+                                        criticalLow={trends[0].critical_low}
+                                        criticalHigh={trends[0].critical_high}
                                       />
                                     ) : (
                                       <TrendChart

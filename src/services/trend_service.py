@@ -4,9 +4,11 @@ import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from sqlalchemy.orm import Session
 
+from src.agents.nodes.reference_range_checker_node import get_reference_repository
 from src.models.db import LabReport, ReportIndicator
 from src.models.schemas import (
     CriticalAlertSchema,
@@ -21,6 +23,7 @@ from src.services.analyte_sections import analyte_section, section_label
 from src.services.critical_value_service import approaches_critical, evaluate_critical
 from src.services.indicator_catalog_service import get_indicator_configuration_service
 from src.services.patient_service import get_patient_by_username
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +130,72 @@ def get_report_patient_snapshot(db: Session, *, report_id: int) -> tuple[str | N
     if report is None:
         return None, None
     return report.patient_gender_at_test, report.patient_age_at_test
+
+
+def _parse_bound(value: object) -> float | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(Decimal(text))
+    except InvalidOperation:
+        return None
+
+
+def _chart_reference_bounds(
+    *,
+    analyte_canonical: str,
+    unit: str,
+    patient_gender: str | None,
+    patient_age: int | None,
+) -> tuple[float | None, float | None]:
+    """ADR-010 CRIT-TREND-02: khoảng "bình thường" để vẽ vùng tham chiếu trên biểu đồ xu hướng.
+
+    Khớp theo đúng snapshot sex/age tại lần đo gần nhất, giống cách pipeline chính chọn rule.
+    Không khớp được thì trả (None, None) — biểu đồ không vẽ vùng tham chiếu trong trường hợp đó,
+    tránh gợi ý sai một khoảng "bình thường" không có nguồn.
+    """
+    if patient_gender is None:
+        return None, None
+    try:
+        repository = get_reference_repository()
+    except ReferenceRepositoryError:
+        return None, None
+    result = repository.select_rule(
+        analyte=analyte_canonical,
+        unit=unit,
+        patient_gender=patient_gender,
+        patient_age=patient_age,
+    )
+    if not result.matched or not result.rule:
+        return None, None
+    return _parse_bound(result.rule.get("range_lower")), _parse_bound(result.rule.get("range_upper"))
+
+
+def _chart_critical_bounds(
+    *,
+    analyte_canonical: str,
+    unit: str,
+    latest_value: float,
+) -> tuple[float | None, float | None]:
+    """ADR-010 CRIT-TREND-03/05: ngưỡng nguy kịch active để vẽ đường tham chiếu trên biểu đồ.
+
+    Chỉ trả về khi ngưỡng đã ở cùng đơn vị với dữ liệu hiển thị trên biểu đồ — một số ngưỡng
+    (vd. glucose) được so sánh sau khi quy đổi sang đơn vị nguồn (``CRITICAL_LAYER_ONLY``,
+    xem ``measurement_conversion.py``); quy đổi đó không được duyệt cho mục đích hiển thị
+    ngược lại nên trong trường hợp đó biểu đồ bỏ qua đường ngưỡng thay vì tự quy đổi.
+    """
+    evaluation = evaluate_critical(analyte_canonical, latest_value, unit)
+    if not evaluation.evaluated:
+        return None, None
+    comparison_unit = evaluation.comparison_unit or ""
+    if ReferenceRepository.normalize_unit(comparison_unit) != ReferenceRepository.normalize_unit(unit):
+        return None, None
+    low = float(evaluation.active_low[0]) if evaluation.active_low else None
+    high = float(evaluation.active_high[0]) if evaluation.active_high else None
+    return low, high
 
 
 def _latest_critical_state(
@@ -322,6 +391,24 @@ def get_patient_trend(
         filtered_points,
     )
 
+    latest_point = filtered_points[-1]
+    snapshot_gender, snapshot_age = get_report_patient_snapshot(db, report_id=latest_point.report_id)
+    reference_low, reference_high = _chart_reference_bounds(
+        analyte_canonical=analyte_canonical,
+        unit=unit,
+        patient_gender=snapshot_gender,
+        patient_age=snapshot_age,
+    )
+    critical_low, critical_high = (
+        _chart_critical_bounds(
+            analyte_canonical=analyte_canonical,
+            unit=unit,
+            latest_value=latest_point.canonical_value,
+        )
+        if critical_status or approaching_critical
+        else (None, None)
+    )
+
     return TrendResponse(
         analyte_canonical=analyte_canonical,
         display_name=analyte_canonical,
@@ -342,6 +429,10 @@ def get_patient_trend(
         critical_status=critical_status,
         approaching_critical=approaching_critical,
         critical_alert=critical_alert,
+        reference_low=reference_low,
+        reference_high=reference_high,
+        critical_low=critical_low,
+        critical_high=critical_high,
         **section_fields,
     )
 
