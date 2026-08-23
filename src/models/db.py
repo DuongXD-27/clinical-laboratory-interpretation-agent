@@ -698,6 +698,61 @@ class ReportDoctorView(Base):
     doctor = relationship("User")
 
 
+class TrendReviewRequest(Base):
+    """HITL request for a doctor to review one patient trend chart.
+
+    This stays separate from lab report verification: a trend review covers one
+    analyte across several reports, while report verification validates one
+    saved report. The chart data and LLM text are snapshotted at request time so
+    the doctor reviews exactly what the patient saw.
+    """
+
+    __tablename__ = "trend_review_requests"
+
+    STATUS_PENDING = "PENDING"
+    STATUS_REVIEWED = "REVIEWED"
+    STATUS_CANCELLED = "CANCELLED"
+    STATUS_REJECTED = "REJECTED"
+
+    __table_args__ = (
+        Index("ix_trend_reviews_patient_status", "patient_id", "status", "requested_at"),
+        Index("ix_trend_reviews_doctor_status", "reviewed_by_doctor_id", "status", "reviewed_at"),
+        Index(
+            "uq_trend_reviews_one_pending",
+            "patient_id",
+            "analyte_canonical",
+            "trend_filter",
+            unique=True,
+            sqlite_where=text("status = 'PENDING'"),
+            postgresql_where=text("status = 'PENDING'"),
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    patient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    analyte_canonical = Column(String, nullable=False, index=True)
+    display_name = Column(String, nullable=False)
+    canonical_unit = Column(String, nullable=False, default="")
+    trend_filter = Column(String, nullable=False, default="latest5")
+    trend_snapshot = Column(JSON, nullable=False, default=dict)
+    trend_snapshot_hash = Column(String(64), nullable=False, index=True)
+    llm_explanation_snapshot = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default=STATUS_PENDING, index=True)
+    requested_at = Column(DateTime, nullable=False, default=_utcnow, index=True)
+    reviewed_by_doctor_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    reviewed_at = Column(DateTime, nullable=True)
+    doctor_assessment = Column(String, nullable=True)
+    doctor_comment = Column(Text, nullable=True)
+
+    patient = relationship("User", foreign_keys=[patient_id])
+    reviewed_by = relationship("User", foreign_keys=[reviewed_by_doctor_id])
+
+
 class OutOfScopeLog(Base):
     """Một chỉ số nằm ngoài phạm vi thư viện hỗ trợ."""
 
@@ -1066,6 +1121,7 @@ __all__ = [
     "RequestTrace",
     "ReviewFlag",
     "SessionLocal",
+    "TrendReviewRequest",
     "User",
     "engine",
     "get_db",

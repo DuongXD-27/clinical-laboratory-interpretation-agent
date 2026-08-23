@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ListTodo, LogOut } from "lucide-react";
+import { ListTodo, LogOut, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const doctorNavigation = [
   { href: "/doctor", label: "Hàng đợi đánh giá", icon: ListTodo },
+  { href: "/doctor/trend-reviews", label: "Đánh giá biểu đồ xu hướng", icon: TrendingUp },
 ];
 
 export function isNavActive(pathname: string, item: (typeof doctorNavigation)[number]) {

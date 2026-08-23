@@ -786,6 +786,78 @@ class SectionTrendsResponse(BaseModel):
     trends: list[TrendResponse] = Field(default_factory=list)
 
 
+TrendReviewStatus = Literal["PENDING", "REVIEWED", "CANCELLED", "REJECTED"]
+TrendReviewAssessment = Literal["confirmed", "corrected", "needs_follow_up"]
+
+
+class TrendReviewCreateRequest(BaseModel):
+    """Patient request to send the currently visible trend explanation for review."""
+
+    trend_filter: TrendFilter = "latest5"
+    llm_explanation: str = Field(..., min_length=1, max_length=8000)
+
+
+class TrendReviewSchema(BaseModel):
+    id: int
+    patient_id: int
+    analyte_canonical: str
+    display_name: str
+    canonical_unit: str
+    trend_filter: TrendFilter
+    trend_snapshot: TrendResponse
+    trend_snapshot_hash: str
+    llm_explanation_snapshot: str
+    status: TrendReviewStatus
+    requested_at: datetime
+    reviewed_by_doctor_id: int | None = None
+    reviewed_by_username: str | None = None
+    reviewed_at: datetime | None = None
+    doctor_assessment: TrendReviewAssessment | None = None
+    doctor_comment: str | None = None
+
+
+class TrendReviewPatientStateResponse(BaseModel):
+    latest_review: TrendReviewSchema | None = None
+    pending_request: TrendReviewSchema | None = None
+    can_request_review: bool
+    reason: str | None = None
+    current_trend_hash: str | None = None
+
+
+class TrendReviewRequestResponse(BaseModel):
+    review: TrendReviewSchema
+    created: bool = True
+
+
+class DoctorTrendReviewSummary(BaseModel):
+    id: int
+    patient_id: int
+    patient_name: str
+    analyte_canonical: str
+    display_name: str
+    trend_filter: TrendFilter
+    point_count: int
+    status: TrendReviewStatus
+    requested_at: datetime
+    reviewed_at: datetime | None = None
+    reviewed_by_username: str | None = None
+
+
+class DoctorTrendReviewListResponse(BaseModel):
+    total: int
+    items: list[DoctorTrendReviewSummary] = Field(default_factory=list)
+
+
+class DoctorTrendReviewDetailResponse(BaseModel):
+    review: TrendReviewSchema
+    patient: DoctorPatientSchema
+
+
+class DoctorTrendReviewSubmitRequest(BaseModel):
+    doctor_assessment: TrendReviewAssessment
+    doctor_comment: str = Field(..., min_length=1, max_length=8000)
+
+
 # ---------------------------------------------------------------------------
 # Admin — trace vận hành
 #

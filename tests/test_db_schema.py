@@ -49,6 +49,7 @@ EXPECTED_TABLES = {
     "review_flags",
     "doctor_notes",
     "report_doctor_views",
+    "trend_review_requests",
     "out_of_scope_log",
 }
 
