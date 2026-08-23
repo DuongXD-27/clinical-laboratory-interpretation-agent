@@ -764,12 +764,26 @@ class TrendResponse(BaseModel):
     critical_status: str | None = None
     approaching_critical: bool = False
     critical_alert: CriticalAlertSchema | None = None
+    # ADR-010 CRIT-TREND-02: khoảng "bình thường" khớp theo sex/age tại lần đo gần nhất, dùng để vẽ vùng tham chiếu trên biểu đồ.
+    reference_low: float | None = None
+    reference_high: float | None = None
+    # ADR-010 CRIT-TREND-03/05: ngưỡng nguy kịch active (chỉ khi đã escalate và cùng đơn vị hiển thị), dùng để vẽ đường ngưỡng trên biểu đồ.
+    critical_low: float | None = None
+    critical_high: float | None = None
 
 
 class TrendExplanationResponse(BaseModel):
     explanation: str
     fallback: bool = False
     reason: str | None = None
+
+
+class SectionTrendsResponse(BaseModel):
+    """Response wrapping all analyte trends within a functional section."""
+
+    section: str
+    section_label: str
+    trends: list[TrendResponse] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
