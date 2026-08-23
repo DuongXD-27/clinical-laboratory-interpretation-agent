@@ -9,6 +9,7 @@ from src.models.schemas import (
     PatientLabReportListResponse,
     PatientProfileSchema,
     PatientProfileUpdateRequest,
+    SectionHeatmapResponse,
     SectionTrendsResponse,
     TrendAnalyteListResponse,
     TrendExplanationResponse,
@@ -37,7 +38,12 @@ from src.services.trend_explanation_service import (
     TrendExplanationUnavailable,
     explain_patient_trend,
 )
-from src.services.trend_service import get_patient_section_trends, get_patient_trend, get_patient_trend_analytes
+from src.services.trend_service import (
+    get_patient_section_heatmap,
+    get_patient_section_trends,
+    get_patient_trend,
+    get_patient_trend_analytes,
+)
 
 router = APIRouter(prefix="/patient/me", tags=["patient"])
 
@@ -138,6 +144,30 @@ async def section_trends(
     _require_patient(current_user)
     try:
         return get_patient_section_trends(
+            db,
+            username=current_user.username,
+            section=section,
+            trend_filter=filter,
+        )
+    except PatientNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/trends/sections/{section}/heatmap", response_model=SectionHeatmapResponse)
+async def section_heatmap(
+    section: str,
+    filter: TrendFilter = "latest5",
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> SectionHeatmapResponse:
+    if section not in SECTION_KEYS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Section không hợp lệ: {section}. Chọn từ: {', '.join(SECTION_KEYS)}",
+        )
+    _require_patient(current_user)
+    try:
+        return get_patient_section_heatmap(
             db,
             username=current_user.username,
             section=section,
