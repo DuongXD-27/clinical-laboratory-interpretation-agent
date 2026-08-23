@@ -298,7 +298,7 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-7xl mx-auto space-y-8 pb-12 px-4 sm:px-6">
       <section className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Xu hướng chỉ số</h1>
         <p className="text-muted-foreground">
@@ -523,7 +523,7 @@ export default function PatientTrendsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-6 flex justify-start">
+                      <div className="mt-6 flex flex-col gap-4 w-full">
 {/* Small Multiples Grid (Hybrid: same-unit analytes → 1 multi-line chart) */}
                         {groupTrendsLoading ? (
                           <div className="patient-glass-clinical p-6 mt-6 flex items-center justify-center text-sm text-slate-600" role="status" aria-label="Đang tải biểu đồ nhóm">
@@ -577,7 +577,12 @@ export default function PatientTrendsPage() {
                             </div>
 
                             {/* Desktop/Tablet Grid — same-unit analytes → 1 multi-line chart */}
-                            <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div
+                              className="hidden lg:grid gap-4"
+                              style={{
+                                gridTemplateColumns: `repeat(${Math.min(unitGroups.length, 3)}, minmax(0, 1fr))`,
+                              }}
+                            >
                               {unitGroups.map(({ unit, trends }) => {
                                 const anyCritical = trends.some((t) => t.critical_status);
                                 const anyApproaching = trends.some((t) => t.approaching_critical);
@@ -626,7 +631,7 @@ export default function PatientTrendsPage() {
 
                         <button
                           type="button"
-                          className="patient-btn-secondary"
+                          className="patient-btn-secondary self-start"
                           onClick={() => void loadGroupExplanation()}
                           disabled={groupExplanationLoading || !selectedSection || Boolean(groupExplanation)}
                         >
