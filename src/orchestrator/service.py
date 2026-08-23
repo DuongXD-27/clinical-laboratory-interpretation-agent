@@ -23,7 +23,13 @@ from src.models.orchestrator_schemas import (
     TrendDataPayload,
 )
 from src.orchestrator.dispatcher import DispatchContext, WorkflowResult, dispatch_workflow
-from src.orchestrator.gates import medical_safety_gate, onboarding_gate, policy_gate, role_admission_gate
+from src.orchestrator.gates import (
+    medical_safety_gate,
+    onboarding_gate,
+    policy_gate,
+    role_admission_gate,
+    treatment_followup_gate,
+)
 from src.orchestrator.intent_router import RouteDecision, contains_lab_value, route_intent
 from src.orchestrator.progress import ProgressCallback, emit_progress
 from src.orchestrator.response_composer import _safety_refusal_message, build_final_response, map_needs_input_prompt
@@ -365,6 +371,26 @@ async def handle_message(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
+
+    # 4b. CHAT-V1.5-R1-G4 layer 2: context-aware treatment follow-up
+    # elevation. An ambiguous short action follow-up is elevated to
+    # TREATMENT_REQUEST only when an authenticated active report/analyte
+    # context exists; without context this gate never fires. Context may
+    # elevate safety but never downgrade it.
+    followup_reason = treatment_followup_gate(request.message, session)
+    if followup_reason is not None:
+        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0)
+        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=followup_reason,
             started_at=started_at,
         )
         return response

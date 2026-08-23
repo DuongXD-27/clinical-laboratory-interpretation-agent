@@ -113,6 +113,143 @@ def _matches_personal_diagnosis_form(normalized: str) -> bool:
     return True
 
 
+# --- CHAT-V1.5-R1-G4: treatment/action request form detection ---------------
+#
+# Two complementary layers:
+#
+# Layer 1 - context-free (medical_safety_gate): a treatment construction
+#   (patient direction + advice request + change/improve/treat component)
+#   is classified as TREATMENT_REQUEST only when the message itself carries
+#   a MEDICAL ANCHOR (explicit analyte, result/index nouns, or medication).
+#   Broad action forms without an anchor ("Lam sao de giam dung luong file?")
+#   must never be classified context-free.
+#
+# Layer 2 - session-aware elevation (treatment_followup_gate): short,
+#   ambiguous action follow-ups ("Vay toi nen lam gi tiep?") are elevated to
+#   TREATMENT_REQUEST ONLY when an authenticated active report/analyte
+#   context exists. Medical context may elevate safety; it must never
+#   downgrade safety nor manufacture a medical answer.
+#
+# Normalization-collision safety: need-modal "can" collides with the word
+# for weigh/balance after accent stripping, and cure "chua" collides with
+# "not yet". Bare "can"/"chua" tokens are therefore NEVER used as semantic
+# signals. The need-modal is omitted entirely; cure semantics are honored
+# only via accent-aware raw constructions already present in the fixed
+# phrase lists ("cach chua").
+
+_TREATMENT_PRONOUN_RE = re.compile(r"\b(?:toi|em|minh)\b|\bchung toi\b")
+_TREATMENT_MODAL_TOKENS = frozenset({"nen", "phai"})
+_TREATMENT_ADVICE_FRAMES = (
+    "nen lam gi", "phai lam gi", "nen lam sao",
+    "lam sao de", "co cach nao", "cach nao de",
+)
+_TREATMENT_CHANGE_VERBS = ("ha", "giam", "cai thien", "dieu tri")
+_TREATMENT_DRUG_BIGRAMS = ("dung thuoc", "uong thuoc", "mua thuoc")
+_TREATMENT_ANCHOR_PHRASES = ("chi so", "ket qua", "xet nghiem", "benh", "thuoc")
+_DOCTOR_QUESTION_FRAME_MARKERS = ("hoi bac si", "chuan bi cau hoi")
+_AMBIGUOUS_FOLLOWUP_EXCLUSIONS = (
+    "file", "dung luong", "giao dien", "phieu", "anh", "ocr",
+    "ung dung", "lich su", "tai khoan", "mat khau", "tieng anh",
+    "code", "lap trinh", "game", "nau an", "world cup",
+)
+
+
+def _has_treatment_medical_anchor(normalized: str, original_lower: str) -> bool:
+    """The message itself references an analyte/result/index or medication."""
+    from src.orchestrator.medical_context import extract_explicit_analyte
+
+    if extract_explicit_analyte(original_lower) is not None:
+        return True
+    return any(
+        _contains_phrase_norm(normalized, phrase)
+        for phrase in _TREATMENT_ANCHOR_PHRASES
+    )
+
+
+def _matches_treatment_request_form(normalized: str, original_lower: str) -> bool:
+    """CHAT-V1.5-R1-G4 layer 1: form-based treatment detection (context-free).
+
+    Recognizes the request FORM "patient asks what they personally should do
+    to change/improve/treat their result" without relying on any single
+    keyword, and only when the message carries its own medical anchor so
+    that generic (non-medical) how-to questions are never blocked.
+    """
+    # Doctor-question preparation frames ask what to ASK the clinician about
+    # management; they are question preparation, not patient-directed action.
+    if any(marker in normalized for marker in _DOCTOR_QUESTION_FRAME_MARKERS):
+        return False
+
+    tokens = set(normalized.split())
+    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
+    has_modal = bool(tokens & _TREATMENT_MODAL_TOKENS)
+    advice_frame = any(frame in normalized for frame in _TREATMENT_ADVICE_FRAMES)
+
+    patient_direction = has_pronoun or advice_frame
+    advice_request = (has_pronoun and has_modal) or advice_frame
+    # Multi-token verbs ("cai thien") require word-boundary phrase matching;
+    # single-token set membership can never see them.
+    change_component = any(
+        _contains_phrase_norm(normalized, verb)
+        for verb in _TREATMENT_CHANGE_VERBS
+    ) or any(
+        _contains_phrase_norm(normalized, bigram)
+        for bigram in _TREATMENT_DRUG_BIGRAMS
+    )
+
+    return (
+        patient_direction
+        and advice_request
+        and change_component
+        and _has_treatment_medical_anchor(normalized, original_lower)
+    )
+
+
+def _is_ambiguous_treatment_followup(normalized: str) -> bool:
+    """CHAT-V1.5-R1-G4 layer 2: short ambiguous action follow-up form.
+
+    Matches utterances whose medical target can only come from active
+    session context. Domain-bearing questions never match.
+    """
+    tokens = normalized.split()
+    if not tokens or 12 < len(tokens):
+        return False
+    if any(marker in normalized for marker in _DOCTOR_QUESTION_FRAME_MARKERS):
+        return False
+    if any(_contains_phrase_norm(normalized, term) for term in _AMBIGUOUS_FOLLOWUP_EXCLUSIONS):
+        return False
+
+    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
+    has_modal = bool(set(tokens) & _TREATMENT_MODAL_TOKENS)
+    advice_frame = any(frame in normalized for frame in _TREATMENT_ADVICE_FRAMES)
+    if not ((has_pronoun and has_modal) or advice_frame):
+        return False
+
+    continuation_signal = (
+        "tiep" in tokens
+        or any(
+            _contains_phrase_norm(normalized, ref)
+            for ref in ("chi so nay", "ket qua nay", "chung nay")
+        )
+        or any(_contains_phrase_norm(normalized, verb) for verb in _TREATMENT_CHANGE_VERBS)
+    )
+    return continuation_signal
+
+
+def treatment_followup_gate(message: str, session: object) -> ReasonCode | None:
+    """CHAT-V1.5-R1-G4 layer 2: elevate ambiguous action follow-ups to
+    TREATMENT_REQUEST only when an authenticated active report/analyte
+    context exists. Without active context this gate never fires, so the
+    bare sentence alone can never manufacture a medical safety refusal."""
+    has_active_context = getattr(session, "current_report_ref", None) is not None or getattr(
+        session, "current_analyte", None
+    ) is not None
+    if not has_active_context:
+        return None
+    if _is_ambiguous_treatment_followup(_normalize(message)):
+        return ReasonCode.TREATMENT_REQUEST
+    return None
+
+
 def medical_safety_gate(message: str) -> ReasonCode | None:
     """Run before intent routing to block explicit medical questions."""
     normalized = _normalize(message)
@@ -193,6 +330,13 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
         "cach dieu tri", "dung thuoc gi", "mua thuoc gi",
     )
     if any(_contains_phrase_norm(normalized, phrase) for phrase in treatment_norm):
+        return ReasonCode.TREATMENT_REQUEST
+
+    # 3b. CHAT-V1.5-R1-G4 layer 1: form-based detection. Context-free
+    # classification requires the message to carry its own medical anchor;
+    # broad action forms without one are left unclassified here and may only
+    # be elevated to safety by treatment_followup_gate with session context.
+    if _matches_treatment_request_form(normalized, original_lower):
         return ReasonCode.TREATMENT_REQUEST
 
     return None
