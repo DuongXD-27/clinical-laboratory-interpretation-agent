@@ -294,12 +294,71 @@ class AnalysisDataPayload(BaseModel):
     has_critical_values: bool = False
 
 
+# ORCH-V1.4C amendments 2 & 4: canonical critical verdicts emitted by the
+# approved critical detector (critical_detector_node). This is the ONLY
+# critical authority consulted by single-analyte composition. Plain HIGH/LOW
+# are abnormal but never critical; a missing verdict is never inferred.
+CANONICAL_CRITICAL_STATUSES = frozenset({"critical_low", "critical_high"})
+
+
+def canonical_critical_side(critical_status):
+    """Resolve THE canonical critical verdict for one indicator.
+
+    Single critical authority: the current detector output carried in
+    ``critical_status``. HIGH != CRITICAL, LOW != CRITICAL, and a missing
+    verdict is never inferred as critical.
+    """
+    if critical_status in CANONICAL_CRITICAL_STATUSES:
+        return critical_status
+    return None
+
+
+class ExplanationIndicatorFacts(BaseModel):
+    """Atomic deterministic fact block for ONE analyte.
+
+    Built exclusively by the dispatcher from the authoritative
+    ``IndicatorResultSchema`` of the stored report. The response composer
+    renders these facts verbatim; neither the composer LLM nor any other
+    component may rewrite value, unit, reference status, range or critical
+    facts. ``critical_status`` is the canonical output of the approved
+    critical detector.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    analyte_name: str = Field(min_length=1)
+    value: float = Field(allow_inf_nan=False)
+    unit: str = Field(min_length=1)
+    status: str = Field(min_length=1)
+    reference_low: float | None = Field(default=None, allow_inf_nan=False)
+    reference_high: float | None = Field(default=None, allow_inf_nan=False)
+    # True ONLY when BOTH authoritative bounds exist; one-sided/banded rules
+    # must never receive a fabricated two-sided range (ORCH-V1.4C amendment 3).
+    has_two_sided_reference_range: bool = False
+    critical_status: Literal["critical_low", "critical_high"] | None = None
+    # Approved critical-alert message copied VERBATIM from the same
+    # detector run (report.critical_alerts). DISPLAY projection only -
+    # never used to infer or alter the canonical verdict above.
+    approved_critical_message: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def _two_sided_flag_must_match_bounds(self) -> ExplanationIndicatorFacts:
+        both_present = self.reference_low is not None and self.reference_high is not None
+        if self.has_two_sided_reference_range != both_present:
+            raise ValueError(
+                "has_two_sided_reference_range must be true if and only if both reference bounds are present"
+            )
+        return self
+
+
 class ExplanationDataPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     data_type: Literal[DataType.EXPLANATION] = DataType.EXPLANATION
     explanation: str
     sources: list[str] = Field(default_factory=list)
+    # Deterministic fact block; None preserves the legacy prose-only contract.
+    facts: ExplanationIndicatorFacts | None = None
 
 
 class HistorySummaryPayload(BaseModel):
@@ -443,12 +502,14 @@ class OrchestratorStreamEvent(BaseModel):
 __all__ = [
     "AnalysisDataPayload",
     "BlockedPayload",
+    "canonical_critical_side",
     "ConfirmOcrAction",
     "ConversationState",
     "DataPayload",
     "DataType",
     "DoctorQuestionsPayload",
     "ExplanationDataPayload",
+    "ExplanationIndicatorFacts",
     "HistorySummaryPayload",
     "IntentEnum",
     "NeedsInputPayload",

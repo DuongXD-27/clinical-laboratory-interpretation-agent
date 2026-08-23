@@ -9,11 +9,13 @@ from src.models.orchestrator_schemas import (
     DataPayload,
     DoctorQuestionsPayload,
     ExplanationDataPayload,
+    ExplanationIndicatorFacts,
     IntentEnum,
     NeedsInputPayload,
     ProgressStage,
     ReasonCode,
     ResponseStatus,
+    canonical_critical_side,
 )
 from src.orchestrator.errors import OrchestratorWrapperError
 from src.orchestrator.progress import ProgressCallback, emit_progress
@@ -112,11 +114,53 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
                 indicator.analyte_raw or "",
             }
             if context.current_analyte in names:
+                explanation = indicator.explanation or ""
+                sources = list(getattr(indicator, "sources", None) or [])
+                value = getattr(indicator, "value", None)
+                unit = getattr(indicator, "unit", None)
+                status = getattr(indicator, "status", None)
+                # ORCH-V1.4C: stop dropping authoritative facts. Carry the
+                # canonical fact block so deterministic single-analyte
+                # composition can present value/unit/status/range/critical
+                # verbatim, with the approved explanation kept supplemental.
+                # Fail-safe: an incomplete snapshot (no authoritative
+                # value/unit/status) keeps the legacy prose-only contract
+                # instead of inventing partial facts.
+                if value is None or unit is None or status is None:
+                    return WorkflowResult(
+                        status=ResponseStatus.SUCCESS,
+                        data=ExplanationDataPayload(explanation=explanation, sources=sources),
+                        workflow_selected="get_my_report",
+                    )
+                reference_low = getattr(indicator, "reference_low", None)
+                reference_high = getattr(indicator, "reference_high", None)
+                # Preserve the APPROVED critical warning of the same
+                # detector run for this analyte, verbatim (display only).
+                approved_critical_message = None
+                for alert in getattr(report, "critical_alerts", None) or []:
+                    if getattr(alert, "indicator_name", None) in names:
+                        message = getattr(alert, "message", None)
+                        if message:
+                            approved_critical_message = message
+                            break
                 return WorkflowResult(
                     status=ResponseStatus.SUCCESS,
                     data=ExplanationDataPayload(
-                        explanation=indicator.explanation or "",
-                        sources=list(indicator.sources or []),
+                        explanation=explanation,
+                        sources=sources,
+                        facts=ExplanationIndicatorFacts(
+                            analyte_name=getattr(indicator, "analyte_canonical", None) or indicator.name,
+                            value=value,
+                            unit=unit,
+                            status=str(status),
+                            reference_low=reference_low,
+                            reference_high=reference_high,
+                            has_two_sided_reference_range=(
+                                reference_low is not None and reference_high is not None
+                            ),
+                            critical_status=canonical_critical_side(getattr(indicator, "critical_status", None)),
+                            approved_critical_message=approved_critical_message,
+                        ),
                     ),
                     workflow_selected="get_my_report",
                 )
