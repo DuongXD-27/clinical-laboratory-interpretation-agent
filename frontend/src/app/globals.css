@@ -1478,6 +1478,7 @@ textarea::placeholder {
 
 /* Heatmap ma trận chỉ số × phiếu xét nghiệm — dùng đúng 4 tone/màu status-* ở trên. */
 .heatmap-table {
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 4px;
   font-size: 0.8rem;
@@ -1491,9 +1492,19 @@ textarea::placeholder {
   text-align: center;
 }
 
+/* Fixed column widths so every cell (button or div) renders the same size — with
+   table-layout: auto (the default), the browser sized each column from its own
+   content, so a column holding a <button> (data cell) could end up a different
+   width than one holding a plain <div> (missing-data cell). */
+.heatmap-table td,
+.heatmap-table th:not(.heatmap-th-sticky) {
+  width: 84px;
+}
+
 .heatmap-th-sticky {
   position: sticky;
   left: 0;
+  width: 160px;
   background: #fff;
   text-align: left;
   z-index: 1;
@@ -1503,10 +1514,14 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 64px;
+  box-sizing: border-box;
+  width: 100%;
   height: 40px;
+  padding: 0;
+  margin: 0;
   border-radius: 8px;
   border: none;
+  font: inherit;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -1522,7 +1537,8 @@ textarea::placeholder {
 .heatmap-cell-unknown { background: #f1f5f9; color: #475569; }
 
 .heatmap-cell-missing {
-  min-width: 64px;
+  box-sizing: border-box;
+  width: 100%;
   height: 40px;
   border-radius: 8px;
   background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 4px, #e2e8f0 4px, #e2e8f0 8px);
