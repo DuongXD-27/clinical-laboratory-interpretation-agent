@@ -14,6 +14,7 @@ from src.models.orchestrator_schemas import (
     BlockedPayload,
     DataPayload,
     DataType,
+    DoctorQuestionsPayload,
     ExplanationDataPayload,
     IntentEnum,
     NeedsInputPayload,
@@ -217,6 +218,14 @@ def _compose_explanation_message(data: ExplanationDataPayload) -> str:
     return "\n".join(lines)
 
 
+def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
+    if not data.questions:
+        return "Hiện chưa có câu hỏi phù hợp cho chỉ số hoặc phiếu xét nghiệm này."
+    lines = ["Đây là các câu hỏi gợi ý để trao đổi với bác sĩ:"]
+    lines.extend(f"{index}. {question.text}" for index, question in enumerate(data.questions, start=1))
+    return "\n".join(lines)
+
+
 def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum, data: DataPayload | None = None) -> str:
     if reason_code == ReasonCode.OUT_OF_SCOPE:
         from src.orchestrator.service import OUT_OF_SCOPE_MESSAGE
@@ -243,7 +252,9 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
             return _compose_trend_message(data)
         return "Đây là xu hướng của chỉ số đã chọn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.GET_DOCTOR_QUESTIONS:
-        return "Đây là các câu hỏi gợi ý để trao đổi với bác sĩ."
+        if isinstance(data, DoctorQuestionsPayload):
+            return _compose_doctor_questions_message(data)
+        return "Hiện chưa có câu hỏi phù hợp cho phiếu xét nghiệm này."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)
@@ -415,6 +426,10 @@ async def compose_message(
     if status != ResponseStatus.SUCCESS:
         return fallback_message
     if isinstance(data, TrendDataPayload):
+        return fallback_message
+    if isinstance(data, DoctorQuestionsPayload):
+        # HAL-039: persisted/guardrailed wording is authoritative. Render it
+        # deterministically so composer availability cannot alter or hide it.
         return fallback_message
     if isinstance(data, ExplanationDataPayload) and data.facts is not None:
         # ORCH-V1.4C: one canonical deterministic path. The general composer
