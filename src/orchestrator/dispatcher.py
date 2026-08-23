@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 
@@ -31,6 +32,9 @@ class DispatchContext:
     current_report_ref: str | None
     current_analyte: str | None
     progress_callback: ProgressCallback | None = None
+    # CHAT-V1.5-R1-G1: raw patient message, used only by the constrained
+    # provenance follow-up path to detect named-source verification probes.
+    message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -232,6 +236,147 @@ async def _dispatch_safe_general(_: DispatchContext) -> WorkflowResult:
             sources=[]
         ),
         workflow_selected="safe_general"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CHAT-V1.5-R1-G1: constrained provenance / source follow-up mode
+#
+# One canonical approved-source path. Sources come ONLY from the stored
+# approved indicator sources of the current authorized report/analyte context
+# (``get_my_report`` enforces patient ownership). Rendering is fully
+# deterministic: no LLM participates, no source identity is invented, and no
+# internal chunk/source IDs are exposed — only stored titles (URLs are kept
+# verbatim when already present in the stored metadata).
+# ---------------------------------------------------------------------------
+
+NO_STORED_SOURCE_MESSAGE = (
+    "Hiện tôi không có nguồn tham chiếu đã được lưu cho phần giải thích này."
+)
+
+_NAMED_SOURCE_PROBES: tuple[tuple[str, str], ...] = (
+    ("who", "WHO"),
+    ("cdc", "CDC"),
+    ("vinmec", "Vinmec"),
+    ("mayo clinic", "Mayo Clinic"),
+    ("arup", "ARUP"),
+)
+
+
+def _detect_named_source_probe(message: str | None) -> tuple[str, str] | None:
+    """Return ``(match_key, display_label)`` when the question names a source."""
+    if not message:
+        return None
+    from src.orchestrator.gates import _normalize
+
+    normalized = _normalize(message)
+    for key, label in _NAMED_SOURCE_PROBES:
+        if re.search(rf"\b{re.escape(key)}\b", normalized):
+            return key, label
+    return None
+
+
+def _source_mentions(source: str, key: str) -> bool:
+    return re.search(rf"\b{re.escape(key)}\b", source, re.IGNORECASE) is not None
+
+
+def _dedupe_sources(sources: object) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for raw in sources or []:
+        text = str(raw).strip()
+        if text and text not in seen:
+            seen.add(text)
+            ordered.append(text)
+    return ordered
+
+
+def _render_source_entries(sources: list[str]) -> list[str]:
+    return [f"{index}. {source}" for index, source in enumerate(sources, start=1)]
+
+
+def _compose_provenance_explanation(message: str | None, sources: list[str]) -> str:
+    probe = _detect_named_source_probe(message)
+    if probe is not None:
+        key, label = probe
+        present = any(_source_mentions(source, key) for source in sources)
+        if present:
+            lines = [
+                f"Có. {label} nằm trong các nguồn tham chiếu đã được duyệt "
+                "cho phần giải thích này:"
+            ]
+        elif not sources:
+            return (
+                "Hiện tôi không có nguồn tham chiếu nào được lưu cho phần giải thích "
+                f"này, nên tôi không thể xác nhận nguồn {label}."
+            )
+        else:
+            lines = [
+                f"Trong các nguồn tham chiếu đã được duyệt cho phần giải thích này "
+                f"không có nguồn {label}. Các nguồn hiện có:"
+            ]
+        lines.extend(_render_source_entries(sources))
+        return "\n".join(lines)
+
+    if not sources:
+        return NO_STORED_SOURCE_MESSAGE
+    lines = ["Phần giải thích này dựa trên các nguồn tham chiếu đã được duyệt sau:"]
+    lines.extend(_render_source_entries(sources))
+    return "\n".join(lines)
+
+
+def _approved_sources_for_context(
+    report: object, current_analyte: str | None
+) -> list[str]:
+    """Stored approved sources bound to the CURRENT context only.
+
+    With an active analyte: only that analyte's sources. Without one: every
+    approved indicator source of the current report, in stored order.
+    """
+    sources: list[str] = []
+    if current_analyte:
+        for indicator in getattr(report, "indicators", ()) or ():
+            names = {
+                getattr(indicator, "name", None),
+                getattr(indicator, "analyte_canonical", None) or "",
+                getattr(indicator, "analyte_raw", None) or "",
+            }
+            if current_analyte in names:
+                sources.extend(getattr(indicator, "sources", None) or [])
+                break
+    else:
+        for indicator in getattr(report, "indicators", ()) or ():
+            sources.extend(getattr(indicator, "sources", None) or [])
+    return _dedupe_sources(sources)
+
+
+async def dispatch_provenance_followup(context: DispatchContext) -> WorkflowResult:
+    """CHAT-V1.5-R1-G1 canonical provenance workflow.
+
+    Deterministic; fail-closed on wrapper errors (ownership, DB). Never
+    merges unrelated source pools and never fabricates a missing URL.
+    """
+    if not context.current_report_ref:
+        return WorkflowResult(
+            status=ResponseStatus.SUCCESS,
+            data=ExplanationDataPayload(
+                explanation=_compose_provenance_explanation(context.message, []),
+                sources=[],
+            ),
+            workflow_selected="source_provenance",
+        )
+    try:
+        report = get_my_report(context.current_user, context.db, context.current_report_ref)
+        sources = _approved_sources_for_context(report, context.current_analyte)
+    except OrchestratorWrapperError as exc:
+        return _blocked(exc.reason_code)
+    return WorkflowResult(
+        status=ResponseStatus.SUCCESS,
+        data=ExplanationDataPayload(
+            explanation=_compose_provenance_explanation(context.message, sources),
+            sources=list(sources),
+        ),
+        workflow_selected="source_provenance",
     )
 
 WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {

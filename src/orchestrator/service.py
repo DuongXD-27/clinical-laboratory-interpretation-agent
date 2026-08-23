@@ -5,7 +5,7 @@ import logging
 import re
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from src.models.orchestrator_schemas import (
     BlockedPayload,
@@ -22,8 +22,14 @@ from src.models.orchestrator_schemas import (
     RetryAction,
     TrendDataPayload,
 )
-from src.orchestrator.dispatcher import DispatchContext, WorkflowResult, dispatch_workflow
+from src.orchestrator.dispatcher import (
+    DispatchContext,
+    WorkflowResult,
+    dispatch_provenance_followup,
+    dispatch_workflow,
+)
 from src.orchestrator.gates import (
+    is_provenance_request,
     medical_safety_gate,
     onboarding_gate,
     policy_gate,
@@ -32,7 +38,12 @@ from src.orchestrator.gates import (
 )
 from src.orchestrator.intent_router import RouteDecision, contains_lab_value, route_intent
 from src.orchestrator.progress import ProgressCallback, emit_progress
-from src.orchestrator.response_composer import _safety_refusal_message, build_final_response, map_needs_input_prompt
+from src.orchestrator.response_composer import (
+    _safety_refusal_message,
+    build_final_response,
+    build_provenance_response,
+    map_needs_input_prompt,
+)
 from src.orchestrator.session_store import SessionStore, default_session_store
 from src.services.request_timing import get_current_timing
 
@@ -417,13 +428,25 @@ async def handle_message(
     # 6. Intent router
     from src.models.db import ROLE_PATIENT
 
+    # 6a. CHAT-V1.5-R1-G1: constrained provenance follow-up mode.
+    # A bare stored-provenance question ("Thông tin này dựa trên đâu?") is
+    # routed deterministically to the canonical approved-source path BEFORE
+    # the LLM router, so it can neither be re-explained nor fall to generic
+    # SAFE_GENERAL, and composer availability cannot change the answer.
+    # All earlier gates (unclear, out-of-scope, treatment elevation, OCR)
+    # keep their precedence; this detection never overrides a safety route.
+    provenance_turn = is_provenance_request(request.message)
+
     has_medical_context = (
         session.current_report_ref is not None
         or session.current_analyte is not None
         or (role == ROLE_PATIENT)
     )
     await emit_progress(progress_callback, ProgressStage.ROUTING)
-    route = await route_intent(request.message, session, role, has_medical_context=has_medical_context)
+    if provenance_turn:
+        route = RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=1.0)
+    else:
+        route = await route_intent(request.message, session, role, has_medical_context=has_medical_context)
     if route.reason_code == ReasonCode.UNKNOWN_INTENT:
         response = _blocked_response(
             IntentEnum.UNSUPPORTED_OR_UNSAFE,
@@ -546,26 +569,37 @@ async def handle_message(
         )
         return response
 
-    result = await dispatch_workflow(
-        route.intent,
-        DispatchContext(
-            current_user=current_user,
-            db=db,
-            current_report_ref=resolved.current_report_ref,
-            current_analyte=resolved.current_analyte,
-            progress_callback=progress_callback,
-        ),
+    dispatch_context = DispatchContext(
+        current_user=current_user,
+        db=db,
+        current_report_ref=resolved.current_report_ref,
+        current_analyte=resolved.current_analyte,
+        progress_callback=progress_callback,
     )
+    if provenance_turn:
+        # CHAT-V1.5-R1-G1: canonical approved-source path for the CURRENT
+        # report/analyte context only. The message is carried so named-source
+        # verification ("Theo WHO không?", "Có phải CDC không?") can be
+        # answered strictly from stored metadata.
+        result = await dispatch_provenance_followup(
+            replace(dispatch_context, message=request.message)
+        )
+    else:
+        result = await dispatch_workflow(route.intent, dispatch_context)
     next_report_ref, next_analyte = _context_after_workflow(
         result=result,
         current_report_ref=resolved.current_report_ref,
         current_analyte=resolved.current_analyte,
     )
-    final_response = await _response_from_workflow(
-        route.intent,
-        result,
-        progress_callback=progress_callback,
-    )
+    if provenance_turn:
+        await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
+        final_response = build_provenance_response(result.data)
+    else:
+        final_response = await _response_from_workflow(
+            route.intent,
+            result,
+            progress_callback=progress_callback,
+        )
 
     # Save conversation state with active timestamp
     from src.models.orchestrator_schemas import ConversationState

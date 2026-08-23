@@ -573,9 +573,31 @@ async def build_final_response(
     return enforce_final_response(response)
 
 
+def build_provenance_response(data: ExplanationDataPayload) -> OrchestratorResponse:
+    """CHAT-V1.5-R1-G1: deterministic provenance response assembly.
+
+    The provenance wording rendered by the dispatcher is authoritative and is
+    copied verbatim into the final message. The general composer LLM never
+    runs on this path, so it can never invent or rewrite a source identity.
+    The assembled response still passes the same final safety guardrails as
+    every other response.
+    """
+    return enforce_final_response(
+        OrchestratorResponse(
+            intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
+            status=ResponseStatus.SUCCESS,
+            message=data.explanation,
+            data_type=data.data_type,
+            data=data,
+            sources=list(data.sources),
+        )
+    )
+
+
 __all__ = [
     "ComposedMessage",
     "build_final_response",
+    "build_provenance_response",
     "compose_message",
     "deterministic_message_for",
     "enforce_final_response",

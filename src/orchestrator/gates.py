@@ -469,3 +469,53 @@ def out_of_scope_gate(message: str) -> ReasonCode | None:
 
     return None
 
+
+# --- CHAT-V1.5-R1-G1: provenance / source follow-up detection ---------------
+#
+# A patient asking where an explanation comes from ("Thông tin này dựa trên
+# đâu?", "Nguồn nào nói vậy?") must reach ONE canonical approved-source path
+# instead of being re-routed to EXPLAIN_CURRENT_RESULT or generic
+# SAFE_GENERAL. Detection is form-based and context-free: the QUESTION SHAPE
+# asks for stored provenance. Combined explain+provenance messages ("Giải
+# thích ... và cho em biết thông tin này dựa trên đâu") stay on the single-
+# analyte explanation path, which already attaches its own approved sources.
+
+_PROVENANCE_FRAMES = (
+    "dua tren dau",
+    "dua tren nguon",
+    "lay tu nguon",
+    "lay tu dau",
+    "tu nguon nao",
+    "tu nguon gi",
+    "nguon nao",
+    "nguon gi",
+    "nguon dau",
+    "nguon tham khao",
+    "co nguon khong",
+    "nguon cua phan giai",
+    "nguon cua thong tin",
+    "nguon nay la cua",
+    "to chuc nao",
+    "theo who",
+    "co phai who",
+    "who khong",
+    "theo cdc",
+    "co phai cdc",
+    "cdc khong",
+)
+
+# Combined explanation requests keep the explanation path; they are never
+# intercepted as bare provenance follow-ups. The possessive noun phrase
+# "phần giải thích" (= "phan giai thich") is itself a provenance TARGET, so
+# only explain cues outside that phrase count as combined requests.
+
+
+def is_provenance_request(message: str) -> bool:
+    """CHAT-V1.5-R1-G1: deterministic provenance follow-up form detection."""
+    normalized = _normalize(message)
+    # "phan giai thich" mentions the explanation as a source target, not an
+    # explanation request; any other "giai thich" marks a combined request.
+    if re.search(r"(?<!phan )giai thich", normalized):
+        return False
+    return any(frame in normalized for frame in _PROVENANCE_FRAMES)
+
