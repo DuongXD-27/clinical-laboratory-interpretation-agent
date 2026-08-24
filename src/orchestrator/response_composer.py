@@ -14,6 +14,7 @@ from src.models.orchestrator_schemas import (
     BlockedPayload,
     DataPayload,
     DataType,
+    DoctorQuestionsPayload,
     ExplanationDataPayload,
     IntentEnum,
     NeedsInputPayload,
@@ -79,6 +80,17 @@ def _compose_trend_message(data: TrendDataPayload) -> str:
     if trend.critical_alert is not None:
         lines.append(f"\n⚠️ CẢNH BÁO: {trend.critical_alert.message}")
 
+    return "\n".join(lines)
+
+
+def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
+    questions = sorted(data.questions, key=lambda question: question.display_order)
+    if not questions:
+        return "Hiện chưa có câu hỏi gợi ý phù hợp cho phiếu hoặc chỉ số này."
+
+    lines = ["Bạn có thể trao đổi với bác sĩ các câu hỏi sau:"]
+    for index, question in enumerate(questions, start=1):
+        lines.append(f"{index}. {question.text}")
     return "\n".join(lines)
 
 
@@ -180,7 +192,9 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
             return _compose_trend_message(data)
         return "Đây là xu hướng của chỉ số đã chọn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.GET_DOCTOR_QUESTIONS:
-        return "Đây là các câu hỏi gợi ý để trao đổi với bác sĩ."
+        if isinstance(data, DoctorQuestionsPayload):
+            return _compose_doctor_questions_message(data)
+        return "Hiện chưa có câu hỏi gợi ý phù hợp cho phiếu hoặc chỉ số này."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)
@@ -350,6 +364,8 @@ async def compose_message(
     if status != ResponseStatus.SUCCESS:
         return fallback_message
     if isinstance(data, TrendDataPayload):
+        return fallback_message
+    if isinstance(data, DoctorQuestionsPayload):
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,

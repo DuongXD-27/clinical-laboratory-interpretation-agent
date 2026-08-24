@@ -164,7 +164,12 @@ async def _dispatch_questions(context: DispatchContext) -> WorkflowResult:
             "Vui lòng chọn phiếu xét nghiệm để tạo câu hỏi cho bác sĩ.",
             ["current_report_ref"],
         )
-    payload = get_report_questions(context.current_user, context.db, report_ref=context.current_report_ref)
+    payload = get_report_questions(
+        context.current_user,
+        context.db,
+        report_ref=context.current_report_ref,
+        current_analyte=context.current_analyte,
+    )
     return WorkflowResult(
         status=ResponseStatus.SUCCESS,
         data=DoctorQuestionsPayload(questions=payload.questions),
