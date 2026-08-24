@@ -171,22 +171,14 @@ def _base_priority(flag_codes: set[str]) -> float:
     return sum(PRIORITY_WEIGHTS[code] for code in PRIORITY_WEIGHTS if code in flag_codes)
 
 
-def _dynamic_priority(report: LabReport, *, now: datetime | None = None) -> float:
-    flag_codes = {flag.code for flag in report.review_flags}
-    score = _base_priority(flag_codes)
-    queued_at = report.queued_at
-    if queued_at is None:
-        return score
-    now = now or datetime.now(UTC)
-    if queued_at.tzinfo is None:
-        queued_at = queued_at.replace(tzinfo=UTC)
-    waited_hours = max(0.0, (now - queued_at).total_seconds() / 3600)
-    return score + min(AGING_POINTS_MAX, waited_hours * AGING_POINTS_PER_HOUR)
+def _apply_review_flags_no_commit(db: Session, report: LabReport) -> None:
+    """Apply review flag state to one report WITHOUT committing.
 
-
-def refresh_review_flags(db: Session, report: LabReport) -> LabReport:
-    """Regenerate queue flags for one report and sync report-level status."""
-
+    This is the canonical mutation used by both the per-report refresh path
+    (which commits immediately after) and the backfill path (which commits once
+    at the end of the batch).  Do not call this directly from business logic —
+    use ``refresh_review_flags`` instead.
+    """
     existing = list(report.review_flags)
     for flag in existing:
         db.delete(flag)
@@ -249,6 +241,108 @@ def refresh_review_flags(db: Session, report: LabReport) -> LabReport:
             report.queued_at = None
 
     report.priority_score = _base_priority({flag.code for flag in flags})
+
+
+def _is_review_state_consistent(report: LabReport) -> bool:
+    """Return True if the report's current DB state matches what refresh would produce.
+
+    This is a pure read — it does NOT mutate anything.  The comparison is
+    deterministic: expected state is computed from indicator/question state
+    using exactly the same rules as ``_apply_review_flags_no_commit``.
+
+    Returns False — and thus triggers a full refresh — if ANY of the following
+    differ from expected:
+
+    * The set of (code, finding_id) pairs in review_flags
+    * verification_status  (for non-verified reports)
+    * priority_score
+    * queued_at semantics (should be non-None iff flags are expected)
+    * findings_total / findings_reviewed
+
+    Note: presence of ANY ReviewFlag rows is NOT treated as proof of consistency.
+    A report with stale or wrong flags is correctly detected and repaired.
+    """
+    # --- Compute expected flag set from current indicator/question state ---
+    expected_codes: set[str] = set()
+    # (code, finding_id) pairs for structural equality
+    expected_pairs: set[tuple[str, int | None]] = set()
+
+    for indicator in report.indicators:
+        if indicator.is_critical:
+            expected_codes.add(FLAG_CRITICAL)
+            expected_pairs.add((FLAG_CRITICAL, indicator.id))
+        if (
+            indicator.ocr_confidence is not None
+            and indicator.ocr_confidence < LOW_OCR_CONFIDENCE_THRESHOLD
+        ):
+            expected_codes.add(FLAG_LOW_OCR)
+            expected_pairs.add((FLAG_LOW_OCR, indicator.id))
+
+    selected_questions = [q for q in report.questions if q.is_selected]
+    if selected_questions:
+        expected_codes.add(FLAG_PATIENT_QUESTIONS)
+        expected_pairs.add((FLAG_PATIENT_QUESTIONS, None))
+
+    expected_priority = _base_priority(expected_codes)
+
+    # --- Compare flags (set equality, not just presence check) ---
+    current_pairs: set[tuple[str, int | None]] = {
+        (flag.code, flag.finding_id) for flag in report.review_flags
+    }
+    if current_pairs != expected_pairs:
+        return False
+
+    # --- Compare verification_status (only for non-verified reports) ---
+    if report.verification_status != VERIFICATION_VERIFIED:
+        expected_vs = VERIFICATION_PENDING if expected_codes else VERIFICATION_UNVERIFIED
+        if report.verification_status != expected_vs:
+            return False
+
+    # --- Compare priority_score ---
+    if report.priority_score != expected_priority:
+        return False
+
+    # --- Compare queued_at semantics ---
+    # Should be non-None iff there are flags; exact timestamp is not compared.
+    if expected_codes and report.queued_at is None:
+        return False
+    if not expected_codes and report.queued_at is not None:
+        return False
+
+    # --- Compare findings_total / findings_reviewed ---
+    expected_total = len(report.indicators)
+    expected_reviewed = sum(
+        1
+        for ind in report.indicators
+        if (ind.review_outcome or OUTCOME_PENDING) in REVIEWED_OUTCOMES
+    )
+    if report.findings_total != expected_total or report.findings_reviewed != expected_reviewed:
+        return False
+
+    return True
+
+
+def _dynamic_priority(report: LabReport, *, now: datetime | None = None) -> float:
+    flag_codes = {flag.code for flag in report.review_flags}
+    score = _base_priority(flag_codes)
+    queued_at = report.queued_at
+    if queued_at is None:
+        return score
+    now = now or datetime.now(UTC)
+    if queued_at.tzinfo is None:
+        queued_at = queued_at.replace(tzinfo=UTC)
+    waited_hours = max(0.0, (now - queued_at).total_seconds() / 3600)
+    return score + min(AGING_POINTS_MAX, waited_hours * AGING_POINTS_PER_HOUR)
+
+
+def refresh_review_flags(db: Session, report: LabReport) -> LabReport:
+    """Regenerate queue flags for one report and sync report-level status.
+
+    Unchanged public behavior: applies mutations and commits immediately.
+    Callers that need a transaction-controlled path should use the internal
+    ``_apply_review_flags_no_commit`` helper directly.
+    """
+    _apply_review_flags_no_commit(db, report)
     db.commit()
     db.refresh(report)
     return report
@@ -260,11 +354,29 @@ def refresh_review_flags_for_report_id(db: Session, report_id: int) -> None:
 
 
 def backfill_review_flags(db: Session) -> int:
-    """Regenerate review flags for existing non-verified reports.
+    """Repair review-flag state for all unverified reports in a single transaction.
 
-    This is intentionally explicit and development/demo-scoped at the caller.
-    It fixes reports created before the doctor verification workflow existed,
-    without changing reports already completed by a doctor.
+    Unlike the per-report ``refresh_review_flags``, this path:
+
+    1. Skips reports whose current DB state already matches the expected state
+       computed by ``_is_review_state_consistent``.  The consistency check is a
+       pure read that compares flags, verification_status, priority_score,
+       queued_at semantics, and findings counters — presence of ANY ReviewFlag
+       row alone is NOT treated as proof of consistency.
+
+    2. Applies mutations for stale reports without committing per-report
+       (uses ``_apply_review_flags_no_commit`` directly).
+
+    3. Issues ONE ``db.commit()`` covering all stale reports at the end of the
+       batch.  This removes the N×round-trip cost that made the original
+       implementation spend ~163 seconds at startup when the DB is remote.
+
+    4. Rolls back on any exception to leave the DB in its pre-backfill state.
+
+    Returns the count of reports that required a repair (consistent reports are
+    not counted).  Callers that log only when changed > 0 continue to work
+    correctly: a zero return means no work was done, not that the function ran
+    fast by skipping correctness checks.
     """
 
     reports = (
@@ -281,13 +393,17 @@ def backfill_review_flags(db: Session) -> int:
         .all()
     )
     changed = 0
-    for report in reports:
-        previous_status = report.verification_status
-        previous_flag_codes = sorted(flag.code for flag in report.review_flags)
-        refresh_review_flags(db, report)
-        current_flag_codes = sorted(flag.code for flag in report.review_flags)
-        if previous_status != report.verification_status or previous_flag_codes != current_flag_codes:
+    try:
+        for report in reports:
+            if _is_review_state_consistent(report):
+                continue
+            _apply_review_flags_no_commit(db, report)
             changed += 1
+        if changed:
+            db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return changed
 
 
