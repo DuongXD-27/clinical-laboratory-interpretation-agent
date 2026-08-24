@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Chính sách quyền riêng tư · VMEC-05",
+  title: "Chính sách quyền riêng tư · LumiLab",
   description:
     "Dữ liệu xét nghiệm của bạn được lưu ở đâu, gửi cho ai, giữ bao lâu và ai xem được.",
 };
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <p className="mt-2 text-sm text-[var(--foreground-muted)]">Cập nhật lần cuối: {UPDATED}</p>
 
         <p className="mt-6 text-sm leading-relaxed text-[var(--foreground-secondary)]">
-          VMEC-05 là ứng dụng giải thích kết quả xét nghiệm bằng tiếng Việt. Trang này mô tả đúng những gì
+          LumiLab là ứng dụng giải thích kết quả xét nghiệm bằng tiếng Việt. Trang này mô tả đúng những gì
           hệ thống thực sự làm với dữ liệu của bạn — lưu ở đâu, gửi cho ai, giữ bao lâu. Nếu có điểm nào
           trong đây không khớp với hành vi thật của ứng dụng, hãy báo cho chúng tôi.
         </p>
@@ -158,7 +158,7 @@ export default function PrivacyPage() {
 
         <Section title="8. Điều ứng dụng này không làm">
           <p>
-            VMEC-05 <strong>không chẩn đoán bệnh, không kê đơn và không thay thế bác sĩ</strong>. Lời giải
+            LumiLab <strong>không chẩn đoán bệnh, không kê đơn và không thay thế bác sĩ</strong>. Lời giải
             thích do hệ thống tạo ra nhằm giúp bạn hiểu con số trên phiếu và chuẩn bị câu hỏi khi đi khám.
             Mọi quyết định về sức khoẻ cần có ý kiến của nhân viên y tế.
           </p>
@@ -167,7 +167,7 @@ export default function PrivacyPage() {
         <Section title="9. Liên hệ">
           <p>
             Có câu hỏi về chính sách này, hoặc muốn yêu cầu xoá dữ liệu, hãy liên hệ nhóm phát triển
-            VMEC-05 qua email hỗ trợ ghi trên màn hình đăng nhập bằng Google.
+            LumiLab qua email hỗ trợ ghi trên màn hình đăng nhập bằng Google.
           </p>
         </Section>
 
