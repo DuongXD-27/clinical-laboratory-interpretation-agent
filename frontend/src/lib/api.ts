@@ -1,4 +1,15 @@
 import type {
+  DoctorTrendReviewDetail,
+  DoctorTrendReviewListResponse,
+  TrendFilter,
+  TrendReview,
+  TrendReviewAssessment,
+  TrendReviewHistoryResponse,
+  TrendReviewPatientState,
+  TrendReviewRequestResponse,
+  TrendReviewStatus,
+} from "@/types/analysis";
+import type {
   RequestTrace,
   RequestTraceListResponse,
   TraceQuery,
@@ -336,6 +347,101 @@ export async function completeDoctorReport(reportId: number) {
   if (response.status === 401) throw new UnauthorizedError();
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không hoàn tất được phiếu"));
+  }
+  return response.json();
+}
+
+export async function fetchPatientTrendReviewState(
+  analyteCanonical: string,
+  trendFilter: TrendFilter,
+): Promise<TrendReviewPatientState> {
+  const response = await authFetch(
+    `/api/v1/patient/me/trends/${encodeURIComponent(analyteCanonical)}/review?filter=${trendFilter}`,
+  );
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được trạng thái review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function fetchPatientTrendReviewHistory(
+  analyteCanonical: string,
+  trendFilter: TrendFilter,
+): Promise<TrendReviewHistoryResponse> {
+  const response = await authFetch(
+    `/api/v1/patient/me/trends/${encodeURIComponent(analyteCanonical)}/review-history?filter=${trendFilter}`,
+  );
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được lịch sử review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function createPatientTrendReviewRequest(
+  analyteCanonical: string,
+  trendFilter: TrendFilter,
+  llmExplanation: string,
+): Promise<TrendReviewRequestResponse> {
+  const response = await authFetch(
+    `/api/v1/patient/me/trends/${encodeURIComponent(analyteCanonical)}/review-requests`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        trend_filter: trendFilter,
+        llm_explanation: llmExplanation,
+      }),
+    },
+  );
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không gửi được yêu cầu review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function fetchDoctorTrendReviewQueue(
+  status: TrendReviewStatus | "all" = "PENDING",
+): Promise<DoctorTrendReviewListResponse> {
+  const response = await authFetch(`/api/v1/doctor/trend-reviews?status=${status}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không tải được hàng đợi review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function fetchDoctorTrendReviewDetail(requestId: number): Promise<DoctorTrendReviewDetail> {
+  const response = await authFetch(`/api/v1/doctor/trend-reviews/${requestId}`);
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không mở được yêu cầu review xu hướng"));
+  }
+  return response.json();
+}
+
+export async function submitDoctorTrendReview(
+  requestId: number,
+  doctorAssessment: TrendReviewAssessment,
+  doctorComment: string,
+): Promise<TrendReview> {
+  const response = await authFetch(`/api/v1/doctor/trend-reviews/${requestId}/review`, {
+    method: "POST",
+    body: JSON.stringify({
+      doctor_assessment: doctorAssessment,
+      doctor_comment: doctorComment,
+    }),
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) {
+    throw new Error(await readErrorDetail(response, "Không lưu được review xu hướng"));
   }
   return response.json();
 }

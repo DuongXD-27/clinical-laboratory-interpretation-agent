@@ -15,6 +15,7 @@ from src.api.ocr_routes import router as ocr_router
 from src.api.orchestrator_routes import router as orchestrator_router
 from src.api.patient_routes import router as patient_router
 from src.api.routes import router
+from src.api.trend_review_routes import router as trend_review_router
 from src.config import get_settings
 from src.models.db import SessionLocal, get_db, init_db
 from src.services import langfuse_tracing, trace_repository
@@ -247,6 +248,7 @@ app.include_router(orchestrator_router, prefix="/api/v1")
 app.include_router(patient_router, prefix="/api/v1")
 app.include_router(history_router, prefix="/api/v1")
 app.include_router(doctor_router, prefix="/api/v1")
+app.include_router(trend_review_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
 

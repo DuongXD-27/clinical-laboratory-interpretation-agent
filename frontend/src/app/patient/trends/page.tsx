@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TrendChart from "@/components/TrendChart";
+import TrendDoctorReviewPanel from "@/components/patient/TrendDoctorReviewPanel";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import {
   canRenderTrendChart,
@@ -481,6 +482,15 @@ export default function PatientTrendsPage() {
                             )}
                           </section>
                         ) : null}
+
+                        <TrendDoctorReviewPanel
+                          trend={trend}
+                          explanation={explanation}
+                          onUnauthorized={() => {
+                            clearSession();
+                            router.replace("/login");
+                          }}
+                        />
                       </div>
                     ) : null}
                   </>

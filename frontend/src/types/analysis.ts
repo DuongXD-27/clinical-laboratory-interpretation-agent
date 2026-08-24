@@ -102,3 +102,74 @@ export type TrendExplanationResponse = {
   fallback: boolean;
   reason?: string | null;
 };
+
+export type TrendReviewStatus = "PENDING" | "REVIEWED" | "CANCELLED" | "REJECTED";
+export type TrendReviewAssessment = "confirmed" | "corrected" | "needs_follow_up";
+
+export type TrendReview = {
+  id: number;
+  patient_id: number;
+  analyte_canonical: string;
+  display_name: string;
+  canonical_unit: string;
+  trend_filter: TrendFilter;
+  trend_snapshot: TrendResponse;
+  trend_snapshot_hash: string;
+  llm_explanation_snapshot: string;
+  status: TrendReviewStatus;
+  requested_at: string;
+  reviewed_by_doctor_id?: number | null;
+  reviewed_by_username?: string | null;
+  reviewed_at?: string | null;
+  doctor_assessment?: TrendReviewAssessment | null;
+  doctor_comment?: string | null;
+};
+
+export type TrendReviewPatientState = {
+  latest_review: TrendReview | null;
+  latest_historical_review: TrendReview | null;
+  pending_request: TrendReview | null;
+  can_request_review: boolean;
+  reason?: string | null;
+  current_trend_hash?: string | null;
+  history_count: number;
+};
+
+export type TrendReviewRequestResponse = {
+  review: TrendReview;
+  created: boolean;
+};
+
+export type TrendReviewHistoryResponse = {
+  total: number;
+  items: TrendReview[];
+};
+
+export type DoctorTrendReviewSummary = {
+  id: number;
+  patient_id: number;
+  patient_name: string;
+  analyte_canonical: string;
+  display_name: string;
+  trend_filter: TrendFilter;
+  point_count: number;
+  status: TrendReviewStatus;
+  requested_at: string;
+  reviewed_at?: string | null;
+  reviewed_by_username?: string | null;
+};
+
+export type DoctorTrendReviewListResponse = {
+  total: number;
+  items: DoctorTrendReviewSummary[];
+};
+
+export type DoctorTrendReviewDetail = {
+  review: TrendReview;
+  patient: {
+    id: number;
+    name: string;
+    age: number | null;
+    gender: string | null;
+  };
+};

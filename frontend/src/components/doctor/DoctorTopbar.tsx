@@ -21,7 +21,7 @@ interface DoctorTopbarProps {
 }
 
 function pageTitle(pathname: string) {
-  if (pathname.startsWith("/doctor/sandbox")) return "Sandbox";
+  if (pathname.startsWith("/doctor/trend-reviews")) return "Đánh giá biểu đồ xu hướng";
   if (pathname.startsWith("/doctor/reports/")) return "Chi tiết kết quả";
   return "Hàng đợi đánh giá";
 }
