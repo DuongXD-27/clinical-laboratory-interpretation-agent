@@ -48,7 +48,7 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
           <SheetContent side="left" className="w-[280px] p-0 flex flex-col bg-[var(--surface)]">
             <SheetHeader className="h-16 flex items-center justify-center border-b border-[var(--border)] px-4">
               <SheetTitle className="text-left w-full flex flex-col">
-                <span className="font-semibold text-base text-[var(--brand-strong)]">VMEC</span>
+                <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab</span>
                 <span className="text-xs text-muted-foreground font-normal">Không gian bệnh nhân</span>
               </SheetTitle>
               <SheetDescription className="sr-only">Menu điều hướng bệnh nhân</SheetDescription>

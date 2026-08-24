@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Phân Tích Sức Khỏe AI",
+  title: "LumiLab - Hiểu Kết Quả Xét Nghiệm",
   description: "Giải thích kết quả xét nghiệm bằng ngôn ngữ dễ hiểu cho người bệnh.",
 };
 

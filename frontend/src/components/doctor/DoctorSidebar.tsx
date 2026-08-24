@@ -28,7 +28,7 @@ export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSi
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--brand-strong)]">VMEC Clinical</span>
+          <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab Clinical</span>
           <span className="text-xs text-muted-foreground">Không gian bác sĩ</span>
         </div>
       </div>

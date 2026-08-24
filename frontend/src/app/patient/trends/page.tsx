@@ -512,7 +512,7 @@ export default function PatientTrendsPage() {
                           <section className="patient-glass-clinical p-5 sm:p-6" aria-labelledby="trend-explanation-title">
                             <div className="flex items-center justify-between mb-3">
                               <h3 id="trend-explanation-title" className="text-sm font-semibold text-slate-800">Giải thích của AI</h3>
-                              <span className="text-xs text-slate-400">VMEC-05</span>
+                              <span className="text-xs text-slate-400">LumiLab</span>
                             </div>
                             {explanation ? (
                               <p className="text-sm leading-relaxed text-slate-700">{explanation}</p>
@@ -744,7 +744,7 @@ export default function PatientTrendsPage() {
                         <section className="patient-glass-clinical p-5 sm:p-6 mt-6" aria-labelledby="trend-group-explanation-title">
                           <div className="flex items-center justify-between mb-3">
                             <h3 id="trend-group-explanation-title" className="text-sm font-semibold text-slate-800">Giải thích của AI</h3>
-                            <span className="text-xs text-slate-400">VMEC-05</span>
+                            <span className="text-xs text-slate-400">LumiLab</span>
                           </div>
                           {groupExplanation ? (
                             groupExplanation.fallback ? (

@@ -40,7 +40,7 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
           <SheetContent side="left" className="w-[280px] p-0 flex flex-col bg-[var(--surface)]">
             <SheetHeader className="h-16 flex items-center justify-center border-b border-[var(--border)] px-4">
               <SheetTitle className="text-left w-full flex flex-col">
-                <span className="font-semibold text-base text-[var(--brand-strong)]">VMEC Clinical</span>
+                <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab Clinical</span>
                 <span className="text-xs text-muted-foreground font-normal">Không gian bác sĩ</span>
               </SheetTitle>
               <SheetDescription className="sr-only">Menu điều hướng lâm sàng</SheetDescription>
