@@ -18,8 +18,10 @@ from src.models.orchestrator_schemas import (
 from src.models.schemas import AnalyzeResponse, TrendFilter
 from src.orchestrator.errors import OrchestratorWrapperError
 from src.services import history_repository, trend_service
+from src.services.analyte_resolver import canonical_analyte_id
 from src.services.auth import ROLE_GUEST
-from src.services.question_templates import generate_questions
+from src.services.question_templates import GeneratedQuestion, generate_questions
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
 def _raise(reason_code: ReasonCode) -> None:
@@ -110,6 +112,86 @@ def _indicator_mappings(session_result: object) -> list[Mapping[str, Any]]:
     return mapped
 
 
+def _resolved_analyte(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        repository = ReferenceRepository.from_default_files()
+        return repository.resolve_analyte(text) or text
+    except ReferenceRepositoryError:
+        return text
+
+
+def _matches_analyte(indicator: object, analyte: str | None) -> bool:
+    if not analyte:
+        return True
+    requested = _resolved_analyte(analyte).casefold()
+    candidates = {
+        _resolved_analyte(getattr(indicator, field, None)).casefold()
+        for field in ("analyte_canonical", "analyte_raw", "name")
+    }
+    return requested in candidates
+
+
+def _question_indicator_map(report: LabReport) -> dict[int, object]:
+    return {
+        indicator.id: indicator
+        for indicator in report.indicators
+        if isinstance(getattr(indicator, "id", None), int)
+    }
+
+
+def _persisted_questions(
+    report: LabReport,
+    *,
+    analyte: str | None,
+) -> list[GeneratedQuestion]:
+    """Return approved stored wording in its persisted order.
+
+    An analyte-specific request intentionally excludes unlinked/fallback and
+    unrelated questions because their association cannot be proven.
+    """
+
+    detail = history_repository.to_detail(report)
+    indicators_by_id = _question_indicator_map(report)
+    questions: list[GeneratedQuestion] = []
+    for stored in detail.questions:
+        indicator = indicators_by_id.get(stored.indicator_id) if stored.indicator_id is not None else None
+        if analyte and (indicator is None or not _matches_analyte(indicator, analyte)):
+            continue
+        questions.append(
+            GeneratedQuestion(
+                text=stored.question_text,
+                priority=stored.priority,
+                display_order=stored.display_order,
+                analyte_id=(
+                    canonical_analyte_id(indicator.analyte_canonical or indicator.name)
+                    if indicator is not None
+                    else None
+                ),
+                indicator_name=(indicator.name if indicator is not None else None),
+            )
+        )
+    return questions
+
+
+def _report_indicator_mappings(
+    report: LabReport,
+    *,
+    analyte: str | None,
+) -> list[Mapping[str, Any]]:
+    detail = history_repository.to_detail(report)
+    mapped: list[Mapping[str, Any]] = []
+    for indicator in detail.indicators:
+        if not _matches_analyte(indicator, analyte):
+            continue
+        item = indicator.model_dump()
+        item["analyte_id"] = canonical_analyte_id(indicator.analyte_canonical or indicator.name)
+        mapped.append(item)
+    return mapped
+
+
 def get_my_history(current_user: object, db: object, filters: Mapping[str, object] | None = None) -> HistorySummaryPayload:
     _, actor_key = _require_patient(current_user)
     from_date, to_date = _history_filters(filters)
@@ -181,14 +263,17 @@ def get_report_questions(
     *,
     session_result: object | None = None,
     report_ref: object | None = None,
+    analyte: str | None = None,
 ) -> DoctorQuestionsPayload:
     role = _require_non_doctor(current_user)
     if report_ref is not None:
         if role == ROLE_GUEST:
             _raise(ReasonCode.UNSUPPORTED_CAPABILITY)
         report = _owned_report(current_user, db, report_ref)
-        detail = history_repository.to_detail(report)
-        indicators: Sequence[Mapping[str, Any]] = [indicator.model_dump() for indicator in detail.indicators]
+        persisted = _persisted_questions(report, analyte=analyte)
+        if persisted:
+            return DoctorQuestionsPayload(questions=persisted)
+        indicators: Sequence[Mapping[str, Any]] = _report_indicator_mappings(report, analyte=analyte)
     elif session_result is not None:
         indicators = _indicator_mappings(session_result)
     else:

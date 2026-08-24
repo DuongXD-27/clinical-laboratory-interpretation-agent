@@ -191,7 +191,7 @@ class ChromaMedicalKnowledgeRetriever:
         chunks: list[RetrievedChunk] = []
         for index, text in enumerate(documents):
             metadata = metadatas[index] if index < len(metadatas) else {}
-            
+
             note_type = str(metadata.get("note_type") or "").strip()
             chunk_band_id = str(metadata.get("band_id") or "").strip() or None
 
@@ -207,6 +207,14 @@ class ChromaMedicalKnowledgeRetriever:
             if len(_normalized_text(text)) < min_chunk_length:
                 continue
             chunk_embedding = embeddings[index] if index < len(embeddings) else None
+            # GRQ-004 Fix 1 (scoped label trust): when clean_bid is set it was
+            # resolved deterministically from authoritative reference bounds,
+            # so an exact note_type+band_id metadata match is a deterministic
+            # hit, not an embedding coincidence. Such chunks keep the length
+            # ceiling WITHOUT the semantic cap. The cap stays fully in force
+            # for every other chunk, so off-topic or low-quality content still
+            # cannot ride a correct label past the relevance gate.
+            exact_deterministic_band = bool(clean_bid) and note_type == "band_note"
             chunks.append(
                 self._metadata_chunk(
                     text,
@@ -215,7 +223,7 @@ class ChromaMedicalKnowledgeRetriever:
                     score=self._metadata_score(
                         text,
                         min_chunk_length=min_chunk_length,
-                        chunk_embedding=chunk_embedding,
+                        chunk_embedding=None if exact_deterministic_band else chunk_embedding,
                         query_embedding=query_embedding,
                     ),
                 )

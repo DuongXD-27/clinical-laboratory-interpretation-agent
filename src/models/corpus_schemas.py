@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
-from pydantic import BaseModel, Field
+import json
+from typing import Literal
 
+from pydantic import BaseModel, Field
 
 SourceTier = Literal["TIER_1", "TIER_2", "TIER_3"]
 RuleType = Literal["RI", "BAND", "CDL", "ONE_SIDED_LIMIT"]
@@ -76,7 +77,12 @@ class CorpusChunk(BaseModel):
 
     def to_chroma_metadata(self) -> dict[str, str]:
         """Convert chunk metadata to flat scalars for ChromaDB compatibility."""
+        # ``ChromaMedicalKnowledgeRetriever._metadata_chunk`` restores chunk
+        # provenance from this key (JSON string list). Use the authoritative
+        # source_url when present, otherwise the source_id. Never fabricated.
+        provenance = self.source_url or self.source_id
         return {
+            "sources": json.dumps([provenance] if provenance else []),
             "indicator": str(self.indicator),
             "analyte_id": str(self.analyte_id),
             "rule_type": str(self.rule_type),
