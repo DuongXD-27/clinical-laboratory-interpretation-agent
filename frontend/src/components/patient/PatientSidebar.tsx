@@ -37,7 +37,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--brand-strong)]">VMEC</span>
+          <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab</span>
           <span className="text-xs text-muted-foreground">Không gian bệnh nhân</span>
         </div>
       </div>

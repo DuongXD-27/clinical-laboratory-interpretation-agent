@@ -111,7 +111,7 @@ export default function LoginPage() {
           <Stethoscope className="h-6 w-6" />
         </div>
         <h1 className="text-2xl font-semibold text-foreground">
-          VMEC - Giải thích kết quả xét nghiệm
+          LumiLab - Hiểu Kết Quả Xét Nghiệm
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Đăng nhập, đăng ký, hoặc dùng thử ngay không cần tài khoản
