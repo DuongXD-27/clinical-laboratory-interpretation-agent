@@ -727,6 +727,75 @@ def _section_explain_url(section: str, trend_filter: str = "latest5") -> str:
     return f"/api/v1/patient/me/trends/sections/{section}/explain?filter={trend_filter}"
 
 
+def _section_heatmap_url(section: str, trend_filter: str = "latest5") -> str:
+    return f"/api/v1/patient/me/trends/sections/{section}/heatmap?filter={trend_filter}"
+
+
+@pytest.mark.asyncio
+async def test_section_heatmap_marks_missing_cell_instead_of_interpolating(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    # Phiếu giữa (2026-08-02) cố tình thiếu LDL-C — đúng kịch bản "dữ liệu thưa" cần xử lý.
+    _save(session_local, "benhnhan", "2026-08-01", [{"name": "LDL-C", "value": 2.1, "unit": "mmol/L"}])
+    _save(session_local, "benhnhan", "2026-08-02", [{"name": "Fasting plasma glucose", "value": 5.0, "unit": "mmol/L"}])
+    _save(session_local, "benhnhan", "2026-08-03", [{"name": "LDL-C", "value": 2.3, "unit": "mmol/L"}])
+
+    response = await client.get(_section_heatmap_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [c["test_date"] for c in payload["columns"]] == ["2026-08-01", "2026-08-02", "2026-08-03"]
+    rows = {row["analyte_canonical"]: row["cells"] for row in payload["rows"]}
+    assert [cell["value"] if cell else None for cell in rows["LDL-C"]] == [2.1, None, 2.3]
+
+
+@pytest.mark.asyncio
+async def test_section_heatmap_shows_analyte_with_only_one_result(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    # Chỉ 1 kết quả — line-chart (MIN_TREND_POINTS=3) sẽ không hiển thị, heatmap thì có.
+    _save(session_local, "benhnhan", "2026-08-01", [{"name": "LDL-C", "value": 2.1, "unit": "mmol/L"}])
+
+    response = await client.get(_section_heatmap_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    rows = {row["analyte_canonical"]: row["cells"] for row in payload["rows"]}
+    assert rows["LDL-C"][0]["value"] == 2.1
+
+
+@pytest.mark.asyncio
+async def test_section_heatmap_latest5_scopes_by_report_not_per_analyte(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for index, date_text in enumerate(
+        ["2026-04-10", "2026-05-10", "2026-06-10", "2026-07-10", "2026-08-01", "2026-08-10"]
+    ):
+        _save(session_local, "benhnhan", date_text, [{"name": "LDL-C", "value": 2.0 + index / 10, "unit": "mmol/L"}])
+
+    response = await client.get(_section_heatmap_url("lipids"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [c["test_date"] for c in payload["columns"]] == [
+        "2026-05-10",
+        "2026-06-10",
+        "2026-07-10",
+        "2026-08-01",
+        "2026-08-10",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_section_heatmap_invalid_section_returns_400(isolated_client):
+    client, _ = isolated_client
+    headers = await _auth_headers(client)
+
+    response = await client.get(_section_heatmap_url("not-a-real-section"), headers=headers)
+
+    assert response.status_code == 400, response.text
+
+
 def _save_ldl_and_fpg_series(session_local):
     for index in range(3):
         date_text = f"2026-08-{index + 1:02d}"

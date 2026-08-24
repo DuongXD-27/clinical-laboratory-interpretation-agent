@@ -12,7 +12,11 @@ from src.agents.nodes.reference_range_checker_node import get_reference_reposito
 from src.models.db import LabReport, ReportIndicator
 from src.models.schemas import (
     CriticalAlertSchema,
+    HeatmapCellSchema,
+    HeatmapColumnSchema,
+    HeatmapRowSchema,
     ObservedDirection,
+    SectionHeatmapResponse,
     SectionTrendsResponse,
     TrendAnalyteSummary,
     TrendFilter,
@@ -478,3 +482,84 @@ def get_patient_section_trends(
         section_label=section_label(section),
         trends=trends,
     )
+
+
+def _reports_in_scope(
+    reports: list[LabReport], trend_filter: TrendFilter, *, today: date | None = None
+) -> list[LabReport]:
+    """Which lab reports (phiếu) fall inside the selected data scope.
+
+    Unlike `_apply_filter` (which trims each analyte's own point list independently),
+    heatmap columns are shared across every analyte in the section, so scoping happens
+    once at the report level: "5 phiếu gần nhất" means the 5 most recent lab reports for
+    the patient, not the 5 most recent results of any single analyte.
+    """
+    sorted_desc = sorted(reports, key=lambda report: (report.test_date, report.id), reverse=True)
+    if trend_filter == "latest5":
+        return sorted(sorted_desc[:LATEST_POINT_LIMIT], key=lambda report: (report.test_date, report.id))
+    if trend_filter == "three_months":
+        current_date = today or date.today()
+        boundary = _subtract_months(current_date, 3)
+        filtered = [report for report in reports if boundary <= report.test_date <= current_date]
+        return sorted(filtered, key=lambda report: (report.test_date, report.id))
+    raise TrendServiceError("Bộ lọc xu hướng không hợp lệ.")
+
+
+def get_patient_section_heatmap(
+    db: Session,
+    *,
+    username: str,
+    section: str,
+    trend_filter: TrendFilter,
+    today: date | None = None,
+) -> SectionHeatmapResponse:
+    """Ma trận chỉ số × phiếu cho một nhóm chức năng.
+
+    Khác với `get_patient_trend`/`get_patient_section_trends`: không áp `MIN_TREND_POINTS`
+    (mọi chỉ số có ít nhất 1 kết quả trong phạm vi đã chọn đều xuất hiện — kể cả chỉ có 1
+    phiếu), và không nội suy dữ liệu thiếu (phiếu nào không đo chỉ số đó thì cell là None).
+    Đọc thẳng `status`/`critical_status`/`reference_low`/`reference_high` đã được ingest
+    pipeline tính sẵn trên từng `ReportIndicator`, không tính lại.
+    """
+    patient = get_patient_by_username(db, username)
+    section_fields = {"section": section, "section_label": section_label(section)}
+    rows = _query_candidate_rows(db, patient_id=patient.id)
+
+    section_rows = [
+        (report, indicator)
+        for report, indicator in rows
+        if _is_valid_point(report, indicator) and analyte_section(str(indicator.analyte_canonical)) == section
+    ]
+    if not section_rows:
+        return SectionHeatmapResponse(columns=[], rows=[], **section_fields)
+
+    reports_by_id = {report.id: report for report, _ in section_rows}
+    scoped_reports = _reports_in_scope(list(reports_by_id.values()), trend_filter, today=today)
+    scoped_report_ids = {report.id for report in scoped_reports}
+
+    cells_by_analyte: dict[str, dict[int, HeatmapCellSchema]] = defaultdict(dict)
+    for report, indicator in section_rows:
+        if report.id not in scoped_report_ids:
+            continue
+        canonical = str(indicator.analyte_canonical)
+        cells_by_analyte[canonical][report.id] = HeatmapCellSchema(
+            report_id=report.id,
+            test_date=report.test_date,
+            value=float(indicator.canonical_value),
+            unit=str(indicator.canonical_unit),
+            status=str(indicator.status),
+            critical_status=indicator.critical_status,
+            reference_low=indicator.reference_low,
+            reference_high=indicator.reference_high,
+        )
+
+    columns = [HeatmapColumnSchema(report_id=report.id, test_date=report.test_date) for report in scoped_reports]
+    heatmap_rows = [
+        HeatmapRowSchema(
+            analyte_canonical=analyte,
+            cells=[cells_by_analyte[analyte].get(report.id) for report in scoped_reports],
+        )
+        for analyte in sorted(cells_by_analyte, key=str.casefold)
+    ]
+
+    return SectionHeatmapResponse(columns=columns, rows=heatmap_rows, **section_fields)

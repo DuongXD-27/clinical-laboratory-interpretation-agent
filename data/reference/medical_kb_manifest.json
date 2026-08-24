@@ -8,9 +8,9 @@
   "source_record_count": 79,
   "analyte_count": 35,
   "chunk_builder_version": "corpus_builder",
-  "embedding_provider": "fake",
-  "embedding_model": "fake-embedding",
-  "embedding_dimension": 3,
+  "embedding_provider": "openai",
+  "embedding_model": "text-embedding-3-small",
+  "embedding_dimension": 1536,
   "build_timestamp": "2026-08-18T00:15:00+07:00",
   "release_validator_result": "PASS"
 }

@@ -1476,6 +1476,89 @@ textarea::placeholder {
 .status-critical { background: #ffebeb; color: #aa2020; }
 .status-unknown { background: #f1f5f9; color: #475569; }
 
+/* Heatmap ma trận chỉ số × phiếu xét nghiệm — dùng đúng 4 tone/màu status-* ở trên. */
+.heatmap-table {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 4px;
+  font-size: 0.8rem;
+}
+
+.heatmap-table th {
+  font-weight: 600;
+  color: #475569;
+  padding: 4px 8px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Fixed column widths so every cell (button or div) renders the same size — with
+   table-layout: auto (the default), the browser sized each column from its own
+   content, so a column holding a <button> (data cell) could end up a different
+   width than one holding a plain <div> (missing-data cell). */
+.heatmap-table td,
+.heatmap-table th:not(.heatmap-th-sticky) {
+  width: 84px;
+}
+
+.heatmap-th-sticky {
+  position: sticky;
+  left: 0;
+  width: 160px;
+  background: #fff;
+  text-align: left;
+  z-index: 1;
+}
+
+.heatmap-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border-radius: 8px;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.heatmap-cell:hover { transform: scale(1.05); }
+
+.heatmap-cell-selected { outline: 2px solid #1769e0; outline-offset: 1px; }
+
+.heatmap-cell-normal { background: #eaf8f1; color: #13764a; }
+.heatmap-cell-abnormal { background: #fff4df; color: #9a5d05; }
+.heatmap-cell-critical { background: #ffebeb; color: #aa2020; }
+.heatmap-cell-unknown { background: #f1f5f9; color: #475569; }
+
+.heatmap-cell-missing {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+  background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 4px, #e2e8f0 4px, #e2e8f0 8px);
+}
+
+.heatmap-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.heatmap-swatch-normal { background: #28a36a; }
+.heatmap-swatch-abnormal { background: #e89a20; }
+.heatmap-swatch-critical { background: #d32f2f; }
+.heatmap-swatch-unknown { background: #64748b; }
+.heatmap-swatch-missing {
+  background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 2px, #cbd5e1 2px, #cbd5e1 4px);
+}
+
 .badge-sev,
 .badge-ver {
   display: inline-flex;

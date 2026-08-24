@@ -218,6 +218,12 @@ export default function LandingPage() {
             <span>VMEC</span>
           </div>
           <p>© 2026 VMEC. Thông tin chỉ mang tính tham khảo.</p>
+          {/* Google kiểm trang chủ có dẫn tới chính sách quyền riêng tư không
+              trước khi cho publish OAuth app. Nhưng lý do chính vẫn là người
+              dùng phải tìm được nó mà không cần đoán URL. */}
+          <Link href="/privacy" className="landing-text-link">
+            Chính sách quyền riêng tư
+          </Link>
         </div>
       </footer>
     </main>

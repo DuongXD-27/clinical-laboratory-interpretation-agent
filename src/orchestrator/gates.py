@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import unicodedata
+
 from src.models.db import ROLE_DOCTOR, ROLE_PATIENT
 from src.models.orchestrator_schemas import IntentEnum, OrchestratorSessionContext, ReasonCode
 from src.services.auth import ROLE_GUEST
@@ -26,9 +29,6 @@ def policy_gate(role: str, intent: IntentEnum) -> ReasonCode | None:
     return None
 
 
-import re
-import unicodedata
-
 def _normalize(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     without_accents = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
@@ -48,12 +48,213 @@ def _contains_phrase_raw(raw_text: str, phrase_raw: str) -> bool:
     return re.search(pattern, raw_text, re.IGNORECASE) is not None
 
 
+# --- CHAT-V1.5-003: form-based personal disease confirmation ---------------
+#
+# Detects the semantic request FORM "user + disease/condition + asking whether
+# they have it" without maintaining a disease dictionary and WITHOUT any
+# analyte/value exemption: an explicit analyte or lab value must never
+# downgrade a personal disease-confirmation question.
+
+_DIAGNOSIS_PRONOUN = r"(?:toi|em|minh|chung toi)"
+_CONDITION_VERB = r"(?:bi|mac)"
+_CONFIRMATION_PARTICLES = frozenset({"khong", "chu", "a", "nha"})
+
+# Result-property adjectives: asking about the result's own state is NOT a
+# diagnosis proposition ("Chi so nay co phai cao khong?").
+_RESULT_PROPERTY_TOKENS = frozenset(
+    {"cao", "thap", "on", "tot", "bat", "thuong", "binh", "nguy", "hiem", "lon", "nho"}
+)
+
+# App/report nouns never form diagnostic propositions over the result.
+_APP_REPORT_NOUNS = ("bao cao", "phieu", "lich su", "chuc nang", "ocr", "ung dung")
+
+_PERSONAL_CONDITION_CONFIRMATION = re.compile(
+    rf"\b{_DIAGNOSIS_PRONOUN}\b\s+(?:co\s+)?{_CONDITION_VERB}\s+\S+"
+)
+_PERSONAL_DISEASE_NP_CONFIRMATION = re.compile(
+    rf"\b{_DIAGNOSIS_PRONOUN}\b\s+co\s+(?:benh|chung)\s+\S+"
+)
+_REFERENTIAL_DIAGNOSIS_LABEL = re.compile(
+    r"\b(?:ket qua nay|chi so nay|ket qua xet nghiem nay|chung nay)\s+"
+    r"(?:thi\s+)?co\s+phai\s+(?:la\s+)?(.+?)\s+(?:khong|chu|a|nha)\Z"
+)
+
+
+def _matches_personal_diagnosis_form(normalized: str) -> bool:
+    """CHAT-V1.5-003: deterministic form detection for diagnosis requests."""
+    tokens = normalized.split()
+    if not tokens:
+        return False
+    ends_with_particle = tokens[-1] in _CONFIRMATION_PARTICLES
+
+    # R1/R2 - first-person confirmation: pronoun + condition verb / disease noun
+    # + sentence-final confirmation particle.
+    if ends_with_particle and (
+        _PERSONAL_CONDITION_CONFIRMATION.search(normalized) is not None
+        or _PERSONAL_DISEASE_NP_CONFIRMATION.search(normalized) is not None
+    ):
+        return True
+
+    # R3 - referential disease labeling over the current result
+    # ("Ket qua nay co phai ung thu khong?"). Strong forms containing a personal
+    # clause ("ket qua nay co nghia la toi bi X khong?") are already caught by R1.
+    match = _REFERENTIAL_DIAGNOSIS_LABEL.search(normalized)
+    if match is None:
+        return False
+    from src.orchestrator.medical_context import extract_explicit_analyte
+
+    np_norm = match.group(1).strip()
+    if not np_norm or extract_explicit_analyte(np_norm) is not None:
+        return False
+    if set(np_norm.split()) & _RESULT_PROPERTY_TOKENS:
+        return False
+    if any(term in np_norm for term in _APP_REPORT_NOUNS):
+        return False
+    return True
+
+
+# --- CHAT-V1.5-R1-G4: treatment/action request form detection ---------------
+#
+# Two complementary layers:
+#
+# Layer 1 - context-free (medical_safety_gate): a treatment construction
+#   (patient direction + advice request + change/improve/treat component)
+#   is classified as TREATMENT_REQUEST only when the message itself carries
+#   a MEDICAL ANCHOR (explicit analyte, result/index nouns, or medication).
+#   Broad action forms without an anchor ("Lam sao de giam dung luong file?")
+#   must never be classified context-free.
+#
+# Layer 2 - session-aware elevation (treatment_followup_gate): short,
+#   ambiguous action follow-ups ("Vay toi nen lam gi tiep?") are elevated to
+#   TREATMENT_REQUEST ONLY when an authenticated active report/analyte
+#   context exists. Medical context may elevate safety; it must never
+#   downgrade safety nor manufacture a medical answer.
+#
+# Normalization-collision safety: need-modal "can" collides with the word
+# for weigh/balance after accent stripping, and cure "chua" collides with
+# "not yet". Bare "can"/"chua" tokens are therefore NEVER used as semantic
+# signals. The need-modal is omitted entirely; cure semantics are honored
+# only via accent-aware raw constructions already present in the fixed
+# phrase lists ("cach chua").
+
+_TREATMENT_PRONOUN_RE = re.compile(r"\b(?:toi|em|minh)\b|\bchung toi\b")
+_TREATMENT_MODAL_TOKENS = frozenset({"nen", "phai"})
+_TREATMENT_ADVICE_FRAMES = (
+    "nen lam gi", "phai lam gi", "nen lam sao",
+    "lam sao de", "co cach nao", "cach nao de",
+)
+_TREATMENT_CHANGE_VERBS = ("ha", "giam", "cai thien", "dieu tri")
+_TREATMENT_DRUG_BIGRAMS = ("dung thuoc", "uong thuoc", "mua thuoc")
+_TREATMENT_ANCHOR_PHRASES = ("chi so", "ket qua", "xet nghiem", "benh", "thuoc")
+_DOCTOR_QUESTION_FRAME_MARKERS = ("hoi bac si", "chuan bi cau hoi")
+_AMBIGUOUS_FOLLOWUP_EXCLUSIONS = (
+    "file", "dung luong", "giao dien", "phieu", "anh", "ocr",
+    "ung dung", "lich su", "tai khoan", "mat khau", "tieng anh",
+    "code", "lap trinh", "game", "nau an", "world cup",
+)
+
+
+def _has_treatment_medical_anchor(normalized: str, original_lower: str) -> bool:
+    """The message itself references an analyte/result/index or medication."""
+    from src.orchestrator.medical_context import extract_explicit_analyte
+
+    if extract_explicit_analyte(original_lower) is not None:
+        return True
+    return any(
+        _contains_phrase_norm(normalized, phrase)
+        for phrase in _TREATMENT_ANCHOR_PHRASES
+    )
+
+
+def _matches_treatment_request_form(normalized: str, original_lower: str) -> bool:
+    """CHAT-V1.5-R1-G4 layer 1: form-based treatment detection (context-free).
+
+    Recognizes the request FORM "patient asks what they personally should do
+    to change/improve/treat their result" without relying on any single
+    keyword, and only when the message carries its own medical anchor so
+    that generic (non-medical) how-to questions are never blocked.
+    """
+    # Doctor-question preparation frames ask what to ASK the clinician about
+    # management; they are question preparation, not patient-directed action.
+    if any(marker in normalized for marker in _DOCTOR_QUESTION_FRAME_MARKERS):
+        return False
+
+    tokens = set(normalized.split())
+    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
+    has_modal = bool(tokens & _TREATMENT_MODAL_TOKENS)
+    advice_frame = any(frame in normalized for frame in _TREATMENT_ADVICE_FRAMES)
+
+    patient_direction = has_pronoun or advice_frame
+    advice_request = (has_pronoun and has_modal) or advice_frame
+    # Multi-token verbs ("cai thien") require word-boundary phrase matching;
+    # single-token set membership can never see them.
+    change_component = any(
+        _contains_phrase_norm(normalized, verb)
+        for verb in _TREATMENT_CHANGE_VERBS
+    ) or any(
+        _contains_phrase_norm(normalized, bigram)
+        for bigram in _TREATMENT_DRUG_BIGRAMS
+    )
+
+    return (
+        patient_direction
+        and advice_request
+        and change_component
+        and _has_treatment_medical_anchor(normalized, original_lower)
+    )
+
+
+def _is_ambiguous_treatment_followup(normalized: str) -> bool:
+    """CHAT-V1.5-R1-G4 layer 2: short ambiguous action follow-up form.
+
+    Matches utterances whose medical target can only come from active
+    session context. Domain-bearing questions never match.
+    """
+    tokens = normalized.split()
+    if not tokens or 12 < len(tokens):
+        return False
+    if any(marker in normalized for marker in _DOCTOR_QUESTION_FRAME_MARKERS):
+        return False
+    if any(_contains_phrase_norm(normalized, term) for term in _AMBIGUOUS_FOLLOWUP_EXCLUSIONS):
+        return False
+
+    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
+    has_modal = bool(set(tokens) & _TREATMENT_MODAL_TOKENS)
+    advice_frame = any(frame in normalized for frame in _TREATMENT_ADVICE_FRAMES)
+    if not ((has_pronoun and has_modal) or advice_frame):
+        return False
+
+    continuation_signal = (
+        "tiep" in tokens
+        or any(
+            _contains_phrase_norm(normalized, ref)
+            for ref in ("chi so nay", "ket qua nay", "chung nay")
+        )
+        or any(_contains_phrase_norm(normalized, verb) for verb in _TREATMENT_CHANGE_VERBS)
+    )
+    return continuation_signal
+
+
+def treatment_followup_gate(message: str, session: object) -> ReasonCode | None:
+    """CHAT-V1.5-R1-G4 layer 2: elevate ambiguous action follow-ups to
+    TREATMENT_REQUEST only when an authenticated active report/analyte
+    context exists. Without active context this gate never fires, so the
+    bare sentence alone can never manufacture a medical safety refusal."""
+    has_active_context = getattr(session, "current_report_ref", None) is not None or getattr(
+        session, "current_analyte", None
+    ) is not None
+    if not has_active_context:
+        return None
+    if _is_ambiguous_treatment_followup(_normalize(message)):
+        return ReasonCode.TREATMENT_REQUEST
+    return None
+
+
 def medical_safety_gate(message: str) -> ReasonCode | None:
     """Run before intent routing to block explicit medical questions."""
-    
     normalized = _normalize(message)
     original_lower = message.casefold()
-    
+
     # 1. Diagnosis requests & reassurance
     diag_patterns_raw = (
         "bị bệnh gì", "đoán bệnh", "đoán giúp tôi bệnh gì", "chẩn đoán",
@@ -75,6 +276,12 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
         "toi bi benh gi", "em bi benh gi",
     )
     if any(_contains_phrase_norm(normalized, phrase) for phrase in diag_patterns_norm):
+        return ReasonCode.MEDICAL_DIAGNOSIS_REQUEST
+
+    # 1b. Form-based personal disease confirmation (CHAT-V1.5-003).
+    # Detect the semantic REQUEST FORM instead of matching only fixed phrases.
+    # Explicit analytes or lab values NEVER suppress this detection.
+    if _matches_personal_diagnosis_form(normalized):
         return ReasonCode.MEDICAL_DIAGNOSIS_REQUEST
 
     # 2. Personal Cause requests (distinguish from educational questions like "WBC cao do nguyên nhân gì?")
@@ -125,4 +332,190 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
     if any(_contains_phrase_norm(normalized, phrase) for phrase in treatment_norm):
         return ReasonCode.TREATMENT_REQUEST
 
+    # 3b. CHAT-V1.5-R1-G4 layer 1: form-based detection. Context-free
+    # classification requires the message to carry its own medical anchor;
+    # broad action forms without one are left unclassified here and may only
+    # be elevated to safety by treatment_followup_gate with session context.
+    if _matches_treatment_request_form(normalized, original_lower):
+        return ReasonCode.TREATMENT_REQUEST
+
     return None
+
+
+def sensitive_system_gate(message: str) -> ReasonCode | None:
+    """Detect requests attempting to access/extract secrets, credentials, internal prompts, or DB."""
+    normalized = _normalize(message)
+
+    # 1. System prompt / instructions extraction
+    prompt_terms = (
+        "system prompt", "prompt he thong", "prompt cua ban", "developer prompt",
+        "system instruction", "chi thi he thong", "in prompt", "show prompt",
+    )
+    if any(term in normalized for term in prompt_terms):
+        return ReasonCode.SENSITIVE_SYSTEM_REQUEST
+
+    # 2. Database dump / query / internal access
+    db_actions = (
+        "query database", "dump database", "truy van database", "query csdl",
+        "dump csdl", "database benh nhan", "csdl benh nhan", "sql injection",
+        "mat khau database", "password database", "database password",
+    )
+    if any(term in normalized for term in db_actions):
+        return ReasonCode.SENSITIVE_SYSTEM_REQUEST
+
+    # 3. Secret keys, credentials, tokens extraction
+    # Negative control: pure definition questions like "API key là gì?", "JWT là gì?" must NOT be blocked here.
+    if normalized in {"api key la gi", "jwt la gi", "database la gi", "prompt la gi"}:
+        return None
+    if normalized.endswith(" la gi") and any(k in normalized for k in ("api key", "jwt", "database", "prompt", "token")):
+        return None
+
+    secret_terms = (
+        "api key", "gemini key", "gemini api key", "openai key", "openai api key",
+        "secret key", "jwt", "access token", "bearer token", "token dang nhap",
+        "mat khau he thong", "mat khau admin", "mat khau root", "db password",
+        "source code bi mat", "ma nguon bi mat", "source code cua he thong", "ma nguon he thong",
+        "file env", "bien moi truong he thong", "internal config",
+    )
+    for term in secret_terms:
+        if term in normalized:
+            extraction_terms = ("cho toi", "cho em", "xin", "lay", "cung cap", "in", "show", "hien thi", "xuat", "dump", "query", "truy van", "gui toi", "gui em")
+            if any(ext in normalized for ext in extraction_terms) or term in (
+                "jwt", "gemini key", "gemini api key", "secret key", "access token",
+                "bearer token", "source code bi mat", "ma nguon bi mat", "token dang nhap",
+            ) or "cua he thong" in normalized or "cua ban" in normalized:
+                return ReasonCode.SENSITIVE_SYSTEM_REQUEST
+
+    return None
+
+
+def out_of_scope_gate(message: str) -> ReasonCode | None:
+    """Detect clear out-of-scope requests (coding, math, translation, trivia, general writing)."""
+    from src.orchestrator.intent_router import contains_lab_value
+    from src.orchestrator.medical_context import extract_explicit_analyte
+
+    # Positive controls: explicit analyte or lab values are medical
+    if extract_explicit_analyte(message) is not None or contains_lab_value(message):
+        return None
+
+    normalized = _normalize(message)
+
+    # In-scope app help / capabilities must NEVER be blocked
+    in_scope_app_cues = (
+        "tai phieu", "khong tai duoc phieu", "tai duoc phieu", "tai anh",
+        "dung ocr", "chuc nang ocr", "ocr dung de lam gi", "ocr cua ung dung", "ocr la gi",
+        "xem lich su", "xem xu huong", "xem ket qua", "xem phieu",
+        "ung dung nay", "chatbot nay", "tro ly nay", "ban lam duoc gi",
+        "huong dan su dung", "huong dan dung", "huong dan toi tai phieu",
+        "huong dan toi dung ocr", "huong dan toi su dung",
+    )
+    if any(cue in normalized for cue in in_scope_app_cues):
+        return None
+
+    # High-confidence coding & programming requests
+    coding_cues = (
+        "viet code", "viet python", "code python", "tinh fibonacci", "fibonacci",
+        "viet script", "lap trinh", "viet ham", "giai bai python",
+        "huong dan viet python", "huong dan lap trinh", "code java", "code c",
+        "viet chuong trinh", "debug code",
+    )
+    if any(cue in normalized for cue in coding_cues):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Math calculations and problem solving
+    math_cues = (
+        "giai toan", "giai bai toan", "tinh bai toan", "giai phuong trinh",
+        "tinh dao ham", "tinh tich phan", "bai tap ve nha", "giai bai tap",
+        "huong dan giai toan",
+    )
+    if any(cue in normalized for cue in math_cues):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Specific math expressions e.g. "2 + 2", "2+2", "giải bài toán 2 + 2"
+    if re.search(r"\b\d+\s*[\+\-\*\/]\s*\d+\b", message):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Translation
+    translation_cues = (
+        "dich tieng anh", "dich sang tieng anh", "dich doan nay", "dich doan",
+        "dich cau nay sang tieng anh", "dich cau nay", "dich van ban", "dich sang tieng viet",
+        "dich doan tieng anh",
+    )
+    if any(cue in normalized for cue in translation_cues):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Generic writing & essays
+    writing_cues = (
+        "viet email xin viec", "viet cv", "viet don xin viec", "viet email",
+        "viet thu xin viec", "viet bai van", "viet tho", "viet truyen",
+    )
+    if any(cue in normalized for cue in writing_cues):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Entertainment & trivia
+    trivia_cues = (
+        "ke chuyen cuoi", "ke chuyen hai", "chuyen cuoi", "ke chuyen",
+        "ai vo dich world cup", "world cup",
+    )
+    if any(cue in normalized for cue in trivia_cues):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Out-of-scope guidance (e.g. "hướng dẫn nấu ăn", "hướng dẫn chơi game")
+    unrelated_guidance = (
+        "huong dan nau an", "huong dan choi game", "huong dan tap gym",
+    )
+    if any(cue in normalized for cue in unrelated_guidance):
+        return ReasonCode.OUT_OF_SCOPE
+
+    return None
+
+
+# --- CHAT-V1.5-R1-G1: provenance / source follow-up detection ---------------
+#
+# A patient asking where an explanation comes from ("Thông tin này dựa trên
+# đâu?", "Nguồn nào nói vậy?") must reach ONE canonical approved-source path
+# instead of being re-routed to EXPLAIN_CURRENT_RESULT or generic
+# SAFE_GENERAL. Detection is form-based and context-free: the QUESTION SHAPE
+# asks for stored provenance. Combined explain+provenance messages ("Giải
+# thích ... và cho em biết thông tin này dựa trên đâu") stay on the single-
+# analyte explanation path, which already attaches its own approved sources.
+
+_PROVENANCE_FRAMES = (
+    "dua tren dau",
+    "dua tren nguon",
+    "lay tu nguon",
+    "lay tu dau",
+    "tu nguon nao",
+    "tu nguon gi",
+    "nguon nao",
+    "nguon gi",
+    "nguon dau",
+    "nguon tham khao",
+    "co nguon khong",
+    "nguon cua phan giai",
+    "nguon cua thong tin",
+    "nguon nay la cua",
+    "to chuc nao",
+    "theo who",
+    "co phai who",
+    "who khong",
+    "theo cdc",
+    "co phai cdc",
+    "cdc khong",
+)
+
+# Combined explanation requests keep the explanation path; they are never
+# intercepted as bare provenance follow-ups. The possessive noun phrase
+# "phần giải thích" (= "phan giai thich") is itself a provenance TARGET, so
+# only explain cues outside that phrase count as combined requests.
+
+
+def is_provenance_request(message: str) -> bool:
+    """CHAT-V1.5-R1-G1: deterministic provenance follow-up form detection."""
+    normalized = _normalize(message)
+    # "phan giai thich" mentions the explanation as a source target, not an
+    # explanation request; any other "giai thich" marks a combined request.
+    if re.search(r"(?<!phan )giai thich", normalized):
+        return False
+    return any(frame in normalized for frame in _PROVENANCE_FRAMES)
+
