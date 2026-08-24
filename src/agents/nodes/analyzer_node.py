@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src.agents.nodes.reference_range_checker_node import get_reference_repository
 from src.agents.state import AgentState, IndicatorExplanation, RetrievedChunk
 from src.config import get_settings
 from src.services.analyte_catalog import get_analyte_catalog
@@ -62,6 +63,50 @@ def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> l
         if chunk.get("source"):
             sources.append(str(chunk["source"]))
     return _deduplicate(sources)
+
+
+def _resolve_band_fallback(
+    indicator: dict[str, Any],
+    *,
+    unit: str,
+    patient_gender: str | None,
+    patient_age: int | float | None,
+) -> str | None:
+    """Deterministic band id when the checker's matched rule carried none.
+
+    GRQ-004 Fix 1: banded/CDL analytes store their approved educational
+    knowledge as band_notes, which the retriever can only admit when a band id
+    is provided. Resolution reuses the SAME authoritative rule bounds loaded by
+    the reference checker (ReferenceRepository.resolve_band) plus the frozen
+    band vocabulary — no new classification engine, no threshold changes.
+
+    Retrieval-context only: the resolved band never mutates indicator status,
+    critical facts, or persisted data. Fail-closed to None.
+    """
+    status = str(indicator.get("status", "")).strip().lower()
+    if not status or status == "unknown":
+        return None
+    existing_band = str(indicator.get("band_id") or "").strip()
+    if existing_band:
+        return existing_band
+    try:
+        numeric_value = float(indicator.get("value"))
+    except (TypeError, ValueError):
+        return None
+    analyte_hint = str(indicator.get("analyte_canonical") or indicator.get("analyte_id") or indicator.get("name") or "")
+    if not analyte_hint:
+        return None
+    try:
+        return get_reference_repository().resolve_band(
+            analyte=analyte_hint,
+            value=numeric_value,
+            unit=unit,
+            patient_gender=patient_gender,
+            patient_age=patient_age,
+        )
+    except Exception as exc:
+        logger.info("Band resolution unavailable for %s: %s", analyte_hint, exc)
+        return None
 
 
 async def _retrieve_optional_context(
@@ -128,6 +173,8 @@ async def process_single_indicator(
     rag_semaphore: asyncio.Semaphore,
     llm_semaphore: asyncio.Semaphore,
     llm_timeout_seconds: float,
+    patient_gender_raw: str | None = None,
+    patient_age_raw: int | float | None = None,
 ) -> tuple[dict[str, Any], IndicatorExplanation, list[RetrievedChunk]]:
     name = str(indicator.get("name", ""))
     analyte_id = str(indicator.get("analyte_id", ""))
@@ -167,7 +214,12 @@ async def process_single_indicator(
         analyte_id=analyte_id,
         name=name,
         status=status,
-        band_id=str(indicator.get("band_id", "")).strip() or None,
+        band_id=_resolve_band_fallback(
+            indicator,
+            unit=unit,
+            patient_gender=patient_gender_raw,
+            patient_age=patient_age_raw,
+        ),
         critical_status=critical_status,
     )
     known_sources = _known_sources(indicator, chunks)
@@ -308,6 +360,8 @@ async def analyzer_node(state: AgentState) -> dict:
                 rag_semaphore,
                 llm_semaphore,
                 llm_timeout_seconds,
+                patient_gender_raw=patient_gender,
+                patient_age_raw=patient_age_value,
             )
             for indicator in indicators
         ]

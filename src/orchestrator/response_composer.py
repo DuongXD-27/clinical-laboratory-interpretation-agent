@@ -14,6 +14,7 @@ from src.models.orchestrator_schemas import (
     BlockedPayload,
     DataPayload,
     DataType,
+    DoctorQuestionsPayload,
     ExplanationDataPayload,
     IntentEnum,
     NeedsInputPayload,
@@ -160,7 +161,78 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str
     return "\n".join(lines)
 
 
+_EXPLANATION_STATUS_LABELS = {
+    "low": "THẤP",
+    "normal": "BÌNH THƯỜNG",
+    "high": "CAO",
+    "unknown": "CHƯA XÁC ĐỊNH (UNKNOWN)",
+}
+
+_CRITICAL_SIDE_LABELS = {
+    "critical_high": "NGUY KỊCH (CAO)",
+    "critical_low": "NGUY KỊCH (THẤP)",
+}
+
+
+def _compose_explanation_message(data: ExplanationDataPayload) -> str:
+    """ORCH-V1.4C deterministic single-analyte composition.
+
+    One canonical path:
+        ExplanationDataPayload with structured facts,
+        deterministic single-analyte composer,
+        final response.
+
+    Output = DETERMINISTIC FACT BLOCK + EXISTING APPROVED EXPLANATION PROSE.
+    The general composer LLM is never invoked for this path, so it can never
+    rewrite value, unit, reference status, range or critical facts. Numeric
+    and unit formatting reuses the existing conventions (no rounding, no
+    invented operators); the two-sided range is rendered ONLY when both
+    authoritative bounds are available.
+    """
+    facts = data.facts
+    if facts is None:  # pragma: no cover - callers guarantee facts
+        return ""
+    if facts.critical_status is not None:
+        status_label = _CRITICAL_SIDE_LABELS.get(facts.critical_status, facts.critical_status.upper())
+    else:
+        status_key = str(facts.status).casefold()
+        status_label = _EXPLANATION_STATUS_LABELS.get(status_key, str(facts.status).upper())
+    lines = [
+        f"Kết quả {facts.analyte_name} của bạn:",
+        f"- Giá trị: {facts.value} {facts.unit}",
+        f"- Trạng thái: {status_label}",
+    ]
+    if facts.has_two_sided_reference_range:
+        lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
+    if facts.critical_status == "critical_high":
+        lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} tăng tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
+    elif facts.critical_status == "critical_low":
+        lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} giảm tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
+    elif facts.approved_critical_message:
+        # Approved existing critical warning, preserved verbatim.
+        lines.append(f"\n⚠️ {facts.approved_critical_message}")
+    approved_explanation = data.explanation.strip()
+    if approved_explanation:
+        lines.append("")
+        lines.append(approved_explanation)
+    return "\n".join(lines)
+
+
+def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
+    if not data.questions:
+        return "Hiện chưa có câu hỏi phù hợp cho chỉ số hoặc phiếu xét nghiệm này."
+    lines = ["Đây là các câu hỏi gợi ý để trao đổi với bác sĩ:"]
+    lines.extend(f"{index}. {question.text}" for index, question in enumerate(data.questions, start=1))
+    return "\n".join(lines)
+
+
 def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum, data: DataPayload | None = None) -> str:
+    if reason_code == ReasonCode.OUT_OF_SCOPE:
+        from src.orchestrator.service import OUT_OF_SCOPE_MESSAGE
+        return OUT_OF_SCOPE_MESSAGE
+    if reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
+        from src.orchestrator.service import SENSITIVE_SYSTEM_MESSAGE
+        return SENSITIVE_SYSTEM_MESSAGE
     if reason_code == ReasonCode.UNSUPPORTED_ANALYTE:
         return "Chỉ số này chưa nằm trong phạm vi hỗ trợ an toàn của hệ thống."
     if reason_code == ReasonCode.UNSUPPORTED_CAPABILITY:
@@ -180,10 +252,14 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
             return _compose_trend_message(data)
         return "Đây là xu hướng của chỉ số đã chọn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.GET_DOCTOR_QUESTIONS:
-        return "Đây là các câu hỏi gợi ý để trao đổi với bác sĩ."
+        if isinstance(data, DoctorQuestionsPayload):
+            return _compose_doctor_questions_message(data)
+        return "Hiện chưa có câu hỏi phù hợp cho phiếu xét nghiệm này."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)
+        if isinstance(data, ExplanationDataPayload) and data.facts is not None:
+            return _compose_explanation_message(data)
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
     if status == ResponseStatus.SUCCESS:
         if isinstance(data, AnalysisDataPayload):
@@ -351,6 +427,16 @@ async def compose_message(
         return fallback_message
     if isinstance(data, TrendDataPayload):
         return fallback_message
+    if isinstance(data, DoctorQuestionsPayload):
+        # HAL-039: persisted/guardrailed wording is authoritative. Render it
+        # deterministically so composer availability cannot alter or hide it.
+        return fallback_message
+    if isinstance(data, ExplanationDataPayload) and data.facts is not None:
+        # ORCH-V1.4C: one canonical deterministic path. The general composer
+        # LLM must NOT run for fact-bearing single-analyte explanations, so
+        # hostile or incorrect rewrites of value/unit/status/range/critical
+        # facts can never reach the final response.
+        return fallback_message
     prompt = _composer_prompt(
         intent=intent,
         status=status,
@@ -487,9 +573,31 @@ async def build_final_response(
     return enforce_final_response(response)
 
 
+def build_provenance_response(data: ExplanationDataPayload) -> OrchestratorResponse:
+    """CHAT-V1.5-R1-G1: deterministic provenance response assembly.
+
+    The provenance wording rendered by the dispatcher is authoritative and is
+    copied verbatim into the final message. The general composer LLM never
+    runs on this path, so it can never invent or rewrite a source identity.
+    The assembled response still passes the same final safety guardrails as
+    every other response.
+    """
+    return enforce_final_response(
+        OrchestratorResponse(
+            intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
+            status=ResponseStatus.SUCCESS,
+            message=data.explanation,
+            data_type=data.data_type,
+            data=data,
+            sources=list(data.sources),
+        )
+    )
+
+
 __all__ = [
     "ComposedMessage",
     "build_final_response",
+    "build_provenance_response",
     "compose_message",
     "deterministic_message_for",
     "enforce_final_response",

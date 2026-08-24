@@ -865,6 +865,43 @@ class DoctorTrendReviewSubmitRequest(BaseModel):
     doctor_comment: str = Field(..., min_length=1, max_length=8000)
 
 
+class HeatmapColumnSchema(BaseModel):
+    report_id: int
+    test_date: date
+
+
+class HeatmapCellSchema(BaseModel):
+    report_id: int
+    test_date: date
+    value: float
+    unit: str
+    status: str
+    critical_status: str | None = None
+    reference_low: float | None = None
+    reference_high: float | None = None
+
+
+class HeatmapRowSchema(BaseModel):
+    analyte_canonical: str
+    # Cùng độ dài và cùng thứ tự với `SectionHeatmapResponse.columns` — None ở vị trí
+    # nào nghĩa là phiếu đó (cột đó) không đo chỉ số này, không phải "chưa xác định".
+    cells: list[HeatmapCellSchema | None] = Field(default_factory=list)
+
+
+class SectionHeatmapResponse(BaseModel):
+    """Ma trận chỉ số × phiếu xét nghiệm cho một nhóm chức năng.
+
+    Khác với `SectionTrendsResponse`: không áp ngưỡng MIN_TREND_POINTS (mọi chỉ số có
+    ít nhất 1 kết quả trong phạm vi đều xuất hiện), và không nội suy dữ liệu thiếu —
+    cột nào chỉ số đó không có kết quả thì cell tương ứng là None.
+    """
+
+    section: str
+    section_label: str
+    columns: list[HeatmapColumnSchema] = Field(default_factory=list)
+    rows: list[HeatmapRowSchema] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Admin — trace vận hành
 #

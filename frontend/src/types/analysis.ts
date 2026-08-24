@@ -97,6 +97,35 @@ export type TrendResponse = {
   critical_high?: number | null;
 };
 
+export type HeatmapColumn = {
+  report_id: number;
+  test_date: string;
+};
+
+export type HeatmapCell = {
+  report_id: number;
+  test_date: string;
+  value: number;
+  unit: string;
+  status: string;
+  critical_status?: string | null;
+  reference_low?: number | null;
+  reference_high?: number | null;
+};
+
+export type HeatmapRow = {
+  analyte_canonical: string;
+  /** Cùng độ dài/thứ tự với `SectionHeatmapResponse.columns`; null = phiếu đó không đo chỉ số này. */
+  cells: (HeatmapCell | null)[];
+};
+
+export type SectionHeatmapResponse = {
+  section: string;
+  section_label: string;
+  columns: HeatmapColumn[];
+  rows: HeatmapRow[];
+};
+
 export type TrendExplanationResponse = {
   explanation: string;
   fallback: boolean;
