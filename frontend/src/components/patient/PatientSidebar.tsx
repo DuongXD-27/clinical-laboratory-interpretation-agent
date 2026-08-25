@@ -54,7 +54,8 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
               aria-current={active ? "page" : undefined}
               className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors relative",
-                active 
+                "outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
+                active
                   ? "bg-[var(--glass-surface)] backdrop-blur-md text-[var(--brand-strong)] shadow-[0_4px_16px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-[var(--holo-cyan)]/30" 
                   : "text-[var(--foreground-secondary)] hover:bg-[var(--surface-subtle)] hover:text-foreground"
               )}

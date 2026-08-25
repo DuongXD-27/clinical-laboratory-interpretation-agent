@@ -358,6 +358,12 @@ class ExplanationDataPayload(BaseModel):
     data_type: Literal[DataType.EXPLANATION] = DataType.EXPLANATION
     explanation: str
     sources: list[str] = Field(default_factory=list)
+    presentation_mode: Literal[
+        "current_fact_first",
+        "status_first",
+        "education_first",
+        "mixed_explanation",
+    ] = "mixed_explanation"
     # Deterministic fact block; None preserves the legacy prose-only contract.
     facts: ExplanationIndicatorFacts | None = None
 

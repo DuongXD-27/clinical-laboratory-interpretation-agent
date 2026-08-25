@@ -338,7 +338,7 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12 px-4 sm:px-6">
+    <div className="space-y-8 pb-12">
       <section className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Xu hướng chỉ số</h1>
         <p className="text-muted-foreground">

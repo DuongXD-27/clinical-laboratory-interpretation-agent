@@ -7,6 +7,24 @@ import { clearSession, getRole, getToken, getUsername, type Role } from "@/lib/a
 import PatientSidebar from "./PatientSidebar";
 import PatientTopbar from "./PatientTopbar";
 
+/**
+ * WIDE pages (analysis / history / reports / trends) get a broader content
+ * column; everything else stays on the calm STANDARD reading width. Pages must
+ * not set their own max-width — the shell is the single source of truth.
+ */
+const WIDE_CONTENT_ROUTES = [
+  "/patient/analysis",
+  "/patient/history",
+  "/patient/reports/",
+  "/patient/trends",
+];
+
+function isWideContentRoute(pathname: string): boolean {
+  return WIDE_CONTENT_ROUTES.some(
+    (route) => pathname.startsWith(route) || pathname === route.replace(/\/$/, ""),
+  );
+}
+
 export default function PatientShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -66,7 +84,12 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         />
         
         <main id="patient-main-content" className="flex-1 p-4 lg:p-8" tabIndex={-1}>
-          <div key={pathname} className="mx-auto max-w-6xl page-transition-enter">
+          <div
+            key={pathname}
+            className={`mx-auto page-transition-enter ${
+              isWideContentRoute(pathname) ? "max-w-7xl" : "max-w-6xl"
+            }`}
+          >
             {children}
           </div>
         </main>

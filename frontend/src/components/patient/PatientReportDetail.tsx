@@ -103,7 +103,7 @@ export default function PatientReportDetail() {
       <div className="page-section-heading report-detail-heading">
         <div>
           <span className="eyebrow">Phiếu đã lưu</span>
-          <h2>Kết quả xét nghiệm</h2>
+          <h1>Kết quả xét nghiệm</h1>
           <p>{formatDate(report.test_date)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
