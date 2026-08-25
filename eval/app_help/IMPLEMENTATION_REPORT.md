@@ -2,7 +2,7 @@ TASK_ID=APP-HELP-RAG-PHASE2
 BRANCH=feature/app-help-rag
 PR=(chưa mở — sẽ mở khi bạn xác nhận nội dung này)
 BASE_MAIN_SHA=2da389b3e2d8553d63be73c2b8e5380345201bbd
-HEAD_SHA=59f3ca0118ec88020a0aac21b5410559626fbe33
+HEAD_SHA=(xem `git log -1` trên feature/app-help-rag — nhiều commit sửa lỗi đã thêm sau lần điền đầu tiên, xem mục "Post-launch fixes" bên dưới)
 
 GOAL=Chatbot phải trả lời đúng câu hỏi "cách dùng app" (upload, lịch sử, xu hướng, OCR review, hồ sơ, cảnh báo, hỏi bác sĩ, nguồn tham chiếu, trợ lý) từ corpus thật của sản phẩm, tách biệt hoàn toàn khỏi RAG y khoa (medical_kb_v4), không được bịa route/nút không tồn tại.
 
@@ -85,6 +85,27 @@ READY_FOR_REVIEW=NO
 (Lý do: PR chưa mở, chưa merge; cần bạn xác nhận có muốn hiển thị RETRIEVED_CHUNK_IDS cho end-user hay giữ ẩn như hiện tại trước khi khóa scope. Về mặt kỹ thuật — code, test, build, lint — đã sẵn sàng.)
 
 ---
+
+## Post-launch fixes (tìm được qua bạn test thật trên UI, cùng ngày)
+
+Sau khi báo READY ở trên, bạn test trực tiếp trên UI và phát hiện thêm 5 lỗi thật liên tiếp — tất cả đã sửa, có test khóa lại, có xác nhận test thật sự fail nếu revert fix (không phải test giả):
+
+1. **LLM paraphrase làm sai lệch nội dung.** `response_composer.compose_message` chạy LLM rewrite chung cho mọi `ExplanationDataPayload` không có `facts`, khiến câu trả lời APP_HELP không còn đúng nguyên văn corpus. Fix ban đầu: chặn hẳn LLM cho APP_HELP.
+2. **`deterministic_message_for` thiếu nhánh APP_HELP** — khi fix #1 chặn LLM, lộ ra bug thứ 2: hàm build fallback_message không có case cho APP_HELP, rơi vào placeholder chung "Đây là kết quả phân tích hiện có.", bỏ qua hẳn `data.explanation`. Fix: thêm nhánh trả `data.explanation` trực tiếp.
+3. **Bạn phản hồi: câu trả lời nguyên văn đọc như tài liệu nội bộ** (heading lặp, tên file `.md`) — không tự nhiên cho người dùng. Thiết kế lại: cho phép LLM viết lại có kiểm soát chặt (`_APP_HELP_EXTRA_RULES` cấm bịa route/nút/khả năng mới) + lưới an toàn hậu kiểm (`_app_help_rewrite_introduces_new_label`: quét route/nhãn nút trong bản viết lại, nếu có gì không nằm trong nguyên văn gốc thì huỷ, dùng lại bản gốc đã dọn sạch heading/file-ref).
+4. **Sai mục con (section) trong đúng feature** — "Làm sao tải phiếu xét nghiệm?" trả lời "tính năng này để làm gì" thay vì các bước bấm cụ thể, vì dense search nhầm giữa các mục có từ vựng giống nhau trong cùng 1 file. Fix: `_section_hint()` — nhận diện ý định câu hỏi (làm sao/ở đâu/nghĩa là gì) rồi tra thẳng đúng heading bằng metadata lookup xác định, không phụ thuộc điểm similarity.
+5. **Route sai hẳn sang intent khác** — "Làm thế nào để tải ảnh phiếu?" và "...thì làm như nào" (văn nói) không khớp `app_help_nav_cues` (chỉ có "làm sao"), rơi vào `ANALYZE_REPORT` (muốn tải ảnh phân tích ngay) → báo "chưa thấy phiếu xét nghiệm nào". Fix: mở rộng cue list ("làm thế nào", "làm như nào", "bằng cách nào"...).
+
+**Sau đó tự chủ động audit có hệ thống** (không đợi bạn test tiếp) — chạy ~20 câu hỏi trải khắp cả 10 feature, tìm thêm 4 gap nữa:
+
+6. "Câu hỏi cho bác sĩ ở đâu?" bị `GET_DOCTOR_QUESTIONS` (tính năng thật) nuốt mất trước khi tới APP_HELP.
+7. "Cảnh báo khẩn cấp nghĩa là gì?" — **câu hỏi nằm ngay trong `phan-cong-vu.txt` gốc** — bị route sai sang `EXPLAIN_CURRENT_RESULT`.
+8. Sau khi sửa #7, retriever lại chọn sai mục con (lấy "Không làm được gì?" thay vì "Feature này dùng để làm gì?") cho câu hỏi kiểu "nghĩa là gì" — thêm `_WHAT_INTENT_CUES`.
+9. "Tải phiếu ở đâu?" — feature đã xác định đúng qua `FEATURE_HINTS` nhưng điểm embedding trong đúng feature đó lại thấp hơn ngưỡng cho câu hỏi ngắn → fail-closed oan. Fix: khi cả feature_hint VÀ section_hint đều xác định chắc chắn (khớp cụm từ đã kiểm chứng thủ công), tra thẳng bằng metadata, bỏ qua hẳn bước similarity/ngưỡng.
+
+Tất cả 9 lỗi trên đều có test khóa lại trong `tests/orchestrator/test_app_help.py` và `tests/test_services/test_app_help_retriever.py`, và với những lỗi nghiêm trọng nhất đã xác nhận thủ công bằng cách revert tạm fix để chứng minh test thật sự fail (không phải test giả vô hại). `eval/app_help/adversarial_threshold_evidence.md` và `eval/app_help/manual_demo.md` đã chạy lại và cập nhật theo trạng thái cuối cùng.
+
+Full suite sau tất cả các fix: **1462 passed** (không tăng số lỗi langfuse baseline).
 
 ## Evidence chạy thật
 
