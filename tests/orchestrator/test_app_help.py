@@ -305,3 +305,30 @@ async def test_app_help_build_final_response_surfaces_the_real_explanation(monke
     )
     assert response.message == explanation
     assert "kết quả phân tích hiện có" not in response.message
+
+
+# ==============================================================================
+# Regression: alternate "how" phrasings must not be misrouted to
+# ANALYZE_REPORT (found live in manual UI testing — "Làm thế nào để tải
+# ảnh phiếu?" and the colloquial "...thì làm như nào" both fell through
+# the APP_HELP nav-cue check because it only recognized "làm sao", not
+# "làm thế nào" / "làm như nào", and got misrouted into "start a new
+# report ingestion now" — surfacing a NEEDS_INPUT "no report found"
+# message instead of upload instructions).
+# ==============================================================================
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Làm thế nào để tải ảnh phiếu",
+        "t muốn tải ảnh phiếu t ko muốn nhâp tay thì làm như nào",
+        "Tôi xem lịch sử bằng cách nào?",
+    ],
+)
+def test_alternate_how_phrasings_route_to_app_help(message):
+    route = _deterministic_route(message)
+    assert route is not None, f"Expected {message!r} to be deterministically routed"
+    assert route.intent == IntentEnum.APP_HELP, (
+        f"{message!r} routed to {route.intent}, not APP_HELP — "
+        "likely misrouted into ANALYZE_REPORT's ingestion flow instead"
+    )

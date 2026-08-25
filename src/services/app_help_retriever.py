@@ -122,7 +122,12 @@ _WHERE_HEADING = "Người dùng tìm ở đâu?"
 # numbered flow. These cue sets are intentionally not mutually exclusive —
 # STEP is checked first because a full walkthrough still answers a
 # location-only question, but not vice versa.
-_STEP_INTENT_CUES = ("lam sao", "cac buoc", "huong dan", "cach su dung", "cach dung", "cach de")
+_STEP_INTENT_CUES = (
+    "lam sao", "cac buoc", "huong dan", "cach su dung", "cach dung", "cach de",
+    "lam the nao", "the nao de", "nhu the nao", "lam nhu the nao",
+    "bang cach nao", "cach nao de",
+    "nhu nao", "lam nhu nao",
+)
 _WHERE_INTENT_CUES = ("o dau",)
 
 

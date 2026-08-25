@@ -128,6 +128,15 @@ def _deterministic_route(
     app_help_nav_cues = (
         "o dau", "lam sao", "huong dan", "cach ", "tai sao", "vi sao",
         "sao khong", "khong duoc", "co can phai",
+        # "làm sao" is not the only common phrasing for "how" — found via
+        # manual testing that "làm thế nào"/"làm như nào" fell through this
+        # branch entirely and got misrouted to ANALYZE_REPORT (treated as
+        # "start a new upload now" instead of "explain how to upload").
+        "lam the nao", "the nao de", "nhu the nao", "lam nhu the nao",
+        "bang cach nao", "cach nao de",
+        # Colloquial contraction dropping "thế" ("làm như nào" instead of
+        # "làm như thế nào") — common in casual chat typing.
+        "nhu nao", "lam nhu nao",
     )
     app_help_feature_cues = (
         "tai phieu", "tai anh", "upload", "tai len phieu",
