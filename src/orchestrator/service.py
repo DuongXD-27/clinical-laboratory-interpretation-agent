@@ -5,7 +5,7 @@ import logging
 import re
 import time
 import uuid
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 from src.models.orchestrator_schemas import (
     BlockedPayload,
@@ -575,15 +575,13 @@ async def handle_message(
         current_report_ref=resolved.current_report_ref,
         current_analyte=resolved.current_analyte,
         progress_callback=progress_callback,
+        # Carried for: (a) CHAT-V1.5-R1-G1 provenance follow-up named-source
+        # verification, and (b) APP_HELP retrieval, which embeds the raw
+        # question against the App Help corpus.
+        message=request.message,
     )
     if provenance_turn:
-        # CHAT-V1.5-R1-G1: canonical approved-source path for the CURRENT
-        # report/analyte context only. The message is carried so named-source
-        # verification ("Theo WHO không?", "Có phải CDC không?") can be
-        # answered strictly from stored metadata.
-        result = await dispatch_provenance_followup(
-            replace(dispatch_context, message=request.message)
-        )
+        result = await dispatch_provenance_followup(dispatch_context)
     else:
         result = await dispatch_workflow(route.intent, dispatch_context)
     next_report_ref, next_analyte = _context_after_workflow(

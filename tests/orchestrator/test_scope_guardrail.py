@@ -385,6 +385,43 @@ async def test_s14_treatment_safety_behavior():
     assert gate_res == ReasonCode.TREATMENT_REQUEST
 
 
+@pytest.mark.asyncio
+async def test_ah08_treatment_safety_unchanged_by_app_help(active_wbc_setup):
+    """AH-08 (yeu-cau-vu.txt mục E): 'Tôi nên làm gì để hạ HbA1c?' ->
+    still a treatment-safety request, never reachable as APP_HELP. The
+    medical_safety_gate runs upstream of intent routing (see gates.py),
+    so adding APP_HELP cannot regress this."""
+    assert medical_safety_gate("Tôi nên làm gì để hạ HbA1c?") == ReasonCode.TREATMENT_REQUEST
+    user, runtime, db = active_wbc_setup
+    res = await handle_message(
+        OrchestratorRequest(message="Tôi nên làm gì để hạ HbA1c?", client_request_id="ah08"),
+        current_user=user,
+        db=db,
+        runtime=runtime,
+    )
+    assert res.status == ResponseStatus.BLOCKED
+    assert res.intent != IntentEnum.APP_HELP
+
+
+@pytest.mark.asyncio
+async def test_ah09_out_of_scope_python_unchanged_by_app_help(active_wbc_setup):
+    """AH-09 (yeu-cau-vu.txt mục E): 'Hướng dẫn viết Python' stays
+    OUT_OF_SCOPE — out_of_scope_gate runs before intent routing, so it
+    never reaches the APP_HELP branch even though both share the word
+    "hướng dẫn"."""
+    user, runtime, db = active_wbc_setup
+    res = await handle_message(
+        OrchestratorRequest(message="Hướng dẫn viết Python", client_request_id="ah09"),
+        current_user=user,
+        db=db,
+        runtime=runtime,
+    )
+    assert res.status == ResponseStatus.BLOCKED
+    assert res.intent == IntentEnum.UNSUPPORTED_OR_UNSAFE
+    assert res.reason_code == ReasonCode.OUT_OF_SCOPE
+    assert res.intent != IntentEnum.APP_HELP
+
+
 # ==============================================================================
 # S-15 to S-17, S-20, S-21: Supported Capability & App Help Routing
 # ==============================================================================

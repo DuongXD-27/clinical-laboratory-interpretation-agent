@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -32,16 +33,24 @@ from src.services.vector_store import VectorStore
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROHIBITED_PLACEHOLDERS = ("TODO", "TBD", "COMING SOON", "PLACEHOLDER", "LOREM IPSUM")
+# Case-sensitive, whole-word: these are only real stub markers when written
+# in the conventional all-caps style ("TODO", "COMING SOON"). Content that
+# merely mentions the English loanword "placeholder" in lowercase (e.g.
+# describing a form field's placeholder text) must not be rejected — unlike
+# the medical corpus (JSON, no natural-language false positives), this
+# corpus is Vietnamese prose mixing English UI terms.
+PROHIBITED_PLACEHOLDER_PATTERNS = tuple(
+    re.compile(rf"\b{re.escape(term)}\b")
+    for term in ("TODO", "TBD", "COMING SOON", "PLACEHOLDER", "LOREM IPSUM")
+)
 
 
 def _validate_no_placeholders(chunks: list) -> None:
     for chunk in chunks:
-        upper = chunk.text.upper()
-        for placeholder in PROHIBITED_PLACEHOLDERS:
-            if placeholder in upper:
+        for pattern in PROHIBITED_PLACEHOLDER_PATTERNS:
+            if pattern.search(chunk.text):
                 raise AppHelpCorpusError(
-                    f"chunk {chunk.chunk_id!r} contains prohibited placeholder text: {placeholder!r}"
+                    f"chunk {chunk.chunk_id!r} contains prohibited placeholder text: {pattern.pattern!r}"
                 )
 
 
