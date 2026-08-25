@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from src.config import get_settings
 from src.main import app
 from src.models.db import DEMO_USERS, Base, User, get_db
+from src.orchestrator.session_store import default_session_store
 from src.services import langfuse_tracing
 from src.services.auth import hash_password
 
@@ -86,6 +87,22 @@ def test_db(tmp_path, demo_password_hashes):
     finally:
         app.dependency_overrides.pop(get_db, None)
         db.dispose()
+
+
+@pytest.fixture(autouse=True)
+def reset_session_store():
+    """Xoá cache context giữa các test.
+
+    `default_session_store` là singleton ở module, còn `test_db` cấp một SQLite
+    tạm mới cho từng test — nên id hội thoại lại đếm từ 1. Không xoá thì khoá
+    `conv:1` của test trước còn nguyên và test sau kế thừa phần context chỉ nằm
+    trong tiến trình của nó. Cùng nguyên tắc với việc mỗi test có DB riêng: bộ
+    test không được để lại gì sống lâu hơn chính nó.
+    """
+
+    default_session_store.reset()
+    yield
+    default_session_store.reset()
 
 
 @pytest_asyncio.fixture

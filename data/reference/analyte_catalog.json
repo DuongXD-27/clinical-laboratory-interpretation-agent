@@ -1,0 +1,293 @@
+{
+  "catalog_version": "v1",
+  "entries": [
+    {
+      "analyte_id": "wbc",
+      "canonical_name": "WBC",
+      "aliases": ["Bạch cầu", "Bạch cầu (WBC)", "Số lượng bạch cầu"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "rbc",
+      "canonical_name": "RBC",
+      "aliases": ["Hồng cầu", "Hồng cầu (RBC)", "Số lượng hồng cầu"],
+      "group": "hematology",
+      "canonical_unit": "10^12/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "hgb",
+      "canonical_name": "HGB",
+      "aliases": ["Hemoglobin", "Hemoglobin (HGB)", "Huyết sắc tố"],
+      "group": "hematology",
+      "canonical_unit": "g/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "hct",
+      "canonical_name": "HCT",
+      "aliases": ["Hematocrit", "Hematocrit (HCT)"],
+      "group": "hematology",
+      "canonical_unit": "L/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "mcv",
+      "canonical_name": "MCV",
+      "aliases": [],
+      "group": "hematology",
+      "canonical_unit": "fL",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "mch",
+      "canonical_name": "MCH",
+      "aliases": [],
+      "group": "hematology",
+      "canonical_unit": "pg",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "mchc",
+      "canonical_name": "MCHC",
+      "aliases": [],
+      "group": "hematology",
+      "canonical_unit": "g/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "rdw_cv",
+      "canonical_name": "RDW-CV",
+      "aliases": ["RDW"],
+      "group": "hematology",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "plt",
+      "canonical_name": "PLT",
+      "aliases": ["Tiểu cầu", "Tiểu cầu (PLT)"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "neutrophils_%",
+      "canonical_name": "Neutrophils %",
+      "aliases": ["NEU/NEUT (percentage)", "Bạch cầu trung tính %"],
+      "group": "hematology",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "neutrophils_abs",
+      "canonical_name": "Neutrophils abs",
+      "aliases": ["NEU/NEUT (absolute)", "Bạch cầu trung tính tuyệt đối"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "lymphocytes_%",
+      "canonical_name": "Lymphocytes %",
+      "aliases": ["LYM (percentage)", "Lympho bào %"],
+      "group": "hematology",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "lymphocytes_abs",
+      "canonical_name": "Lymphocytes abs",
+      "aliases": ["LYM (absolute)", "Lympho bào tuyệt đối"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "monocytes_%",
+      "canonical_name": "Monocytes %",
+      "aliases": ["MONO (percentage)", "Bạch cầu mono %"],
+      "group": "hematology",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "monocytes_abs",
+      "canonical_name": "Monocytes abs",
+      "aliases": ["MONO (absolute)", "Bạch cầu mono tuyệt đối"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "eosinophils_%",
+      "canonical_name": "Eosinophils %",
+      "aliases": ["EOS (percentage)", "Bạch cầu ái toan %"],
+      "group": "hematology",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "eosinophils_abs",
+      "canonical_name": "Eosinophils abs",
+      "aliases": ["EOS (absolute)", "Bạch cầu ái toan tuyệt đối"],
+      "group": "hematology",
+      "canonical_unit": "10^9/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "sodium",
+      "canonical_name": "Sodium",
+      "aliases": ["Natri", "Sodium (Na)", "Na"],
+      "group": "electrolytes",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "potassium",
+      "canonical_name": "Potassium",
+      "aliases": ["Kali", "Potassium (K+)", "K+"],
+      "group": "electrolytes",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "chloride",
+      "canonical_name": "Chloride",
+      "aliases": ["Clor", "Chloride (Cl-)", "Cl-"],
+      "group": "electrolytes",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "fasting_plasma_glucose",
+      "canonical_name": "Fasting plasma glucose",
+      "aliases": ["Đường huyết lúc đói", "Glucose máu lúc đói", "Fasting Blood Glucose"],
+      "group": "glucose",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "hba1c",
+      "canonical_name": "HbA1c",
+      "aliases": [],
+      "group": "glucose",
+      "canonical_unit": "%",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "creatinine",
+      "canonical_name": "Creatinine",
+      "aliases": ["Creatinin"],
+      "group": "renal",
+      "canonical_unit": "umol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "urea",
+      "canonical_name": "Urea",
+      "aliases": [],
+      "group": "renal",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "uric_acid",
+      "canonical_name": "Uric acid",
+      "aliases": ["Uric Acid", "Acid Uric"],
+      "group": "renal",
+      "canonical_unit": "umol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "egfr",
+      "canonical_name": "eGFR",
+      "aliases": [],
+      "group": "renal",
+      "canonical_unit": "mL/min/1.73 m^2",
+      "runtime_status": "UNSUPPORTED"
+    },
+    {
+      "analyte_id": "ast",
+      "canonical_name": "AST",
+      "aliases": ["AST (GOT)", "AST (SGOT)"],
+      "group": "liver",
+      "canonical_unit": "U/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "alt",
+      "canonical_name": "ALT",
+      "aliases": ["ALT (GPT)", "ALT (SGPT)"],
+      "group": "liver",
+      "canonical_unit": "U/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "ggt",
+      "canonical_name": "GGT",
+      "aliases": [],
+      "group": "liver",
+      "canonical_unit": "U/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "total_bilirubin",
+      "canonical_name": "Total bilirubin",
+      "aliases": ["Bilirubin toàn phần"],
+      "group": "liver",
+      "canonical_unit": "umol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "total_protein",
+      "canonical_name": "Total protein",
+      "aliases": ["Total Protein", "Protein toàn phần"],
+      "group": "liver",
+      "canonical_unit": "g/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "albumin",
+      "canonical_name": "Albumin",
+      "aliases": [],
+      "group": "liver",
+      "canonical_unit": "g/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "total_cholesterol",
+      "canonical_name": "Total cholesterol",
+      "aliases": ["Total Cholesterol", "Cholesterol toàn phần"],
+      "group": "lipids",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "triglyceride",
+      "canonical_name": "Triglyceride",
+      "aliases": ["Triglycerides"],
+      "group": "lipids",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "hdl_c",
+      "canonical_name": "HDL-C",
+      "aliases": ["HDL-Cholesterol", "HDL-cho."],
+      "group": "lipids",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    },
+    {
+      "analyte_id": "ldl_c",
+      "canonical_name": "LDL-C",
+      "aliases": ["LDL-Cholesterol", "LDL-cho."],
+      "group": "lipids",
+      "canonical_unit": "mmol/L",
+      "runtime_status": "APPROVED"
+    }
+  ]
+}

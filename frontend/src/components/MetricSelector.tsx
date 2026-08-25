@@ -1,12 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search } from "lucide-react";
 
 export type MetricDefinition = {
   name: string;
   label: string;
   unit: string;
   category?: string;
+  runtimeStatus?: "APPROVED" | "HOLD" | "UNSUPPORTED";
 };
 
 type Props = {
@@ -32,82 +41,93 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
     if (!normalizedQuery) return catalog;
     return catalog.filter((metric) => normalize(`${metric.label} ${metric.name} ${metric.category ?? ""}`).includes(normalizedQuery));
   }, [catalog, query]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, open]);
-
-  if (!open) return null;
+  const grouped = useMemo(() => {
+    const groups = new Map<string, MetricDefinition[]>();
+    for (const metric of filtered) {
+      const category = metric.category ?? "Khác";
+      const items = groups.get(category) ?? [];
+      items.push(metric);
+      groups.set(category, items);
+    }
+    return Array.from(groups, ([label, items]) => ({ label, items }));
+  }, [filtered]);
 
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="metric-selector-title"
-        className="metric-modal"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5 sm:px-6">
-          <div>
-            <h2 id="metric-selector-title" className="text-lg font-semibold text-slate-950">
-              Thêm chỉ số xét nghiệm
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">Chọn chỉ số có trên phiếu của bạn.</p>
-          </div>
-          <button type="button" onClick={onClose} className="icon-button" aria-label="Đóng danh sách chỉ số">
-            ×
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent className="metric-modal gap-0 p-0 sm:max-w-3xl">
+        <DialogHeader className="px-5 pb-4 pt-5 sm:px-6">
+          <DialogTitle id="metric-selector-title" className="text-lg font-semibold text-foreground">
+            Thêm chỉ số xét nghiệm
+          </DialogTitle>
+          <DialogDescription>Chọn chỉ số theo nhóm có sẵn trên phiếu của bạn.</DialogDescription>
+        </DialogHeader>
 
-        <div className="border-y border-slate-100 px-5 py-4 sm:px-6">
+        <div className="border-y border-[var(--border)]/70 px-5 py-4 sm:px-6">
           <label className="sr-only" htmlFor="metric-search">Tìm chỉ số xét nghiệm</label>
-          <input
-            id="metric-search"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tìm chỉ số..."
-            className="form-control"
-            autoFocus
-          />
+          <div className="metric-search-control">
+            <Search aria-hidden="true" />
+            <input
+              id="metric-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Tìm theo tên hoặc nhóm chỉ số..."
+              autoFocus
+            />
+          </div>
         </div>
 
-        <div className="max-h-[min(55vh,28rem)] overflow-y-auto p-3 sm:p-4">
+        <div className="max-h-[min(62vh,34rem)] overflow-y-auto p-4 sm:p-5">
           {filtered.length === 0 ? (
-            <p className="px-3 py-10 text-center text-sm text-slate-500">Không tìm thấy chỉ số phù hợp.</p>
+            <p className="px-3 py-10 text-center text-sm text-muted-foreground">Không tìm thấy chỉ số phù hợp.</p>
           ) : (
-            <ul className="space-y-2">
-              {filtered.map((metric) => {
-                const isSelected = selected.has(metric.name);
-                return (
-                  <li key={metric.name} className="metric-option">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900">{metric.label}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {[metric.category, metric.unit].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isSelected}
-                      onClick={() => onAdd(metric)}
-                      className="secondary-button shrink-0 px-3 py-2"
-                    >
-                      {isSelected ? "Đã thêm" : "Thêm"}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+            <div className="flex flex-col gap-5">
+              {grouped.map((group) => (
+                <section key={group.label} aria-labelledby={`metric-group-${normalize(group.label).replace(/\s+/g, "-")}`}>
+                  <div className="metric-group-heading">
+                    <h3 id={`metric-group-${normalize(group.label).replace(/\s+/g, "-")}`}>{group.label}</h3>
+                    <span>{group.items.length} chỉ số</span>
+                  </div>
+                  <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {group.items.map((metric) => {
+                      const isSelected = selected.has(metric.name);
+                      const statusLabel = metric.runtimeStatus === "HOLD"
+                        ? "Tạm giữ"
+                        : metric.runtimeStatus === "UNSUPPORTED"
+                          ? "Chưa hỗ trợ"
+                          : "";
+                      return (
+                        <li key={metric.name}>
+                          <button
+                            type="button"
+                            disabled={isSelected}
+                            onClick={() => onAdd(metric)}
+                            className="metric-option w-full text-left"
+                            aria-label={`${isSelected ? "Đã thêm" : "Thêm"} ${metric.label}`}
+                          >
+                            <span className="min-w-0">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <strong>{metric.label}</strong>
+                                {statusLabel && (
+                                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                    {statusLabel}
+                                  </span>
+                                )}
+                              </span>
+                              <small>{metric.unit}</small>
+                            </span>
+                            <span className="metric-option-state">{isSelected ? "Đã thêm" : "+ Thêm"}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+            </div>
+           )}
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

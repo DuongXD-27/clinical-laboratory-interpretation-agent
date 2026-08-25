@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
+from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
 from src.services.analyte_sections import analyte_section
 from src.services.reference_repository import ReferenceRepository
 
@@ -31,8 +32,13 @@ class IndicatorConfiguration:
 class IndicatorConfigurationService:
     """Resolve all runtime indicator metadata from one validated configuration API."""
 
-    def __init__(self, repository: ReferenceRepository) -> None:
+    def __init__(
+        self,
+        repository: ReferenceRepository,
+        catalog_contract: AnalyteCatalogContract | None = None,
+    ) -> None:
         self._repository = repository
+        self._catalog_contract = catalog_contract or get_analyte_catalog_contract()
         approved = set(repository.approved_analytes)
         if set(repository.trend_max_gap_days) != approved:
             raise IndicatorConfigurationError(
@@ -41,11 +47,12 @@ class IndicatorConfigurationService:
 
         self._entries: dict[str, IndicatorConfiguration] = {}
         for canonical in approved:
-            unit = repository.canonical_unit_for(canonical)
-            if unit is None:
+            catalog_entry = self._catalog_contract.resolve(canonical)
+            if catalog_entry is None or catalog_entry.runtime_status != "APPROVED":
                 raise IndicatorConfigurationError(
-                    f"{canonical} must have exactly one approved canonical unit"
+                    f"{canonical} must be APPROVED in the canonical analyte catalog"
                 )
+            unit = catalog_entry.canonical_unit
             section = analyte_section(canonical)
             if section is None:
                 raise IndicatorConfigurationError(f"{canonical} has no functional section")
@@ -70,4 +77,7 @@ class IndicatorConfigurationService:
 
 @lru_cache(maxsize=1)
 def get_indicator_configuration_service() -> IndicatorConfigurationService:
-    return IndicatorConfigurationService(ReferenceRepository.from_default_files())
+    return IndicatorConfigurationService(
+        ReferenceRepository.from_default_files(),
+        get_analyte_catalog_contract(),
+    )

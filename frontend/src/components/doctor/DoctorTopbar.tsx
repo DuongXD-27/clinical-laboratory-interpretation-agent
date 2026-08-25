@@ -30,9 +30,9 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--glass-border)] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] shrink-0 relative">
+    <header className="doctor-topbar">
       <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
-      <div className="flex items-center gap-3 relative z-10">
+      <div className="relative z-10 flex items-center gap-3">
         {/* Mobile Hamburger Menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors" aria-label="Mở menu">
@@ -46,7 +46,7 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
               </SheetTitle>
               <SheetDescription className="sr-only">Menu điều hướng lâm sàng</SheetDescription>
             </SheetHeader>
-            <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1" aria-label="Điều hướng trên di động">
+            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-6" aria-label="Điều hướng trên di động">
               {doctorNavigation.map((item) => {
                 const active = isNavActive(pathname, item);
                 const Icon = item.icon;
@@ -103,7 +103,7 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
         {/* Page Title */}
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Khu vực bác sĩ</span>
-          <p className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</p>
+          <span className="font-semibold text-sm lg:text-base truncate leading-none">{pageTitle(pathname)}</span>
         </div>
       </div>
       

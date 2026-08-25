@@ -6,8 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import DoctorFindingCard from "@/components/doctor/DoctorFindingCard";
 import DoctorReportSidebar from "@/components/doctor/DoctorReportSidebar";
 import DoctorReviewProgressBar from "@/components/doctor/DoctorReviewProgressBar";
+import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
+import { CheckCircle2 } from "lucide-react";
 import {
   clearSession,
   completeDoctorReport,
@@ -118,25 +120,27 @@ export default function DoctorReportPage() {
 
   if (loading) {
     return (
-      <main className="doctor-portal">
-        <section className="doctor-report-shell">
+      <div className="doctor-page doctor-detail-page">
+        <DoctorPageHeader eyebrow="Kiểm chứng báo cáo" title="Đang tải phiếu xét nghiệm" />
+        <section className="doctor-detail-skeleton" aria-label="Đang tải phiếu xét nghiệm">
           <div className="skeleton-card" />
           <div className="skeleton-card" />
         </section>
-      </main>
+      </div>
     );
   }
 
   if (error || !detail) {
     return (
-      <main className="doctor-portal">
-        <section className="doctor-report-shell">
+      <div className="doctor-page doctor-detail-page">
+        <DoctorPageHeader eyebrow="Kiểm chứng báo cáo" title="Không mở được phiếu xét nghiệm" />
+        <section className="doctor-state-card doctor-state-card--error">
           <div className="doctor-error-state" role="alert">
             <p>{error || "Không tìm thấy phiếu xét nghiệm."}</p>
             <Link href={`/doctor?tab=${backTab}`}>Quay lại hàng đợi</Link>
           </div>
         </section>
-      </main>
+      </div>
     );
   }
 
@@ -153,51 +157,46 @@ export default function DoctorReportPage() {
   }
 
   return (
-    <main className="doctor-portal">
+    <div className="doctor-page doctor-detail-page">
       {toast && <div className="doctor-toast" role="status">{toast}</div>}
-      <section className="doctor-report-shell">
-        <header className="doctor-report-header">
-          <Link href={`/doctor?tab=${backTab}`}>‹ Hàng đợi</Link>
-          <div className="doctor-report-header__row">
-            <div>
-              <h1>{detail.patient.name}</h1>
-              <p>
-                {genderText(detail.patient.gender)} · {detail.patient.age ?? "-"} tuổi · Xét nghiệm{" "}
-                {formatDate(detail.report.test_date)} · {detail.report.input_method === "ocr" ? "OCR" : "nhập tay"}
-              </p>
-            </div>
-            <div className="doctor-report-header__badges">
-              <SeverityBadge level={severity} />
-              <VerificationBadge status={detail.report.verification_status} />
-            </div>
-          </div>
-        </header>
+      <DoctorPageHeader
+        eyebrow={`Kiểm chứng báo cáo · Phiếu #${detail.report.id}`}
+        title={detail.patient.name}
+        description={
+          <p>
+            {genderText(detail.patient.gender)} · {detail.patient.age ?? "-"} tuổi · Xét nghiệm{" "}
+            {formatDate(detail.report.test_date)} · {detail.report.input_method === "ocr" ? "OCR" : "nhập tay"}
+          </p>
+        }
+        actions={<><SeverityBadge level={severity} /><VerificationBadge status={detail.report.verification_status} /></>}
+        backHref={`/doctor?tab=${backTab}`}
+        backLabel="Hàng đợi đánh giá"
+      />
 
-        {readOnly && (
-          <div className="doctor-verified-banner">
-            <span aria-hidden="true">✓</span>
-            Phiếu đã được kiểm chứng bởi {detail.report.verified_by || "bác sĩ"}
-            {detail.report.verified_at ? ` lúc ${formatMoment(detail.report.verified_at)}` : ""}.
-          </div>
-        )}
-
-        {error && <div className="doctor-error-state" role="alert">{error}</div>}
-
-        <div className="doctor-report-grid">
-          <section className="doctor-finding-list" aria-label="Danh sách luận điểm">
-            {detail.findings.map((finding: DoctorFinding) => (
-              <DoctorFindingCard
-                key={finding.id}
-                finding={finding}
-                flags={flagsByFinding.get(finding.id) ?? []}
-                readOnly={readOnly}
-                onReview={handleReview}
-              />
-            ))}
-          </section>
-          <DoctorReportSidebar detail={detail} readOnly={readOnly} onQuestionUpdated={updateQuestion} />
+      {readOnly && (
+        <div className="doctor-verified-banner">
+          <CheckCircle2 aria-hidden="true" />
+          Phiếu đã được kiểm chứng bởi {detail.report.verified_by || "bác sĩ"}
+          {detail.report.verified_at ? ` lúc ${formatMoment(detail.report.verified_at)}` : ""}.
         </div>
-      </section>
+      )}
+
+      {error && <div className="doctor-error-state" role="alert">{error}</div>}
+
+      <div className="doctor-report-grid">
+        <section className="doctor-finding-list" aria-label="Danh sách luận điểm">
+          {detail.findings.map((finding: DoctorFinding) => (
+            <DoctorFindingCard
+              key={finding.id}
+              finding={finding}
+              flags={flagsByFinding.get(finding.id) ?? []}
+              readOnly={readOnly}
+              onReview={handleReview}
+            />
+          ))}
+        </section>
+        <DoctorReportSidebar detail={detail} readOnly={readOnly} onQuestionUpdated={updateQuestion} />
+      </div>
       <DoctorReviewProgressBar
         reviewed={progress.reviewed}
         total={progress.total}
@@ -205,6 +204,6 @@ export default function DoctorReportPage() {
         readOnly={readOnly}
         onComplete={() => void handleComplete()}
       />
-    </main>
+    </div>
   );
 }

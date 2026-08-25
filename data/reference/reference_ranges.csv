@@ -1,66 +1,68 @@
-rule_id,source_row_number,analyte_canonical,specimen,fasting_required,sex,age_scope,unit_machine,unit_display_vn,unit_raw,unit_canonical,value_type,range_lower,range_upper,upper_operator,reference_type,source_priority_tier,source_url,confidence
-RRV2-0043,43,ALT,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,,41,<,ONE_SIDED_LIMIT,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH
-RRV2-0042,42,AST,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,,40,<,ONE_SIDED_LIMIT,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH
-RRV2-0040,40,Albumin,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,35,50,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/,HIGH
-RRV2-0035,35,Chloride,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,95,108,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/,HIGH
-RRV2-0038,38,Creatinine,Serum/plasma,NO,F,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,45,84,,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH
-RRV2-0037,37,Creatinine,Serum/plasma,NO,M,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,59,104,,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH
-RRV2-0030,30,Eosinophils %,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,0.3,6.8,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0029,29,Eosinophils %,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,0.4,7.6,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0032,32,Eosinophils abs,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.026,0.476,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0031,31,Eosinophils abs,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.034,0.561,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0046,46,Fasting plasma glucose,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,5.6,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
-RRV2-0047,47,Fasting plasma glucose,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.6,7,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
-RRV2-0048,48,Fasting plasma glucose,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,7,,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
-RRV2-0045,45,GGT,Serum/plasma,NO,F,Adult,U/L,U/L,U/L,U/L,activity,,36,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/,HIGH
-RRV2-0044,44,GGT,Serum/plasma,NO,M,Adult,U/L,U/L,U/L,U/L,activity,,61,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/,HIGH
-RRV2-0008,8,HCT,Whole blood EDTA,NO,F,18–60,L/L,L/L,L/L,L/L,fraction,0.32,0.44,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0007,7,HCT,Whole blood EDTA,NO,M,18–60,L/L,L/L,L/L,L/L,fraction,0.37,0.5,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0059,59,HDL-C,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,1.04,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
-RRV2-0060,60,HDL-C,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.04,1.55,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
-RRV2-0061,61,HDL-C,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.55,,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
-RRV2-0006,6,HGB,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,absolute,110,150,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0005,5,HGB,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,absolute,128,183,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0049,49,HbA1c,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,,5.7,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
-RRV2-0050,50,HbA1c,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,5.7,6.5,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
-RRV2-0051,51,HbA1c,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,6.5,,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
-RRV2-0062,62,LDL-C,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,2.59,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
-RRV2-0063,63,LDL-C,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.59,3.36,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
-RRV2-0064,64,LDL-C,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,3.36,4.14,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
-RRV2-0065,65,LDL-C,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,4.14,4.91,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
-RRV2-0066,66,LDL-C,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,4.91,,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
-RRV2-0022,22,Lymphocytes %,Whole blood EDTA,NO,A,18–60,%,%,%,%,relative,12,48.6,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0024,24,Lymphocytes abs,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.94,3.75,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0023,23,Lymphocytes abs,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.92,3.8,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0012,12,MCH,Whole blood EDTA,NO,F,18–60,pg,pg,pg,pg,mass/cell,25.1,31.4,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0011,11,MCH,Whole blood EDTA,NO,M,18–60,pg,pg,pg,pg,mass/cell,26.3,32.2,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0014,14,MCHC,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,concentration,322,366,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0013,13,MCHC,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,concentration,323,371,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0010,10,MCV,Whole blood EDTA,NO,F,18–60,fL,fL,fL,fL,volume,71.6,91.5,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0009,9,MCV,Whole blood EDTA,NO,M,18–60,fL,fL,fL,fL,volume,73.8,93.1,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0026,26,Monocytes %,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,3.1,8.9,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0025,25,Monocytes %,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,3.3,9.39,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0028,28,Monocytes abs,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.2,0.72,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0027,27,Monocytes abs,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.22,0.79,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0020,20,Neutrophils %,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,39.83,80.3,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0019,19,Neutrophils %,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,40.4,79.53,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0021,21,Neutrophils abs,Whole blood EDTA,NO,A,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,2.21,7.55,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0018,18,PLT,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,178,366,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0017,17,PLT,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,172,375,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0034,34,Potassium,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,3.5,5.3,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/,HIGH
-RRV2-0004,4,RBC,Whole blood EDTA,NO,F,18–60,×10^12/L,T/L,×10^12/L,10^12/L,absolute,4.01,5.48,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0003,3,RBC,Whole blood EDTA,NO,M,18–60,×10^12/L,T/L,×10^12/L,10^12/L,absolute,4.45,6.19,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0016,16,RDW-CV,Whole blood EDTA,NO,F,18–60,%,%CV,%,%,dispersion,13.1,15.62,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0015,15,RDW-CV,Whole blood EDTA,NO,M,18–60,%,%CV,%,%,dispersion,13.2,15.1,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
-RRV2-0033,33,Sodium,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,133,146,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/sodium-na/,HIGH
-RRV2-0041,41,Total bilirubin,Serum/plasma,NO,A,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,,21,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/bilirubin-total-sbr/,HIGH
-RRV2-0052,52,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,5.18,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0053,53,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.18,6.19,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0054,54,Total cholesterol,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,6.19,,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0039,39,Total protein,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,60,80,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/,HIGH
-RRV2-0055,55,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,1.7,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0056,56,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.7,2.26,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0057,57,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.26,5.65,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0058,58,Triglyceride,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.65,,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
-RRV2-0036,36,Urea,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.5,7.8,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/urea/,HIGH
-RRV2-0002,2,WBC,Whole blood EDTA,NO,A,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,4.72,11.3,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+rule_id,source_row_number,analyte_canonical,section,specimen,fasting_required,sex,age_scope,unit_machine,unit_display_vn,unit_raw,unit_canonical,value_type,range_lower,range_upper,upper_operator,reference_type,source_priority_tier,source_url,confidence
+RRV2-0043,43,ALT,chemistry,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,,41,<,ONE_SIDED_LIMIT,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH
+RRV2-0042,42,AST,chemistry,Serum/plasma,NO,A,Adult,U/L,U/L,U/L,U/L,activity,,40,<,ONE_SIDED_LIMIT,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171,HIGH
+RRV2-0040,40,Albumin,chemistry,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,35,50,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/,HIGH
+RRV2-0035,35,Chloride,chemistry,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,95,108,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/,HIGH
+RRV2-0038,38,Creatinine,chemistry,Serum/plasma,NO,F,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,45,84,,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH
+RRV2-0037,37,Creatinine,chemistry,Serum/plasma,NO,M,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,59,104,,RI,T2,https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/,HIGH
+RRV2-0030,30,Eosinophils %,hematology,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,0.3,6.8,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0029,29,Eosinophils %,hematology,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,0.4,7.6,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0032,32,Eosinophils abs,hematology,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.026,0.476,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0031,31,Eosinophils abs,hematology,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.034,0.561,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0046,46,Fasting plasma glucose,lipids,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,5.6,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
+RRV2-0047,47,Fasting plasma glucose,lipids,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.6,7,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
+RRV2-0048,48,Fasting plasma glucose,lipids,Fluoride plasma preferred,YES,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,7,,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/index.html,HIGH
+RRV2-0045,45,GGT,chemistry,Serum/plasma,NO,F,Adult,U/L,U/L,U/L,U/L,activity,,36,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/,HIGH
+RRV2-0044,44,GGT,chemistry,Serum/plasma,NO,M,Adult,U/L,U/L,U/L,U/L,activity,,61,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/,HIGH
+RRV2-0008,8,HCT,hematology,Whole blood EDTA,NO,F,18–60,L/L,L/L,L/L,L/L,fraction,0.32,0.44,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0007,7,HCT,hematology,Whole blood EDTA,NO,M,18–60,L/L,L/L,L/L,L/L,fraction,0.37,0.5,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0059,59,HDL-C,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,1.04,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
+RRV2-0060,60,HDL-C,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.04,1.55,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
+RRV2-0061,61,HDL-C,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.55,,,BAND,T2,https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides,HIGH
+RRV2-0006,6,HGB,hematology,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,absolute,110,150,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0005,5,HGB,hematology,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,absolute,128,183,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0049,49,HbA1c,lipids,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,,5.7,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
+RRV2-0050,50,HbA1c,lipids,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,5.7,6.5,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
+RRV2-0051,51,HbA1c,lipids,Whole blood EDTA,NO,A,Adult,%,%,%,%,percentage,6.5,,,CDL,T2,https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html,HIGH
+RRV2-0062,62,LDL-C,lipids,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,2.59,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
+RRV2-0063,63,LDL-C,lipids,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.59,3.36,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
+RRV2-0064,64,LDL-C,lipids,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,3.36,4.14,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
+RRV2-0065,65,LDL-C,lipids,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,4.14,4.91,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
+RRV2-0066,66,LDL-C,lipids,Serum/plasma,YES preferred if calculated,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,4.91,,,BAND,T2,https://isj.testcatalog.org/show/LDLFP,HIGH
+RRV2-0022,22,Lymphocytes %,hematology,Whole blood EDTA,NO,A,18–60,%,%,%,%,relative,12,48.6,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0024,24,Lymphocytes abs,hematology,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.94,3.75,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0023,23,Lymphocytes abs,hematology,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.92,3.8,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0012,12,MCH,hematology,Whole blood EDTA,NO,F,18–60,pg,pg,pg,pg,mass/cell,25.1,31.4,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0011,11,MCH,hematology,Whole blood EDTA,NO,M,18–60,pg,pg,pg,pg,mass/cell,26.3,32.2,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0014,14,MCHC,hematology,Whole blood EDTA,NO,F,18–60,g/L,g/L,g/L,g/L,concentration,322,366,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0013,13,MCHC,hematology,Whole blood EDTA,NO,M,18–60,g/L,g/L,g/L,g/L,concentration,323,371,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0010,10,MCV,hematology,Whole blood EDTA,NO,F,18–60,fL,fL,fL,fL,volume,71.6,91.5,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0009,9,MCV,hematology,Whole blood EDTA,NO,M,18–60,fL,fL,fL,fL,volume,73.8,93.1,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0026,26,Monocytes %,hematology,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,3.1,8.9,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0025,25,Monocytes %,hematology,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,3.3,9.39,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0028,28,Monocytes abs,hematology,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.2,0.72,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0027,27,Monocytes abs,hematology,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,0.22,0.79,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0020,20,Neutrophils %,hematology,Whole blood EDTA,NO,F,18–60,%,%,%,%,relative,39.83,80.3,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0019,19,Neutrophils %,hematology,Whole blood EDTA,NO,M,18–60,%,%,%,%,relative,40.4,79.53,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0021,21,Neutrophils abs,hematology,Whole blood EDTA,NO,A,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,2.21,7.55,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0018,18,PLT,hematology,Whole blood EDTA,NO,F,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,178,366,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0017,17,PLT,hematology,Whole blood EDTA,NO,M,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,172,375,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0034,34,Potassium,chemistry,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,3.5,5.3,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/,HIGH
+RRV2-0004,4,RBC,hematology,Whole blood EDTA,NO,F,18–60,×10^12/L,T/L,×10^12/L,10^12/L,absolute,4.01,5.48,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0003,3,RBC,hematology,Whole blood EDTA,NO,M,18–60,×10^12/L,T/L,×10^12/L,10^12/L,absolute,4.45,6.19,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0016,16,RDW-CV,hematology,Whole blood EDTA,NO,F,18–60,%,%CV,%,%,dispersion,13.1,15.62,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0015,15,RDW-CV,hematology,Whole blood EDTA,NO,M,18–60,%,%CV,%,%,dispersion,13.2,15.1,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH
+RRV2-0033,33,Sodium,chemistry,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,133,146,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/sodium-na/,HIGH
+RRV2-0041,41,Total bilirubin,chemistry,Serum/plasma,NO,A,Adult,µmol/L,µmol/L,µmol/L,umol/L,concentration,,21,<,ONE_SIDED_LIMIT,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/bilirubin-total-sbr/,HIGH
+RRV2-0052,52,Total cholesterol,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,5.18,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0053,53,Total cholesterol,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.18,6.19,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0054,54,Total cholesterol,lipids,Serum/plasma,CONDITIONAL,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,6.19,,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0039,39,Total protein,chemistry,Serum/plasma,NO,A,Adult,g/L,g/L,g/L,g/L,concentration,60,80,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/,HIGH
+RRV2-0055,55,Triglyceride,lipids,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,,1.7,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0056,56,Triglyceride,lipids,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,1.7,2.26,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0057,57,Triglyceride,lipids,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.26,5.65,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0058,58,Triglyceride,lipids,Serum/plasma,YES preferred,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,5.65,,,BAND,T2,https://renal.testcatalog.org/show/LPSC1,HIGH
+RRV2-0036,36,Urea,chemistry,Serum/plasma,NO,A,Adult,mmol/L,mmol/L,mmol/L,mmol/L,concentration,2.5,7.8,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/urea/,HIGH
+RRV2-0067,67,Uric acid,chemistry,Serum/plasma,NO,F,>=19,µmol/L,µmol/L,µmol/L,umol/L,concentration,140,360,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/uric-acid-urate/,HIGH
+RRV2-0068,68,Uric acid,chemistry,Serum/plasma,NO,M,>=19,µmol/L,µmol/L,µmol/L,umol/L,concentration,200,430,,RI,T2,https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/uric-acid-urate/,HIGH
+RRV2-0002,2,WBC,hematology,Whole blood EDTA,NO,A,18–60,×10^9/L,G/L,×10^9/L,10^9/L,absolute,4.72,11.3,,RI,T1,https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653,HIGH

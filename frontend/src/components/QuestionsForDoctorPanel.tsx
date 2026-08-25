@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
 } from "@/lib/api";
 import type { ReportQuestion } from "@/types/history";
+import { Check, Send } from "lucide-react";
 
 type Props = {
   /** Câu hỏi lấy trực tiếp từ kết quả phân tích, dùng khi phiếu không được lưu. */
@@ -19,8 +20,7 @@ type Props = {
 /** Màn 6 — câu hỏi gợi ý cho bác sĩ.
  *
  * Danh sách có ô tích chọn: câu hỏi không chỉ để đọc mà để bệnh nhân chọn những
- * câu mình thực sự muốn hỏi rồi mang theo. Chức năng sao chép chỉ áp dụng cho
- * các câu đã chọn.
+ * câu mình thực sự muốn hỏi rồi mang theo.
  *
  * Bệnh nhân đăng nhập thì lựa chọn được lưu vào phiếu, nên bác sĩ mở phiếu sẽ
  * thấy đúng những thắc mắc bệnh nhân đã chuẩn bị. Khách thì chọn được trong
@@ -31,7 +31,7 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
   const [localSelected, setLocalSelected] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [sendNotice, setSendNotice] = useState<string | null>(null);
 
   const loadSaved = useCallback(async () => {
     if (reportId === null) return;
@@ -91,7 +91,7 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
   const selectedTexts = rows.filter((row) => row.checked).map((row) => row.text);
 
   function toggle(key: number) {
-    setCopied(false);
+    setSendNotice(null);
 
     if (!saved || saved.length === 0 || reportId === null) {
       setLocalSelected((current) => {
@@ -124,19 +124,6 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
     })();
   }
 
-  async function copySelected() {
-    if (selectedTexts.length === 0) return;
-
-    const text = selectedTexts.map((line, index) => `${index + 1}. ${line}`).join("\n");
-
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      setError("Trình duyệt không cho phép sao chép. Bạn có thể chọn và copy tay.");
-    }
-  }
-
   return (
     <div className="patient-card mt-5 p-5 sm:p-7">
       <div className="section-heading">
@@ -154,18 +141,19 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
         </p>
       )}
 
-      <ul className="mt-4 grid gap-2">
+      <ul className="mt-4 grid gap-2.5">
         {rows.map((row) => (
-          <li key={row.key} className="rounded-xl border border-slate-200 p-3">
-            <label className="flex cursor-pointer items-start gap-3 text-sm leading-6 text-slate-700">
+          <li key={row.key} className={`doctor-question-row ${row.checked ? "is-selected" : ""}`}>
+            <label className="flex cursor-pointer items-start gap-3 text-sm leading-6 text-foreground">
               <input
                 type="checkbox"
-                className="mt-1.5"
+                className="sr-only"
                 checked={row.checked}
                 disabled={busy}
                 onChange={() => toggle(row.key)}
               />
-              <span>{row.text}</span>
+              <span className="doctor-question-check" aria-hidden="true">{row.checked ? <Check /> : null}</span>
+              <span className="min-w-0 flex-1">{row.text}</span>
             </label>
 
             {row.answer && (
@@ -182,30 +170,28 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
         ))}
       </ul>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         <button
           type="button"
-          onClick={() => void copySelected()}
-          disabled={selectedTexts.length === 0}
-          className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium disabled:opacity-50"
+          onClick={() => setSendNotice(
+            reportId === null
+              ? "Phiên dùng thử chưa có phiếu được lưu, vì vậy hệ thống chưa thể chuyển lựa chọn này cho bác sĩ."
+              : "Các câu đã chọn được lưu cùng phiếu để bác sĩ xem khi mở hồ sơ. Hệ thống không gửi tin nhắn trực tiếp.",
+          )}
+          disabled={selectedTexts.length === 0 || busy}
+          className="primary-button doctor-question-cta"
         >
-          Sao chép {selectedTexts.length > 0 ? `${selectedTexts.length} câu đã chọn` : "câu đã chọn"}
+          <Send aria-hidden="true" />
+          Gửi câu hỏi đến bác sĩ
         </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          disabled={selectedTexts.length === 0}
-          className="h-10 rounded-lg border border-slate-300 px-4 text-sm font-medium disabled:opacity-50"
-        >
-          In
-        </button>
-        {copied && <span className="text-sm text-emerald-700">Đã sao chép vào clipboard.</span>}
+        <span className="text-xs text-muted-foreground">Đã chọn {selectedTexts.length} câu</span>
       </div>
+
+      {sendNotice && <p className="doctor-question-notice" role="status">{sendNotice}</p>}
 
       {reportId === null && (
         <p className="mt-3 text-xs text-slate-500">
-          Bạn đang dùng thử với tư cách khách nên lựa chọn này không được lưu lại. Đăng ký tài khoản
-          để bác sĩ thấy được những câu bạn đã chọn.
+          Bạn đang dùng thử với tư cách khách nên lựa chọn này chỉ được giữ trong phiên hiện tại.
         </p>
       )}
     </div>

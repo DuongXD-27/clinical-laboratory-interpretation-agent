@@ -3,6 +3,7 @@
     "rule_id": "RRV2-0043",
     "source_row_number": 43,
     "analyte_canonical": "ALT",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -18,13 +19,13 @@
     "reference_type": "ONE_SIDED_LIMIT",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0042",
     "source_row_number": 42,
     "analyte_canonical": "AST",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -40,13 +41,13 @@
     "reference_type": "ONE_SIDED_LIMIT",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/10898/9528/19171",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0040",
     "source_row_number": 40,
     "analyte_canonical": "Albumin",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -62,13 +63,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/albumin/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0035",
     "source_row_number": 35,
     "analyte_canonical": "Chloride",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -84,13 +85,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/chloride-ci/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0038",
     "source_row_number": 38,
     "analyte_canonical": "Creatinine",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "F",
@@ -106,13 +107,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0037",
     "source_row_number": 37,
     "analyte_canonical": "Creatinine",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "M",
@@ -128,13 +129,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.uhnm.nhs.uk/our-services/pathology/tests/creatinine/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0030",
     "source_row_number": 30,
     "analyte_canonical": "Eosinophils %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -150,13 +151,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0029",
     "source_row_number": 29,
     "analyte_canonical": "Eosinophils %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -172,13 +173,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0032",
     "source_row_number": 32,
     "analyte_canonical": "Eosinophils abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -194,13 +195,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0031",
     "source_row_number": 31,
     "analyte_canonical": "Eosinophils abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -216,13 +217,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0046",
     "source_row_number": 46,
     "analyte_canonical": "Fasting plasma glucose",
+    "section": "lipids",
     "specimen": "Fluoride plasma preferred",
     "fasting_required": "YES",
     "sex": "A",
@@ -238,13 +239,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0047",
     "source_row_number": 47,
     "analyte_canonical": "Fasting plasma glucose",
+    "section": "lipids",
     "specimen": "Fluoride plasma preferred",
     "fasting_required": "YES",
     "sex": "A",
@@ -260,13 +261,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0048",
     "source_row_number": 48,
     "analyte_canonical": "Fasting plasma glucose",
+    "section": "lipids",
     "specimen": "Fluoride plasma preferred",
     "fasting_required": "YES",
     "sex": "A",
@@ -282,13 +283,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/index.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0045",
     "source_row_number": 45,
     "analyte_canonical": "GGT",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "F",
@@ -304,13 +305,13 @@
     "reference_type": "ONE_SIDED_LIMIT",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0044",
     "source_row_number": 44,
     "analyte_canonical": "GGT",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "M",
@@ -326,13 +327,13 @@
     "reference_type": "ONE_SIDED_LIMIT",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/gamma-gt-ggt/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0008",
     "source_row_number": 8,
     "analyte_canonical": "HCT",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -348,13 +349,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0007",
     "source_row_number": 7,
     "analyte_canonical": "HCT",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -370,13 +371,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0059",
     "source_row_number": 59,
     "analyte_canonical": "HDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -392,13 +393,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0060",
     "source_row_number": 60,
     "analyte_canonical": "HDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -414,13 +415,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0061",
     "source_row_number": 61,
     "analyte_canonical": "HDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -436,13 +437,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://www.heart.org/en/health-topics/cholesterol/hdl-good-ldl-bad-cholesterol-and-triglycerides",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0006",
     "source_row_number": 6,
     "analyte_canonical": "HGB",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -458,13 +459,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0005",
     "source_row_number": 5,
     "analyte_canonical": "HGB",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -480,13 +481,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0049",
     "source_row_number": 49,
     "analyte_canonical": "HbA1c",
+    "section": "lipids",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -502,13 +503,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0050",
     "source_row_number": 50,
     "analyte_canonical": "HbA1c",
+    "section": "lipids",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -524,13 +525,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0051",
     "source_row_number": 51,
     "analyte_canonical": "HbA1c",
+    "section": "lipids",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -546,13 +547,13 @@
     "reference_type": "CDL",
     "source_priority_tier": "T2",
     "source_url": "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0062",
     "source_row_number": 62,
     "analyte_canonical": "LDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred if calculated",
     "sex": "A",
@@ -568,13 +569,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://isj.testcatalog.org/show/LDLFP",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0063",
     "source_row_number": 63,
     "analyte_canonical": "LDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred if calculated",
     "sex": "A",
@@ -590,13 +591,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://isj.testcatalog.org/show/LDLFP",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0064",
     "source_row_number": 64,
     "analyte_canonical": "LDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred if calculated",
     "sex": "A",
@@ -612,13 +613,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://isj.testcatalog.org/show/LDLFP",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0065",
     "source_row_number": 65,
     "analyte_canonical": "LDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred if calculated",
     "sex": "A",
@@ -634,13 +635,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://isj.testcatalog.org/show/LDLFP",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0066",
     "source_row_number": 66,
     "analyte_canonical": "LDL-C",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred if calculated",
     "sex": "A",
@@ -656,13 +657,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://isj.testcatalog.org/show/LDLFP",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0022",
     "source_row_number": 22,
     "analyte_canonical": "Lymphocytes %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -678,13 +679,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0024",
     "source_row_number": 24,
     "analyte_canonical": "Lymphocytes abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -700,13 +701,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0023",
     "source_row_number": 23,
     "analyte_canonical": "Lymphocytes abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -722,13 +723,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0012",
     "source_row_number": 12,
     "analyte_canonical": "MCH",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -744,13 +745,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0011",
     "source_row_number": 11,
     "analyte_canonical": "MCH",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -766,13 +767,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0014",
     "source_row_number": 14,
     "analyte_canonical": "MCHC",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -788,13 +789,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0013",
     "source_row_number": 13,
     "analyte_canonical": "MCHC",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -810,13 +811,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0010",
     "source_row_number": 10,
     "analyte_canonical": "MCV",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -832,13 +833,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0009",
     "source_row_number": 9,
     "analyte_canonical": "MCV",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -854,13 +855,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0026",
     "source_row_number": 26,
     "analyte_canonical": "Monocytes %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -876,13 +877,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0025",
     "source_row_number": 25,
     "analyte_canonical": "Monocytes %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -898,13 +899,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0028",
     "source_row_number": 28,
     "analyte_canonical": "Monocytes abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -920,13 +921,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0027",
     "source_row_number": 27,
     "analyte_canonical": "Monocytes abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -942,13 +943,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0020",
     "source_row_number": 20,
     "analyte_canonical": "Neutrophils %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -964,13 +965,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0019",
     "source_row_number": 19,
     "analyte_canonical": "Neutrophils %",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -986,13 +987,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0021",
     "source_row_number": 21,
     "analyte_canonical": "Neutrophils abs",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -1008,13 +1009,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0018",
     "source_row_number": 18,
     "analyte_canonical": "PLT",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -1030,13 +1031,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0017",
     "source_row_number": 17,
     "analyte_canonical": "PLT",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -1052,13 +1053,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0034",
     "source_row_number": 34,
     "analyte_canonical": "Potassium",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -1074,13 +1075,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/potassium-k/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0004",
     "source_row_number": 4,
     "analyte_canonical": "RBC",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -1096,13 +1097,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0003",
     "source_row_number": 3,
     "analyte_canonical": "RBC",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -1118,13 +1119,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0016",
     "source_row_number": 16,
     "analyte_canonical": "RDW-CV",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "F",
@@ -1140,13 +1141,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0015",
     "source_row_number": 15,
     "analyte_canonical": "RDW-CV",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "M",
@@ -1162,13 +1163,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0033",
     "source_row_number": 33,
     "analyte_canonical": "Sodium",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -1184,13 +1185,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/sodium-na/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0041",
     "source_row_number": 41,
     "analyte_canonical": "Total bilirubin",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -1206,13 +1207,13 @@
     "reference_type": "ONE_SIDED_LIMIT",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/bilirubin-total-sbr/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0052",
     "source_row_number": 52,
     "analyte_canonical": "Total cholesterol",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -1228,13 +1229,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0053",
     "source_row_number": 53,
     "analyte_canonical": "Total cholesterol",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -1250,13 +1251,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0054",
     "source_row_number": 54,
     "analyte_canonical": "Total cholesterol",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "CONDITIONAL",
     "sex": "A",
@@ -1272,13 +1273,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0039",
     "source_row_number": 39,
     "analyte_canonical": "Total protein",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -1294,13 +1295,13 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/protein-total/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0055",
     "source_row_number": 55,
     "analyte_canonical": "Triglyceride",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred",
     "sex": "A",
@@ -1316,13 +1317,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0056",
     "source_row_number": 56,
     "analyte_canonical": "Triglyceride",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred",
     "sex": "A",
@@ -1338,13 +1339,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0057",
     "source_row_number": 57,
     "analyte_canonical": "Triglyceride",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred",
     "sex": "A",
@@ -1360,13 +1361,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0058",
     "source_row_number": 58,
     "analyte_canonical": "Triglyceride",
+    "section": "lipids",
     "specimen": "Serum/plasma",
     "fasting_required": "YES preferred",
     "sex": "A",
@@ -1382,13 +1383,13 @@
     "reference_type": "BAND",
     "source_priority_tier": "T2",
     "source_url": "https://renal.testcatalog.org/show/LPSC1",
-    "confidence": "HIGH",
-    "section": "lipids"
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0036",
     "source_row_number": 36,
     "analyte_canonical": "Urea",
+    "section": "chemistry",
     "specimen": "Serum/plasma",
     "fasting_required": "NO",
     "sex": "A",
@@ -1404,13 +1405,57 @@
     "reference_type": "RI",
     "source_priority_tier": "T2",
     "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/urea/",
-    "confidence": "HIGH",
-    "section": "chemistry"
+    "confidence": "HIGH"
+  },
+  {
+    "rule_id": "RRV2-0067",
+    "source_row_number": 67,
+    "analyte_canonical": "Uric acid",
+    "section": "chemistry",
+    "specimen": "Serum/plasma",
+    "fasting_required": "NO",
+    "sex": "F",
+    "age_scope": ">=19",
+    "unit_machine": "µmol/L",
+    "unit_display_vn": "µmol/L",
+    "unit_raw": "µmol/L",
+    "unit_canonical": "umol/L",
+    "value_type": "concentration",
+    "range_lower": 140,
+    "range_upper": 360,
+    "upper_operator": null,
+    "reference_type": "RI",
+    "source_priority_tier": "T2",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/uric-acid-urate/",
+    "confidence": "HIGH"
+  },
+  {
+    "rule_id": "RRV2-0068",
+    "source_row_number": 68,
+    "analyte_canonical": "Uric acid",
+    "section": "chemistry",
+    "specimen": "Serum/plasma",
+    "fasting_required": "NO",
+    "sex": "M",
+    "age_scope": ">=19",
+    "unit_machine": "µmol/L",
+    "unit_display_vn": "µmol/L",
+    "unit_raw": "µmol/L",
+    "unit_canonical": "umol/L",
+    "value_type": "concentration",
+    "range_lower": 200,
+    "range_upper": 430,
+    "upper_operator": null,
+    "reference_type": "RI",
+    "source_priority_tier": "T2",
+    "source_url": "https://www.gloshospitals.nhs.uk/our-services/services-we-offer/pathology/tests-and-investigations/uric-acid-urate/",
+    "confidence": "HIGH"
   },
   {
     "rule_id": "RRV2-0002",
     "source_row_number": 2,
     "analyte_canonical": "WBC",
+    "section": "hematology",
     "specimen": "Whole blood EDTA",
     "fasting_required": "NO",
     "sex": "A",
@@ -1426,7 +1471,6 @@
     "reference_type": "RI",
     "source_priority_tier": "T1",
     "source_url": "https://tapchiyhocvietnam.vn/index.php/vmj/article/download/9352/8252/16653",
-    "confidence": "HIGH",
-    "section": "hematology"
+    "confidence": "HIGH"
   }
 ]

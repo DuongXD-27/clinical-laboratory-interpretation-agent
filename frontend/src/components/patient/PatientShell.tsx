@@ -83,10 +83,10 @@ export default function PatientShell({ children }: { children: ReactNode }) {
           onLogout={logout}
         />
         
-        <main id="patient-main-content" className="flex-1 p-4 lg:p-8" tabIndex={-1}>
+        <main id="patient-main-content" className="min-w-0 w-full flex-1 p-4 lg:p-8" tabIndex={-1}>
           <div
             key={pathname}
-            className={`mx-auto page-transition-enter ${
+            className={`min-w-0 w-full page-transition-enter ${
               isWideContentRoute(pathname) ? "max-w-7xl" : "max-w-6xl"
             }`}
           >

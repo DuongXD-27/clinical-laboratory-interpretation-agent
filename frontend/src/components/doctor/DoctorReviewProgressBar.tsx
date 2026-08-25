@@ -1,5 +1,8 @@
 "use client";
 
+import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 type Props = {
   reviewed: number;
   total: number;
@@ -23,15 +26,20 @@ export default function DoctorReviewProgressBar({ reviewed, total, busy, readOnl
         <strong>Đã xử lý {reviewed}/{total} luận điểm</strong>
       </div>
       <div className="review-progress-bar__right">
-        {remaining > 0 && <span>Còn {remaining} luận điểm chưa xử lý</span>}
-        <button
+        {remaining > 0 && <span>Còn {remaining} luận điểm</span>}
+        <Button
           type="button"
           disabled={busy || remaining > 0}
           onClick={onComplete}
-          className="doctor-primary-button"
         >
-          {busy ? "Đang hoàn tất..." : "Hoàn tất kiểm chứng"}
-        </button>
+          <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
+          <span className="review-progress-bar__button-label">
+            {busy ? "Đang hoàn tất..." : "Hoàn tất kiểm chứng"}
+          </span>
+          <span className="review-progress-bar__button-label-mobile">
+            {busy ? "Đang lưu..." : "Hoàn tất"}
+          </span>
+        </Button>
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport
+from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport, ReportIndicator, ReportQuestion
 from src.models.orchestrator_schemas import (
     AnalysisDataPayload,
     DoctorQuestionsPayload,
@@ -275,7 +275,11 @@ def get_report_questions(
             return DoctorQuestionsPayload(questions=persisted)
         indicators: Sequence[Mapping[str, Any]] = _report_indicator_mappings(report, analyte=analyte)
     elif session_result is not None:
-        indicators = _indicator_mappings(session_result)
+        indicators = [
+            indicator
+            for indicator in _indicator_mappings(session_result)
+            if _mapping_matches_analyte(indicator, current_analyte)
+        ]
     else:
         _raise(ReasonCode.AMBIGUOUS_CONTEXT)
     return DoctorQuestionsPayload(questions=generate_questions(indicators))

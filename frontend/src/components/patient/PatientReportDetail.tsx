@@ -12,6 +12,8 @@ import { formatDate, reportTone } from "@/lib/patientUi.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import { ArrowLeft, Trash2 } from "lucide-react";
 
 type ReportDetail = {
   id: number;
@@ -99,20 +101,25 @@ export default function PatientReportDetail() {
   const reportSeverity = reportTone(report.status) as "critical" | "abnormal" | "normal";
 
   return (
-    <div className="report-detail-layout">
-      <div className="page-section-heading report-detail-heading">
-        <div>
-          <span className="eyebrow">Phiếu đã lưu</span>
-          <h1>Kết quả xét nghiệm</h1>
-          <p>{formatDate(report.test_date)}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/patient/history" className="secondary-button">Quay lại lịch sử</Link>
-          <button type="button" onClick={deleteReport} disabled={deleting} className="text-danger-button">
-            {deleting ? "Đang xóa..." : "Xóa phiếu"}
-          </button>
-        </div>
-      </div>
+    <div className="patient-page-layout report-detail-layout">
+      <PatientPageHeader
+        eyebrow="Phiếu đã lưu"
+        title="Kết quả xét nghiệm"
+        description={formatDate(report.test_date)}
+        className="report-detail-heading"
+        actions={(
+          <div className="report-action-cluster">
+            <Link href="/patient/history" className="patient-btn-secondary">
+              <ArrowLeft aria-hidden="true" />
+              Quay lại lịch sử
+            </Link>
+            <button type="button" onClick={deleteReport} disabled={deleting} className="patient-btn-danger">
+              <Trash2 aria-hidden="true" />
+              {deleting ? "Đang xóa..." : "Xóa phiếu"}
+            </button>
+          </div>
+        )}
+      />
 
       {report.critical_alerts?.length > 0 && (
         <div className="critical-report-notice" role="alert">
@@ -146,7 +153,7 @@ export default function PatientReportDetail() {
           {indicatorGroups.map((group) => (
             <div key={group.label}>
               <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
-              <div className="mt-3 grid gap-3">
+              <div className="mt-2 grid gap-2.5 lg:grid-cols-2">
                 {group.items.map((indicator, index) => (
                   <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
                 ))}
