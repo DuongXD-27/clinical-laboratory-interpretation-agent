@@ -5,7 +5,7 @@ TASK_ID        = chat-conversation-persistence
 BRANCH         = feature/chat-conversation-persistence
 PR             = (điền sau khi mở PR)
 BASE_MAIN_SHA  = cf4643000951ad30044425188d69851ee112ece5
-HEAD_SHA       = (điền sau khi commit)
+HEAD_SHA       = 3674d7e069916b273a1ec42e7afda7e80683b47f
 ```
 
 ## GOAL
@@ -386,8 +386,8 @@ pytest tests/test_api/test_conversation_persistence.py
 pytest tests/orchestrator/test_conversation_context_isolation.py
                                                     -> 25 passed
 
-pytest tests/orchestrator -q                        -> (điền số cuối)
-pytest tests/ -q                                    -> (điền số cuối)
+pytest tests/orchestrator -q   -> 398 passed, 1 failed, 1 error  (cả 2 đỏ sẵn trên main)
+pytest tests/ -q               -> 1473 passed, 1 failed, 3 errors (cả 4 đỏ sẵn trên main)
 
 ruff check src/ tests/   -> 104 errors trên HEAD
                             104 errors trên main (cf46430) — cùng con số,
@@ -536,8 +536,24 @@ Rủi ro còn lại:
 ## HARD_EVAL
 
 ```
-python scripts/run_response_quality_eval.py   -> (điền kết quả)
+python scripts/run_response_quality_eval.py     --report-out <ngoài repo> --json-out <ngoài repo>
+-> Overall Result: 125/125 passed (100.0%) | 0 Failed
 ```
+
+**HARD = 125/125.** Kiểm sau khi chạy: `git status --short eval/ data/` → sạch,
+không file track nào bị ghi đè.
+
+**Phải truyền `--report-out` / `--json-out` ra ngoài repo.** Mặc định script ghi
+vào `eval/manual/response_quality_baseline.json` và `_report.md`, mà **cả hai đều
+là file được git track**. Chạy mặc định là âm thầm ghi đè baseline bằng kết quả
+của lần chạy hiện tại — tức là tự phong lại chính mình, đúng loại lỗi đã xảy ra
+với `data/reference/medical_kb_manifest.json` (một test gọi `ingest()` thật và ghi
+đè file pin, làm cái pin không bao giờ phát hiện được thay đổi nữa).
+
+Tôi đã lỡ chạy mặc định một lần, dừng lại trước khi nó ghi (script ghi ở cuối
+run), và kiểm `git status --short eval/` → sạch. Đề bài cấm sửa golden để làm
+test xanh; ghi đè baseline bằng output của chính mình là dạng nguy hiểm nhất của
+việc đó vì nó không hiện ra trong diff nếu ai đó vô tình commit kèm.
 
 Lưu ý về harness này: nó chạy qua `TestClient(app)`, tức **đi qua route thật**,
 nên thay đổi của task này có tác dụng ở đó. Đã kiểm phần quan trọng nhất: mỗi
@@ -545,6 +561,36 @@ case **đăng ký một bệnh nhân mới** (`rq_a_<uuid>`), nên `get_or_creat
 tạo một hội thoại mới với context rỗng cho từng case — không có nguy cơ context
 của case trước rớt sang case sau.
 
+## F. Regression gate
+
+| Hạng mục | Kết quả |
+| --- | --- |
+| targeted conversation tests | **PASS** — 25/25 |
+| orchestrator suite | **PASS** — 398 passed; 1 failed + 1 error đỏ sẵn trên main |
+| full backend suite | **PASS** — 1473 passed; 1 failed + 3 errors đỏ sẵn trên main |
+| HARD | **125/125** |
+| ruff | 104 lỗi, **bằng đúng main**; 0 lỗi trong file tôi đụng |
+| frontend lint | **PASS** — 0 problem |
+| frontend build | **PASS** |
+| frontend tests | **PASS** — 68/68 (`node --test src/lib/*.test.mjs` từ `frontend/`) |
+
+Bốn test đỏ đã được xác nhận là đỏ sẵn trên main bằng `git stash`, không phải
+báo gộp cho qua:
+
+```
+git stash -u && pytest <4 test đó> -q   -> 1 failed, 3 errors, 2 passed
+git stash pop
+```
+
+Hai test `tip006` trong danh sách đỏ ban đầu **là lỗi của tôi** — đã nêu ở RISKS
+và đã sửa; giờ 14/14 xanh.
+
 ## READY_FOR_REVIEW
 
-`NO` cho tới khi điền xong HARD_EVAL và chạy E2E trên trình duyệt.
+`YES` cho phần backend — mọi cổng đề bài yêu cầu đều đạt, CP-05/07/08 có bằng
+chứng runtime kèm vế đối chứng.
+
+Một việc còn treo, nêu rõ chứ không giấu: **chưa bấm thử trên trình duyệt.**
+Giao diện mới qua `tsc`, `eslint`, `next build` và 10 test logic thuần. Ai review
+nên mở app bấm thử trước khi merge — repo này đã có tiền lệ ba lỗi giao diện lọt
+qua một bộ 387 test xanh.
