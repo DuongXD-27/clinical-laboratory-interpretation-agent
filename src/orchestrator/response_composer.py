@@ -280,8 +280,14 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)
-        if isinstance(data, ExplanationDataPayload) and data.facts is not None:
-            return _compose_explanation_message(data)
+        if isinstance(data, ExplanationDataPayload):
+            if data.facts is not None:
+                return _compose_explanation_message(data)
+            # 0e128c5 contract: approved bare prose (no fact block) surfaces
+            # VERBATIM in the deterministic path — never swapped for a
+            # generic placeholder. A later refactor in the same PR range
+            # dropped this branch; restored.
+            return data.explanation or "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.APP_HELP:
         # The dispatcher already put the exact (verbatim, grounded) answer
@@ -486,6 +492,17 @@ async def compose_message(
     if isinstance(data, TrendDataPayload):
         return fallback_message
     if isinstance(data, DoctorQuestionsPayload):
+        return fallback_message
+    if isinstance(data, ExplanationDataPayload) and data.facts is not None:
+        # ORCH-V1.4C: one canonical deterministic path. The general composer
+        # LLM must NOT run for fact-bearing single-analyte explanations, so
+        # hostile or incorrect rewrites of value/unit/status/range/critical
+        # facts can never reach the final response. Restored after the
+        # conversation-persistence refactor dropped it: with a live LLM the
+        # rewrite reordered the deterministic fact block and destroyed both
+        # the ORCH-V1.4C contracts and the G2 education-first ordering
+        # ("WBC là gì?" must lead with approved education, "WBC là bao
+        # nhiêu?" must lead with the fact block — in BOTH composer modes).
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,

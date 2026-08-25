@@ -110,7 +110,7 @@ def test_active_analyte_returns_only_matching_persisted_questions(monkeypatch):
     )
     db = _authorized(monkeypatch, report)
 
-    payload = wrappers.get_report_questions(Patient(), db, report_ref=390, analyte="WBC")
+    payload = wrappers.get_report_questions(Patient(), db, report_ref=390, current_analyte="WBC")
 
     assert [question.text for question in payload.questions] == ["Chỉ câu WBC."]
 
@@ -126,7 +126,7 @@ def test_missing_analyte_question_falls_back_only_for_requested_analyte(monkeypa
 
     monkeypatch.setattr(wrappers, "generate_questions", fake_generate)
 
-    payload = wrappers.get_report_questions(Patient(), db, report_ref=390, analyte="WBC")
+    payload = wrappers.get_report_questions(Patient(), db, report_ref=390, current_analyte="WBC")
 
     assert payload.questions == []
     assert [item["name"] for item in captured] == ["WBC"]

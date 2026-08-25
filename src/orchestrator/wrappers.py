@@ -134,6 +134,24 @@ def _matches_analyte(indicator: object, analyte: str | None) -> bool:
     return requested in candidates
 
 
+def _mapping_matches_analyte(indicator: Mapping[str, Any], analyte: str | None) -> bool:
+    """Mapping-shaped twin of `_matches_analyte` for session-result indicators,
+    which arrive as `model_dump()` dicts rather than attribute objects.
+
+    Fixes the half-landed conversation-persistence edit that referenced this
+    helper (and a nonexistent `current_analyte` local) without defining it —
+    any guest/session doctor-question request with non-empty indicators hit a
+    NameError instead of generating questions."""
+    if not analyte:
+        return True
+    requested = _resolved_analyte(analyte).casefold()
+    candidates = {
+        _resolved_analyte(indicator.get(field)).casefold()
+        for field in ("analyte_id", "analyte_canonical", "analyte_raw", "name")
+    }
+    return requested in candidates
+
+
 def _question_indicator_map(report: LabReport) -> dict[int, object]:
     return {
         indicator.id: indicator
@@ -264,21 +282,26 @@ def get_report_questions(
     session_result: object | None = None,
     report_ref: object | None = None,
     analyte: str | None = None,
+    current_analyte: str | None = None,
 ) -> DoctorQuestionsPayload:
+    # `analyte` là tên kwarg gốc (dispatcher vẫn gọi vậy); `current_analyte`
+    # là tên mà conversation-persistence range chuẩn hoá theo DispatchContext.
+    # Cả hai đều được nhận, current_analyte ưu tiên khi cùng lúc.
+    requested_analyte = current_analyte if current_analyte is not None else analyte
     role = _require_non_doctor(current_user)
     if report_ref is not None:
         if role == ROLE_GUEST:
             _raise(ReasonCode.UNSUPPORTED_CAPABILITY)
         report = _owned_report(current_user, db, report_ref)
-        persisted = _persisted_questions(report, analyte=analyte)
+        persisted = _persisted_questions(report, analyte=requested_analyte)
         if persisted:
             return DoctorQuestionsPayload(questions=persisted)
-        indicators: Sequence[Mapping[str, Any]] = _report_indicator_mappings(report, analyte=analyte)
+        indicators: Sequence[Mapping[str, Any]] = _report_indicator_mappings(report, analyte=requested_analyte)
     elif session_result is not None:
         indicators = [
             indicator
             for indicator in _indicator_mappings(session_result)
-            if _mapping_matches_analyte(indicator, current_analyte)
+            if _mapping_matches_analyte(indicator, requested_analyte)
         ]
     else:
         _raise(ReasonCode.AMBIGUOUS_CONTEXT)
