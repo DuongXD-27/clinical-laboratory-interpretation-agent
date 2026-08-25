@@ -104,6 +104,37 @@ def _feature_hint(query: str) -> str | None:
     return None
 
 
+# Every corpus file uses the SAME 5 question headings verbatim (see
+# app_help_corpus_builder / Phase 1 corpus template), so a question's
+# heading string is a reliable, literal metadata key across all 10 files —
+# not something that needs fuzzy matching.
+_STEPS_HEADING = "Các bước sử dụng?"
+_WHERE_HEADING = "Người dùng tìm ở đâu?"
+
+# Within the RIGHT feature, dense search still confuses sections that share
+# heavy vocabulary — e.g. "Làm sao tải phiếu xét nghiệm?" top-matched
+# upload-analysis's "Feature này dùng để làm gì?" (0.7582, describes WHAT
+# the feature is for) over its own "Các bước sử dụng?" (0.7292, the actual
+# click-by-click steps) — a real product bug: a "how do I..." question
+# answered with a mission statement instead of instructions. A pure "ở
+# đâu" question (no process cue) is better served by the "tìm ở đâu"
+# section, which states the menu location directly instead of a full
+# numbered flow. These cue sets are intentionally not mutually exclusive —
+# STEP is checked first because a full walkthrough still answers a
+# location-only question, but not vice versa.
+_STEP_INTENT_CUES = ("lam sao", "cac buoc", "huong dan", "cach su dung", "cach dung", "cach de")
+_WHERE_INTENT_CUES = ("o dau",)
+
+
+def _section_hint(query: str) -> str | None:
+    normalized = _normalize(query)
+    if any(term in normalized for term in _STEP_INTENT_CUES):
+        return _STEPS_HEADING
+    if any(term in normalized for term in _WHERE_INTENT_CUES):
+        return _WHERE_HEADING
+    return None
+
+
 def strip_explicit_analyte(message: str) -> str:
     """Remove an explicit analyte name (e.g. "WBC", "HbA1c") from a query
     before embedding it for App Help retrieval.
@@ -179,7 +210,50 @@ class AppHelpRetriever:
         # role-aware caveat composed by the caller), not silence. Only
         # reorder so same-role content ranks first.
         matches.sort(key=lambda match: (not _matches_role(match.role, requester_role), -match.score))
+
+        matches = self._promote_section_hint(query, matches)
         return AppHelpRetrievalResult(query=query, matches=matches)
+
+    def _promote_section_hint(
+        self, query: str, matches: list[AppHelpChunkMatch]
+    ) -> list[AppHelpChunkMatch]:
+        """If the question has a clear how-to/where cue, promote the
+        matching section for the already-resolved top feature to the front
+        — via a deterministic metadata lookup (exact heading string), not
+        another embedding call. No-op if there's no top match to anchor
+        the feature to, or the target section is already first."""
+        if not matches:
+            return matches
+        target_heading = _section_hint(query)
+        if target_heading is None or matches[0].heading == target_heading:
+            return matches
+
+        resolved_feature = matches[0].feature
+        try:
+            result = self._vector_store.get_by_metadata(
+                filter={"$and": [{"feature": resolved_feature}, {"heading": target_heading}]},
+                limit=1,
+            )
+        except Exception:
+            return matches
+        documents = result.get("documents") or []
+        if not documents:
+            return matches
+        metadatas = result.get("metadatas") or []
+        ids = result.get("ids") or []
+        metadata = metadatas[0] if metadatas else {}
+        promoted = AppHelpChunkMatch(
+            chunk_id=ids[0] if ids else "",
+            text=documents[0],
+            feature=str(metadata.get("feature", "")),
+            role=str(metadata.get("role", "")),
+            route=str(metadata.get("route", "")),
+            heading=str(metadata.get("heading", "")),
+            source_file=str(metadata.get("source_file", "")),
+            score=matches[0].score,  # same feature confidence, section-corrected
+        )
+        rest = [m for m in matches if m.chunk_id != promoted.chunk_id]
+        return [promoted, *rest]
 
 
 def get_app_help_retriever() -> AppHelpRetriever:
