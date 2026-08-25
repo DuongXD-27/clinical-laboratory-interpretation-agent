@@ -13,8 +13,8 @@ from src.main import app
 from src.models import db as db_module
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, SaveReportRequest
 from src.services.auth import create_access_token
-from src.services.lab_history_service import save_analyzed_report, save_report_snapshot
 from src.services.demo_patient_data import seed_demo_patient_reports
+from src.services.lab_history_service import save_analyzed_report, save_report_snapshot
 
 
 @pytest_asyncio.fixture

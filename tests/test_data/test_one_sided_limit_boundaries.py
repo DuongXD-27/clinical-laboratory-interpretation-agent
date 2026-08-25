@@ -1,8 +1,9 @@
 from decimal import Decimal
+
 import pytest
 
 from src.agents.nodes.reference_range_checker_node import _classify, _parse_value
-from src.services.measurement_conversion import validate_numeric_measurement
+
 
 class TestOneSidedLimitBoundaries:
     """Boundary tests for ONE_SIDED_LIMIT reference rules (AST, ALT, GGT, Total bilirubin)."""

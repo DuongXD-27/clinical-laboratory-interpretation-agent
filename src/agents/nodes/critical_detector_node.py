@@ -1,6 +1,6 @@
 import json
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 

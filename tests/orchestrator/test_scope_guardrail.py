@@ -120,8 +120,8 @@ def active_wbc_setup(monkeypatch):
     monkeypatch.setattr(history_repository, "to_detail", MagicMock(return_value=detail))
     monkeypatch.setattr(history_repository, "list_reports", MagicMock(return_value=(1, [mock_db_report])))
 
+    from src.models.schemas import TrendPointResponse, TrendResponse
     from src.services import trend_service
-    from src.models.schemas import TrendResponse, TrendPointResponse
     dummy_trend = TrendResponse(
         analyte_canonical="HbA1c",
         display_name="HbA1c",

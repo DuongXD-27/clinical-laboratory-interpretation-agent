@@ -1,28 +1,21 @@
 import json
-import math
-import pytest
 from decimal import Decimal
 from pathlib import Path
 
-from src.services.analyte_resolver import LOCKED_35_ANALYTES, ANALYTE_RULE_TYPES, FROZEN_CLINICAL_RULE_BANDS
-from src.services.reference_repository import ReferenceRepository
-from src.services.measurement_conversion import (
-    validate_numeric_measurement,
-    is_valid_numeric_measurement,
-    classify_lipid_band,
-    cholesterol_mg_dl_to_mmol_l,
-    cholesterol_mmol_l_to_mg_dl,
-    triglyceride_mg_dl_to_mmol_l,
-    triglyceride_mmol_l_to_mg_dl,
-    glucose_mmol_l_to_mg_dl,
-    bilirubin_umol_l_to_mg_dl,
-)
+import pytest
+
+from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.reference_range_checker_node import (
-    _classify,
-    _parse_value,
     reference_range_checker_node,
 )
-from src.agents.nodes.critical_detector_node import detect_critical_values_node
+from src.services.analyte_resolver import LOCKED_35_ANALYTES
+from src.services.measurement_conversion import (
+    cholesterol_mg_dl_to_mmol_l,
+    classify_lipid_band,
+    is_valid_numeric_measurement,
+    triglyceride_mg_dl_to_mmol_l,
+    validate_numeric_measurement,
+)
 
 
 def test_numeric_domain_validator_valid_inputs():

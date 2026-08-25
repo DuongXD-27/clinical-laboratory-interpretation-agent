@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport, ReportIndicator, ReportQuestion
+from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport
 from src.models.orchestrator_schemas import (
     AnalysisDataPayload,
     DoctorQuestionsPayload,

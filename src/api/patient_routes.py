@@ -35,7 +35,7 @@ from src.services.section_trend_explanation_service import (
     explain_section_trend,
 )
 from src.services.trend_explanation_service import (
-    TrendExplanationUnavailable,
+    TrendExplanationUnavailableError,
     explain_patient_trend,
 )
 from src.services.trend_service import (
@@ -211,7 +211,7 @@ async def trend_explanation(
             analyte_canonical=analyte_canonical,
             trend_filter=filter,
         )
-    except TrendExplanationUnavailable as exc:
+    except TrendExplanationUnavailableError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PatientNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -234,7 +234,7 @@ async def section_trend_explanation(
             section=section,
             trend_filter=filter,
         )
-    except TrendExplanationUnavailable as exc:
+    except TrendExplanationUnavailableError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PatientNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

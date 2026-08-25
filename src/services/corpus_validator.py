@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.models.corpus_schemas import CorpusChunk
 from src.services.analyte_resolver import (
     ANALYTE_RULE_TYPES,
-    CANONICAL_ANALYTE_ID_MAP,
     FROZEN_CLINICAL_RULE_BANDS,
     LOCKED_35_ANALYTES,
     VALID_NOTE_TYPES,
     canonical_analyte_id,
 )
-from src.services.corpus_builder import build_corpus_chunks, parse_analyte_record
-
+from src.services.corpus_builder import build_corpus_chunks
 
 PROHIBITED_PLACEHOLDERS = (
     "TODO",

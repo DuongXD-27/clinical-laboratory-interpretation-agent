@@ -15,11 +15,11 @@ from src.models.orchestrator_schemas import (
     ReasonCode,
 )
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
-from src.orchestrator.medical_context import resolve_medical_context
+from src.orchestrator import response_composer
 from src.orchestrator import service as orchestrator_service
 from src.orchestrator import session_store as session_store_module
 from src.orchestrator.intent_router import RouteDecision
-from src.orchestrator import response_composer
+from src.orchestrator.medical_context import resolve_medical_context
 from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
 from src.services import history_repository

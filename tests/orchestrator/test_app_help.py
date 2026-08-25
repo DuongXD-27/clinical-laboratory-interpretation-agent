@@ -19,7 +19,6 @@ from src.orchestrator.dispatcher import DispatchContext, _dispatch_app_help
 from src.orchestrator.intent_router import _deterministic_route
 from src.services.app_help_retriever import AppHelpChunkMatch, AppHelpRetrievalResult, AppHelpRetrieverError
 
-
 # ==============================================================================
 # AH-01..AH-05: known app-help phrasings route to APP_HELP
 # ==============================================================================

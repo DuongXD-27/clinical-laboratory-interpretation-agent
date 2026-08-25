@@ -35,7 +35,7 @@ CONTACT_DOCTOR_NOTICE = (
 )
 
 
-class TrendExplanationUnavailable(ValueError):
+class TrendExplanationUnavailableError(ValueError):
     pass
 
 
@@ -433,7 +433,7 @@ async def explain_patient_trend(
         trend_filter=trend_filter,
     )
     if not trend.trend_available:
-        raise TrendExplanationUnavailable("Trend chưa đủ dữ liệu để tạo giải thích.")
+        raise TrendExplanationUnavailableError("Trend chưa đủ dữ liệu để tạo giải thích.")
 
     escalate = bool(trend.critical_status or trend.approaching_critical)
     range_lower, range_upper = matched_reference_bounds(db, trend)

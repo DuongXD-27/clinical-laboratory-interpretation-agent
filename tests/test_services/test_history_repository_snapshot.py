@@ -1,8 +1,11 @@
-import pytest
 from datetime import date
-from src.models.db import LabReport, ReportIndicator, User, ROLE_PATIENT
-from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema, CriticalAlertSchema
+
+import pytest
+
+from src.models.db import ROLE_PATIENT, LabReport, ReportIndicator, User
+from src.models.schemas import AnalyzeRequest, AnalyzeResponse, CriticalAlertSchema, IndicatorResultSchema
 from src.services import history_repository as repo
+
 
 @pytest.fixture
 def patient(test_db):
@@ -15,7 +18,7 @@ def patient(test_db):
 
 def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
     """Chứng minh metadata hiển thị được lưu chuẩn theo thiết kế."""
-    
+
     request = AnalyzeRequest(
         test_date=date(2026, 8, 19),
         patient_age=30,
@@ -30,7 +33,7 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
             {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
         ]
     )
-    
+
     response = AnalyzeResponse(
         indicators=[
             # A. WBC RI
@@ -82,43 +85,43 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
         has_critical_values=True,
         guardrail_passed=True,
     )
-    
+
     with test_db.session() as db:
         report = repo.save_report(db, patient_id=patient.id, request=request, response=response)
-        
+
         # Verify DB persistence
         wbc_db = next(i for i in report.indicators if i.name == "WBC")
         assert wbc_db.rule_type == "RI"
         assert wbc_db.reference_low == 4.0
-        
+
         ast_db = next(i for i in report.indicators if i.name == "AST")
         assert ast_db.rule_type == "ONE_SIDED_LIMIT"
         assert ast_db.upper_operator == "<"
-        
+
         tg_db = next(i for i in report.indicators if i.name == "Triglyceride")
         assert tg_db.rule_type == "BAND"
         assert tg_db.band_id == "very_high"
-        
+
         hba1c_db = next(i for i in report.indicators if i.name == "HbA1c")
         assert hba1c_db.rule_type == "CDL"
-        
+
         uric_db = next(i for i in report.indicators if i.name == "Uric acid")
         assert uric_db.rule_type is None
         assert uric_db.evaluation_reason == "analyte_not_supported"
-        
+
         # Verify API mapping
         detail = repo.to_detail(report)
         wbc_api = next(i for i in detail.indicators if i.name == "WBC")
         assert wbc_api.rule_type == "RI"
         assert wbc_api.reference_low == 4.0
-        
+
         ast_api = next(i for i in detail.indicators if i.name == "AST")
         assert ast_api.rule_type == "ONE_SIDED_LIMIT"
         assert ast_api.upper_operator == "<"
-    
+
 def test_legacy_history_compatibility(test_db, patient):
     """Test old row without the newly added metadata."""
-    
+
     with test_db.session() as db:
         # Bỏ qua repository layer, insert trực tiếp mô phỏng data cũ
         report = LabReport(
@@ -128,7 +131,7 @@ def test_legacy_history_compatibility(test_db, patient):
         )
         db.add(report)
         db.flush()
-        
+
         indicator = ReportIndicator(
             report_id=report.id,
             name="Legacy Test",
@@ -144,7 +147,7 @@ def test_legacy_history_compatibility(test_db, patient):
         )
         db.add(indicator)
         db.commit()
-        
+
         # Verify API mapping does not crash
         detail = repo.to_detail(report)
         assert len(detail.indicators) == 1

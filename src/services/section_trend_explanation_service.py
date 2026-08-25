@@ -23,7 +23,7 @@ from src.services.request_timing import add_timing_event
 from src.services.trend_explanation_service import (
     CONTACT_DOCTOR_NOTICE,
     TREND_EXPLANATION_FALLBACK,
-    TrendExplanationUnavailable,
+    TrendExplanationUnavailableError,
     _extract_text_content,
     _percent_change,
     critical_threshold_bounds,
@@ -169,7 +169,7 @@ async def explain_section_trend(
     - Đúng 1 chỉ số đủ điểm → tái dùng luồng đơn chỉ số để hành vi không lệch nhau.
     """
     if section not in SECTION_KEYS:
-        raise TrendExplanationUnavailable("Nhóm chức năng không hợp lệ.")
+        raise TrendExplanationUnavailableError("Nhóm chức năng không hợp lệ.")
 
     analytes = get_patient_trend_analytes(db, username=username)
     eligible = [item for item in analytes if item.section == section and item.trend_available]

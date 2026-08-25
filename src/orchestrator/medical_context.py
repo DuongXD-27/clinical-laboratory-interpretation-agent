@@ -23,6 +23,7 @@ from src.models.orchestrator_schemas import (
 )
 from src.services import history_repository
 from src.services.analyte_resolver import LOCKED_35_ANALYTES
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 _COMPARISON_PATTERNS = (
     "so voi lan truoc",
@@ -67,8 +68,6 @@ class ResolvedMedicalContext:
 def _normalize(text: str) -> str:
     return " ".join(re.findall(r"[a-zA-Z0-9À-ỹ]+", text.casefold()))
 
-
-from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 _COMMON_ALIAS_MAP: dict[str, str] = {
     "glucose": "Fasting plasma glucose",

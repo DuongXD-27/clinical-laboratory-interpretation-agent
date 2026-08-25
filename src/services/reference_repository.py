@@ -12,11 +12,11 @@ from types import MappingProxyType
 from typing import Any
 
 from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
+from src.services.analyte_resolver import FROZEN_CLINICAL_RULE_BANDS, canonical_analyte_id
 from src.services.measurement_conversion import (
     cholesterol_mg_dl_to_mmol_l,
     triglyceride_mg_dl_to_mmol_l,
 )
-from src.services.analyte_resolver import FROZEN_CLINICAL_RULE_BANDS, canonical_analyte_id
 
 
 class ReferenceRepositoryError(Exception):

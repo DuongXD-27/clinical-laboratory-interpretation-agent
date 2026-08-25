@@ -51,7 +51,6 @@ from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
 from src.services import history_repository
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
