@@ -507,11 +507,33 @@ async def compose_message(
         # discard the rewrite and fall back to the verbatim corpus text.
         logger.info("App Help rewrite introduced an unverified label/route; using verbatim fallback")
         return fallback_message
+    if intent == IntentEnum.APP_HELP and _app_help_rewrite_keeps_forbidden_artifact(message):
+        # Second, independent net: raw route paths / code filenames / chunk
+        # IDs must never reach the chat regardless of whether they existed in
+        # the source — the deterministic cleanup already stripped them from
+        # the fallback text, so a rewrite still carrying one reintroduced or
+        # retained it. Found live during final-integration verification: the
+        # model kept doctor-questions.md's inline `/patient/analysis`-style
+        # paths verbatim despite _APP_HELP_EXTRA_RULES.
+        logger.info("App Help rewrite kept a forbidden artifact; using verbatim fallback")
+        return fallback_message
     return message
 
 
 _QUOTED_LABEL_RE = re.compile(r'"([^"]{2,60})"|\*\*([^*]{2,60})\*\*')
 _ROUTE_PATH_RE = re.compile(r"/[a-zA-Z][a-zA-Z0-9/_-]*")
+_FORBIDDEN_ARTIFACT_RE = re.compile(
+    r"`?/(?:patient|doctor|api)\b"  # raw app/API route path
+    r"|[\w.-]+\.(?:tsx|ts|jsx|mjs|py|md)\b"  # code/doc filename
+    r"|\w+::[\w-]+"  # internal chunk ID ("feature::section")
+)
+
+
+def _app_help_rewrite_keeps_forbidden_artifact(rewritten: str) -> bool:
+    """True if `rewritten` still shows any raw route path, code/doc filename,
+    or internal chunk ID — artifacts that must never reach an APP_HELP chat
+    message no matter what the source contained."""
+    return bool(_FORBIDDEN_ARTIFACT_RE.search(rewritten))
 
 
 def _extract_labels_and_routes(text: str) -> set[str]:

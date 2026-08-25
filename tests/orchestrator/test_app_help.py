@@ -199,13 +199,16 @@ class _FakeComposerLLM:
 @pytest.mark.asyncio
 async def test_app_help_llm_rewrite_is_used_when_it_stays_grounded(monkeypatch):
     # A rewrite that only rephrases tone (no new quoted labels/routes beyond
-    # what the source already names) is trusted and used — this is the
-    # feature the user asked for: raw corpus dumps ("Feature này dùng để làm
-    # gì?" headings, `file.md` references) read like internal docs, so a
-    # bounded rewrite for natural chat tone is allowed as long as it can't
-    # introduce a new claim.
-    fallback = 'Tải phiếu tại trang "/patient/analysis", bấm nút "Tải ảnh phiếu".'
-    natural_rewrite = 'Bạn vào trang "/patient/analysis" rồi bấm nút "Tải ảnh phiếu" để tải phiếu lên nhé.'
+    # what the source already names, and no forbidden artifacts) is trusted
+    # and used — this is the feature the user asked for: raw corpus dumps
+    # ("Feature này dùng để làm gì?" headings, `file.md` references) read
+    # like internal docs, so a bounded rewrite for natural chat tone is
+    # allowed as long as it can't introduce a new claim.
+    fallback = 'Vào mục "Phân tích xét nghiệm" trên menu, rồi bấm nút "Tải ảnh phiếu".'
+    natural_rewrite = (
+        'Bạn vào mục "Phân tích xét nghiệm" trên menu, '
+        'rồi bấm nút "Tải ảnh phiếu" để tải phiếu lên nhé.'
+    )
     monkeypatch.setattr(
         response_composer,
         "get_llm",
@@ -220,6 +223,40 @@ async def test_app_help_llm_rewrite_is_used_when_it_stays_grounded(monkeypatch):
         fallback_message=fallback,
     )
     assert message == natural_rewrite
+
+
+@pytest.mark.asyncio
+async def test_app_help_llm_rewrite_keeping_raw_route_or_filename_is_rejected(monkeypatch):
+    # Found live during final-integration verification ("câu hỏi cho bác sĩ
+    # ở đâu?"): even when every label/route exists in the source, a rewrite
+    # that still SHOWS a raw route path or code filename must be discarded —
+    # the deterministic cleanup stripped them from the fallback text, so a
+    # rewrite carrying one reintroduced internal-docs artifacts into the
+    # chat. Users navigate by clicking menu items, not typing URLs.
+    fallback = (
+        "Phía bệnh nhân: panel \"Câu hỏi mang đi hỏi bác sĩ\" hiện dưới kết quả "
+        "phân tích và trên trang chi tiết phiếu."
+    )
+    artifact_rewrite = (
+        "Panel \"Câu hỏi mang đi hỏi bác sĩ\" hiện tại /patient/analysis "
+        "(component QuestionsForDoctorPanel.tsx)."
+    )
+    monkeypatch.setattr(
+        response_composer,
+        "get_llm",
+        lambda: _FakeComposerLLM(response_composer.ComposedMessage(message=artifact_rewrite)),
+    )
+
+    message = await response_composer.compose_message(
+        intent=IntentEnum.APP_HELP,
+        status=ResponseStatus.SUCCESS,
+        reason_code=None,
+        data=ExplanationDataPayload(explanation=fallback, sources=["doctor-questions.md"]),
+        fallback_message=fallback,
+    )
+    assert message == fallback
+    assert "/patient/" not in message
+    assert ".tsx" not in message
 
 
 @pytest.mark.asyncio
@@ -295,6 +332,39 @@ def test_clean_app_help_text_strips_raw_routes():
     assert "`/patient`" not in cleaned
     assert 'mục **"Phân tích xét nghiệm"**' in cleaned
     assert "Từ trang Tổng quan, khối" in cleaned
+
+
+def test_clean_app_help_text_strips_bare_inline_paths_and_component_refs():
+    # Regression: found via the final-integration safety probe ("câu hỏi cho
+    # bác sĩ ở đâu?"). doctor-questions.md's "Người dùng tìm ở đâu?" section
+    # writes locations as bare inline backticked paths ("tại
+    # `/patient/analysis` và trên `/patient/reports/{reportId}`") plus
+    # "(component `QuestionsForDoctorPanel.tsx`)" refs — forms the earlier
+    # "→ route" / parenthetical rules don't match. These previously relied on
+    # the bounded LLM rewrite dropping them; a live run kept them verbatim,
+    # so they are now stripped deterministically too. Visible human labels
+    # ("mục ...", "Hàng đợi đánh giá") must survive.
+    from src.orchestrator.dispatcher import _clean_app_help_text
+
+    raw = (
+        "Người dùng tìm ở đâu?\n\n"
+        "Phía bệnh nhân:\n"
+        '- Panel "Câu hỏi mang đi hỏi bác sĩ" hiện dưới kết quả phân tích tại '
+        '`/patient/analysis` và trên `/patient/reports/{reportId}` '
+        '(component `QuestionsForDoctorPanel.tsx`).\n'
+        "Phía bác sĩ:\n"
+        "- Câu hỏi của bệnh nhân hiện trong sidebar khi bác sĩ mở một phiếu tại "
+        '`/doctor/reports/{reportId}` (component `DoctorReportSidebar.tsx`, mục '
+        '"Câu hỏi của bệnh nhân (N)").'
+    )
+    cleaned = _clean_app_help_text(raw)
+    assert "/patient/" not in cleaned
+    assert "/doctor/" not in cleaned
+    assert ".tsx" not in cleaned
+    assert "component" not in cleaned
+    assert "(, mục" not in cleaned  # half-emptied parenthetical tidied up
+    assert 'Panel "Câu hỏi mang đi hỏi bác sĩ" hiện dưới kết quả phân tích.' in cleaned
+    assert 'mục "Câu hỏi của bệnh nhân (N)"' in cleaned
 
 
 @pytest.mark.asyncio

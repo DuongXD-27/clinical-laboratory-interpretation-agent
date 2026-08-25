@@ -318,15 +318,44 @@ def _clean_app_help_text(text: str) -> str:
     opener uses (a raw URL is meaningless to a user who navigates by
     clicking a menu item, not typing a path — see corpus template).
     Purely subtractive/deterministic — never changes a remaining word, so
-    it cannot introduce a new claim. Other, less regular inline route
-    mentions (there are many phrasings across the corpus) are left for the
-    bounded LLM rewrite to smooth over — see _APP_HELP_EXTRA_RULES."""
+    it cannot introduce a new claim.
+    Found during final-integration verification: doctor-questions.md also
+    writes locations as bare inline paths ("tại `/patient/analysis` và trên
+    `/patient/reports/{reportId}`") plus "(component `X.tsx`)" refs — forms
+    the rules above don't match, which previously relied on the bounded LLM
+    rewrite dropping them. A prompt is a request, not a guarantee (the
+    rewrite kept them verbatim in a live run), so these are now stripped
+    here too; the composer's artifact guard rejects any rewrite that still
+    shows them."""
     lines = text.split("\n", 1)
     body = lines[1].lstrip("\n") if len(lines) > 1 and lines[0].strip().endswith("?") else text
     body = re.sub(r"\s*\(xem file `[^`]+`\)", "", body)
     body = re.sub(r"\s*→\s*route\s*`[^`]+`", "", body)
     # "Từ trang Tổng quan (`/patient`), ..." -> "Từ trang Tổng quan, ..."
     body = re.sub(r"\s*\(`/[^`]+`\)", "", body)
+    # Bare inline app route paths: absorb one preceding connector/conjunction
+    # ("tại", "trên", "ở", "vào", optionally joined by "và"/"hoặc") so no
+    # dangling word is left behind:
+    # "... phân tích tại `/patient/analysis` và trên `/patient/reports/{id}`"
+    #   -> "... phân tích". Case-insensitive because list items capitalize
+    # the opener ("Vào `/doctor/trend-reviews`, lọc theo ...").
+    body = re.sub(
+        r"\s+(?:(?:và|hoặc)\s+)?(?:tại|trên|ở|vào)\s+`/(?:patient|doctor|api)[^`]*`",
+        "",
+        body,
+        flags=re.IGNORECASE,
+    )
+    # Any remaining standalone backticked route path (list-item openers like
+    # "Vào `/doctor/trend-reviews`, lọc theo ...").
+    body = re.sub(r"\s+`/(?:patient|doctor|api)[^`]*`", "", body, flags=re.IGNORECASE)
+    # Backticked code-file identifiers (`QuestionsForDoctorPanel.tsx`) — same
+    # dev/docs-leak rationale; visible human-readable labels stay untouched.
+    body = re.sub(r"\s*(?:\b(?:component|components)\s+)?`[^`]+\.(?:tsx|ts|jsx|mjs|py)`", "", body)
+    # Tidy parentheses left half-emptied by the identifier strip above:
+    # "(component , mục ...)" -> "(mục ...)"; "()" -> "" (absorbing the
+    # preceding space so "... phân tích ()." doesn't become "... phân tích .").
+    body = re.sub(r"\(\s*,\s*", "(", body)
+    body = re.sub(r"\s*\(\s*\)", "", body)
     return body.strip()
 
 
