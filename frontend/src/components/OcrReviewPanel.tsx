@@ -6,6 +6,7 @@ import UploadDropzone from "@/components/UploadDropzone";
 import { API_BASE, authFetch } from "@/lib/api";
 import { getOcrIndicators, parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
 import type { AnalysisResult } from "@/types/analysis";
+import { ScanLine } from "lucide-react";
 
 type UploadPolicy = {
   mode: "internal_only" | "demo_only" | "open_with_consent";
@@ -265,6 +266,21 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   const workflowSteps = ["Tải phiếu", "Kiểm tra dữ liệu", "Phân tích", "Xem kết quả"];
   
   const readiness = useMemo(() => getConfirmReadiness(meta, rows), [meta, rows]);
+  const globalReviewed = includedRows.length > 0 && includedRows.every(
+    (row) => row.reviewed && (!row.needs_review || row.low_confidence_acknowledged),
+  );
+
+  const setGlobalReviewed = (checked: boolean) => {
+    setRows((current) => current.map((row) => (
+      row.supported && row.included
+        ? {
+            ...row,
+            reviewed: checked,
+            low_confidence_acknowledged: row.needs_review ? checked : row.low_confidence_acknowledged,
+          }
+        : row
+    )));
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -318,9 +334,13 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
       )}
 
       {busyAction === "upload" && (
-        <div role="status" aria-live="polite" className="loading-message mt-4">
-          <span className="loading-dot" aria-hidden="true" />
-          Đang đọc phiếu xét nghiệm. Quá trình này có thể mất một chút thời gian...
+        <div role="status" aria-live="polite" className="ocr-processing-surface mt-4">
+          <div className="ocr-processing-icon" aria-hidden="true"><ScanLine /></div>
+          <div>
+            <strong>Đang đọc phiếu xét nghiệm...</strong>
+            <p>AI đang nhận diện tên chỉ số, giá trị và đơn vị. Quá trình này có thể mất một chút thời gian.</p>
+          </div>
+          <span className="ocr-processing-track" aria-hidden="true"><span /></span>
         </div>
       )}
 
@@ -351,7 +371,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3">
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
             {includedRows.map((row) => {
               const index = rows.indexOf(row);
               return (
@@ -372,25 +392,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
                   removeLabel="Không đưa vào phân tích"
                   attentionMessage={row.needs_review ? "Cần bạn kiểm tra lại" : undefined}
                 >
-                  {row.raw_text && <p className="mb-3 text-xs text-slate-500">Nội dung đọc được: “{row.raw_text}”</p>}
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={row.reviewed}
-                      onChange={(event) => updateRow(index, { reviewed: event.target.checked })}
-                    />
-                    <span>Tôi đã kiểm tra tên, giá trị và đơn vị với ảnh gốc.</span>
-                  </label>
-                  {row.needs_review && (
-                    <label className="check-row mt-3 text-amber-900">
-                      <input
-                        type="checkbox"
-                        checked={row.low_confidence_acknowledged}
-                        onChange={(event) => updateRow(index, { low_confidence_acknowledged: event.target.checked })}
-                      />
-                      <span>Tôi xác nhận giá trị trên đã đúng với phiếu xét nghiệm.</span>
-                    </label>
-                  )}
+                  {row.raw_text && <p className="ocr-evidence">Nội dung OCR: “{row.raw_text}”</p>}
                 </MetricInput>
               );
             })}
@@ -454,7 +456,21 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
             </div>
           </div>
 
-          <div className="mt-6">
+          <div className="ocr-global-confirmation mt-6">
+            <label>
+              <input
+                type="checkbox"
+                checked={globalReviewed}
+                onChange={(event) => setGlobalReviewed(event.target.checked)}
+              />
+              <span>
+                <strong>Tôi đã đối chiếu toàn bộ dữ liệu OCR với ảnh gốc</strong>
+                <small>Tôi xác nhận tên chỉ số, giá trị và đơn vị của tất cả mục được đưa vào phân tích là chính xác.</small>
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4">
             <button type="button" onClick={confirm} disabled={busy || !readiness.ready} className="primary-button w-full">
               {busyAction === "confirm" ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
             </button>
@@ -468,9 +484,13 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
       )}
 
       {busyAction === "confirm" && (
-        <div role="status" aria-live="polite" className="loading-message mt-4">
-          <span className="loading-dot" aria-hidden="true" />
-          Đang phân tích các chỉ số đã xác nhận...
+        <div role="status" aria-live="polite" className="ocr-processing-surface mt-4">
+          <div className="ocr-processing-icon" aria-hidden="true"><ScanLine /></div>
+          <div>
+            <strong>Đang phân tích các chỉ số đã xác nhận...</strong>
+            <p>Hệ thống đang đối chiếu dữ liệu đã duyệt và chuẩn bị phần giải thích.</p>
+          </div>
+          <span className="ocr-processing-track" aria-hidden="true"><span /></span>
         </div>
       )}
 
