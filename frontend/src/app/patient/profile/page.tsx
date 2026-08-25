@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatMoment } from "@/lib/patientUi.mjs";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
 
 type PatientProfile = {
   patient_id: number;
@@ -93,14 +94,12 @@ export default function PatientProfilePage() {
   };
 
   return (
-    <div className="profile-page-layout">
-      <div className="page-section-heading">
-        <div>
-          <span className="eyebrow">Tài khoản bệnh nhân</span>
-          <h1>Thông tin cá nhân</h1>
-          <p>Quản lý thông tin dùng để đối chiếu khi xem các phiếu đã lưu.</p>
-        </div>
-      </div>
+    <div className="patient-page-layout profile-page-layout">
+      <PatientPageHeader
+        eyebrow="Tài khoản bệnh nhân"
+        title="Thông tin cá nhân"
+        description="Quản lý thông tin dùng để đối chiếu khi xem các phiếu đã lưu."
+      />
       <section className="patient-card p-5 sm:p-7">
           {loading ? (
             <div className="loading-message" role="status">Đang tải hồ sơ...</div>

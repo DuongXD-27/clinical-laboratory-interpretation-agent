@@ -38,7 +38,7 @@ export default function MetricInput({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {onNameChange ? (
-            <label className="field-label" htmlFor={nameId}>
+            <label className="field-label min-w-0" htmlFor={nameId}>
               Chỉ số
               <input
                 id={nameId}
@@ -73,8 +73,8 @@ export default function MetricInput({
         </p>
       )}
 
-      <div className={`mt-4 grid gap-3 ${onUnitChange ? "sm:grid-cols-[1fr_10rem]" : ""}`}>
-        <label className="field-label" htmlFor={valueId}>
+      <div className={`mt-4 grid min-w-0 gap-3 ${onUnitChange ? "sm:grid-cols-[minmax(0,1fr)_minmax(6.5rem,8rem)]" : ""}`}>
+        <label className="field-label min-w-0" htmlFor={valueId}>
           Giá trị
           <div className="mt-2 flex min-w-0 items-center overflow-hidden rounded-xl border border-slate-300 bg-white transition focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100">
             <input
@@ -96,7 +96,7 @@ export default function MetricInput({
         </label>
 
         {onUnitChange && (
-          <label className="field-label" htmlFor={unitId}>
+          <label className="field-label min-w-0" htmlFor={unitId}>
             Đơn vị
             <input
               id={unitId}

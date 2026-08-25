@@ -10,6 +10,7 @@ import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
 
 function metricInputId(name: string) {
   return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -132,7 +133,7 @@ export default function PatientAnalysisPage() {
   const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="patient-page-layout">
       {result ? (
         <AnalysisResultView
           result={result}
@@ -147,14 +148,11 @@ export default function PatientAnalysisPage() {
         />
       ) : (
         <>
-          <section className="space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">
-              Nhập kết quả xét nghiệm
-            </h1>
-            <p className="text-muted-foreground">
-              Tải phiếu xét nghiệm hoặc nhập các chỉ số để hệ thống giải thích kết quả.
-            </p>
-          </section>
+          <PatientPageHeader
+            eyebrow="Phân tích xét nghiệm"
+            title="Nhập kết quả xét nghiệm"
+            description="Tải phiếu xét nghiệm hoặc nhập các chỉ số để hệ thống giải thích kết quả."
+          />
 
           {isGuest && (
             <div className="p-4 rounded-xl bg-[var(--surface-subtle)] border border-[var(--border)] text-sm" role="status">
