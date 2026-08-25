@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from src.models.orchestrator_schemas import IntentEnum, ResponseStatus
+from src.models.orchestrator_schemas import ExplanationDataPayload, IntentEnum, ResponseStatus
+from src.orchestrator import response_composer
 from src.orchestrator.dispatcher import DispatchContext, _dispatch_app_help
 from src.orchestrator.intent_router import _deterministic_route
 from src.services.app_help_retriever import AppHelpChunkMatch, AppHelpRetrievalResult, AppHelpRetrieverError
@@ -169,3 +170,40 @@ async def test_patient_asking_own_role_workflow_gets_no_caveat(monkeypatch):
     )
     result = await _dispatch_app_help(context)
     assert "Lưu ý:" not in result.data.explanation
+
+
+# ==============================================================================
+# Regression: the general response composer must NEVER paraphrase an
+# APP_HELP answer through an LLM. Found live in manual testing: the
+# dispatcher's raw corpus-chunk text was silently getting rewritten by
+# response_composer.compose_message (which runs an LLM "rewrite/summarize"
+# pass on any ExplanationDataPayload without `facts`) before reaching the
+# user — defeating the whole point of returning the corpus text verbatim
+# (yeu-cau-vu.txt mục D requires a "deterministic / grounded answer").
+# ==============================================================================
+
+@pytest.mark.asyncio
+async def test_app_help_response_composer_never_calls_llm(monkeypatch):
+    # NOTE: compose_message wraps the LLM call in a broad `except Exception`
+    # that falls back to fallback_message on ANY error — so a mock that
+    # raises to "prove" non-invocation would pass even if get_llm() WAS
+    # called and merely failed. Use a call counter instead, which cannot be
+    # accidentally satisfied by the except-and-fallback path.
+    call_count = {"n": 0}
+
+    def _tracking_get_llm():
+        call_count["n"] += 1
+        raise RuntimeError("should never be reached")
+
+    monkeypatch.setattr(response_composer, "get_llm", _tracking_get_llm)
+
+    fallback = "Vào mục Lịch sử kết quả trên menu."
+    message = await response_composer.compose_message(
+        intent=IntentEnum.APP_HELP,
+        status=ResponseStatus.SUCCESS,
+        reason_code=None,
+        data=ExplanationDataPayload(explanation=fallback, sources=["history.md"]),
+        fallback_message=fallback,
+    )
+    assert message == fallback
+    assert call_count["n"] == 0, "get_llm() was called for an APP_HELP response — it must render verbatim"

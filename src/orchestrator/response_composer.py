@@ -437,6 +437,14 @@ async def compose_message(
         # hostile or incorrect rewrites of value/unit/status/range/critical
         # facts can never reach the final response.
         return fallback_message
+    if intent == IntentEnum.APP_HELP:
+        # App Help answers must be grounded/deterministic (yeu-cau-vu.txt
+        # mục D): the fallback_message here IS the retrieved corpus chunk
+        # verbatim (see dispatcher._dispatch_app_help). Letting the general
+        # composer LLM "rewrite/summarize" it would reintroduce exactly the
+        # paraphrase-drift risk App Help was built to avoid — a rewrite
+        # could subtly add a detail the corpus never said. Render deterministically.
+        return fallback_message
     prompt = _composer_prompt(
         intent=intent,
         status=status,
