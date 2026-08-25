@@ -24,7 +24,7 @@ interface DoctorSidebarProps {
 
 export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSidebarProps) {
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-md border-r border-[var(--glass-border)] sticky top-0 h-dvh z-40">
+    <aside className="doctor-navigation-rail">
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
@@ -34,7 +34,7 @@ export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSi
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1" aria-label="Điều hướng lâm sàng">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-6" aria-label="Điều hướng lâm sàng">
         {doctorNavigation.map((item) => {
           const active = isNavActive(pathname, item);
           const Icon = item.icon;

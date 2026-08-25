@@ -35,7 +35,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-dvh bg-[var(--background)] text-foreground">
+    <div className="doctor-app-shell">
       <a href="#doctor-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-background p-4 rounded-md shadow-md">
         Bỏ qua điều hướng
       </a>
@@ -46,14 +46,14 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
         onLogout={logout}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="doctor-app-frame">
         <DoctorTopbar 
           pathname={pathname}
           username={session.username}
           onLogout={logout}
         />
         
-        <main id="doctor-main-content" className="flex-1 p-4 lg:p-6 w-full max-w-full" tabIndex={-1}>
+        <main id="doctor-main-content" className="doctor-main-content" tabIndex={-1}>
           {children}
         </main>
       </div>

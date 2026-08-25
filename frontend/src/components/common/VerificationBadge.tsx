@@ -1,4 +1,5 @@
 import { Circle, Clock, CheckCircle2 } from "lucide-react";
+import ClinicalStatusChip from "@/components/common/ClinicalStatusChip";
 import type { VerificationStatus } from "@/types/doctor";
 
 type Props = {
@@ -8,24 +9,21 @@ type Props = {
 export default function VerificationBadge({ status }: Props) {
   if (status === "unverified") {
     return (
-      <span className="badge-ver badge-ver--unverified">
-        <Circle className="w-3.5 h-3.5 text-slate-400" />
+      <ClinicalStatusChip tone="neutral" icon={Circle}>
         Chưa kiểm chứng
-      </span>
+      </ClinicalStatusChip>
     );
   }
   if (status === "pending_review") {
     return (
-      <span className="badge-ver badge-ver--pending_review">
-        <Clock className="w-3.5 h-3.5 text-indigo-500" />
+      <ClinicalStatusChip tone="pending" icon={Clock}>
         Đang chờ bác sĩ xem
-      </span>
+      </ClinicalStatusChip>
     );
   }
   return (
-    <span className="badge-ver badge-ver--verified">
-      <CheckCircle2 className="w-3.5 h-3.5 text-teal-500" />
+    <ClinicalStatusChip tone="verified" icon={CheckCircle2}>
       Đã xác minh
-    </span>
+    </ClinicalStatusChip>
   );
 }

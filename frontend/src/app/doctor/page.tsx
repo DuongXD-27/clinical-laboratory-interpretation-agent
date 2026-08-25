@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import QueueRow from "@/components/doctor/QueueRow";
 import QueueTabs from "@/components/doctor/QueueTabs";
 import DoctorQueueOverview from "@/components/doctor/DoctorQueueOverview";
+import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import {
   fetchDoctorQueue,
   getRole,
@@ -75,56 +79,55 @@ export default function DoctorPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <section className="flex flex-col">
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Hàng đợi đánh giá</h1>
-          <p className="text-muted-foreground mt-1">Xem và xử lý các báo cáo cần đánh giá.</p>
-        </header>
+    <div className="doctor-page doctor-queue-page">
+      <DoctorPageHeader
+        eyebrow="Không gian bác sĩ"
+        title="Hàng đợi đánh giá"
+        description="Ưu tiên các phiếu cần xác minh lâm sàng, kiểm tra OCR và phản hồi bệnh nhân."
+      />
+
+      <section className="doctor-page-section" aria-label="Tổng quan hàng đợi">
 
         <DoctorQueueOverview counts={counts} />
+      </section>
 
+      <section className="doctor-page-section doctor-queue-workspace" aria-label="Danh sách phiếu cần đánh giá">
         <QueueTabs active={tab} counts={counts} onChange={changeTab} />
-        
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-muted-foreground">Sắp xếp theo mức ưu tiên</p>
+
+        <div className="doctor-list-toolbar">
+          <p><SlidersHorizontal aria-hidden="true" /> Sắp xếp theo mức ưu tiên lâm sàng</p>
+          {!loading && total > 0 && <span>{total} phiếu</span>}
         </div>
 
         <section aria-live="polite">
           {loading && (
-            <div className="space-y-3" role="status">
+            <div className="doctor-skeleton-stack" role="status" aria-label="Đang tải hàng đợi">
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="h-[120px] bg-muted/50 rounded-2xl border border-border animate-pulse motion-reduce:animate-none" />
+                <Skeleton key={index} className="doctor-queue-skeleton" />
               ))}
             </div>
           )}
 
           {error && !loading && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-2xl flex flex-col items-center justify-center text-center" role="alert">
-              <p className="font-medium mb-4">Không tải được dữ liệu hàng đợi.</p>
-              <button 
-                type="button" 
-                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-xl text-sm font-medium hover:bg-destructive/90 transition-colors"
-                onClick={() => void load(tab, page)}
-              >
+            <div className="doctor-state-card doctor-state-card--error" role="alert">
+              <p>Không tải được dữ liệu hàng đợi.</p>
+              <Button type="button" variant="outline" onClick={() => void load(tab, page)}>
                 Thử lại
-              </button>
+              </Button>
             </div>
           )}
 
           {!error && !loading && items.length === 0 && (
-            <div className="bg-[var(--surface)] border border-[var(--border)] p-12 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
-              <div className="w-12 h-12 bg-[var(--surface-subtle)] border border-[var(--border)] rounded-full flex items-center justify-center mb-4 text-muted-foreground" aria-hidden="true">
-                ✓
-              </div>
-              <h2 className="text-lg font-semibold text-foreground mb-2">
+            <div className="doctor-state-card">
+              <span className="doctor-state-card__icon" aria-hidden="true"><CheckCircle2 /></span>
+              <h2>
                 {isPendingDefault
                   ? hasVerified
                     ? "Không có phiếu nào đang chờ kiểm chứng."
                     : "Chưa có phiếu nào cần kiểm chứng."
                   : "Không có phiếu nào khớp bộ lọc này."}
               </h2>
-              <p className="text-muted-foreground max-w-sm mb-6">
+              <p>
                 {isPendingDefault
                   ? hasVerified
                     ? "Tất cả phiếu đã đi qua hàng đợi hiện đã được xử lý."
@@ -132,19 +135,15 @@ export default function DoctorPage() {
                   : "Bộ lọc hiện tại đang rỗng."}
               </p>
               {!isPendingDefault && (
-                <button 
-                  type="button" 
-                  className="px-4 py-2 bg-[var(--brand)] text-primary-foreground rounded-xl text-sm font-medium hover:bg-[var(--brand-strong)] transition-colors"
-                  onClick={() => changeTab("pending")}
-                >
+                <Button type="button" onClick={() => changeTab("pending")}>
                   Xem tất cả phiếu đang chờ
-                </button>
+                </Button>
               )}
             </div>
           )}
 
           {!error && !loading && items.length > 0 && (
-            <ul className="flex flex-col gap-3">
+            <ul className="doctor-queue-cards">
               {items.map((item) => (
                 <li key={item.report_id}>
                   <QueueRow item={item} activeTab={tab} />
@@ -155,24 +154,14 @@ export default function DoctorPage() {
         </section>
 
         {total > 0 && (
-          <nav className="flex items-center justify-between mt-6 bg-[var(--surface)] border border-[var(--border)] p-2 rounded-xl shadow-sm" aria-label="Phân trang hàng đợi">
-            <button 
-              type="button" 
-              className="px-4 py-2 text-sm font-medium rounded-lg text-foreground hover:bg-[var(--surface-subtle)] transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
-              disabled={page <= 1} 
-              onClick={() => setPage((current) => current - 1)}
-            >
-              ‹ Trước
-            </button>
-            <span className="text-sm text-muted-foreground font-medium">{rangeStart}-{rangeEnd} của {total}</span>
-            <button 
-              type="button" 
-              className="px-4 py-2 text-sm font-medium rounded-lg text-foreground hover:bg-[var(--surface-subtle)] transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
-              disabled={rangeEnd >= total} 
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Sau ›
-            </button>
+          <nav className="doctor-pagination" aria-label="Phân trang hàng đợi">
+            <Button type="button" variant="ghost" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
+              <ChevronLeft data-icon="inline-start" aria-hidden="true" /> Trước
+            </Button>
+            <span>{rangeStart}-{rangeEnd} của {total}</span>
+            <Button type="button" variant="ghost" disabled={rangeEnd >= total} onClick={() => setPage((current) => current + 1)}>
+              Sau <ChevronRight data-icon="inline-end" aria-hidden="true" />
+            </Button>
           </nav>
         )}
       </section>
