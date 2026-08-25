@@ -97,7 +97,7 @@ export default function PatientProfilePage() {
       <div className="page-section-heading">
         <div>
           <span className="eyebrow">Tài khoản bệnh nhân</span>
-          <h2>Thông tin cá nhân</h2>
+          <h1>Thông tin cá nhân</h1>
           <p>Quản lý thông tin dùng để đối chiếu khi xem các phiếu đã lưu.</p>
         </div>
       </div>

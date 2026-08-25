@@ -65,7 +65,8 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
                     onClick={() => setOpen(false)}
                     className={cn(
                       "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
-                      active 
+                      "outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
+                      active
                         ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" 
                         : "text-[var(--foreground-secondary)] hover:bg-[var(--surface-subtle)] hover:text-foreground"
                     )}
@@ -107,10 +108,10 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
           </SheetContent>
         </Sheet>
         
-        {/* Page Title */}
+        {/* Contextual location label — the page's own <h1> remains the document heading */}
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Khu vực bệnh nhân</span>
-          <h1 className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</h1>
+          <p className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</p>
         </div>
       </div>
       

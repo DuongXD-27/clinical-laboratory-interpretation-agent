@@ -39,6 +39,13 @@
   --status-unknown-bg: #F2F4F7;
   --status-unknown-border: #D0D5DD;
 
+  /* 4b. SEMANTIC ALIASES (dashboard summary chips / banners)
+     "success" = trong khoảng tham chiếu, "warning" = cần lưu ý nhưng chưa nguy kịch. */
+  --status-success-fg: var(--status-normal-fg);
+  --status-success-bg: var(--status-normal-bg);
+  --status-warning-fg: var(--status-abnormal-fg);
+  --status-warning-bg: var(--status-abnormal-bg);
+
   /* 6. SPACING FOUNDATION */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -1464,10 +1471,10 @@ textarea::placeholder {
   align-items: center;
   width: fit-content;
   border-radius: 999px;
-  padding: 5px 9px;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.05em;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -2785,6 +2792,7 @@ button:disabled {
   gap: 24px;
 }
 
+.page-section-heading h1,
 .page-section-heading h2,
 .dashboard-welcome h2 {
   margin-top: 7px;
@@ -3355,6 +3363,7 @@ button:disabled {
     gap: 15px;
   }
 
+  .page-section-heading h1,
   .page-section-heading h2,
   .dashboard-welcome h2 {
     font-size: 27px;
@@ -4561,6 +4570,7 @@ body.assistant-mobile-open {
   gap: 24px;
 }
 
+.page-section-heading h1,
 .page-section-heading h2,
 .dashboard-welcome h2 {
   margin-top: 7px;
