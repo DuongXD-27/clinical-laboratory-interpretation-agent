@@ -321,25 +321,31 @@ BOUNDARY_TABLE = {
     "Total cholesterol": {
         "unit": "mmol/L",
         "boundaries": [5.18, 6.19],
-        5.17: (None, None),
-        5.18: (None, None),
-        5.19: (None, None),
-        6.18: (None, None),
-        6.19: (None, None),
-        6.2: (None, None),
+        # Activated with the value-aware runtime catalog (RRV2-0052..0054):
+        # desirable < 5.18, borderline_high 5.18–6.19, high > 6.19.
+        # Convention matches the LDL-C/HDL-C rows below: above-desirable
+        # values are checker-"high" with the finer audited band alongside.
+        5.17: ("normal", "desirable"),
+        5.18: ("normal", "desirable"),
+        5.19: ("high", "borderline_high"),
+        6.18: ("high", "borderline_high"),
+        6.19: ("high", "high"),
+        6.2: ("high", "high"),
     },
     "Triglyceride": {
         "unit": "mmol/L",
         "boundaries": [1.7, 2.26, 5.65],
-        1.69: (None, None),
-        1.7: (None, None),
-        1.71: (None, None),
-        2.25: (None, None),
-        2.26: (None, None),
-        2.27: (None, None),
-        5.64: (None, None),
-        5.65: (None, None),
-        5.66: (None, None),
+        # RRV2-0055..0058: normal < 1.7, borderline_high 1.7–2.26,
+        # high 2.26–5.65, very_high > 5.65.
+        1.69: ("normal", "normal"),
+        1.7: ("normal", "normal"),
+        1.71: ("high", "borderline_high"),
+        2.25: ("high", "borderline_high"),
+        2.26: ("high", "high"),
+        2.27: ("high", "high"),
+        5.64: ("high", "high"),
+        5.65: ("high", "very_high"),
+        5.66: ("high", "very_high"),
     },
     "HDL-C": {
         "unit": "mmol/L",

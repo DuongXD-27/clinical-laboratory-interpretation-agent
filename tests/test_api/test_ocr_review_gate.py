@@ -259,9 +259,9 @@ async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
                     confidence=0.95,
                 ),
                 OCRIndicatorDraft(
-                    name="AST",
-                    value=48,
-                    unit="U/L",
+                    name="Glucose",
+                    value=5.2,
+                    unit="mmol/L",
                     confidence=0.95,
                 ),
             ]
@@ -283,7 +283,7 @@ async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
     assert response.status_code == 200, response.text
     indicators = response.json()["indicators"]
     assert indicators[0]["supported"] is True
-    assert indicators[1]["name"] == "AST"
+    assert indicators[1]["name"] == "Glucose"
     assert indicators[1]["supported"] is False
     assert "chưa được hỗ trợ" in indicators[1]["unsupported_reason"]
 
@@ -365,7 +365,11 @@ async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, mon
     drafts, token = prepare_review(
         [
             OCRIndicatorDraft(name="WBC", value=7.2, unit="10^9/L", confidence=0.95),
-            OCRIndicatorDraft(name="AST", value=48, unit="U/L", confidence=0.95),
+            # Glucose (generic, no specimen) is fail-closed under the 35/35
+            # runtime catalog — the out-of-scope specimen. AST used to play
+            # this role but became supported when the catalog was activated
+            # (commit 7ba8346), so it no longer exercises the gate.
+            OCRIndicatorDraft(name="Glucose", value=5.2, unit="mmol/L", confidence=0.95),
         ],
         username="benhnhan",
         review_id=lifecycle.review_id,
@@ -414,9 +418,9 @@ async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, mon
                 },
                 {
                     "draft_id": drafts[1].draft_id,
-                    "name": "AST",
-                    "value": 48,
-                    "unit": "U/L",
+                    "name": "Glucose",
+                    "value": 5.2,
+                    "unit": "mmol/L",
                     "included": True,
                     "reviewed": True,
                     "low_confidence_acknowledged": False,
@@ -429,7 +433,7 @@ async def test_ocr_confirm_filters_unsupported_rows_and_reports_them(client, mon
     assert response.status_code == 200, response.text
     initial_state = mock_ainvoke.await_args.args[0]
     assert [item["name"] for item in initial_state["raw_indicators"]] == ["WBC"]
-    assert response.json()["out_of_scope_indicators"] == ["AST"]
+    assert response.json()["out_of_scope_indicators"] == ["Glucose"]
 
 
 def test_ocr_review_gate_alias_support_and_safety():
