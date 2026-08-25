@@ -136,3 +136,54 @@ def test_promotion_no_op_when_target_section_missing_for_the_feature():
     result = retriever.retrieve("Làm sao xem cảnh báo khẩn cấp?")
 
     assert result.matches[0].chunk_id == "critical-alerts::Feature này dùng để làm gì?"
+
+
+def test_section_hint_detects_what_intent():
+    from src.services.app_help_retriever import _WHAT_HEADING
+
+    assert _section_hint("Cảnh báo khẩn cấp nghĩa là gì?") == _WHAT_HEADING
+    assert _section_hint("Chức năng OCR dùng để làm gì?") == _WHAT_HEADING
+
+
+def test_deterministic_hint_bypasses_a_low_dense_score():
+    # Regression: found via manual testing. "Tải phiếu ở đâu?" correctly
+    # resolves feature via FEATURE_HINTS ("tai phieu o dau" ->
+    # upload-analysis) but the dense score for every chunk in that feature
+    # can legitimately fall below min_score for a short/vague phrasing —
+    # a real question was fail-closed for no good reason. When BOTH the
+    # feature and the section are resolved deterministically (curated
+    # phrase + literal heading), no embedding score should be needed at
+    # all — this test's store never even implements dense-search scoring
+    # correctly (returns a huge distance = ~0 score) to prove the
+    # deterministic path is what's actually taken, not a lucky pass.
+    class _AlwaysLowScoreStore(_FakeVectorStore):
+        def search(self, query, *, k=5, filter=None, query_embedding=None):
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]], "ids": [[]]}
+
+    store = _AlwaysLowScoreStore([
+        _chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.99),
+    ])
+    retriever = AppHelpRetriever(vector_store=store, min_score=0.70, top_k=3)
+
+    result = retriever.retrieve("Tải phiếu ở đâu?")
+
+    assert result.has_match
+    assert result.matches[0].chunk_id == "upload-analysis::Người dùng tìm ở đâu?"
+    assert result.matches[0].score == 1.0  # deterministic-match sentinel
+
+
+def test_no_deterministic_shortcut_without_both_hints():
+    # Only a feature hint (no section cue) must still go through normal
+    # dense search + threshold — the shortcut requires BOTH signals.
+    class _AlwaysEmptyStore(_FakeVectorStore):
+        def search(self, query, *, k=5, filter=None, query_embedding=None):
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]], "ids": [[]]}
+
+    store = _AlwaysEmptyStore([_chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.99)])
+    retriever = AppHelpRetriever(vector_store=store, min_score=0.70, top_k=3)
+
+    # "chuc nang ocr" is a feature hint (-> ocr-review) but has no
+    # step/where/what cue, so no section_target — must not shortcut.
+    result = retriever.retrieve("chức năng OCR")
+
+    assert not result.has_match

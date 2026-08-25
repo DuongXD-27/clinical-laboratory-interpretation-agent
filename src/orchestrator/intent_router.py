@@ -124,6 +124,13 @@ def _deterministic_route(
         "tai sao phai xac nhan ocr", "vi sao phai xac nhan ocr",
         "sua ho so o dau", "sua thong tin ca nhan o dau", "chinh sua ho so o dau",
         "xem canh bao khan cap o dau",
+        # Explicitly required by phan-cong-vu.txt's own example question
+        # list — "cảnh báo khẩn cấp nghĩa là gì?" asks what the app's alert
+        # banner FEATURE means, not a medical question, but "nghia la gi"
+        # alone is a generic EXPLAIN_CURRENT_RESULT marker (matches medical
+        # "WBC nghĩa là gì?" too) so it needs the full phrase listed here
+        # rather than relying on the generic nav-cue+feature-cue combo.
+        "canh bao khan cap nghia la gi", "canh bao nguy kich nghia la gi",
     )
     app_help_nav_cues = (
         "o dau", "lam sao", "huong dan", "cach ", "tai sao", "vi sao",
@@ -145,6 +152,8 @@ def _deterministic_route(
         "ho so", "thong tin ca nhan", "profile", "tai khoan",
         "canh bao khan cap", "canh bao nguy kich",
         "chuc nang", "tinh nang cua ung dung",
+        "cau hoi bac si", "cau hoi cho bac si", "hoi bac si", "gui cau hoi",
+        "bac si review", "yeu cau bac si",
     )
     is_app_help = any(term in normalized for term in app_help_explicit_patterns) or (
         any(term in normalized for term in app_help_nav_cues)

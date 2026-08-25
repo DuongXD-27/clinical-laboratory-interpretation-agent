@@ -332,3 +332,48 @@ def test_alternate_how_phrasings_route_to_app_help(message):
         f"{message!r} routed to {route.intent}, not APP_HELP — "
         "likely misrouted into ANALYZE_REPORT's ingestion flow instead"
     )
+
+
+# ==============================================================================
+# Regression: found via a systematic routing audit (checking many phrasings
+# per feature, not just the hand-picked ones already covered above).
+# ==============================================================================
+
+@pytest.mark.parametrize(
+    "message,wrong_intent",
+    [
+        # "câu hỏi"/"hỏi bác sĩ" alone matches GET_DOCTOR_QUESTIONS (the
+        # live feature) — a navigational "ở đâu"/"làm sao" question about
+        # it must still resolve to APP_HELP first, same principle as the
+        # VIEW_HISTORY collision APP_HELP was originally built to avoid.
+        ("Câu hỏi cho bác sĩ ở đâu?", IntentEnum.GET_DOCTOR_QUESTIONS),
+        ("Làm sao gửi câu hỏi cho bác sĩ?", IntentEnum.GET_DOCTOR_QUESTIONS),
+        # Explicitly required by phan-cong-vu.txt's own example question
+        # list. "nghĩa là gì" alone is a generic EXPLAIN_CURRENT_RESULT
+        # marker (matches "WBC nghĩa là gì?" too), so this needs its own
+        # explicit pattern rather than the generic nav+feature cue combo.
+        ("Cảnh báo khẩn cấp nghĩa là gì?", IntentEnum.EXPLAIN_CURRENT_RESULT),
+    ],
+)
+def test_routing_audit_catches_feature_collisions(message, wrong_intent):
+    route = _deterministic_route(message)
+    assert route is not None
+    assert route.intent == IntentEnum.APP_HELP
+    assert route.intent != wrong_intent
+
+
+def test_doctor_asking_own_medical_question_still_reaches_get_doctor_questions():
+    # Negative control for the fix above: without a nav cue, "câu hỏi"
+    # phrasing must still reach the real GET_DOCTOR_QUESTIONS feature.
+    route = _deterministic_route("tôi muốn hỏi bác sĩ về HbA1c")
+    assert route is not None
+    assert route.intent == IntentEnum.GET_DOCTOR_QUESTIONS
+
+
+def test_wbc_nghia_la_gi_unaffected_by_critical_alerts_explicit_pattern():
+    # Negative control: the new "canh bao khan cap nghia la gi" explicit
+    # pattern must not accidentally widen to catch generic medical
+    # "X nghĩa là gì?" questions.
+    route = _deterministic_route("WBC nghĩa là gì?")
+    assert route is not None
+    assert route.intent == IntentEnum.EXPLAIN_CURRENT_RESULT

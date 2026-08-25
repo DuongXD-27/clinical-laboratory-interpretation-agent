@@ -129,6 +129,15 @@ _STEP_INTENT_CUES = (
     "nhu nao", "lam nhu nao",
 )
 _WHERE_INTENT_CUES = ("o dau",)
+_WHAT_HEADING = "Feature này dùng để làm gì?"
+# "X nghĩa là gì?" style questions (explicitly required — see
+# phan-cong-vu.txt's "Cảnh báo khẩn cấp nghĩa là gì?") were matching
+# "Không làm được gì?" (also full of "gì") instead of the actual
+# what-is-this-feature section. Checked LAST: STEP/WHERE cues are more
+# specific and should win if a question happens to combine both (e.g.
+# "làm sao biết cảnh báo khẩn cấp nghĩa là gì" — unlikely but STEP is a
+# stronger signal of intent than the generic "là gì").
+_WHAT_INTENT_CUES = ("nghia la gi", "la gi", "dung de lam gi", "de lam gi")
 
 
 def _section_hint(query: str) -> str | None:
@@ -137,6 +146,8 @@ def _section_hint(query: str) -> str | None:
         return _STEPS_HEADING
     if any(term in normalized for term in _WHERE_INTENT_CUES):
         return _WHERE_HEADING
+    if any(term in normalized for term in _WHAT_INTENT_CUES):
+        return _WHAT_HEADING
     return None
 
 
@@ -182,8 +193,24 @@ class AppHelpRetriever:
         self._top_k = top_k
 
     def retrieve(self, query: str, *, requester_role: str | None = None) -> AppHelpRetrievalResult:
-        embed_query = strip_explicit_analyte(query)
         hint_feature = _feature_hint(query)
+        section_target = _section_hint(query)
+
+        # Both hints resolved deterministically (FEATURE_HINTS is a curated
+        # list of specific, hand-vetted explicit phrases — not a fuzzy
+        # guess), so trust that over embedding similarity entirely. Found
+        # live: "Tải phiếu ở đâu?" correctly resolved to feature
+        # upload-analysis via the hint, but every chunk *within* that
+        # feature scored just under min_score for this short/vague
+        # phrasing — a real, valid question was fail-closed for no good
+        # reason. A curated exact-phrase match plus an exact heading lookup
+        # needs no similarity score to be trustworthy.
+        if hint_feature and section_target:
+            deterministic = self._lookup_section(hint_feature, section_target)
+            if deterministic is not None:
+                return AppHelpRetrievalResult(query=query, matches=[deterministic])
+
+        embed_query = strip_explicit_analyte(query)
         search_filter = {"feature": hint_feature} if hint_feature else None
         raw = self._vector_store.search(embed_query, k=self._top_k, filter=search_filter)
         documents = (raw.get("documents") or [[]])[0]
@@ -219,35 +246,24 @@ class AppHelpRetriever:
         matches = self._promote_section_hint(query, matches)
         return AppHelpRetrievalResult(query=query, matches=matches)
 
-    def _promote_section_hint(
-        self, query: str, matches: list[AppHelpChunkMatch]
-    ) -> list[AppHelpChunkMatch]:
-        """If the question has a clear how-to/where cue, promote the
-        matching section for the already-resolved top feature to the front
-        — via a deterministic metadata lookup (exact heading string), not
-        another embedding call. No-op if there's no top match to anchor
-        the feature to, or the target section is already first."""
-        if not matches:
-            return matches
-        target_heading = _section_hint(query)
-        if target_heading is None or matches[0].heading == target_heading:
-            return matches
-
-        resolved_feature = matches[0].feature
+    def _lookup_section(self, feature: str, heading: str, *, score: float = 1.0) -> AppHelpChunkMatch | None:
+        """Exact (feature, heading) metadata lookup — no embedding call, no
+        similarity score involved. `score` is a sentinel: 1.0 means "this
+        is a curated deterministic match, not a similarity guess"."""
         try:
             result = self._vector_store.get_by_metadata(
-                filter={"$and": [{"feature": resolved_feature}, {"heading": target_heading}]},
+                filter={"$and": [{"feature": feature}, {"heading": heading}]},
                 limit=1,
             )
         except Exception:
-            return matches
+            return None
         documents = result.get("documents") or []
         if not documents:
-            return matches
+            return None
         metadatas = result.get("metadatas") or []
         ids = result.get("ids") or []
         metadata = metadatas[0] if metadatas else {}
-        promoted = AppHelpChunkMatch(
+        return AppHelpChunkMatch(
             chunk_id=ids[0] if ids else "",
             text=documents[0],
             feature=str(metadata.get("feature", "")),
@@ -255,8 +271,25 @@ class AppHelpRetriever:
             route=str(metadata.get("route", "")),
             heading=str(metadata.get("heading", "")),
             source_file=str(metadata.get("source_file", "")),
-            score=matches[0].score,  # same feature confidence, section-corrected
+            score=score,
         )
+
+    def _promote_section_hint(
+        self, query: str, matches: list[AppHelpChunkMatch]
+    ) -> list[AppHelpChunkMatch]:
+        """If the question has a clear how-to/where/what cue, promote the
+        matching section for the already-resolved top feature to the
+        front. No-op if there's no top match to anchor the feature to, or
+        the target section is already first."""
+        if not matches:
+            return matches
+        target_heading = _section_hint(query)
+        if target_heading is None or matches[0].heading == target_heading:
+            return matches
+
+        promoted = self._lookup_section(matches[0].feature, target_heading, score=matches[0].score)
+        if promoted is None:
+            return matches
         rest = [m for m in matches if m.chunk_id != promoted.chunk_id]
         return [promoted, *rest]
 
