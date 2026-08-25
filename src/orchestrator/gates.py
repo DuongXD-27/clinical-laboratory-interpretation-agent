@@ -141,7 +141,7 @@ _TREATMENT_PRONOUN_RE = re.compile(r"\b(?:toi|em|minh)\b|\bchung toi\b")
 _TREATMENT_MODAL_TOKENS = frozenset({"nen", "phai"})
 _TREATMENT_ADVICE_FRAMES = (
     "nen lam gi", "phai lam gi", "nen lam sao",
-    "lam sao de", "co cach nao", "cach nao de",
+    "lam gi de", "lam sao de", "co cach nao", "cach nao de",
 )
 _TREATMENT_CHANGE_VERBS = ("ha", "giam", "cai thien", "dieu tri")
 _TREATMENT_DRUG_BIGRAMS = ("dung thuoc", "uong thuoc", "mua thuoc")
@@ -483,6 +483,7 @@ def out_of_scope_gate(message: str) -> ReasonCode | None:
 _PROVENANCE_FRAMES = (
     "dua tren dau",
     "dua tren nguon",
+    "dua vao dau",
     "lay tu nguon",
     "lay tu dau",
     "tu nguon nao",
@@ -491,11 +492,14 @@ _PROVENANCE_FRAMES = (
     "nguon gi",
     "nguon dau",
     "nguon tham khao",
+    "nguon o dau",
     "co nguon khong",
+    "nguon cua nguong",
     "nguon cua phan giai",
     "nguon cua thong tin",
     "nguon nay la cua",
     "to chuc nao",
+    "can cu nao",
     "theo who",
     "co phai who",
     "who khong",
