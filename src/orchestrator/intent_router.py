@@ -48,13 +48,20 @@ def _is_trend_request(message: str, normalized: str) -> bool:
         "xu huong",
         "trend",
         "so voi",
+        "theo thoi gian",
+        "thay doi the nao",
+        "thay doi nhu the nao",
+        "thay doi ra sao",
+        "thay doi gi",
         "thay doi",
         "tang hay giam",
-        "co tang khong",
-        "co giam khong",
         "tang bao nhieu",
         "giam bao nhieu",
-        "theo thoi gian",
+        "co tang khong",
+        "co giam khong",
+        "cu tang",
+        "tang lien tuc",
+        "giam lien tuc",
         "qua cac lan xet nghiem",
         "qua cac lan",
         "cu tang",
@@ -93,6 +100,10 @@ def _is_explicit_current_result_request(message: str, normalized: str) -> bool:
             "gan nhat",
             "moi nhat",
             "la bao nhieu",
+            "the nao",
+            "ra sao",
+            "sao roi",
+            "la sao",
         )
     )
 
@@ -157,7 +168,11 @@ def _deterministic_route(
         "co gi dang chu y trong phieu nay", "co gi can chu y trong phieu nay",
         "nhin chung ca phieu", "xem tong the phieu", "xem tong quan phieu",
         "xem phieu nay", "ket qua nay the nao",
+        "ket qua gan nhat", "ket qua moi nhat",
+        "ket qua cua em", "ket qua cua toi", "ket qua cua minh",
         "co gi dang chu y", "co gi can chu y", "nhin chung ca phieu cua em thi sao",
+        "co gi bat thuong", "xem tong the ket qua", "xem tong quan ket qua",
+        "xem tong quan", "tong the phieu nay"
         "xem tong the ket qua", "xem tong quan ket qua", "tong the phieu nay",
         "xem tong quan", "tong quan", "xem tong the", "tong the"
     )
@@ -211,7 +226,7 @@ def _deterministic_route(
             "coi giup em", "coi giup toi", "coi dum em", "coi dum minh",
             "em hoi lo", "toi hoi lo", "lo lang", "co sao khong",
             "co van de gi khong", "co can chu y", "dang chu y",
-            "co bat thuong khong", "chi so nao bat thuong", "bat thuong khong",
+            "co bat thuong khong", "co gi bat thuong", "chi so nao bat thuong", "bat thuong khong",
             "chi so nay nghia la gi", "ket qua nay nghia la gi",
             "ket qua gan nhat", "ket qua gan day", "ket qua cua em the nao",
             "ket qua the nao", "ket qua the nao roi", "xem ket qua giup em",
@@ -222,6 +237,14 @@ def _deterministic_route(
         )
         if any(term in normalized for term in vague_result_patterns):
             return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+
+    # 7. SAFE_GENERAL (Greetings and Capability Requests)
+    if any(term in normalized for term in (
+        "chao ban", "chao em", "xin chao", "hello", "cam on",
+        "ban lam duoc gi", "ban co the giup", "giup toi lam gi",
+        "tro ly nay giup gi", "bat dau tu dau"
+    )) or "hi" in normalized.split():
+        return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
 
     return None
 

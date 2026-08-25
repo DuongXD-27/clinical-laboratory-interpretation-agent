@@ -123,18 +123,18 @@ def test_sync_04_no_duplicate_import_for_present_analytes(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-05: Rule count — 15 supplemental, 73 catalog total
+# SYNC-05: Rule count — primary catalog total
 # ---------------------------------------------------------------------------
 def test_sync_05_rule_count(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
-    # Primary pipeline: all 65 structurally valid rows are accepted.
+    # Primary pipeline: all 67 structurally valid rows are accepted.
     # explanations.json no longer has reference_ranges → 0 supplemental rules added
-    assert len(result.accepted) == 65
+    assert len(result.accepted) == 67
     assert result.report["explanation_supplement"]["rules_added"] == 0
-    assert len(catalog) == 65
-    assert result.report["catalog"]["total_rules"] == 65
+    assert len(catalog) == 67
+    assert result.report["catalog"]["total_rules"] == 67
     assert all("range" + "_flag" not in rule for rule in catalog)
 
 
@@ -232,7 +232,7 @@ def test_sync_11_units(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-12: Existing 58 primary rules remain semantically unchanged
+# SYNC-12: Existing primary rules remain semantically unchanged
 # ---------------------------------------------------------------------------
 def test_sync_12_existing_rules_unchanged(tmp_path: Path):
     # Build without supplemental to get primary baseline
@@ -251,7 +251,7 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
         if rule.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
     }
 
-    assert len(baseline.accepted) == 65
+    assert len(baseline.accepted) == 67
     for rule_id, primary_rule in non_replacement_baseline.items():
         assert rule_id in catalog_by_id, f"Primary rule {rule_id} missing from combined catalog"
         combined_rule = catalog_by_id[rule_id]
@@ -262,14 +262,14 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-13: Primary counts unchanged — 65
+# SYNC-13: Primary counts unchanged — 67
 # ---------------------------------------------------------------------------
 def test_sync_13_primary_counts_unchanged(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     report = result.report
 
-    assert report["input_rows"] == 65
-    assert report["runtime_accepted_rows"] == 65
+    assert report["input_rows"] == 67
+    assert report["runtime_accepted_rows"] == 67
     assert report["quarantined_rows"] == 0
     assert report["multiple_reason_rows"] == 0
     assert report["input_rows"] == report["runtime_accepted_rows"] + report["quarantined_rows"]
@@ -280,14 +280,14 @@ def test_sync_13_primary_counts_unchanged(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-14: Catalog total becomes 65
+# SYNC-14: Catalog total becomes 67
 # ---------------------------------------------------------------------------
 def test_sync_14_catalog_total(tmp_path: Path):
     result = build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
 
-    assert len(catalog) == 65
-    assert result.report["catalog"]["total_rules"] == 65
+    assert len(catalog) == 67
+    assert result.report["catalog"]["total_rules"] == 67
 
 
 # ---------------------------------------------------------------------------
@@ -363,15 +363,15 @@ def test_sync_18_deterministic_rebuild(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# SYNC-19: JSON/CSV agreement — all 65 rules present in both
+# SYNC-19: JSON/CSV agreement — all 67 rules present in both
 # ---------------------------------------------------------------------------
 def test_sync_19_json_csv_agreement(tmp_path: Path):
     build_reference_config(SOURCE, tmp_path, supplemental_path=EXPLANATIONS_PATH)
     catalog_json = json.loads((tmp_path / RUNTIME_JSON).read_text(encoding="utf-8"))
     catalog_csv = _load_csv_from(tmp_path / RUNTIME_CSV)
 
-    assert len(catalog_json) == 65
-    assert len(catalog_csv) == 65
+    assert len(catalog_json) == 67
+    assert len(catalog_csv) == 67
 
     json_ids = {r["rule_id"] for r in catalog_json}
     csv_ids = {r["rule_id"] for r in catalog_csv}

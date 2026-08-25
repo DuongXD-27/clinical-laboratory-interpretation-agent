@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 from copy import deepcopy
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -510,6 +511,42 @@ def test_a05_unknown_age_text():
     assert result.reason == "age_scope_not_supported"
 
 
+@pytest.mark.parametrize("age", [18, 18.99])
+def test_a06_open_ended_min_age_scope_rejects_under_minimum(age):
+    repo = ReferenceRepository(
+        config=make_config(approved=["OpenEndedAge"], pending=[]),
+        rules=[make_rule("OpenEndedAge", age_scope=">=19")],
+    )
+
+    result = repo.select_rule(analyte="OpenEndedAge", unit="10^9/L", patient_gender="male", patient_age=age)
+
+    assert result.reason == "age_scope_not_supported"
+
+
+@pytest.mark.parametrize("age", [19, 90])
+def test_a07_open_ended_min_age_scope_accepts_minimum_and_older(age):
+    repo = ReferenceRepository(
+        config=make_config(approved=["OpenEndedAge"], pending=[]),
+        rules=[make_rule("OpenEndedAge", age_scope=">=19")],
+    )
+
+    result = repo.select_rule(analyte="OpenEndedAge", unit="10^9/L", patient_gender="male", patient_age=age)
+
+    assert result.matched is True
+
+
+@pytest.mark.parametrize("age", [19, 90])
+def test_a08_plus_age_scope_accepts_minimum_and_older(age):
+    repo = ReferenceRepository(
+        config=make_config(approved=["PlusAge"], pending=[]),
+        rules=[make_rule("PlusAge", age_scope="19+")],
+    )
+
+    result = repo.select_rule(analyte="PlusAge", unit="10^9/L", patient_gender="male", patient_age=age)
+
+    assert result.matched is True
+
+
 def test_t01_ri_preferred_over_cdl(repository):
     result = repository.select_rule(
         analyte="Fasting plasma glucose",
@@ -589,22 +626,88 @@ def test_u03_unit_conflict_isolation():
 
 
 def test_u04_direct_canonical_unit_lookup_all_approved():
-    """Verify that default repository activates all 9 approved analytes using direct canonical names."""
+    """Verify that default repository activates all Phase B approved analytes using direct canonical names."""
     repo = ReferenceRepository.from_default_files()
     expected_approved = {
         "WBC",
         "RBC",
         "HGB",
+        "HCT",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "RDW-CV",
+        "PLT",
+        "Neutrophils %",
+        "Neutrophils abs",
+        "Lymphocytes %",
+        "Lymphocytes abs",
+        "Monocytes %",
+        "Monocytes abs",
+        "Eosinophils %",
+        "Eosinophils abs",
+        "Sodium",
+        "Chloride",
         "Fasting plasma glucose",
         "HbA1c",
+        "Creatinine",
+        "Urea",
+        "AST",
+        "ALT",
+        "GGT",
+        "Total bilirubin",
+        "Total protein",
+        "Albumin",
+        "Total cholesterol",
+        "Triglyceride",
         "LDL-C",
         "HDL-C",
-        "Creatinine",
         "Potassium",
+        "Uric acid",
     }
     assert repo.approved_analytes == expected_approved
     assert repo.unit_conflict_analytes == frozenset()
     assert repo.pending_analytes == frozenset()
+
+
+def test_u04a_rdw_cv_accepts_percent_cv_unit_alias():
+    repo = ReferenceRepository.from_default_files()
+    result = repo.select_rule(analyte="RDW", unit="%CV", value=14.0, patient_gender="female", patient_age=35)
+
+    assert result.matched is True
+    assert result.canonical_analyte == "RDW-CV"
+    assert result.comparison_value is None
+
+
+@pytest.mark.parametrize(
+    ("analyte", "raw_unit", "raw_value", "expected_canonical", "expected_value"),
+    [
+        ("Total Cholesterol", "mg/dL", 200, "Total cholesterol", "5.1800"),
+        ("Triglycerides", "mg/dL", 150, "Triglyceride", "1.6950"),
+        ("HDL-C", "mg/dL", 40, "HDL-C", "1.0360"),
+        ("LDL-Cholesterol", "mg/dL", 100, "LDL-C", "2.5900"),
+    ],
+)
+def test_u04b_lipid_mg_dl_inputs_use_existing_mmol_conversion(
+    analyte,
+    raw_unit,
+    raw_value,
+    expected_canonical,
+    expected_value,
+):
+    repo = ReferenceRepository.from_default_files()
+    result = repo.select_rule(
+        analyte=analyte,
+        unit=raw_unit,
+        value=raw_value,
+        patient_gender="male",
+        patient_age=35,
+    )
+
+    assert result.matched is True
+    assert result.canonical_analyte == expected_canonical
+    assert result.comparison_unit == "mmol/L"
+    assert result.comparison_value == Decimal(expected_value)
 
 
 def test_u05_unit_conflict_demotes_to_pending():

@@ -15,6 +15,7 @@ export type MetricDefinition = {
   label: string;
   unit: string;
   category?: string;
+  runtimeStatus?: "APPROVED" | "HOLD" | "UNSUPPORTED";
 };
 
 type Props = {
@@ -90,6 +91,11 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
                   <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                     {group.items.map((metric) => {
                       const isSelected = selected.has(metric.name);
+                      const statusLabel = metric.runtimeStatus === "HOLD"
+                        ? "Tạm giữ"
+                        : metric.runtimeStatus === "UNSUPPORTED"
+                          ? "Chưa hỗ trợ"
+                          : "";
                       return (
                         <li key={metric.name}>
                           <button
@@ -100,7 +106,14 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
                             aria-label={`${isSelected ? "Đã thêm" : "Thêm"} ${metric.label}`}
                           >
                             <span className="min-w-0">
-                              <strong>{metric.label}</strong>
+                              <span className="flex flex-wrap items-center gap-2">
+                                <strong>{metric.label}</strong>
+                                {statusLabel && (
+                                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                    {statusLabel}
+                                  </span>
+                                )}
+                              </span>
                               <small>{metric.unit}</small>
                             </span>
                             <span className="metric-option-state">{isSelected ? "Đã thêm" : "+ Thêm"}</span>
@@ -112,7 +125,7 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
                 </section>
               ))}
             </div>
-          )}
+           )}
         </div>
       </DialogContent>
     </Dialog>

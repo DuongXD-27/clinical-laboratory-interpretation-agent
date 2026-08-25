@@ -7,7 +7,7 @@ import MetricInput from "@/components/MetricInput";
 import MetricSelector, { type MetricDefinition } from "@/components/MetricSelector";
 import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
-import { buildManualIndicators, MANUAL_ANALYTES } from "@/lib/manualEntry.mjs";
+import { buildManualIndicators, MANUAL_ANALYTES, manualAnalyteAttentionMessage } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
@@ -255,6 +255,7 @@ export default function PatientAnalysisPage() {
                         value={manualValues[metric.name] ?? ""}
                         onValueChange={(value) => setManualValues((current) => ({ ...current, [metric.name]: value }))}
                         onRemove={() => removeManualMetric(metric.name)}
+                        attentionMessage={manualAnalyteAttentionMessage(metric)}
                       />
                     ))}
                   </div>

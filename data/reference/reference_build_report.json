@@ -1,13 +1,13 @@
 {
-  "builder_version": "v2",
+  "builder_version": "v3",
   "input_file": "data/reference/source/adult_outpatient_laboratory_reference_map.csv",
-  "input_sha256": "2324755F2D4894B12E0CEABE30BC953313AA632E3C9FB7B52AEA1A8DF799753C",
-  "input_sha256_after": "2324755F2D4894B12E0CEABE30BC953313AA632E3C9FB7B52AEA1A8DF799753C",
-  "input_size_bytes": 34092,
-  "input_rows": 65,
-  "structurally_eligible_rows": 65,
+  "input_sha256": "16613A768804C531EBDDAF3DB1EC9FB90DC47F5DDD5C84EBBCB69C9BE263B6C3",
+  "input_sha256_after": "16613A768804C531EBDDAF3DB1EC9FB90DC47F5DDD5C84EBBCB69C9BE263B6C3",
+  "input_size_bytes": 35144,
+  "input_rows": 67,
+  "structurally_eligible_rows": 67,
   "structurally_rejected_rows": 0,
-  "runtime_accepted_rows": 65,
+  "runtime_accepted_rows": 67,
   "quarantined_rows": 0,
   "multiple_reason_rows": 0,
   "rejection_reason_counts": {},
@@ -45,25 +45,48 @@
     "Total protein",
     "Triglyceride",
     "Urea",
+    "Uric acid",
     "WBC"
   ],
   "quarantined_analytes": [],
   "output_files": {
     "reference_ranges_csv": {
       "path": "data/reference/reference_ranges.csv",
-      "sha256": "076DCFC4FCC00F5A4A5BC79A5CC1F87E19741E155A0EEBF3C969FCDC6D34427E"
+      "sha256": "E5378F5B8BCB2E5DC0582542AF7584B9CFCF1423F787DEBCFAC7849270098A25"
     },
     "reference_ranges_json": {
       "path": "data/reference/reference_ranges.json",
-      "sha256": "0AEBE60AC2C82E4DB2FD0B4E82C10758A4CF5079EA095F88F4BBDC69529237C4"
+      "sha256": "F64FBB1DD24753DC1576604B11F372CAD713CE6CEB8ACD2C63B7AAA618384E63"
     },
     "quarantine_csv": {
       "path": "data/reference/quarantine.csv",
       "sha256": "881D7F13DA90517B6CA79FFE2B2BFEE2D7539866A592A16B88519CB96B3AB2CB"
     }
   },
-  "generated_at": "2026-08-18T04:57:14Z",
+  "generated_at": "2026-08-25T09:02:15Z",
   "source_integrity_verified": true,
+  "section_propagation": {
+    "records_per_section": {
+      "chemistry": 15,
+      "hematology": 31,
+      "lipids": 21
+    },
+    "records_without_section": 0,
+    "overrides_applied": [
+      {
+        "analyte_canonical": "Fasting plasma glucose",
+        "section": "lipids"
+      },
+      {
+        "analyte_canonical": "Fasting plasma glucose",
+        "section": "lipids"
+      },
+      {
+        "analyte_canonical": "Fasting plasma glucose",
+        "section": "lipids"
+      }
+    ]
+  },
   "explanation_supplement": {
     "supplemental_file": "data/reference/explanations.json",
     "entries_scanned": 9,
@@ -124,6 +147,6 @@
     ]
   },
   "catalog": {
-    "total_rules": 65
+    "total_rules": 67
   }
 }
