@@ -7,6 +7,9 @@ import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
 import type { DoctorReportDetail } from "@/types/doctor";
 import type { ReportQuestion } from "@/types/history";
 import ReasonChip from "./ReasonChip";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { FileImage, Flag, MessageCircleQuestion, Save, UserRound } from "lucide-react";
 
 type Props = {
   detail: DoctorReportDetail;
@@ -48,7 +51,7 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
   return (
     <aside className="doctor-report-sidebar">
       <section className="doctor-side-card">
-        <h2>Bệnh nhân</h2>
+        <h2><UserRound aria-hidden="true" /> Bệnh nhân</h2>
         <dl>
           <div><dt>Họ tên</dt><dd>{detail.patient.name}</dd></div>
           <div><dt>Tuổi</dt><dd>{detail.patient.age ?? "-"}</dd></div>
@@ -60,7 +63,7 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
 
       {detail.flags.length > 0 && (
         <section className="doctor-side-card">
-          <h2>Lý do cần kiểm chứng</h2>
+          <h2><Flag aria-hidden="true" /> Lý do cần kiểm chứng</h2>
           <div className="doctor-side-flags">
             {detail.flags.map((flag, index) => (
               <ReasonChip key={`${flag.code}-${flag.finding_id ?? "report"}-${index}`} flag={flag} />
@@ -71,7 +74,7 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
 
       {detail.report.original_image_url && (
         <section className="doctor-side-card">
-          <h2>Ảnh gốc phiếu</h2>
+          <h2><FileImage aria-hidden="true" /> Ảnh gốc phiếu</h2>
           <button
             type="button"
             className="doctor-image-thumb"
@@ -91,7 +94,7 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
 
       {detail.questions.length > 0 && (
         <section className="doctor-side-card">
-          <h2>Câu hỏi của bệnh nhân ({detail.questions.length})</h2>
+          <h2><MessageCircleQuestion aria-hidden="true" /> Câu hỏi của bệnh nhân ({detail.questions.length})</h2>
           {error && <p className="doctor-side-error" role="alert">{error}</p>}
           <ul className="doctor-question-list">
             {detail.questions.map((question) => {
@@ -107,21 +110,21 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
                         {question.answered_at ? ` · ${formatMoment(question.answered_at)}` : ""}
                       </span>
                       {!readOnly && (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setDrafts((current) => ({ ...current, [question.id]: question.answer_text || "" }));
                             setEditing((current) => ({ ...current, [question.id]: true }));
                           }}
-                        >
-                          Sửa
-                        </button>
+                        >Sửa</Button>
                       )}
                     </div>
                   ) : (
                     !readOnly && (
                       <div className="doctor-question-editor">
-                        <textarea
+                        <Textarea
                           rows={3}
                           value={drafts[question.id] ?? ""}
                           placeholder="Trả lời câu hỏi này cho bệnh nhân"
@@ -129,14 +132,14 @@ export default function DoctorReportSidebar({ detail, readOnly, onQuestionUpdate
                             setDrafts((current) => ({ ...current, [question.id]: event.target.value }))
                           }
                         />
-                        <button
+                        <Button
                           type="button"
                           disabled={busyQuestion === question.id || !(drafts[question.id] || "").trim()}
                           onClick={() => void saveAnswer(question.id)}
-                          className="doctor-primary-button"
                         >
+                          <Save data-icon="inline-start" aria-hidden="true" />
                           {busyQuestion === question.id ? "Đang lưu..." : "Lưu câu trả lời"}
-                        </button>
+                        </Button>
                       </div>
                     )
                   )}

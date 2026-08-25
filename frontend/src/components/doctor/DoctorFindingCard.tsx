@@ -5,6 +5,11 @@ import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { DoctorFinding, ReviewFlag } from "@/types/doctor";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, CircleMinus, PencilLine, Sparkles } from "lucide-react";
+import ClinicalStatusChip from "@/components/common/ClinicalStatusChip";
+import ReasonChip from "./ReasonChip";
 
 type Props = {
   finding: DoctorFinding;
@@ -50,12 +55,13 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
       className={`finding-card finding-card--${finding.classification}${flags.length > 0 ? " finding-card--flagged" : ""}${isReviewed ? " finding-card--reviewed" : ""}`}
     >
       <div className="finding-card__header">
-        <div>
+        <div className="finding-card__metric">
           <h2>{finding.metric_name}</h2>
-          <p className="finding-card__value">
-            {finding.value} <span>{finding.unit}</span>
-          </p>
-          <p className="finding-card__ref">Tham chiếu: {finding.reference_range}</p>
+          <div className="finding-card__measurement">
+            <p className="finding-card__value">{finding.value}</p>
+            <span>{finding.unit}</span>
+          </div>
+          <p className="finding-card__ref"><span>Khoảng tham chiếu</span> {finding.reference_range}</p>
         </div>
         <SeverityBadge level={finding.classification} />
       </div>
@@ -63,13 +69,13 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
       {flags.length > 0 && (
         <div className="finding-card__flags" role="status">
           {flags.map((flag, index) => (
-            <span key={`${flag.code}-${index}`}>⚠ {flag.detail}</span>
+            <ReasonChip key={`${flag.code}-${index}`} flag={flag} />
           ))}
         </div>
       )}
 
       <div className="finding-card__ai">
-        <p className="finding-card__label">Giải thích của AI</p>
+        <p className="finding-card__label"><Sparkles aria-hidden="true" /> Giải thích của AI</p>
         <p>{finding.ai_text}</p>
       </div>
 
@@ -83,16 +89,20 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
 
       {isReviewed && !editing && (
         <div className={`finding-card__outcome finding-card__outcome--${finding.review_outcome}`}>
-          <span>{finding.review_outcome === "skipped" ? "−" : "✓"}</span>
-          <span>
+          <ClinicalStatusChip
+            tone={finding.review_outcome === "skipped" ? "neutral" : "verified"}
+            icon={finding.review_outcome === "skipped" ? CircleMinus : Check}
+          >
             {outcomeText(finding.review_outcome)}
+          </ClinicalStatusChip>
+          <span>
             {finding.reviewed_by ? ` · ${finding.reviewed_by}` : ""}
             {finding.reviewed_at ? ` · ${formatMoment(finding.reviewed_at)}` : ""}
           </span>
           {!readOnly && (
-            <button type="button" onClick={() => setEditing(true)}>
-              Sửa lại
-            </button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <PencilLine data-icon="inline-start" aria-hidden="true" /> Sửa lại
+            </Button>
           )}
         </div>
       )}
@@ -100,14 +110,14 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
       {error && (
         <div className="finding-card__error" role="alert">
           {error}
-          <button type="button" onClick={() => setError(null)}>Đóng</button>
+          <Button type="button" variant="ghost" size="xs" onClick={() => setError(null)}>Đóng</Button>
         </div>
       )}
 
       {!readOnly && (!isReviewed || editing) && (
         editing ? (
           <div className="finding-card__correction">
-            <textarea
+            <Textarea
               ref={textareaRef}
               value={note}
               minLength={10}
@@ -125,35 +135,35 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
               <span className={note.trim().length >= 10 ? "is-ready" : ""}>
                 {note.trim().length} / tối thiểu 10
               </span>
-              <button
+              <Button
                 type="button"
                 disabled={saving !== null || note.trim().length < 10}
                 onClick={() => void save("corrected", note.trim())}
-                className="doctor-primary-button"
               >
                 {saving === "corrected" ? "Đang lưu..." : "Lưu"}
-              </button>
-              <button type="button" disabled={saving !== null} onClick={() => setEditing(false)}>
+              </Button>
+              <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => setEditing(false)}>
                 Huỷ
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
           <div className="finding-card__actions">
-            <button
+            <Button
               type="button"
               disabled={saving !== null}
               onClick={() => void save("agreed")}
-              className="doctor-primary-button"
             >
+              <Check data-icon="inline-start" aria-hidden="true" />
               {saving === "agreed" ? "Đang lưu..." : "Đồng ý"}
-            </button>
-            <button type="button" disabled={saving !== null} onClick={() => setEditing(true)}>
-              Đính chính
-            </button>
-            <button type="button" disabled={saving !== null} onClick={() => void save("skipped")}>
+            </Button>
+            <Button type="button" variant="outline" disabled={saving !== null} onClick={() => setEditing(true)}>
+              <PencilLine data-icon="inline-start" aria-hidden="true" /> Đính chính
+            </Button>
+            <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => void save("skipped")}>
+              <CircleMinus data-icon="inline-start" aria-hidden="true" />
               {saving === "skipped" ? "Đang lưu..." : "Bỏ qua"}
-            </button>
+            </Button>
           </div>
         )
       )}
