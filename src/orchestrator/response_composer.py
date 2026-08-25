@@ -198,6 +198,8 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)
+        if isinstance(data, ExplanationDataPayload):
+            return data.explanation or "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
     if status == ResponseStatus.SUCCESS:
         if isinstance(data, AnalysisDataPayload):

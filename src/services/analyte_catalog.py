@@ -134,6 +134,22 @@ class AnalyteCatalogContract:
     def approved_entries(self) -> tuple[AnalyteCatalogEntry, ...]:
         return tuple(entry for entry in self._entries if entry.runtime_status == "APPROVED")
 
+    @property
+    def approved_names(self) -> tuple[str, ...]:
+        return tuple(entry.canonical_name for entry in self.approved_entries)
+
+    def runtime_alias_map(self) -> dict[str, str]:
+        """Raw alias -> canonical name for runtime-approved analytes only."""
+        aliases: dict[str, str] = {}
+        for entry in self.approved_entries:
+            for alias in (entry.canonical_name, *entry.aliases):
+                aliases[alias] = entry.canonical_name
+        return aliases
+
+    def runtime_status_for(self, value: Any) -> str | None:
+        entry = self.resolve(value)
+        return entry.runtime_status if entry is not None else None
+
     def get(self, analyte_id: str) -> AnalyteCatalogEntry | None:
         return self._by_id.get(str(analyte_id).strip())
 

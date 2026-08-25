@@ -11,6 +11,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
+from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
+
 
 class ReferenceRepositoryError(Exception):
     """Raised when reference checker configuration or runtime rules are unusable."""
@@ -53,6 +55,7 @@ class ReferenceRepository:
         config: dict[str, Any],
         rules: list[dict[str, Any]],
         unit_rows: list[dict[str, str]] | None = None,
+        catalog_contract: AnalyteCatalogContract | None = None,
     ):
         self._validate_config(config)
         self._validate_rules(rules)
@@ -65,21 +68,34 @@ class ReferenceRepository:
         self.allowed_reference_types = frozenset(
             self._norm_text(value) for value in config_copy["allowed_reference_types"]
         )
+        if catalog_contract is not None:
+            self._validate_catalog_sync(config_copy, catalog_contract)
+            requested_approved = set(catalog_contract.approved_names)
+            alias_source = catalog_contract.runtime_alias_map()
+            explicit_pending: set[str] = set()
+        else:
+            requested_approved = {str(item).strip() for item in config_copy["approved_analytes"]}
+            alias_source = {
+                str(alias).strip(): str(canonical).strip()
+                for alias, canonical in config_copy["analyte_aliases"].items()
+            }
+            explicit_pending = {str(item).strip() for item in config_copy["pending_analytes"]}
+        self._catalog_contract = catalog_contract
         self.analyte_aliases = MappingProxyType(
             {
                 self._alias_key(alias): str(canonical).strip()
-                for alias, canonical in config_copy["analyte_aliases"].items()
+                for alias, canonical in alias_source.items()
             }
         )
         aliases_by_canonical: dict[str, list[str]] = {}
-        for alias, canonical in config_copy["analyte_aliases"].items():
+        for alias, canonical in alias_source.items():
             aliases_by_canonical.setdefault(str(canonical).strip(), []).append(str(alias).strip())
         self._aliases_by_canonical = MappingProxyType(
             {name: tuple(sorted(set(aliases), key=str.casefold)) for name, aliases in aliases_by_canonical.items()}
         )
         self.trend_max_gap_days = self._load_trend_gap_policy(
             config_copy.get("trend_max_gap_days"),
-            requested_approved=set(config_copy["approved_analytes"]),
+            requested_approved=requested_approved,
         )
         self.age_scope_aliases = MappingProxyType(
             {
@@ -93,8 +109,6 @@ class ReferenceRepository:
         self._rules = tuple(rules_copy)
         self._rules_by_analyte = self._index_rules(self._rules)
 
-        requested_approved = {str(item).strip() for item in config_copy["approved_analytes"]}
-        explicit_pending = {str(item).strip() for item in config_copy["pending_analytes"]}
         unit_conflicts = self._find_unit_conflicts(requested_approved, unit_rows_copy)
 
         self.unit_conflict_analytes = frozenset(unit_conflicts)
@@ -103,6 +117,43 @@ class ReferenceRepository:
 
         if not self.approved_analytes:
             raise ReferenceRepositoryError("no approved analytes remain after unit validation")
+
+    @staticmethod
+    def _validate_catalog_sync(
+        config: dict[str, Any],
+        catalog_contract: AnalyteCatalogContract,
+    ) -> None:
+        config_approved = {str(item).strip() for item in config["approved_analytes"]}
+        catalog_approved = set(catalog_contract.approved_names)
+        if config_approved != catalog_approved:
+            raise ReferenceRepositoryError(
+                "reference_checker_config approved_analytes drift from analyte_catalog"
+            )
+
+        config_aliases = {
+            str(alias).strip(): str(canonical).strip()
+            for alias, canonical in config["analyte_aliases"].items()
+        }
+        catalog_aliases = catalog_contract.runtime_alias_map()
+        if config_aliases != catalog_aliases:
+            raise ReferenceRepositoryError(
+                "reference_checker_config analyte_aliases drift from analyte_catalog"
+            )
+
+        config_holds = {
+            str(name).strip()
+            for name, metadata in config.get("hold_analytes", {}).items()
+            if isinstance(metadata, dict) and str(metadata.get("status", "")).strip().upper() == "HOLD"
+        }
+        catalog_holds = {
+            entry.canonical_name
+            for entry in catalog_contract.entries
+            if entry.runtime_status == "HOLD"
+        }
+        if config_holds != catalog_holds:
+            raise ReferenceRepositoryError(
+                "reference_checker_config hold_analytes drift from analyte_catalog"
+            )
 
     @staticmethod
     def _load_trend_gap_policy(
@@ -140,6 +191,7 @@ class ReferenceRepository:
             config_path=root / "data/reference/reference_checker_config.json",
             ranges_path=root / "data/reference/reference_ranges.json",
             units_path=root / "data/reference/units_metric.csv",
+            catalog_contract=get_analyte_catalog_contract(),
         )
 
     @classmethod
@@ -149,6 +201,7 @@ class ReferenceRepository:
         config_path: str | Path,
         ranges_path: str | Path,
         units_path: str | Path | None = None,
+        catalog_contract: AnalyteCatalogContract | None = None,
     ) -> ReferenceRepository:
         config_file = Path(config_path)
         ranges_file = Path(ranges_path)
@@ -162,7 +215,12 @@ class ReferenceRepository:
             raise ReferenceRepositoryError("runtime ranges JSON must be a list")
 
         unit_rows = cls._load_units_file(units_file) if units_file else []
-        return cls(config=config, rules=rules, unit_rows=unit_rows)
+        return cls(
+            config=config,
+            rules=rules,
+            unit_rows=unit_rows,
+            catalog_contract=catalog_contract,
+        )
 
     @staticmethod
     def default_repo_root() -> Path:
@@ -341,6 +399,16 @@ class ReferenceRepository:
 
     def resolve_analyte(self, analyte: str) -> str | None:
         return self.analyte_aliases.get(self._alias_key(analyte))
+
+    def runtime_status_for(self, analyte: str) -> str | None:
+        if self._catalog_contract is None:
+            canonical = self.resolve_analyte(analyte)
+            if canonical in self.approved_analytes:
+                return "APPROVED"
+            if canonical in self.pending_analytes:
+                return "HOLD"
+            return None
+        return self._catalog_contract.runtime_status_for(analyte)
 
     def parse_age_scope(self, value: Any) -> AgeRange | None:
         text = str(value or "").strip()

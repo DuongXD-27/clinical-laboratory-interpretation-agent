@@ -1,9 +1,9 @@
-import pytest
+from src.models.orchestrator_schemas import IntentEnum
 from src.orchestrator.intent_router import _deterministic_route
-from src.models.orchestrator_schemas import IntentEnum, ReasonCode
+
 
 def test_safe_general_routing():
-    for greeting in ["Chào bạn", "Chào em", "Xin chào", "Hello", "Hi", "Cảm ơn", "Bạn làm được gì?", "Trợ lý này giúp gì được cho tôi?", "Tôi nên bắt đầu từ đâu?"]:
+    for greeting in ["Chào bạn", "Chào em", "Xin chào", "Hello", "Hi", "Cảm ơn", "Bạn làm được gì?", "Bạn có thể giúp tôi làm gì?", "Trợ lý này giúp gì được cho tôi?", "Tôi nên bắt đầu từ đâu?"]:
         route = _deterministic_route(greeting)
         assert route is not None, f"Expected {greeting} to be routed"
         assert route.intent == IntentEnum.SAFE_GENERAL, f"Expected SAFE_GENERAL for {greeting}"
