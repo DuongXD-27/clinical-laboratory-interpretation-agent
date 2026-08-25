@@ -117,7 +117,7 @@ def _deterministic_route(
         return RouteDecision(intent=IntentEnum.ANALYZE_TREND, route_confidence=0.95)
 
     # 3. GET_DOCTOR_QUESTIONS
-    if any(term in normalized for term in ("hoi bac si", "cau hoi", "doctor question")):
+    if any(term in normalized for term in ("hoi bac si", "hoi gi bac si", "cau hoi", "doctor question")):
         return RouteDecision(intent=IntentEnum.GET_DOCTOR_QUESTIONS, route_confidence=0.95)
 
     # 4. SAFE_GENERAL (Greetings, Capability Requests, and In-Scope App Help)
