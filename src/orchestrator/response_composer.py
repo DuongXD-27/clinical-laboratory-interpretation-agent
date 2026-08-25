@@ -261,6 +261,14 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
         if isinstance(data, ExplanationDataPayload) and data.facts is not None:
             return _compose_explanation_message(data)
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
+    if status == ResponseStatus.SUCCESS and intent == IntentEnum.APP_HELP:
+        # The dispatcher already put the exact (verbatim, grounded) answer
+        # in data.explanation — this function must surface it as-is, not
+        # fall through to the generic AnalysisDataPayload-shaped message
+        # below (which ignores ExplanationDataPayload entirely).
+        if isinstance(data, ExplanationDataPayload):
+            return data.explanation
+        return "Tôi chưa tìm thấy hướng dẫn phù hợp cho câu hỏi này."
     if status == ResponseStatus.SUCCESS:
         if isinstance(data, AnalysisDataPayload):
             return _format_whole_report_deterministic_summary(data)

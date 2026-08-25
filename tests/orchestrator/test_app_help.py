@@ -207,3 +207,32 @@ async def test_app_help_response_composer_never_calls_llm(monkeypatch):
     )
     assert message == fallback
     assert call_count["n"] == 0, "get_llm() was called for an APP_HELP response — it must render verbatim"
+
+
+@pytest.mark.asyncio
+async def test_app_help_build_final_response_surfaces_the_real_explanation(monkeypatch):
+    # Regression: found live in manual UI testing. The first fix (blocking
+    # the LLM composer for APP_HELP) was necessary but NOT sufficient — it
+    # exposed a second, independent bug: deterministic_message_for() had no
+    # APP_HELP branch, so it fell through to a generic AnalysisDataPayload-
+    # shaped placeholder ("Đây là kết quả phân tích hiện có.") that ignores
+    # ExplanationDataPayload.explanation entirely. Before the LLM-composer
+    # fix, the LLM silently "fixed" this by reading the real explanation out
+    # of _payload_summary(data) and paraphrasing it — masking the bug. This
+    # test goes through the real build_final_response() wiring end-to-end
+    # (deterministic_message_for -> compose_message), not a hand-supplied
+    # fallback_message, so it cannot be fooled the same way the first
+    # regression test could.
+    def _boom():
+        raise RuntimeError("should never be reached")
+
+    monkeypatch.setattr(response_composer, "get_llm", _boom)
+
+    explanation = "Vào mục \"Lịch sử kết quả\" trên menu để xem các phiếu đã lưu."
+    response = await response_composer.build_final_response(
+        intent=IntentEnum.APP_HELP,
+        status=ResponseStatus.SUCCESS,
+        data=ExplanationDataPayload(explanation=explanation, sources=["history.md"]),
+    )
+    assert response.message == explanation
+    assert "kết quả phân tích hiện có" not in response.message
