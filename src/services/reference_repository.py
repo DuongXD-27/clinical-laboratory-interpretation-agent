@@ -12,6 +12,10 @@ from types import MappingProxyType
 from typing import Any
 
 from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
+from src.services.measurement_conversion import (
+    cholesterol_mg_dl_to_mmol_l,
+    triglyceride_mg_dl_to_mmol_l,
+)
 
 
 class ReferenceRepositoryError(Exception):
@@ -24,12 +28,19 @@ class ReferenceLookupResult:
     rule: dict[str, Any] | None
     canonical_analyte: str | None
     reason: str | None
+    comparison_value: Decimal | None = None
+    comparison_unit: str | None = None
 
 
 @dataclass(frozen=True)
 class AgeRange:
     min_age: Decimal
-    max_age: Decimal
+    max_age: Decimal | None
+
+    def contains(self, age: Decimal) -> bool:
+        if age < self.min_age:
+            return False
+        return self.max_age is None or age <= self.max_age
 
 
 class ReferenceRepository:
@@ -323,6 +334,7 @@ class ReferenceRepository:
         unit: str,
         patient_gender: str,
         patient_age: int | float | None,
+        value: Any = None,
     ) -> ReferenceLookupResult:
         canonical = self.resolve_analyte(analyte)
         if canonical is None:
@@ -343,7 +355,30 @@ class ReferenceRepository:
             return self._miss(canonical, "reference_type_not_supported")
 
         input_unit = self.normalize_unit(unit)
-        candidates = [rule for rule in candidates if self._rule_unit(rule) == input_unit]
+        exact_unit_candidates = [rule for rule in candidates if self._rule_unit(rule) == input_unit]
+        comparison_value = None
+        comparison_unit = None
+        if exact_unit_candidates:
+            candidates = exact_unit_candidates
+        else:
+            converted_value = None
+            converted_unit = None
+            converted_candidates = []
+            for rule in candidates:
+                rule_unit = self._rule_unit(rule)
+                candidate_value = self._convert_input_for_rule(
+                    canonical,
+                    value,
+                    input_unit,
+                    rule_unit,
+                )
+                if candidate_value is not None:
+                    converted_value = candidate_value
+                    converted_unit = rule_unit
+                    converted_candidates.append(rule)
+            candidates = converted_candidates
+            comparison_value = converted_value
+            comparison_unit = converted_unit
         if not candidates:
             return self._miss(canonical, "unit_not_supported")
 
@@ -352,7 +387,7 @@ class ReferenceRepository:
         if patient_age_decimal is not None:
             for rule in candidates:
                 age_range = self.parse_age_scope(rule.get("age_scope"))
-                if age_range and age_range.min_age <= patient_age_decimal <= age_range.max_age:
+                if age_range and age_range.contains(patient_age_decimal):
                     age_candidates.append(rule)
         if not age_candidates:
             return self._miss(canonical, "age_scope_not_supported")
@@ -395,6 +430,8 @@ class ReferenceRepository:
             rule=deepcopy(sex_candidates[0]),
             canonical_analyte=canonical,
             reason=None,
+            comparison_value=comparison_value,
+            comparison_unit=comparison_unit,
         )
 
     def resolve_analyte(self, analyte: str) -> str | None:
@@ -420,6 +457,12 @@ class ReferenceRepository:
 
         match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\s*", text)
         if not match:
+            match = re.fullmatch(r"\s*(?:>=|≥)\s*(\d+(?:\.\d+)?)\s*", text)
+            if match:
+                return AgeRange(min_age=Decimal(match.group(1)), max_age=None)
+            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*\+\s*", text)
+            if match:
+                return AgeRange(min_age=Decimal(match.group(1)), max_age=None)
             return None
         min_age = Decimal(match.group(1))
         max_age = Decimal(match.group(2))
@@ -451,6 +494,8 @@ class ReferenceRepository:
             "U/l": "U/L",
             "u/l": "U/L",
             "U/L": "U/L",
+            "%CV": "%",
+            "%cv": "%",
         }
         return unit_aliases.get(text, text)
 
@@ -501,6 +546,27 @@ class ReferenceRepository:
         raw_unit = rule.get("unit_canonical") or rule.get("unit_display_vn") or rule.get("unit_machine")
         unit = self.normalize_unit(raw_unit)
         return unit or None
+
+    @classmethod
+    def _convert_input_for_rule(
+        cls,
+        canonical_analyte: str,
+        value: Any,
+        input_unit: str,
+        rule_unit: str | None,
+    ) -> Decimal | None:
+        if value is None or rule_unit is None:
+            return None
+        if input_unit != "mg/dL" or rule_unit != "mmol/L":
+            return None
+        try:
+            if canonical_analyte in {"Total cholesterol", "HDL-C", "LDL-C"}:
+                return cholesterol_mg_dl_to_mmol_l(value)
+            if canonical_analyte == "Triglyceride":
+                return triglyceride_mg_dl_to_mmol_l(value)
+        except (TypeError, ValueError):
+            return None
+        return None
 
     @classmethod
     def _rule_sex(cls, rule: dict[str, Any]) -> str | None:

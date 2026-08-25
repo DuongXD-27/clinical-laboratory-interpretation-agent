@@ -31,7 +31,7 @@
       "aliases": ["Hematocrit", "Hematocrit (HCT)"],
       "group": "hematology",
       "canonical_unit": "L/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "mcv",
@@ -39,7 +39,7 @@
       "aliases": [],
       "group": "hematology",
       "canonical_unit": "fL",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "mch",
@@ -47,7 +47,7 @@
       "aliases": [],
       "group": "hematology",
       "canonical_unit": "pg",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "mchc",
@@ -55,7 +55,7 @@
       "aliases": [],
       "group": "hematology",
       "canonical_unit": "g/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "rdw_cv",
@@ -63,7 +63,7 @@
       "aliases": ["RDW"],
       "group": "hematology",
       "canonical_unit": "%",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "plt",
@@ -71,7 +71,7 @@
       "aliases": ["Tiểu cầu", "Tiểu cầu (PLT)"],
       "group": "hematology",
       "canonical_unit": "10^9/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "neutrophils_%",
@@ -79,7 +79,7 @@
       "aliases": ["NEU/NEUT (percentage)", "Bạch cầu trung tính %"],
       "group": "hematology",
       "canonical_unit": "%",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "neutrophils_abs",
@@ -87,7 +87,7 @@
       "aliases": ["NEU/NEUT (absolute)", "Bạch cầu trung tính tuyệt đối"],
       "group": "hematology",
       "canonical_unit": "10^9/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "lymphocytes_%",
@@ -95,7 +95,7 @@
       "aliases": ["LYM (percentage)", "Lympho bào %"],
       "group": "hematology",
       "canonical_unit": "%",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "lymphocytes_abs",
@@ -103,7 +103,7 @@
       "aliases": ["LYM (absolute)", "Lympho bào tuyệt đối"],
       "group": "hematology",
       "canonical_unit": "10^9/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "monocytes_%",
@@ -111,7 +111,7 @@
       "aliases": ["MONO (percentage)", "Bạch cầu mono %"],
       "group": "hematology",
       "canonical_unit": "%",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "monocytes_abs",
@@ -119,7 +119,7 @@
       "aliases": ["MONO (absolute)", "Bạch cầu mono tuyệt đối"],
       "group": "hematology",
       "canonical_unit": "10^9/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "eosinophils_%",
@@ -127,7 +127,7 @@
       "aliases": ["EOS (percentage)", "Bạch cầu ái toan %"],
       "group": "hematology",
       "canonical_unit": "%",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "eosinophils_abs",
@@ -135,7 +135,7 @@
       "aliases": ["EOS (absolute)", "Bạch cầu ái toan tuyệt đối"],
       "group": "hematology",
       "canonical_unit": "10^9/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "sodium",
@@ -143,7 +143,7 @@
       "aliases": ["Natri", "Sodium (Na)", "Na"],
       "group": "electrolytes",
       "canonical_unit": "mmol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "potassium",
@@ -159,7 +159,7 @@
       "aliases": ["Clor", "Chloride (Cl-)", "Cl-"],
       "group": "electrolytes",
       "canonical_unit": "mmol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "fasting_plasma_glucose",
@@ -191,7 +191,7 @@
       "aliases": [],
       "group": "renal",
       "canonical_unit": "mmol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "uric_acid",
@@ -199,7 +199,7 @@
       "aliases": ["Uric Acid", "Acid Uric"],
       "group": "renal",
       "canonical_unit": "umol/L",
-      "runtime_status": "HOLD"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "egfr",
@@ -215,7 +215,7 @@
       "aliases": ["AST (GOT)", "AST (SGOT)"],
       "group": "liver",
       "canonical_unit": "U/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "alt",
@@ -223,7 +223,7 @@
       "aliases": ["ALT (GPT)", "ALT (SGPT)"],
       "group": "liver",
       "canonical_unit": "U/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "ggt",
@@ -231,7 +231,7 @@
       "aliases": [],
       "group": "liver",
       "canonical_unit": "U/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "total_bilirubin",
@@ -239,7 +239,7 @@
       "aliases": ["Bilirubin toàn phần"],
       "group": "liver",
       "canonical_unit": "umol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "total_protein",
@@ -247,7 +247,7 @@
       "aliases": ["Total Protein", "Protein toàn phần"],
       "group": "liver",
       "canonical_unit": "g/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "albumin",
@@ -255,7 +255,7 @@
       "aliases": [],
       "group": "liver",
       "canonical_unit": "g/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "total_cholesterol",
@@ -263,7 +263,7 @@
       "aliases": ["Total Cholesterol", "Cholesterol toàn phần"],
       "group": "lipids",
       "canonical_unit": "mmol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "triglyceride",
@@ -271,7 +271,7 @@
       "aliases": ["Triglycerides"],
       "group": "lipids",
       "canonical_unit": "mmol/L",
-      "runtime_status": "UNSUPPORTED"
+      "runtime_status": "APPROVED"
     },
     {
       "analyte_id": "hdl_c",

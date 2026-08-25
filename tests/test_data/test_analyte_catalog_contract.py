@@ -24,11 +24,37 @@ APPROVED_EXACT_SET = {
     "WBC",
     "RBC",
     "HGB",
+    "HCT",
+    "MCV",
+    "MCH",
+    "MCHC",
+    "RDW-CV",
+    "PLT",
+    "Neutrophils %",
+    "Neutrophils abs",
+    "Lymphocytes %",
+    "Lymphocytes abs",
+    "Monocytes %",
+    "Monocytes abs",
+    "Eosinophils %",
+    "Eosinophils abs",
+    "Sodium",
+    "Chloride",
     "Fasting plasma glucose",
     "HbA1c",
+    "Creatinine",
+    "Urea",
+    "Uric acid",
+    "AST",
+    "ALT",
+    "GGT",
+    "Total bilirubin",
+    "Total protein",
+    "Albumin",
+    "Total cholesterol",
+    "Triglyceride",
     "LDL-C",
     "HDL-C",
-    "Creatinine",
     "Potassium",
 }
 
@@ -140,12 +166,11 @@ def test_cat_006_canonical_units_are_declared_in_unit_registry() -> None:
     assert missing_or_mismatch == {}
 
 
-def test_cat_007_uric_acid_policy_is_hold_not_approved() -> None:
+def test_cat_007_uric_acid_policy_is_approved_by_tip_data_008() -> None:
     entry = get_analyte_catalog_contract().resolve("Uric acid")
 
     assert entry is not None
-    assert entry.runtime_status == "HOLD"
-    assert entry.runtime_status != "APPROVED"
+    assert entry.runtime_status == "APPROVED"
 
 
 def test_cat_008_egfr_policy_is_unsupported_not_approved() -> None:

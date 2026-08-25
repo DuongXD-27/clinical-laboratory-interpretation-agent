@@ -17,11 +17,37 @@ APPROVED_EXACT_SET = {
     "WBC",
     "RBC",
     "HGB",
+    "HCT",
+    "MCV",
+    "MCH",
+    "MCHC",
+    "RDW-CV",
+    "PLT",
+    "Neutrophils %",
+    "Neutrophils abs",
+    "Lymphocytes %",
+    "Lymphocytes abs",
+    "Monocytes %",
+    "Monocytes abs",
+    "Eosinophils %",
+    "Eosinophils abs",
+    "Sodium",
+    "Chloride",
     "Fasting plasma glucose",
     "HbA1c",
+    "Creatinine",
+    "Urea",
+    "Uric acid",
+    "AST",
+    "ALT",
+    "GGT",
+    "Total bilirubin",
+    "Total protein",
+    "Albumin",
+    "Total cholesterol",
+    "Triglyceride",
     "LDL-C",
     "HDL-C",
-    "Creatinine",
     "Potassium",
 }
 
@@ -52,7 +78,6 @@ def test_rt_cat_003_existing_runtime_alias_snapshot_is_unchanged() -> None:
 @pytest.mark.parametrize(
     ("analyte", "expected_status"),
     [
-        ("Uric acid", "HOLD"),
         ("eGFR", "UNSUPPORTED"),
         ("Not A Real Analyte", None),
     ],
@@ -81,11 +106,37 @@ def test_rt_cat_004_005_006_non_approved_analytes_fail_closed(
         ("Bạch cầu (WBC)", "10^9/L", "WBC"),
         ("Hồng cầu (RBC)", "10^12/L", "RBC"),
         ("Hemoglobin", "g/L", "HGB"),
+        ("Hematocrit", "L/L", "HCT"),
+        ("MCV", "fL", "MCV"),
+        ("MCH", "pg", "MCH"),
+        ("MCHC", "g/L", "MCHC"),
+        ("RDW", "%CV", "RDW-CV"),
+        ("Tiểu cầu", "10^9/L", "PLT"),
+        ("NEU/NEUT (percentage)", "%", "Neutrophils %"),
+        ("NEU/NEUT (absolute)", "10^9/L", "Neutrophils abs"),
+        ("LYM (percentage)", "%", "Lymphocytes %"),
+        ("LYM (absolute)", "10^9/L", "Lymphocytes abs"),
+        ("MONO (percentage)", "%", "Monocytes %"),
+        ("MONO (absolute)", "10^9/L", "Monocytes abs"),
+        ("EOS (percentage)", "%", "Eosinophils %"),
+        ("EOS (absolute)", "10^9/L", "Eosinophils abs"),
+        ("Natri", "mmol/L", "Sodium"),
+        ("Clor", "mmol/L", "Chloride"),
         ("Đường huyết lúc đói", "mmol/L", "Fasting plasma glucose"),
         ("HbA1c", "%", "HbA1c"),
+        ("Urea", "mmol/L", "Urea"),
+        ("AST (GOT)", "U/L", "AST"),
+        ("ALT (GPT)", "U/L", "ALT"),
+        ("GGT", "U/L", "GGT"),
+        ("Bilirubin toàn phần", "umol/L", "Total bilirubin"),
+        ("Protein toàn phần", "g/L", "Total protein"),
+        ("Albumin", "g/L", "Albumin"),
+        ("Total Cholesterol", "mg/dL", "Total cholesterol"),
+        ("Triglycerides", "mg/dL", "Triglyceride"),
         ("LDL-Cholesterol", "mmol/L", "LDL-C"),
         ("HDL-cho.", "mmol/L", "HDL-C"),
         ("Creatinin", "umol/L", "Creatinine"),
+        ("Uric Acid", "umol/L", "Uric acid"),
         ("K+", "mmol/L", "Potassium"),
     ],
 )
@@ -97,6 +148,7 @@ def test_rt_cat_007_reference_lookup_for_existing_supported_aliases(
     result = ReferenceRepository.from_default_files().select_rule(
         analyte=analyte,
         unit=unit,
+        value=100,
         patient_gender="male",
         patient_age=35,
     )
@@ -120,7 +172,7 @@ def test_rt_cat_009_legacy_backend_grouping_is_preserved() -> None:
     assert analyte_section("Fasting plasma glucose") == LIPIDS
     assert analyte_section("Creatinine") == CHEMISTRY
     assert analyte_section("Potassium") == CHEMISTRY
-    assert analyte_section("Uric acid") is None
+    assert analyte_section("Uric acid") == CHEMISTRY
     assert analyte_section("eGFR") is None
 
 

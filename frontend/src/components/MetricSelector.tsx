@@ -7,6 +7,7 @@ export type MetricDefinition = {
   label: string;
   unit: string;
   category?: string;
+  runtimeStatus?: "APPROVED" | "HOLD" | "UNSUPPORTED";
 };
 
 type Props = {
@@ -85,10 +86,22 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
             <ul className="space-y-2">
               {filtered.map((metric) => {
                 const isSelected = selected.has(metric.name);
+                const statusLabel = metric.runtimeStatus === "HOLD"
+                  ? "Tạm giữ"
+                  : metric.runtimeStatus === "UNSUPPORTED"
+                    ? "Chưa hỗ trợ"
+                    : "";
                 return (
                   <li key={metric.name} className="metric-option">
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-900">{metric.label}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-slate-900">{metric.label}</p>
+                        {statusLabel && (
+                          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                            {statusLabel}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 text-xs text-slate-500">
                         {[metric.category, metric.unit].filter(Boolean).join(" · ")}
                       </p>

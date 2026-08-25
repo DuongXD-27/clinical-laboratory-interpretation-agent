@@ -11,7 +11,6 @@ from src.scripts.build_reference_config import RUNTIME_JSON, build_reference_con
 from src.services.analyte_resolver import LOCKED_35_ANALYTES, canonical_analyte_id
 from src.services.reference_repository import ReferenceRepository
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_RANGES = REPO_ROOT / "data/reference/reference_ranges.json"
 EXPLANATIONS = REPO_ROOT / "data/reference/explanations.json"
@@ -96,7 +95,7 @@ def _manual_entries() -> list[dict[str, str]]:
     text = MANUAL_ENTRY.read_text(encoding="utf-8")
     pattern = re.compile(
         r'\{\s*name:\s*"(?P<name>[^"]+)",\s*label:\s*"[^"]+",\s*'
-        r'unit:\s*"(?P<unit>[^"]+)",\s*category:\s*"(?P<category>[^"]+)"\s*\}'
+        r'unit:\s*"(?P<unit>[^"]+)",\s*category:\s*"(?P<category>[^"]+)"[^}]*\}'
     )
     return [match.groupdict() for match in pattern.finditer(text)]
 
@@ -257,11 +256,11 @@ def test_current_inventory_counts_are_explicit() -> None:
         "mock_unique_names_count": len(_mock_names()),
     }
     assert counts == {
-        "reference_ranges_count": 34,
+        "reference_ranges_count": 35,
         "explanations_count": 35,
         "critical_records_count": 35,
         "question_template_count": 35,
-        "runtime_approved_count": 9,
+        "runtime_approved_count": 35,
         "unit_registry_count": 56,
         "manual_entry_count": 35,
         "mock_unique_names_count": 38,
