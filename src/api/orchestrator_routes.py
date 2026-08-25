@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from src.api.conversation_routes import resolve_conversation
 from src.api.deps import CurrentUser, get_current_user
 from src.models.db import get_db
 from src.models.orchestrator_schemas import OrchestratorRequest, OrchestratorResponse
@@ -19,7 +20,12 @@ async def orchestrator_message(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> OrchestratorResponse:
-    return await handle_message(request, current_user=current_user, db=db)
+    conversation = resolve_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=request.conversation_id,
+    )
+    return await handle_message(request, current_user=current_user, db=db, conversation=conversation)
 
 
 @router.post("/message/stream", response_class=StreamingResponse)
@@ -28,8 +34,16 @@ async def orchestrator_message_stream(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
+    # Giai hoi thoai TRUOC khi mo stream. Sau khi StreamingResponse bat dau, mot
+    # HTTPException khong con doi duoc status code -- client da nhan 200 va se
+    # thay stream dut giua chung thay vi mot loi 404 doc duoc.
+    conversation = resolve_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=request.conversation_id,
+    )
     return StreamingResponse(
-        stream_sse_frames(request, current_user=current_user, db=db),
+        stream_sse_frames(request, current_user=current_user, db=db, conversation=conversation),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -41,5 +55,7 @@ async def orchestrator_message_stream(
 @router.post("/onboarding/acknowledge", response_model=OrchestratorResponse)
 async def orchestrator_onboarding_acknowledge(
     current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> OrchestratorResponse:
-    return acknowledge_onboarding(current_user)
+    conversation = resolve_conversation(db, current_user=current_user, conversation_id=None)
+    return acknowledge_onboarding(current_user, db=db, conversation=conversation)

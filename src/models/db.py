@@ -797,6 +797,123 @@ class OutOfScopeLog(Base):
     )
 
 
+class Conversation(Base):
+    """Một cuộc trò chuyện của đúng một bệnh nhân, kèm context riêng của nó.
+
+    ## Vì sao context nằm TRÊN hàng này thay vì ở một bảng khác
+
+    Trước đây `InMemorySessionStore` khoá theo `patient:{user_id}`, tức mỗi bệnh
+    nhân có đúng một context vĩnh viễn. `current_analyte` do câu hỏi về WBC đặt
+    ra sẽ sống mãi, nên "New Chat" dù có xoá giao diện thì câu "chỉ số này" ở
+    cuộc trò chuyện mới vẫn resolve ra WBC.
+
+    Đặt context thành cột của Conversation làm cho **New Chat = hàng mới = context
+    rỗng theo cấu trúc**. Không có đường nào để context cũ chảy sang, vì hai cuộc
+    trò chuyện đọc hai hàng khác nhau. Đây là khác biệt giữa "nhớ xoá state" và
+    "không có state để mà quên xoá" — cách thứ hai không hỏng được.
+
+    ## Quyền sở hữu
+
+    `patient_id` NOT NULL trỏ thẳng `users.id`. Nó **luôn** lấy từ `uid` trong
+    JWT qua `get_current_user`, không bao giờ từ thân request. Mọi hàm trong
+    `conversation_repository` bắt buộc nhận `patient_id` tường minh, cùng khuôn
+    với `history_repository`, nên không route nào lỡ quên `WHERE` mà lộ hội
+    thoại của người khác.
+
+    Khách không có hàng nào ở đây: `user_id` của khách là `None` mà cột này NOT
+    NULL, nên hợp đồng "khách không được lưu gì" được ràng buộc ở tầng schema
+    chứ không phải ở tầng code nhớ kiểm.
+    """
+
+    __tablename__ = "conversations"
+
+    __table_args__ = (
+        # Truy vấn duy nhất màn danh sách chạy: hội thoại của tôi, mới nhất trước.
+        Index("ix_conversations_patient_id_updated_at", "patient_id", "updated_at"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    patient_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Rút từ câu hỏi đầu tiên. Nullable vì hàng được tạo trước khi có tin nhắn nào.
+    title = Column(String(200), nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+    updated_at = Column(DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+
+    # --- Context của riêng cuộc trò chuyện này ---
+    #
+    # Đúng những trường mà `OrchestratorSessionContext` giữ. Chúng ở đây chứ
+    # không ở bảng riêng vì vòng đời của chúng TRÙNG với vòng đời cuộc trò
+    # chuyện: sinh ra cùng nhau, chết cùng nhau, và không bao giờ chia sẻ.
+    onboarding_acknowledged = Column(Boolean, nullable=False, default=False)
+    current_report_ref = Column(String(64), nullable=True)
+    current_analyte = Column(String(64), nullable=True)
+    last_intent = Column(String(64), nullable=True)
+
+    # `ConversationState` được trải phẳng thành ba cột thay vì nhét JSON: câu
+    # hỏi treo là thứ cần soi được khi gỡ lỗi, mà JSON thì không lọc được bằng SQL.
+    pending_question = Column(String(64), nullable=True)
+    pending_question_at = Column(Float, nullable=True)
+    expected_entity = Column(String(64), nullable=True)
+
+    messages = relationship(
+        "ConversationMessage",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="ConversationMessage.id",
+    )
+
+
+class ConversationMessage(Base):
+    """Một lượt trong cuộc trò chuyện — của người dùng hoặc của trợ lý.
+
+    Không có cột `patient_id`. Quyền sở hữu **suy ra** qua `conversation_id`:
+    muốn đọc tin nhắn thì phải qua được cửa Conversation trước, và cửa đó đã lọc
+    theo `patient_id`. Lặp lại `patient_id` ở đây là tạo ra hai nguồn sự thật có
+    thể lệch nhau — lúc đó câu hỏi "tin nhắn này của ai" có hai câu trả lời.
+
+    `content` là văn bản đã hiển thị cho người dùng, tức là bản ĐÃ qua guardrail.
+    Không lưu prompt thô hay nội dung tiền kiểm duyệt: đọc lại lịch sử phải thấy
+    đúng thứ đã hiện trên màn hình, không thấy thứ hệ thống đã cố ý chặn.
+    """
+
+    __tablename__ = "conversation_messages"
+
+    __table_args__ = (
+        Index("ix_conversation_messages_conversation_id_id", "conversation_id", "id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    conversation_id = Column(
+        Integer,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # "user" | "assistant". Không dùng Enum vì SQLite và Postgres xử lý Enum
+    # khác nhau, và `add_missing_columns()` chỉ ALTER được cột thường.
+    role = Column(String(16), nullable=False)
+
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+
+    # Metadata của lượt trợ lý, để dựng lại giao diện khi tải lại trang mà không
+    # phải chạy lại orchestrator.
+    intent = Column(String(64), nullable=True)
+    reason_code = Column(String(64), nullable=True)
+    data_type = Column(String(32), nullable=True)
+
+    conversation = relationship("Conversation", back_populates="messages")
+
 # Co tinh KHONG co tai khoan admin trong day. Mat khau demo la cong khai voi
 # ca cohort; mot admin seed san la mot cua hau ai cung dang nhap duoc. Admin
 # chi tao bang `python -m src.scripts.create_admin`, giong cach doctor duoc
@@ -1133,6 +1250,8 @@ __all__ = [
     "ROLE_PATIENT",
     "ReportCriticalAlert",
     "ReportIndicator",
+    "Conversation",
+    "ConversationMessage",
     "ReportQuestion",
     "RequestTrace",
     "ReviewFlag",

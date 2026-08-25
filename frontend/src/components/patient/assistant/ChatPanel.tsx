@@ -7,7 +7,7 @@ import {
   type RefObject,
   useState,
 } from "react";
-import { Send, Sparkles, Square, X } from "lucide-react";
+import { History, Plus, Send, Sparkles, Square, X } from "lucide-react";
 
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/message-scroller";
 import { Textarea } from "@/components/ui/textarea";
 import { canSubmitMessage, composerKeyAction } from "@/lib/orchestratorChat.mjs";
-import type { Role } from "@/lib/api";
+import { conversationLabel } from "@/lib/conversationTranscript.mjs";
+import type { ConversationSummary, Role } from "@/lib/api";
 import type { SuggestedAction } from "@/types/orchestrator";
 import AssistantTurn from "./AssistantTurn";
 import type { ChatTurn } from "./useOrchestratorChat";
@@ -44,6 +45,13 @@ type Props = {
   onboardingError: string | null;
   turns: ChatTurn[];
   requestActive: boolean;
+  /** Rỗng với khách: chế độ khách không lưu hội thoại, nên không có gì để liệt kê. */
+  conversations: ConversationSummary[];
+  conversationId: number | null;
+  loadingTranscript: boolean;
+  persistence: boolean;
+  onNewChat: () => void;
+  onOpenConversation: (conversationId: number) => void;
   onClose: () => void;
   onAcknowledge: () => void;
   onSend: (message: string) => void;
@@ -79,6 +87,12 @@ export default function ChatPanel({
   onboardingError,
   turns,
   requestActive,
+  conversations,
+  conversationId,
+  loadingTranscript,
+  persistence,
+  onNewChat,
+  onOpenConversation,
   onClose,
   onAcknowledge,
   onSend,
@@ -88,6 +102,7 @@ export default function ChatPanel({
   onPanelKeyDown,
 }: Props) {
   const [draft, setDraft] = useState("");
+  const [listOpen, setListOpen] = useState(false);
 
   function submitDraft() {
     if (!canSubmitMessage(draft, onboardingAccepted, requestActive)) return;
@@ -140,10 +155,72 @@ export default function ChatPanel({
           <p id="assistant-dialog-subtitle">Hỗ trợ giải thích, không chẩn đoán</p>
         </div>
         {requestActive ? <span className="assistant-active-indicator"><i aria-hidden="true" />Đang hỗ trợ</span> : null}
+        {persistence ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="assistant-header-action"
+              aria-label="Cuộc trò chuyện đã lưu"
+              aria-expanded={listOpen}
+              aria-controls="assistant-conversation-list"
+              onClick={() => setListOpen((open) => !open)}
+            >
+              <History aria-hidden="true" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="assistant-header-action"
+              aria-label="Trò chuyện mới"
+              // Không chặn theo `requestActive`: đang chờ một lượt mà muốn bỏ
+              // sang việc khác là chuyện bình thường. Lượt cũ vẫn được ghi vào
+              // hội thoại của nó vì server bám theo id đã gửi kèm request.
+              onClick={() => {
+                setListOpen(false);
+                onNewChat();
+              }}
+            >
+              <Plus aria-hidden="true" />
+            </Button>
+          </>
+        ) : null}
         <Button type="button" variant="ghost" size="icon" className="assistant-close" aria-label="Đóng trợ lý" onClick={onClose}>
           <X aria-hidden="true" />
         </Button>
       </header>
+
+      {persistence && listOpen ? (
+        <nav
+          id="assistant-conversation-list"
+          className="assistant-conversation-list"
+          aria-label="Cuộc trò chuyện đã lưu"
+        >
+          {conversations.length === 0 ? (
+            <p className="assistant-conversation-empty">Chưa có cuộc trò chuyện nào được lưu.</p>
+          ) : (
+            <ul>
+              {conversations.map((conversation) => (
+                <li key={conversation.id}>
+                  <button
+                    type="button"
+                    aria-current={conversation.id === conversationId ? "true" : undefined}
+                    data-active={conversation.id === conversationId ? "true" : undefined}
+                    onClick={() => {
+                      setListOpen(false);
+                      onOpenConversation(conversation.id);
+                    }}
+                  >
+                    {conversationLabel(conversation)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </nav>
+      ) : null}
 
       <div className="assistant-onboarding-slot">
         {!onboardingAccepted ? (
@@ -172,7 +249,12 @@ export default function ChatPanel({
             className="assistant-transcript"
           >
             <MessageScrollerContent className="assistant-transcript-content">
-              {onboardingAccepted && turns.length === 0 ? (
+              {onboardingAccepted && loadingTranscript ? (
+                <MessageScrollerItem messageId="loading-transcript">
+                  <p className="assistant-progress" role="status">Đang mở lại cuộc trò chuyện…</p>
+                </MessageScrollerItem>
+              ) : null}
+              {onboardingAccepted && !loadingTranscript && turns.length === 0 ? (
                 <MessageScrollerItem messageId="empty-conversation">
                   <EmptyConversation onPrompt={submitPrompt} />
                 </MessageScrollerItem>
