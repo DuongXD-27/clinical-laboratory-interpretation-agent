@@ -5,7 +5,9 @@ TASK_ID        = chat-conversation-persistence
 BRANCH         = feature/chat-conversation-persistence
 PR             = #87  https://github.com/AI20K-Build-Phase-Cohort-3/P-056/pull/87
 BASE_MAIN_SHA  = cf4643000951ad30044425188d69851ee112ece5
-HEAD_SHA       = 73eb16b9cec94f52a19e574c57e0c38c76e7027c
+HEAD_SHA       = 3674d7e069916b273a1ec42e7afda7e80683b47f  (commit code — mọi
+                 số liệu test dưới đây đo trên đúng commit này; các commit sau
+                 chỉ sửa file doc này, không đụng một dòng code nào)
 ```
 
 ## GOAL
