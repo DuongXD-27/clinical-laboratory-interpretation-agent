@@ -254,6 +254,17 @@ APP_HELP_NOT_FOUND_MESSAGE = (
 )
 
 
+def _clean_app_help_text(text: str) -> str:
+    """Strip internal-docs artifacts from a corpus chunk before it becomes
+    a chat message: the heading line (already redundant — it repeats the
+    question's topic) and inline `file.md` cross-references (meaningless to
+    an end user). Purely subtractive/deterministic — never changes a
+    remaining word, so it cannot introduce a new claim."""
+    lines = text.split("\n", 1)
+    body = lines[1].lstrip("\n") if len(lines) > 1 and lines[0].strip().endswith("?") else text
+    return re.sub(r"\s*\(xem file `[^`]+`\)", "", body).strip()
+
+
 def _app_help_role_caveat(chunk_role: str, requester_role: str | None) -> str | None:
     if requester_role not in {"patient", "doctor"}:
         return None
@@ -291,7 +302,7 @@ async def _dispatch_app_help(context: DispatchContext) -> WorkflowResult:
         )
 
     top = result.matches[0]
-    explanation = top.text
+    explanation = _clean_app_help_text(top.text)
     caveat = _app_help_role_caveat(top.role, role)
     if caveat:
         explanation = f"{caveat}\n\n{explanation}"

@@ -389,6 +389,26 @@ def _payload_summary(data: DataPayload) -> str:
     return f"Payload: {data.data_type}."
 
 
+_APP_HELP_EXTRA_RULES = """
+        This is an APP_HELP answer: the "Deterministic fallback message" is a
+        verbatim excerpt from the product's own How-To-Use documentation. It
+        currently reads like internal docs (repeated section headings,
+        `file.md` references) — your job is ONLY to make it read like a
+        friendly chat reply, not to add or change what it says.
+        Hard rules, no exceptions:
+        - Do not mention, rename, or invent ANY route, button label, menu
+          item, filename, or app feature that is not already present
+          verbatim in the fallback message below.
+        - Do not add steps, conditions, or capabilities the fallback message
+          does not state. If something is not mentioned, stay silent about
+          it — do not guess or fill gaps.
+        - You MAY: drop the leading heading line, remove `like_this.md` file
+          references, turn a numbered/bulleted list into natural prose or
+          keep it as a list (either is fine), and smooth the tone.
+        - If in doubt, prefer copying a sentence unchanged over rephrasing it.
+"""
+
+
 def _composer_prompt(
     *,
     intent: IntentEnum,
@@ -397,6 +417,7 @@ def _composer_prompt(
     data: DataPayload,
     fallback_message: str,
 ) -> str:
+    extra_rules = _APP_HELP_EXTRA_RULES if intent == IntentEnum.APP_HELP else ""
     return textwrap.dedent(
         f"""\
         You write one short patient-facing message in Vietnamese.
@@ -406,7 +427,7 @@ def _composer_prompt(
         create diagnoses, infer causes, recommend treatment, invent facts,
         invent sources, invent actions, or change server fields.
         If whole report analysis is provided, summarize findings by highlighting critical/abnormal indicators first, mentioning unknown/unresolved indicators separately, summarizing normal indicators, and offering a safe follow-up question.
-
+        {extra_rules}
         Server-controlled fields:
         intent={intent.value}
         status={status.value}
@@ -445,14 +466,6 @@ async def compose_message(
         # hostile or incorrect rewrites of value/unit/status/range/critical
         # facts can never reach the final response.
         return fallback_message
-    if intent == IntentEnum.APP_HELP:
-        # App Help answers must be grounded/deterministic (yeu-cau-vu.txt
-        # mục D): the fallback_message here IS the retrieved corpus chunk
-        # verbatim (see dispatcher._dispatch_app_help). Letting the general
-        # composer LLM "rewrite/summarize" it would reintroduce exactly the
-        # paraphrase-drift risk App Help was built to avoid — a rewrite
-        # could subtly add a detail the corpus never said. Render deterministically.
-        return fallback_message
     prompt = _composer_prompt(
         intent=intent,
         status=status,
@@ -467,7 +480,39 @@ async def compose_message(
     except Exception as exc:
         logger.info("Response composer unavailable; using deterministic fallback: %s", exc)
         return fallback_message
-    return composed.message.strip() or fallback_message
+    message = composed.message.strip() or fallback_message
+    if intent == IntentEnum.APP_HELP and _app_help_rewrite_introduces_new_label(message, fallback_message):
+        # Safety net, not just a prompt instruction: the LLM is asked not to
+        # invent routes/button names, but a prompt is a request, not a
+        # guarantee (yeu-cau-vu.txt AH-10 needs a guarantee). If the rewrite
+        # names a quoted UI label or route that isn't in the source text,
+        # discard the rewrite and fall back to the verbatim corpus text.
+        logger.info("App Help rewrite introduced an unverified label/route; using verbatim fallback")
+        return fallback_message
+    return message
+
+
+_QUOTED_LABEL_RE = re.compile(r'"([^"]{2,60})"|\*\*([^*]{2,60})\*\*')
+_ROUTE_PATH_RE = re.compile(r"/[a-zA-Z][a-zA-Z0-9/_-]*")
+
+
+def _extract_labels_and_routes(text: str) -> set[str]:
+    found: set[str] = set()
+    for match in _QUOTED_LABEL_RE.finditer(text):
+        label = (match.group(1) or match.group(2) or "").strip().casefold()
+        if label:
+            found.add(label)
+    for match in _ROUTE_PATH_RE.finditer(text):
+        found.add(match.group(0).casefold())
+    return found
+
+
+def _app_help_rewrite_introduces_new_label(rewritten: str, source: str) -> bool:
+    """True if `rewritten` names a quoted UI label/button or a route path
+    that never appeared in `source` — i.e. the LLM likely invented it."""
+    source_labels = _extract_labels_and_routes(source)
+    rewritten_labels = _extract_labels_and_routes(rewritten)
+    return not rewritten_labels.issubset(source_labels)
 
 
 def _canonical_statuses(data: DataPayload) -> list[str]:

@@ -182,20 +182,76 @@ async def test_patient_asking_own_role_workflow_gets_no_caveat(monkeypatch):
 # (yeu-cau-vu.txt mục D requires a "deterministic / grounded answer").
 # ==============================================================================
 
+class _FakeComposerLLM:
+    """Mirrors test_response_composer.py's FakeLLM: get_llm() -> object with
+    .with_structured_output(schema) -> self, .ainvoke(messages) -> output."""
+
+    def __init__(self, output):
+        self.output = output
+
+    def with_structured_output(self, schema):
+        return self
+
+    async def ainvoke(self, messages):
+        return self.output
+
+
 @pytest.mark.asyncio
-async def test_app_help_response_composer_never_calls_llm(monkeypatch):
-    # NOTE: compose_message wraps the LLM call in a broad `except Exception`
-    # that falls back to fallback_message on ANY error — so a mock that
-    # raises to "prove" non-invocation would pass even if get_llm() WAS
-    # called and merely failed. Use a call counter instead, which cannot be
-    # accidentally satisfied by the except-and-fallback path.
-    call_count = {"n": 0}
+async def test_app_help_llm_rewrite_is_used_when_it_stays_grounded(monkeypatch):
+    # A rewrite that only rephrases tone (no new quoted labels/routes beyond
+    # what the source already names) is trusted and used — this is the
+    # feature the user asked for: raw corpus dumps ("Feature này dùng để làm
+    # gì?" headings, `file.md` references) read like internal docs, so a
+    # bounded rewrite for natural chat tone is allowed as long as it can't
+    # introduce a new claim.
+    fallback = 'Tải phiếu tại trang "/patient/analysis", bấm nút "Tải ảnh phiếu".'
+    natural_rewrite = 'Bạn vào trang "/patient/analysis" rồi bấm nút "Tải ảnh phiếu" để tải phiếu lên nhé.'
+    monkeypatch.setattr(
+        response_composer,
+        "get_llm",
+        lambda: _FakeComposerLLM(response_composer.ComposedMessage(message=natural_rewrite)),
+    )
 
-    def _tracking_get_llm():
-        call_count["n"] += 1
-        raise RuntimeError("should never be reached")
+    message = await response_composer.compose_message(
+        intent=IntentEnum.APP_HELP,
+        status=ResponseStatus.SUCCESS,
+        reason_code=None,
+        data=ExplanationDataPayload(explanation=fallback, sources=["upload-lab-report.md"]),
+        fallback_message=fallback,
+    )
+    assert message == natural_rewrite
 
-    monkeypatch.setattr(response_composer, "get_llm", _tracking_get_llm)
+
+@pytest.mark.asyncio
+async def test_app_help_llm_rewrite_with_invented_route_is_rejected(monkeypatch):
+    # If the rewrite names a route/button that never appeared in the
+    # source, it's discarded and the verbatim fallback is used instead —
+    # this is the actual AH-10 guarantee: a prompt instruction alone
+    # ("don't invent routes") is a request, not a guarantee.
+    fallback = 'Tải phiếu tại trang "/patient/analysis".'
+    hallucinated_rewrite = 'Bạn vào trang "/patient/upload" rồi bấm nút "Xuất PDF" nhé.'
+    monkeypatch.setattr(
+        response_composer,
+        "get_llm",
+        lambda: _FakeComposerLLM(response_composer.ComposedMessage(message=hallucinated_rewrite)),
+    )
+
+    message = await response_composer.compose_message(
+        intent=IntentEnum.APP_HELP,
+        status=ResponseStatus.SUCCESS,
+        reason_code=None,
+        data=ExplanationDataPayload(explanation=fallback, sources=["upload-lab-report.md"]),
+        fallback_message=fallback,
+    )
+    assert message == fallback
+
+
+@pytest.mark.asyncio
+async def test_app_help_composer_unavailable_falls_back_to_verbatim(monkeypatch):
+    def _boom():
+        raise RuntimeError("llm down")
+
+    monkeypatch.setattr(response_composer, "get_llm", _boom)
 
     fallback = "Vào mục Lịch sử kết quả trên menu."
     message = await response_composer.compose_message(
@@ -206,7 +262,20 @@ async def test_app_help_response_composer_never_calls_llm(monkeypatch):
         fallback_message=fallback,
     )
     assert message == fallback
-    assert call_count["n"] == 0, "get_llm() was called for an APP_HELP response — it must render verbatim"
+
+
+def test_clean_app_help_text_strips_heading_and_file_refs():
+    from src.orchestrator.dispatcher import _clean_app_help_text
+
+    raw = (
+        "Feature này dùng để làm gì?\n\n"
+        "Cho phép bệnh nhân nhập kết quả xét nghiệm "
+        "(xem file `ocr-review.md`)."
+    )
+    cleaned = _clean_app_help_text(raw)
+    assert "Feature này dùng để làm gì?" not in cleaned
+    assert "ocr-review.md" not in cleaned
+    assert "Cho phép bệnh nhân nhập kết quả xét nghiệm" in cleaned
 
 
 @pytest.mark.asyncio
