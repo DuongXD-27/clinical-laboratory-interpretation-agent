@@ -44,7 +44,12 @@ from src.orchestrator.response_composer import (
     build_provenance_response,
     map_needs_input_prompt,
 )
-from src.orchestrator.session_store import SessionStore, default_session_store
+from src.orchestrator.session_store import (
+    SessionStore,
+    bind_conversation,
+    default_session_store,
+)
+from src.services import conversation_repository
 from src.services.request_timing import get_current_timing
 
 logger = logging.getLogger(__name__)
@@ -257,6 +262,102 @@ def _log_turn(
 
 
 async def handle_message(
+    request: OrchestratorRequest,
+    *,
+    current_user: object,
+    db: object,
+    runtime: OrchestratorRuntime | None = None,
+    progress_callback: ProgressCallback | None = None,
+    conversation: object | None = None,
+) -> OrchestratorResponse:
+    """Xu ly mot luot, va neu co hoi thoai thi luu lai luot do.
+
+    `conversation` do ROUTE giai ra, khong phai o day: giai ra tu
+    `request.conversation_id` co the that bai vi khong dung chu so huu, va do la
+    404 -- mot quyet dinh thuoc tang HTTP. Service khong nen nem HTTPException.
+
+    `conversation is None` nghia la khach, hoac bac si, hoac mot lenh goi
+    truc tiep trong test. Luc do khong gan, khong ghi, va toan bo hanh vi cu
+    giu nguyen tung dong -- day la ly do lop bao nay mong nhu vay.
+    """
+
+    if conversation is None:
+        return await _handle_message_core(
+            request,
+            current_user=current_user,
+            db=db,
+            runtime=runtime,
+            progress_callback=progress_callback,
+        )
+
+    # Ghi cau hoi TRUOC khi xu ly. Neu lat sang sau, mot luot loi giua duong se
+    # lam mat han cau hoi cua benh nhan khoi transcript, va ho tai lai trang thi
+    # thay minh chua tung hoi gi. Thay cau hoi khong co tra loi thi con doc duoc.
+    _persist_message(
+        db,
+        conversation=conversation,
+        role=conversation_repository.ROLE_USER,
+        content=request.message,
+    )
+
+    with bind_conversation(db, conversation):
+        response = await _handle_message_core(
+            request,
+            current_user=current_user,
+            db=db,
+            runtime=runtime,
+            progress_callback=progress_callback,
+        )
+
+    # `response.message` la van ban DA qua guardrail -- dung thu benh nhan thay
+    # tren man hinh. Khong luu ban tien kiem duyet: doc lai lich su phai thay
+    # dung thu da hien, khong thay thu he thong da co y chan.
+    _persist_message(
+        db,
+        conversation=conversation,
+        role=conversation_repository.ROLE_ASSISTANT,
+        content=response.message,
+        intent=response.intent.value,
+        reason_code=response.reason_code.value if response.reason_code else None,
+        data_type=response.data_type.value,
+    )
+
+    return response
+
+
+def _persist_message(
+    db: object,
+    *,
+    conversation: object,
+    role: str,
+    content: str,
+    intent: str | None = None,
+    reason_code: str | None = None,
+    data_type: str | None = None,
+) -> None:
+    """Ghi mot luot, va khong bao gio lam do luot dang phuc vu.
+
+    Nuot loi o BIEN chu khong chi trong repository: neu ghi that bai truoc khi
+    vao duoc block try cua repository (session dut, ai do doi ky hieu ham) thi
+    exception se bay len va bien mot cau tra loi dung thanh 500. Mat lich su la
+    thiet hai nho hon mat cau tra loi. Log lai de con lan ra duoc.
+    """
+
+    try:
+        conversation_repository.append_message(
+            db,
+            conversation=conversation,
+            role=role,
+            content=content,
+            intent=intent,
+            reason_code=reason_code,
+            data_type=data_type,
+        )
+    except Exception:
+        logger.warning("conversation_message_persist_failed", exc_info=True)
+
+
+async def _handle_message_core(
     request: OrchestratorRequest,
     *,
     current_user: object,
@@ -642,9 +743,29 @@ async def handle_message(
     return final_response
 
 
-def acknowledge_onboarding(current_user: object, *, runtime: OrchestratorRuntime | None = None) -> OrchestratorResponse:
+def acknowledge_onboarding(
+    current_user: object,
+    *,
+    runtime: OrchestratorRuntime | None = None,
+    db: object | None = None,
+    conversation: object | None = None,
+) -> OrchestratorResponse:
+    """Ghi nhan da doc huong dan.
+
+    `conversation` la BAT BUOC voi benh nhan, du chu ky cho phep None.
+
+    Ly do: context giờ gan theo hoi thoai. Khong gan o day thi xac nhan roi vao
+    ban ghi in-memory khoa theo `patient:{uid}`, con luot chat sau doc hang
+    `conv:{id}` -- va benh nhan ket o man onboarding vinh vien, dung mot buoc
+    sau khi vua bam "Toi da hieu". Bo test tip006 bat dung loi nay.
+    """
+
     runtime = runtime or OrchestratorRuntime()
-    runtime.session_store.acknowledge_onboarding(current_user)
+    if conversation is None:
+        runtime.session_store.acknowledge_onboarding(current_user)
+    else:
+        with bind_conversation(db, conversation):
+            runtime.session_store.acknowledge_onboarding(current_user)
     return OrchestratorResponse(
         intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
         status=ResponseStatus.SUCCESS,

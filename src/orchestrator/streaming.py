@@ -42,6 +42,7 @@ async def stream_message_events(
     current_user: object,
     db: object,
     runtime: OrchestratorRuntime | None = None,
+    conversation: object | None = None,
 ) -> AsyncIterator[OrchestratorStreamEvent]:
     """Execute ``handle_message`` once and expose only patient-safe events."""
 
@@ -75,6 +76,7 @@ async def stream_message_events(
                 db=db,
                 runtime=runtime,
                 progress_callback=publish_progress,
+                conversation=conversation,
             )
         except asyncio.CancelledError:
             raise
@@ -114,12 +116,14 @@ async def stream_sse_frames(
     current_user: object,
     db: object,
     runtime: OrchestratorRuntime | None = None,
+    conversation: object | None = None,
 ) -> AsyncIterator[str]:
     async for event in stream_message_events(
         request,
         current_user=current_user,
         db=db,
         runtime=runtime,
+        conversation=conversation,
     ):
         yield encode_sse_event(event)
 

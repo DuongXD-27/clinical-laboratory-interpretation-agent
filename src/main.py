@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from src.adapters.vision_adapter import close_vision_clients
 from src.api.admin_routes import router as admin_router
 from src.api.auth_routes import router as auth_router
+from src.api.conversation_routes import router as conversation_router
 from src.api.doctor_routes import router as doctor_router
 from src.api.history_routes import router as history_router
 from src.api.ocr_routes import router as ocr_router
@@ -247,6 +248,7 @@ app.include_router(ocr_router, prefix="/api/v1")
 app.include_router(orchestrator_router, prefix="/api/v1")
 app.include_router(patient_router, prefix="/api/v1")
 app.include_router(history_router, prefix="/api/v1")
+app.include_router(conversation_router, prefix="/api/v1")
 app.include_router(doctor_router, prefix="/api/v1")
 app.include_router(trend_review_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")

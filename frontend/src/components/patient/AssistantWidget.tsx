@@ -67,14 +67,25 @@ export default function AssistantWidget({ role }: Props) {
   }, [router]);
   const onOnboardingRequired = useCallback(() => setOnboardingAccepted(false), []);
 
+  // Chỉ bệnh nhân có hội thoại được lưu. Khách vẫn chat bình thường — hợp đồng
+  // của chế độ khách là không lưu gì, và ở đây nó được tôn trọng bằng cách
+  // không gọi API hội thoại, chứ không phải gọi rồi nuốt 403.
+  const persistence = role === "patient";
+
   const {
     turns,
     requestActive,
+    conversations,
+    conversationId,
+    loadingTranscript,
+    openConversation,
+    startNewChat,
     send,
     stop,
     retry,
   } = useOrchestratorChat({
     uiContext,
+    persistence,
     onUnauthorized,
     onOnboardingRequired,
   });
@@ -203,6 +214,12 @@ export default function AssistantWidget({ role }: Props) {
         onboardingError={onboardingError}
         turns={turns}
         requestActive={requestActive}
+        conversations={conversations}
+        conversationId={conversationId}
+        loadingTranscript={loadingTranscript}
+        persistence={persistence}
+        onNewChat={() => void startNewChat()}
+        onOpenConversation={(id) => void openConversation(id)}
         onClose={closePanel}
         onAcknowledge={() => void acknowledge()}
         onSend={(message) => void send(message)}
