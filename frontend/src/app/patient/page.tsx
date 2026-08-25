@@ -100,7 +100,7 @@ export default function PatientDashboardPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="space-y-8 pb-12">
       {/* PAGE HEADER */}
       <section className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">

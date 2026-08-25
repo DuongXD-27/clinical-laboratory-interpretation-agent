@@ -371,14 +371,7 @@ async def test_tip006_p1_workflow_selection_benchmark(monkeypatch):
         calls.append("get_my_indicator_trend")
         return SimpleNamespace(data_type=DataType.TREND, trend=SimpleNamespace(analyte_canonical=analyte))
 
-    def fake_questions(
-        current_user,
-        db,
-        *,
-        session_result=None,
-        report_ref=None,
-        current_analyte=None,
-    ):
+    def fake_questions(current_user, db, *, session_result=None, report_ref=None, analyte=None):
         calls.append("get_report_questions")
         return DoctorQuestionsPayload(questions=[])
 

@@ -18,8 +18,10 @@ from src.models.orchestrator_schemas import (
 from src.models.schemas import AnalyzeResponse, TrendFilter
 from src.orchestrator.errors import OrchestratorWrapperError
 from src.services import history_repository, trend_service
+from src.services.analyte_resolver import canonical_analyte_id
 from src.services.auth import ROLE_GUEST
 from src.services.question_templates import GeneratedQuestion, generate_questions
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
 def _raise(reason_code: ReasonCode) -> None:
@@ -110,90 +112,84 @@ def _indicator_mappings(session_result: object) -> list[Mapping[str, Any]]:
     return mapped
 
 
-def _normalized_name_values(*values: object) -> set[str]:
-    return {str(value).strip().casefold() for value in values if str(value or "").strip()}
+def _resolved_analyte(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        repository = ReferenceRepository.from_default_files()
+        return repository.resolve_analyte(text) or text
+    except ReferenceRepositoryError:
+        return text
 
 
-def _mapping_matches_analyte(indicator: Mapping[str, Any], analyte: str | None) -> bool:
+def _matches_analyte(indicator: object, analyte: str | None) -> bool:
     if not analyte:
         return True
-    target = analyte.strip().casefold()
-    if not target:
-        return True
-    return target in _normalized_name_values(
-        indicator.get("name"),
-        indicator.get("analyte_canonical"),
-        indicator.get("analyte_raw"),
-    )
+    requested = _resolved_analyte(analyte).casefold()
+    candidates = {
+        _resolved_analyte(getattr(indicator, field, None)).casefold()
+        for field in ("analyte_canonical", "analyte_raw", "name")
+    }
+    return requested in candidates
 
 
-def _indicator_matches_analyte(indicator: ReportIndicator, analyte: str | None) -> bool:
-    if not analyte:
-        return True
-    target = analyte.strip().casefold()
-    if not target:
-        return True
-    return target in _normalized_name_values(
-        indicator.name,
-        indicator.analyte_canonical,
-        indicator.analyte_raw,
-    )
-
-
-def _report_indicator_mapping(indicator: ReportIndicator) -> Mapping[str, Any]:
+def _question_indicator_map(report: LabReport) -> dict[int, object]:
     return {
-        "name": indicator.name,
-        "value": indicator.value,
-        "unit": indicator.unit,
-        "reference_low": indicator.reference_low,
-        "reference_high": indicator.reference_high,
-        "status": indicator.status,
-        "critical_status": indicator.critical_status,
-        "is_abnormal": indicator.is_abnormal,
-        "is_critical": indicator.is_critical,
+        indicator.id: indicator
+        for indicator in report.indicators
+        if isinstance(getattr(indicator, "id", None), int)
     }
 
 
-def _stored_question_payload(
-    question: ReportQuestion,
-    indicators_by_id: Mapping[int, ReportIndicator],
-) -> GeneratedQuestion:
-    indicator = (
-        indicators_by_id.get(question.indicator_id)
-        if question.indicator_id is not None
-        else None
-    )
-    return GeneratedQuestion(
-        text=question.question_text,
-        priority=question.priority,
-        display_order=question.display_order,
-        indicator_name=indicator.name if indicator is not None else None,
-    )
-
-
-def _stored_questions_for_report(
+def _persisted_questions(
     report: LabReport,
     *,
-    current_analyte: str | None,
+    analyte: str | None,
 ) -> list[GeneratedQuestion]:
-    indicators_by_id = {indicator.id: indicator for indicator in report.indicators}
-    allowed_indicator_ids = {
-        indicator.id
-        for indicator in report.indicators
-        if _indicator_matches_analyte(indicator, current_analyte)
-    }
-    if current_analyte:
-        questions = [
-            question
-            for question in report.questions
-            if question.indicator_id in allowed_indicator_ids
-        ]
-    else:
-        questions = list(report.questions)
-    return [
-        _stored_question_payload(question, indicators_by_id)
-        for question in sorted(questions, key=lambda item: (item.display_order, item.id))
-    ]
+    """Return approved stored wording in its persisted order.
+
+    An analyte-specific request intentionally excludes unlinked/fallback and
+    unrelated questions because their association cannot be proven.
+    """
+
+    detail = history_repository.to_detail(report)
+    indicators_by_id = _question_indicator_map(report)
+    questions: list[GeneratedQuestion] = []
+    for stored in detail.questions:
+        indicator = indicators_by_id.get(stored.indicator_id) if stored.indicator_id is not None else None
+        if analyte and (indicator is None or not _matches_analyte(indicator, analyte)):
+            continue
+        questions.append(
+            GeneratedQuestion(
+                text=stored.question_text,
+                priority=stored.priority,
+                display_order=stored.display_order,
+                analyte_id=(
+                    canonical_analyte_id(indicator.analyte_canonical or indicator.name)
+                    if indicator is not None
+                    else None
+                ),
+                indicator_name=(indicator.name if indicator is not None else None),
+            )
+        )
+    return questions
+
+
+def _report_indicator_mappings(
+    report: LabReport,
+    *,
+    analyte: str | None,
+) -> list[Mapping[str, Any]]:
+    detail = history_repository.to_detail(report)
+    mapped: list[Mapping[str, Any]] = []
+    for indicator in detail.indicators:
+        if not _matches_analyte(indicator, analyte):
+            continue
+        item = indicator.model_dump()
+        item["analyte_id"] = canonical_analyte_id(indicator.analyte_canonical or indicator.name)
+        mapped.append(item)
+    return mapped
 
 
 def get_my_history(current_user: object, db: object, filters: Mapping[str, object] | None = None) -> HistorySummaryPayload:
@@ -267,21 +263,17 @@ def get_report_questions(
     *,
     session_result: object | None = None,
     report_ref: object | None = None,
-    current_analyte: str | None = None,
+    analyte: str | None = None,
 ) -> DoctorQuestionsPayload:
     role = _require_non_doctor(current_user)
     if report_ref is not None:
         if role == ROLE_GUEST:
             _raise(ReasonCode.UNSUPPORTED_CAPABILITY)
         report = _owned_report(current_user, db, report_ref)
-        stored_questions = _stored_questions_for_report(report, current_analyte=current_analyte)
-        if stored_questions:
-            return DoctorQuestionsPayload(questions=stored_questions)
-        indicators: Sequence[Mapping[str, Any]] = [
-            _report_indicator_mapping(indicator)
-            for indicator in report.indicators
-            if _indicator_matches_analyte(indicator, current_analyte)
-        ]
+        persisted = _persisted_questions(report, analyte=analyte)
+        if persisted:
+            return DoctorQuestionsPayload(questions=persisted)
+        indicators: Sequence[Mapping[str, Any]] = _report_indicator_mappings(report, analyte=analyte)
     elif session_result is not None:
         indicators = [
             indicator

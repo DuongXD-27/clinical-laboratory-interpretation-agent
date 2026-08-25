@@ -53,6 +53,7 @@ def _is_trend_request(message: str, normalized: str) -> bool:
         "thay doi nhu the nao",
         "thay doi ra sao",
         "thay doi gi",
+        "thay doi",
         "tang hay giam",
         "tang bao nhieu",
         "giam bao nhieu",
@@ -62,6 +63,11 @@ def _is_trend_request(message: str, normalized: str) -> bool:
         "tang lien tuc",
         "giam lien tuc",
         "qua cac lan xet nghiem",
+        "qua cac lan",
+        "cu tang",
+        "cu giam",
+        "tang lien tuc",
+        "giam lien tuc",
     )
     if any(term in normalized for term in strong_trend_cues):
         return True
@@ -122,8 +128,24 @@ def _deterministic_route(
         return RouteDecision(intent=IntentEnum.ANALYZE_TREND, route_confidence=0.95)
 
     # 3. GET_DOCTOR_QUESTIONS
-    if any(term in normalized for term in ("hoi bac si", "cau hoi", "doctor question")):
+    if any(term in normalized for term in ("hoi bac si", "hoi gi bac si", "cau hoi", "doctor question")):
         return RouteDecision(intent=IntentEnum.GET_DOCTOR_QUESTIONS, route_confidence=0.95)
+
+    # 4. SAFE_GENERAL (Greetings, Capability Requests, and In-Scope App Help)
+    safe_general_patterns = (
+        "chao ban", "chao em", "chao bac", "chao anh", "chao chi", "xin chao",
+        "hello", "cam on", "thank", "ban lam duoc gi", "tro ly nay giup gi",
+        "bat dau tu dau", "ban la ai", "giup toi lam gi", "giup gi", "co the giup",
+        "lam duoc gi", "ban giup duoc gi", "ban co the lam gi",
+        "huong dan su dung", "huong dan dung", "huong dan toi su dung",
+        "huong dan toi tai phieu", "huong dan tai phieu", "huong dan dung ocr",
+        "huong dan toi dung ocr", "huong dan xem ket qua", "huong dan xem lich su",
+        "huong dan xem xu huong", "cach su dung", "cach dung ung dung",
+        "tai phieu xet nghiem o dau", "tai phieu o dau", "khong tai duoc phieu",
+        "chuc nang ocr", "ocr dung de lam gi", "ocr cua ung dung",
+    )
+    if any(term in normalized for term in safe_general_patterns) or "hi" in normalized.split():
+        return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
 
     # Ingestion / Active upload context detection
     has_active_ingestion = session is not None and (
@@ -151,6 +173,8 @@ def _deterministic_route(
         "co gi dang chu y", "co gi can chu y", "nhin chung ca phieu cua em thi sao",
         "co gi bat thuong", "xem tong the ket qua", "xem tong quan ket qua",
         "xem tong quan", "tong the phieu nay"
+        "xem tong the ket qua", "xem tong quan ket qua", "tong the phieu nay",
+        "xem tong quan", "tong quan", "xem tong the", "tong the"
     )
     is_existing_report_overview = any(term in normalized for term in existing_report_cues)
 
@@ -162,16 +186,31 @@ def _deterministic_route(
     if is_existing_report_overview:
         return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
 
-    # 4. EXPLAIN_CURRENT_RESULT (Explicit current-result markers or lab values)
+    # 5. EXPLAIN_CURRENT_RESULT (Explicit current-result markers or lab values or explicit/referential analytes)
     explain_markers = ("giai thich", "explain", "nghia la gi", "y nghia", "mau do", "tai sao", "thap", "cao")
     has_explicit_analyte = extract_explicit_analyte(message) is not None
     is_analyte_switch = has_explicit_analyte and (
         normalized.startswith("con ") or normalized.startswith("the con ") or "con " in normalized
     )
-    if _is_explicit_current_result_request(message, normalized) or contains_lab_value(message) or is_analyte_switch or any(term in normalized for term in explain_markers) or any(term in original_lower for term in ("nghĩa là gì", "ý nghĩa", "màu đỏ")):
+    from src.orchestrator.medical_context import _is_referential_analyte, _normalize_no_accents
+    is_referential = _is_referential_analyte(_normalize_no_accents(message))
+    is_explicit_current_result = _is_explicit_current_result_request(message, normalized)
+    is_lab_value = contains_lab_value(message)
+    has_explain_marker = any(term in normalized for term in explain_markers) or any(term in original_lower for term in ("nghĩa là gì", "ý nghĩa", "màu đỏ"))
+
+    if is_explicit_current_result or is_lab_value or is_analyte_switch or has_explain_marker or has_explicit_analyte or is_referential:
         return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
 
-    # 5. ANALYZE_REPORT (Fallback for new report phrases)
+    # Generic report queries (e.g. 'phiếu gần nhất', 'kết quả của tôi')
+    generic_report_queries = (
+        "phieu gan nhat", "ket qua gan nhat", "ket qua moi nhat",
+        "ket qua cua toi", "ket qua cua em", "ket qua cua minh",
+        "doc ket qua", "xem ket qua", "doc phieu", "xem phieu",
+    )
+    if any(term in normalized for term in generic_report_queries):
+        return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
+
+    # 6. ANALYZE_REPORT (Fallback for new report phrases)
     if any(term in normalized for term in ("cai xet nghiem", "nhan phieu", "phieu xet nghiem", "anh xet nghiem")):
         if has_active_ingestion:
             return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
@@ -180,7 +219,7 @@ def _deterministic_route(
         else:
             return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
 
-    # 6. Context-aware Vague Patient Expressions (Only active when patient has accessible medical data/session)
+    # 7. Context-aware Vague Patient Expressions (Only active when patient has accessible medical data/session)
     if has_medical_context:
         vague_result_patterns = (
             "xem giup em", "xem giup toi", "xem giup minh",
@@ -194,6 +233,7 @@ def _deterministic_route(
             "xem ket qua", "xem tong the", "tong the ket qua", "khong hieu ket qua",
             "khong hieu ket qua nay", "em khong hieu ket qua",
             "phieu nay", "phieu nay the nao", "ket qua nay",
+            "xem tong quan", "tong quan", "tong quan giup",
         )
         if any(term in normalized for term in vague_result_patterns):
             return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
@@ -254,6 +294,8 @@ def _prompt_for(message: str, session: OrchestratorSessionContext, role: str, ha
         "- Route VIEW_HISTORY when asking about past reports (e.g. 'kết quả tháng trước', 'lần trước').\n"
         "- Only route ANALYZE_REPORT when the user explicitly requests new report ingestion/processing or when there is an active pending OCR review (e.g. 'Phân tích phiếu này', 'Tôi có phiếu mới', 'Phân tích ảnh này').\n"
         "- If `pending_question` is present and the user gives a short response answering it, rely heavily on `last_intent`.\n"
+        "- If the utterance is unclear, nonsense, off-topic, unsupported, or does not clearly match any supported intent, classify as UNSUPPORTED_OR_UNSAFE.\n"
+        "- Do NOT guess or infer a medical intent for an utterance that does not specifically ask about tests, reports, analytes, trends, or medical questions, even if medical context is present.\n"
         f"Sanitized user utterance: {_sanitize_for_prompt(message)}\n"
         f"Sanitized context: {context}"
     )
@@ -277,18 +319,55 @@ async def route_intent(
     try:
         response = await get_llm().ainvoke(prompt)
     except Exception:
+        from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+        from src.orchestrator.service import _is_unclear_input
+        if sensitive_system_gate(message) is not None:
+            reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
+        elif _is_unclear_input(message):
+            reason = ReasonCode.UNKNOWN_INTENT
+        elif out_of_scope_gate(message) is not None:
+            reason = ReasonCode.OUT_OF_SCOPE
+        else:
+            reason = ReasonCode.UNKNOWN_INTENT
         return RouteDecision(
             intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=ReasonCode.UNKNOWN_INTENT,
+            reason_code=reason,
             route_confidence=0.0,
         )
 
     content = str(getattr(response, "content", response)).strip()
     try:
-        return RouteDecision(intent=IntentEnum(content), route_confidence=0.5)
+        parsed_intent = IntentEnum(content)
+        if parsed_intent == IntentEnum.UNSUPPORTED_OR_UNSAFE:
+            from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+            from src.orchestrator.service import _is_unclear_input
+            if sensitive_system_gate(message) is not None:
+                reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
+            elif _is_unclear_input(message):
+                reason = ReasonCode.UNKNOWN_INTENT
+            elif out_of_scope_gate(message) is not None:
+                reason = ReasonCode.OUT_OF_SCOPE
+            else:
+                reason = ReasonCode.OUT_OF_SCOPE
+            return RouteDecision(
+                intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
+                reason_code=reason,
+                route_confidence=0.5,
+            )
+        return RouteDecision(intent=parsed_intent, route_confidence=0.5)
     except ValueError:
+        from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+        from src.orchestrator.service import _is_unclear_input
+        if sensitive_system_gate(message) is not None:
+            reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
+        elif _is_unclear_input(message):
+            reason = ReasonCode.UNKNOWN_INTENT
+        elif out_of_scope_gate(message) is not None:
+            reason = ReasonCode.OUT_OF_SCOPE
+        else:
+            reason = ReasonCode.UNKNOWN_INTENT
         return RouteDecision(
             intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=ReasonCode.UNKNOWN_INTENT,
+            reason_code=reason,
             route_confidence=0.0,
         )

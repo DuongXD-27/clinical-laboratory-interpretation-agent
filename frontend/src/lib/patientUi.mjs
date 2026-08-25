@@ -69,6 +69,26 @@ export function reportTone(status) {
   return "abnormal";
 }
 
+/**
+ * Display-only ordering for the analysis result list: critical findings first,
+ * then abnormal, then unknown, then normal. Order within each group is
+ * preserved. Purely presentational — never mutates stored data and never
+ * reclassifies a backend-provided status.
+ */
+const SEVERITY_RANK = { critical: 0, abnormal: 1, unknown: 2, normal: 3 };
+
+export function sortIndicatorsBySeverity(indicators) {
+  if (!Array.isArray(indicators)) return [];
+  return indicators
+    .map((indicator, index) => ({ indicator, index }))
+    .sort((a, b) => {
+      const rankA = SEVERITY_RANK[reportTone(a.indicator.status)] ?? 4;
+      const rankB = SEVERITY_RANK[reportTone(b.indicator.status)] ?? 4;
+      return rankA - rankB || a.index - b.index;
+    })
+    .map((entry) => entry.indicator);
+}
+
 export function sourceHostname(source) {
   try {
     return new URL(source).hostname.replace(/^www\./, "");

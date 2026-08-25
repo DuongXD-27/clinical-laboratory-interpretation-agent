@@ -16,6 +16,7 @@ from src.services.measurement_conversion import (
     cholesterol_mg_dl_to_mmol_l,
     triglyceride_mg_dl_to_mmol_l,
 )
+from src.services.analyte_resolver import FROZEN_CLINICAL_RULE_BANDS, canonical_analyte_id
 
 
 class ReferenceRepositoryError(Exception):
@@ -433,6 +434,125 @@ class ReferenceRepository:
             comparison_value=comparison_value,
             comparison_unit=comparison_unit,
         )
+
+    def resolve_band(
+        self,
+        *,
+        analyte: str,
+        value: float,
+        unit: str,
+        patient_gender: str | None = None,
+        patient_age: int | float | None = None,
+    ) -> str | None:
+        """Resolve the deterministic band id consistent with the Reference Checker.
+
+        GRQ-004 boundary-consistency contract: this method NEVER applies its own
+        boundary algorithm. It reuses, verbatim:
+        - ``select_rule`` — the exact row-selection helper the reference checker
+          calls, so the matched baseline row (and its bounds/operators) is
+          IDENTICAL to the one behind the checker's deterministic status;
+        - the checker's own ``_classify`` and ``_parse_rule_bound``
+          (lazy-imported, read-only) so comparison operators cannot drift.
+
+        The frozen band vocabulary (``FROZEN_CLINICAL_RULE_BANDS``) supplies
+        labels only. Selection rules:
+        - checker semantic NORMAL -> the baseline row's own band;
+        - checker semantic HIGH   -> the DEEPEST band segment above the baseline
+          whose closed interval contains the value;
+        - checker semantic LOW    -> the LOWEST band segment below the baseline
+          whose closed interval contains the value;
+        - a value inside a literal uncovered gap, any ambiguity (duplicate
+          baseline rows, segment/band count mismatch), or any failure -> None
+          (fail closed; caller keeps current behaviour, no band_note retrieval).
+        """
+        canonical = self.resolve_analyte(analyte)
+        if canonical is None:
+            return None
+        bands = FROZEN_CLINICAL_RULE_BANDS.get(canonical_analyte_id(canonical))
+        if not bands:
+            return None
+
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        # Option A: exact same row selection as the authoritative checker.
+        result = self.select_rule(
+            analyte=analyte,
+            unit=unit,
+            patient_gender=patient_gender or "",
+            patient_age=patient_age,
+        )
+        if not result.matched or not result.rule:
+            return None
+
+        # Option B: the checker's own classifier and bound parser.
+        from src.agents.nodes.reference_range_checker_node import (
+            _classify,
+            _parse_rule_bound,
+        )
+
+        lower = _parse_rule_bound(result.rule.get("range_lower"))
+        upper = _parse_rule_bound(result.rule.get("range_upper"))
+        semantic = _classify(
+            Decimal(str(numeric)),
+            lower,
+            upper,
+            rule_type=result.rule.get("reference_type"),
+            upper_operator=result.rule.get("upper_operator"),
+        )
+        if semantic not in {"low", "normal", "high"}:
+            return None
+
+        segments: list[tuple[float, float]] = []
+        for segment_rule in self._rules_by_analyte.get(canonical, ()):
+            if self._norm_text(segment_rule.get("reference_type")) not in {"CDL", "BAND"}:
+                continue
+            segment_lower = _parse_rule_bound(segment_rule.get("range_lower"))
+            segment_upper = _parse_rule_bound(segment_rule.get("range_upper"))
+            segments.append(
+                (
+                    float("-inf") if segment_lower is None else float(segment_lower),
+                    float("inf") if segment_upper is None else float(segment_upper),
+                )
+            )
+        segments.sort()
+        if len(segments) != len(bands):
+            return None
+
+        baseline_lower = float("-inf") if lower is None else float(lower)
+        baseline_upper = float("inf") if upper is None else float(upper)
+        baseline_matches = [
+            index
+            for index, (segment_lower, segment_upper) in enumerate(segments)
+            if segment_lower == baseline_lower and segment_upper == baseline_upper
+        ]
+        if len(baseline_matches) != 1:
+            return None  # ambiguous baseline row identity: fail closed
+        baseline_index = baseline_matches[0]
+
+        def contains(index: int) -> bool:
+            segment_lower, segment_upper = segments[index]
+            return segment_lower <= numeric <= segment_upper
+
+        if semantic == "normal":
+            chosen_index = baseline_index
+        elif semantic == "high":
+            candidates = [
+                index
+                for index in range(baseline_index + 1, len(segments))
+                if contains(index)
+            ]
+            if not candidates:
+                return None
+            chosen_index = max(candidates)
+        else:  # low
+            candidates = [index for index in range(0, baseline_index) if contains(index)]
+            if not candidates:
+                return None
+            chosen_index = min(candidates)
+        return bands[chosen_index]
 
     def resolve_analyte(self, analyte: str) -> str | None:
         return self.analyte_aliases.get(self._alias_key(analyte))

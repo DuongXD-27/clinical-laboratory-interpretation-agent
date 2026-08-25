@@ -57,9 +57,9 @@ export default function LandingPage() {
     <main className="landing-page">
       <nav className="landing-nav" aria-label="Điều hướng trang giới thiệu">
         <div className="landing-container landing-nav-inner">
-          <Link href="/" className="landing-logo" aria-label="VMEC">
+          <Link href="/" className="landing-logo" aria-label="LumiLab">
             <span className="brand-mark" aria-hidden="true">+</span>
-            <span>VMEC</span>
+            <span>LumiLab</span>
           </Link>
           <div className="landing-nav-links">
             <a href="#features">Tính năng</a>
@@ -215,9 +215,15 @@ export default function LandingPage() {
         <div className="landing-container landing-footer-inner">
           <div className="landing-logo">
             <span className="brand-mark" aria-hidden="true">+</span>
-            <span>VMEC</span>
+            <span>LumiLab</span>
           </div>
-          <p>© 2026 VMEC. Thông tin chỉ mang tính tham khảo.</p>
+          <p>© 2026 LumiLab. Thông tin chỉ mang tính tham khảo.</p>
+          {/* Google kiểm trang chủ có dẫn tới chính sách quyền riêng tư không
+              trước khi cho publish OAuth app. Nhưng lý do chính vẫn là người
+              dùng phải tìm được nó mà không cần đoán URL. */}
+          <Link href="/privacy" className="landing-text-link">
+            Chính sách quyền riêng tư
+          </Link>
         </div>
       </footer>
     </main>

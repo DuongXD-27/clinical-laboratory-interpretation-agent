@@ -9,7 +9,7 @@ import AdminTopbar from "./AdminTopbar";
 /** Khung khu vực vận hành, đối xứng với PatientShell và DoctorShell.
  *
  * Trước đây `/admin` không có layout nào nên nó trơ trọi giữa một sản phẩm mà
- * mọi khu vực khác đều có sidebar và topbar — nhìn vào không thấy đó là VMEC.
+ * mọi khu vực khác đều có sidebar và topbar — nhìn vào không thấy đó là LumiLab.
  *
  * Guard ở đây CHỈ là điều hướng cho đỡ lạc, không phải phân quyền: `getRole()`
  * đọc localStorage, thứ ai cũng sửa được. Ranh giới thật là `require_roles()`

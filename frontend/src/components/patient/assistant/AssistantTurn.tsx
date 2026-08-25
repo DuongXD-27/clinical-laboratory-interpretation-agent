@@ -189,7 +189,7 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
   return (
     <Message align="start" className="assistant-turn">
       <MessageContent>
-        <MessageHeader><span className="sr-only">Trợ lý VMEC</span></MessageHeader>
+        <MessageHeader><span className="sr-only">Trợ lý LumiLab</span></MessageHeader>
         <Bubble variant="ghost" className="assistant-response">
           <BubbleContent>
             {turn.deliveryState === "CONNECTING" ? (

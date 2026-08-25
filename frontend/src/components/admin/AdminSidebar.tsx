@@ -20,7 +20,7 @@ interface AdminSidebarProps {
 /** Điều hướng khu vực vận hành.
  *
  * Chỉ có đúng một mục, và vẫn giữ nguyên khung sidebar thay vì bỏ đi: người
- * dùng nhận ra mình vẫn ở trong VMEC nhờ bố cục giống hai khu vực kia. Bỏ
+ * dùng nhận ra mình vẫn ở trong LumiLab nhờ bố cục giống hai khu vực kia. Bỏ
  * sidebar để "đỡ thừa" là làm màn admin trông như một công cụ rời.
  */
 export default function AdminSidebar({ pathname, username, onLogout }: AdminSidebarProps) {
@@ -28,7 +28,7 @@ export default function AdminSidebar({ pathname, username, onLogout }: AdminSide
     <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-md border-r border-[var(--glass-border)] sticky top-0 h-dvh z-40">
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--brand-strong)]">VMEC Operations</span>
+          <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab Operations</span>
           <span className="text-xs text-muted-foreground">Không gian vận hành</span>
         </div>
       </div>

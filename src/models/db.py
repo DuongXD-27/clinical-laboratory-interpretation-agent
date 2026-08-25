@@ -77,6 +77,22 @@ _connect_args = {"check_same_thread": False} if _is_sqlite else {}
 engine = create_engine(
     settings.database_url,
     connect_args=_connect_args,
+    # Kiem tra ket noi con song truoc khi giao ra khoi pool.
+    #
+    # Do that tren production: mot lan POST /auth/login tra 500 sau 2.17ms voi
+    # `psycopg2.OperationalError: SSL connection has been closed unexpectedly`.
+    # Neon free tier ngu khi ranh va dong ket noi tu phia no; pool cua
+    # SQLAlchemy khong biet, van giao ket noi chet ra, va cau truy van dau tien
+    # sau moi khoang lang no ngay.
+    #
+    # Nguoi dung thay "He thong dang ban, vui long thu lai" va thu lai thi duoc
+    # — dung kieu loi de bi cho qua vi khong tai hien duoc theo y muon.
+    #
+    # pool_pre_ping tra gia mot cau SELECT 1 moi lan lay ket noi; doi lai khong
+    # con 500 vi ket noi chet. pool_recycle chu dong bo ket noi qua 5 phut,
+    # ngan han cua Neon truoc khi no tu dong.
+    pool_pre_ping=True,
+    pool_recycle=300,
 )
 
 SessionLocal = sessionmaker(
