@@ -2,7 +2,7 @@ TASK_ID=APP-HELP-RAG-PHASE2
 BRANCH=feature/app-help-rag
 PR=(chưa mở — sẽ mở khi bạn xác nhận nội dung này)
 BASE_MAIN_SHA=2da389b3e2d8553d63be73c2b8e5380345201bbd
-HEAD_SHA=(cập nhật sau commit cuối cùng của Phase 2 — xem `git log -1`)
+HEAD_SHA=59f3ca0118ec88020a0aac21b5410559626fbe33
 
 GOAL=Chatbot phải trả lời đúng câu hỏi "cách dùng app" (upload, lịch sử, xu hướng, OCR review, hồ sơ, cảnh báo, hỏi bác sĩ, nguồn tham chiếu, trợ lý) từ corpus thật của sản phẩm, tách biệt hoàn toàn khỏi RAG y khoa (medical_kb_v4), không được bịa route/nút không tồn tại.
 
