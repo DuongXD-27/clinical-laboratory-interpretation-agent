@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import QueueRow from "@/components/doctor/QueueRow";
 import QueueTabs from "@/components/doctor/QueueTabs";
 import DoctorQueueOverview from "@/components/doctor/DoctorQueueOverview";
-import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import {
   fetchDoctorQueue,
   getRole,
@@ -79,91 +76,109 @@ export default function DoctorPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="doctor-page doctor-queue-page">
-      <DoctorPageHeader
-        eyebrow="Không gian bác sĩ"
-        title="Hàng đợi đánh giá"
-        description="Ưu tiên các phiếu cần xác minh lâm sàng, kiểm tra OCR và phản hồi bệnh nhân."
-      />
-
-      <section className="doctor-page-section" aria-label="Tổng quan hàng đợi">
+    <div className="doctor-worklist-page">
+      <section className="doctor-worklist-page__content">
+        <header className="page-section-heading doctor-worklist-heading">
+          <div>
+            <span className="doctor-worklist-heading__eyebrow">Không gian lâm sàng</span>
+            <h1>Hàng đợi đánh giá</h1>
+            <p>Ưu tiên tín hiệu cần chú ý, theo dõi tiến độ và mở phiếu để kiểm chứng.</p>
+          </div>
+        </header>
 
         <DoctorQueueOverview counts={counts} />
-      </section>
 
-      <section className="doctor-page-section doctor-queue-workspace" aria-label="Danh sách phiếu cần đánh giá">
-        <QueueTabs active={tab} counts={counts} onChange={changeTab} />
+        <section className="doctor-worklist-surface" aria-labelledby="doctor-worklist-title">
+          <h2 id="doctor-worklist-title" className="sr-only">Danh sách phiếu cần đánh giá</h2>
+          <div className="doctor-worklist-surface__filters">
+            <QueueTabs active={tab} counts={counts} onChange={changeTab} />
+          </div>
 
-        <div className="doctor-list-toolbar">
-          <p><SlidersHorizontal aria-hidden="true" /> Sắp xếp theo mức ưu tiên lâm sàng</p>
-          {!loading && total > 0 && <span>{total} phiếu</span>}
-        </div>
-
-        <section aria-live="polite">
-          {loading && (
-            <div className="doctor-skeleton-stack" role="status" aria-label="Đang tải hàng đợi">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="doctor-queue-skeleton" />
-              ))}
+          <div className="doctor-worklist-toolbar">
+            <div>
+              <strong>{total} phiếu</strong>
+              <span>trong bộ lọc hiện tại</span>
             </div>
-          )}
+            <p>Sắp xếp theo mức ưu tiên</p>
+          </div>
 
-          {error && !loading && (
-            <div className="doctor-state-card doctor-state-card--error" role="alert">
-              <p>Không tải được dữ liệu hàng đợi.</p>
-              <Button type="button" variant="outline" onClick={() => void load(tab, page)}>
-                Thử lại
-              </Button>
-            </div>
-          )}
+          <div className="doctor-worklist-body" aria-live="polite">
+            {loading && (
+              <div className="doctor-worklist-skeleton" role="status" aria-label="Đang tải hàng đợi">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="doctor-worklist-skeleton__row">
+                    <Skeleton className="doctor-worklist-skeleton__identity" />
+                    <Skeleton className="doctor-worklist-skeleton__reason" />
+                    <Skeleton className="doctor-worklist-skeleton__workflow" />
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {!error && !loading && items.length === 0 && (
-            <div className="doctor-state-card">
-              <span className="doctor-state-card__icon" aria-hidden="true"><CheckCircle2 /></span>
-              <h2>
-                {isPendingDefault
-                  ? hasVerified
-                    ? "Không có phiếu nào đang chờ kiểm chứng."
-                    : "Chưa có phiếu nào cần kiểm chứng."
-                  : "Không có phiếu nào khớp bộ lọc này."}
-              </h2>
-              <p>
-                {isPendingDefault
-                  ? hasVerified
-                    ? "Tất cả phiếu đã đi qua hàng đợi hiện đã được xử lý."
-                    : "Hệ thống chưa tìm thấy phiếu có cờ cần bác sĩ xem."
-                  : "Bộ lọc hiện tại đang rỗng."}
-              </p>
-              {!isPendingDefault && (
-                <Button type="button" onClick={() => changeTab("pending")}>
-                  Xem tất cả phiếu đang chờ
-                </Button>
-              )}
-            </div>
-          )}
+            {error && !loading && (
+              <div className="doctor-worklist-message doctor-worklist-message--error" role="alert">
+                <strong>Không tải được dữ liệu hàng đợi.</strong>
+                <p>{error}</p>
+                <button type="button" onClick={() => void load(tab, page)}>Thử lại</button>
+              </div>
+            )}
 
-          {!error && !loading && items.length > 0 && (
-            <ul className="doctor-queue-cards">
-              {items.map((item) => (
-                <li key={item.report_id}>
-                  <QueueRow item={item} activeTab={tab} />
-                </li>
-              ))}
-            </ul>
+            {!error && !loading && items.length === 0 && (
+              <div className="doctor-worklist-message doctor-worklist-message--empty">
+                <span aria-hidden="true">✓</span>
+                <h2>
+                  {isPendingDefault
+                    ? hasVerified
+                      ? "Không có phiếu nào đang chờ kiểm chứng."
+                      : "Chưa có phiếu nào cần kiểm chứng."
+                    : "Không có phiếu nào khớp bộ lọc này."}
+                </h2>
+                <p>
+                  {isPendingDefault
+                    ? hasVerified
+                      ? "Tất cả phiếu đã đi qua hàng đợi hiện đã được xử lý."
+                      : "Hệ thống chưa tìm thấy phiếu có cờ cần bác sĩ xem."
+                    : "Bộ lọc hiện tại đang rỗng."}
+                </p>
+                {!isPendingDefault && (
+                  <button type="button" onClick={() => changeTab("pending")}>
+                    Xem tất cả phiếu đang chờ
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!error && !loading && items.length > 0 && (
+              <ul className="doctor-worklist-rows">
+                {items.map((item) => (
+                  <li key={item.report_id}>
+                    <QueueRow item={item} activeTab={tab} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {total > 0 && (
+            <nav className="doctor-worklist-pagination" aria-label="Phân trang hàng đợi">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                ‹ Trước
+              </button>
+              <span>{rangeStart}-{rangeEnd} của {total}</span>
+              <button
+                type="button"
+                disabled={rangeEnd >= total}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Sau ›
+              </button>
+            </nav>
           )}
         </section>
-
-        {total > 0 && (
-          <nav className="doctor-pagination" aria-label="Phân trang hàng đợi">
-            <Button type="button" variant="ghost" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              <ChevronLeft data-icon="inline-start" aria-hidden="true" /> Trước
-            </Button>
-            <span>{rangeStart}-{rangeEnd} của {total}</span>
-            <Button type="button" variant="ghost" disabled={rangeEnd >= total} onClick={() => setPage((current) => current + 1)}>
-              Sau <ChevronRight data-icon="inline-end" aria-hidden="true" />
-            </Button>
-          </nav>
-        )}
       </section>
     </div>
   );

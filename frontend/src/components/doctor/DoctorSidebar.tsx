@@ -44,14 +44,14 @@ export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSi
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
+                "group flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
                 active 
                   ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" 
                   : "text-[var(--foreground-secondary)] hover:bg-[var(--surface-subtle)] hover:text-foreground"
               )}
             >
               {active && (
-                <div className="absolute left-0 top-2 bottom-2 w-1 bg-[var(--brand)] rounded-r-md shadow-[0_0_8px_var(--holo-cyan)]" aria-hidden="true" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[var(--brand)] rounded-r-full shadow-[0_0_12px_var(--holo-cyan)]" aria-hidden="true" />
               )}
               <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
               {item.label}

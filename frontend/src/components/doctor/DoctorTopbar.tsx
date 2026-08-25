@@ -31,7 +31,8 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
 
   return (
     <header className="doctor-topbar">
-      <div className="flex items-center gap-3">
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
+      <div className="relative z-10 flex items-center gap-3">
         {/* Mobile Hamburger Menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors" aria-label="Mở menu">
