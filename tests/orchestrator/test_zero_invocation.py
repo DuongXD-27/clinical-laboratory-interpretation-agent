@@ -289,7 +289,7 @@ async def test_zi5_unsupported_analyte_blocks_before_trend_wrapper(monkeypatch):
     response = await handle_message(
         OrchestratorRequest(
             message="xem xu hướng chỉ số này",
-            ui_context=UIContext(candidate_analyte="Uric_acid"),
+            ui_context=UIContext(candidate_analyte="eGFR"),
         ),
         current_user=current_user,
         db=QuerySpyDb(),

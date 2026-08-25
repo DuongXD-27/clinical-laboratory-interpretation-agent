@@ -449,12 +449,14 @@ export async function submitDoctorTrendReview(
 export async function sendOrchestratorMessage(
   message: string,
   uiContext?: OrchestratorUiContext,
+  conversationId?: number | null,
 ): Promise<OrchestratorResponse> {
   const response = await authFetch("/api/v1/orchestrator/message", {
     method: "POST",
     body: JSON.stringify({
       message,
       ...(uiContext ? { ui_context: uiContext } : {}),
+      ...(conversationId != null ? { conversation_id: conversationId } : {}),
     }),
   });
 
@@ -471,6 +473,7 @@ export async function streamOrchestratorMessage(
     uiContext?: OrchestratorUiContext;
     clientRequestId: string;
     signal: AbortSignal;
+    conversationId?: number | null;
     onEvent: (event: OrchestratorStreamEvent) => void;
   },
 ): Promise<OrchestratorStreamEvent> {
@@ -482,6 +485,9 @@ export async function streamOrchestratorMessage(
       message,
       client_request_id: options.clientRequestId,
       ...(options.uiContext ? { ui_context: options.uiContext } : {}),
+      // Bỏ trường khi không có id, thay vì gửi null: server coi "thiếu id" là
+      // dùng hội thoại gần nhất, và đó đúng là điều ta muốn ở lượt đầu tiên.
+      ...(options.conversationId != null ? { conversation_id: options.conversationId } : {}),
     }),
   });
 
@@ -607,4 +613,71 @@ export async function loginWithGoogle(credential: string) {
   const data = await response.json();
   saveSession(data.access_token, data.role, data.username);
   return data as { access_token: string; role: Role; username: string };
+}
+
+
+// --- Hội thoại -------------------------------------------------------------
+//
+// Chỉ bệnh nhân có hội thoại. Khách chat được nhưng không có gì được lưu, nên
+// các hàm dưới đây trả 403 với token khách — giao diện phải kiểm role trước
+// khi gọi, chứ không bắt người dùng nhìn một thông báo lỗi mà họ không gây ra.
+
+export type ConversationSummary = {
+  id: number;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConversationMessage = {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+  intent: string | null;
+  reason_code: string | null;
+  data_type: string | null;
+};
+
+export type ConversationDetail = {
+  conversation: ConversationSummary;
+  messages: ConversationMessage[];
+};
+
+/** Hội thoại không còn (bị xoá, hoặc không phải của tài khoản đang đăng nhập).
+ *
+ * Tách riêng khỏi Error thường để giao diện xử lý được: id lưu ở localStorage
+ * đã cũ thì mở hội thoại mới, chứ không hiện lỗi đỏ cho một chuyện tự sửa được.
+ */
+export class ConversationNotFoundError extends Error {
+  constructor() {
+    super("Không tìm thấy cuộc trò chuyện.");
+    this.name = "ConversationNotFoundError";
+  }
+}
+
+export async function listConversations(): Promise<ConversationSummary[]> {
+  const response = await authFetch("/api/v1/conversations");
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Chưa tải được danh sách trò chuyện"));
+  const body = await response.json();
+  return body.items ?? [];
+}
+
+export async function createConversation(): Promise<ConversationSummary> {
+  const response = await authFetch("/api/v1/conversations", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  if (response.status === 401) throw new UnauthorizedError();
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Chưa tạo được cuộc trò chuyện mới"));
+  return response.json();
+}
+
+export async function getConversation(conversationId: number): Promise<ConversationDetail> {
+  const response = await authFetch(`/api/v1/conversations/${conversationId}`);
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 404) throw new ConversationNotFoundError();
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Chưa mở được cuộc trò chuyện"));
+  return response.json();
 }

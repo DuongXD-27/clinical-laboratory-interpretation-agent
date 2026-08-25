@@ -22,6 +22,141 @@ class AnalyteCatalogError(Exception):
     """Raised when the curated analyte catalog cannot be loaded safely."""
 
 
+VALID_RUNTIME_STATUSES = frozenset({"APPROVED", "HOLD", "UNSUPPORTED"})
+
+
+@dataclass(frozen=True)
+class AnalyteCatalogEntry:
+    analyte_id: str
+    canonical_name: str
+    aliases: tuple[str, ...]
+    group: str
+    canonical_unit: str
+    runtime_status: str
+
+
+class AnalyteCatalogContract:
+    """Canonical identity contract for analyte metadata.
+
+    The contract is intentionally limited to identity, aliases, grouping,
+    canonical unit metadata and runtime support status. Reference ranges,
+    critical thresholds and medical narrative remain in their dedicated files.
+    """
+
+    def __init__(self, *, entries: list[AnalyteCatalogEntry]) -> None:
+        if not entries:
+            raise AnalyteCatalogError("analyte catalog contract is empty")
+
+        self._entries = tuple(entries)
+        self._by_id: dict[str, AnalyteCatalogEntry] = {}
+        self._by_name: dict[str, AnalyteCatalogEntry] = {}
+        self._by_key: dict[str, AnalyteCatalogEntry] = {}
+
+        for entry in entries:
+            self._register(entry.analyte_id, entry, self._by_id, "analyte_id")
+            self._register(entry.canonical_name, entry, self._by_name, "canonical_name")
+
+            for value in (entry.analyte_id, entry.canonical_name, *entry.aliases):
+                key = _lookup_key(value)
+                existing = self._by_key.get(key)
+                if existing is not None and existing.canonical_name != entry.canonical_name:
+                    raise AnalyteCatalogError(
+                        f"alias {value!r} maps to both "
+                        f"{existing.canonical_name!r} and {entry.canonical_name!r}"
+                    )
+                if key:
+                    self._by_key[key] = entry
+
+    @staticmethod
+    def _register(
+        key: str,
+        entry: AnalyteCatalogEntry,
+        target: dict[str, AnalyteCatalogEntry],
+        label: str,
+    ) -> None:
+        if not key:
+            raise AnalyteCatalogError(f"catalog entry {entry!r} has empty {label}")
+        if key in target:
+            raise AnalyteCatalogError(f"duplicate {label}: {key}")
+        target[key] = entry
+
+    @classmethod
+    def from_file(cls, path: str | Path) -> AnalyteCatalogContract:
+        catalog_path = Path(path)
+        try:
+            payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise AnalyteCatalogError(f"missing analyte catalog contract: {catalog_path}") from exc
+        except json.JSONDecodeError as exc:
+            raise AnalyteCatalogError(f"invalid analyte catalog contract JSON: {exc}") from exc
+        if not isinstance(payload, dict) or not isinstance(payload.get("entries"), list):
+            raise AnalyteCatalogError("analyte catalog contract must contain an entries list")
+
+        entries: list[AnalyteCatalogEntry] = []
+        for index, item in enumerate(payload["entries"]):
+            if not isinstance(item, dict):
+                raise AnalyteCatalogError(f"catalog entry at index {index} must be an object")
+            entry = AnalyteCatalogEntry(
+                analyte_id=str(item.get("analyte_id") or "").strip(),
+                canonical_name=str(item.get("canonical_name") or "").strip(),
+                aliases=tuple(str(alias).strip() for alias in item.get("aliases", []) if str(alias).strip()),
+                group=str(item.get("group") or "").strip(),
+                canonical_unit=str(item.get("canonical_unit") or "").strip(),
+                runtime_status=str(item.get("runtime_status") or "").strip().upper(),
+            )
+            missing = [
+                field_name
+                for field_name in ("analyte_id", "canonical_name", "group", "canonical_unit", "runtime_status")
+                if not getattr(entry, field_name)
+            ]
+            if missing:
+                raise AnalyteCatalogError(
+                    f"catalog entry at index {index} missing required fields: {', '.join(missing)}"
+                )
+            if entry.runtime_status not in VALID_RUNTIME_STATUSES:
+                raise AnalyteCatalogError(
+                    f"{entry.canonical_name} has unsupported runtime_status {entry.runtime_status!r}"
+                )
+            entries.append(entry)
+
+        return cls(entries=entries)
+
+    @classmethod
+    def from_default_file(cls) -> AnalyteCatalogContract:
+        root = Path(__file__).resolve().parents[2]
+        return cls.from_file(root / "data/reference/analyte_catalog.json")
+
+    @property
+    def entries(self) -> tuple[AnalyteCatalogEntry, ...]:
+        return self._entries
+
+    @property
+    def approved_entries(self) -> tuple[AnalyteCatalogEntry, ...]:
+        return tuple(entry for entry in self._entries if entry.runtime_status == "APPROVED")
+
+    @property
+    def approved_names(self) -> tuple[str, ...]:
+        return tuple(entry.canonical_name for entry in self.approved_entries)
+
+    def runtime_alias_map(self) -> dict[str, str]:
+        """Raw alias -> canonical name for runtime-approved analytes only."""
+        aliases: dict[str, str] = {}
+        for entry in self.approved_entries:
+            for alias in (entry.canonical_name, *entry.aliases):
+                aliases[alias] = entry.canonical_name
+        return aliases
+
+    def runtime_status_for(self, value: Any) -> str | None:
+        entry = self.resolve(value)
+        return entry.runtime_status if entry is not None else None
+
+    def get(self, analyte_id: str) -> AnalyteCatalogEntry | None:
+        return self._by_id.get(str(analyte_id).strip())
+
+    def resolve(self, value: Any) -> AnalyteCatalogEntry | None:
+        return self._by_key.get(_lookup_key(value))
+
+
 @dataclass(frozen=True)
 class AnalyteDefinition:
     analyte_id: str
@@ -217,3 +352,8 @@ class AnalyteCatalog:
 @lru_cache(maxsize=1)
 def get_analyte_catalog() -> AnalyteCatalog:
     return AnalyteCatalog.from_default_files()
+
+
+@lru_cache(maxsize=1)
+def get_analyte_catalog_contract() -> AnalyteCatalogContract:
+    return AnalyteCatalogContract.from_default_file()

@@ -216,6 +216,21 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
             {turn.deliveryState === "FAILED" || turn.deliveryState === "CANCELLED" ? (
               <TurnError turn={turn} requestActive={requestActive} onRetry={onRetry} />
             ) : null}
+            {turn.restored && !response ? (
+              <div className="assistant-completed-response">
+                {/* Lượt dựng lại từ transcript đã lưu: chỉ có văn bản đã qua
+                    guardrail, không có nút hành động và không có khối chỉ số.
+                    Server không lưu payload có cấu trúc — xem
+                    `conversationTranscript.mjs` để biết vì sao. */}
+                {turn.restoredMessage ? (
+                  <p className="assistant-prose">{turn.restoredMessage}</p>
+                ) : (
+                  <p className="assistant-prose assistant-restored-gap">
+                    Lượt này chưa có câu trả lời được lưu.
+                  </p>
+                )}
+              </div>
+            ) : null}
             {turn.deliveryState === "COMPLETED" && response ? (
               <div className="assistant-completed-response">
                 <p className="assistant-prose"><InlineMarkdownText text={response.message} /></p>

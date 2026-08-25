@@ -4,16 +4,16 @@ from functools import lru_cache
 
 from src.agents.state import AgentState, IndicatorAssessment
 from src.services.analyte_catalog import AnalyteCatalogError, get_analyte_catalog
+from src.services.measurement_conversion import validate_numeric_measurement
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
+
 
 @lru_cache(maxsize=1)
 def get_reference_repository() -> ReferenceRepository:
     return ReferenceRepository.from_default_files()
 
-
-from src.services.measurement_conversion import validate_numeric_measurement
 
 def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
     return {
@@ -138,6 +138,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         result = repository.select_rule(
             analyte=name,
             unit=unit,
+            value=numeric_value,
             patient_gender=patient_gender,
             patient_age=patient_age,
         )
@@ -150,8 +151,13 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         upper = _parse_rule_bound(result.rule.get("range_upper"))
         ref_type = result.rule.get("reference_type")
         upper_op = result.rule.get("upper_operator")
+        classification_value = (
+            result.comparison_value
+            if result.comparison_value is not None
+            else numeric_value
+        )
         status = _classify(
-            numeric_value,
+            classification_value,
             lower,
             upper,
             rule_type=ref_type,

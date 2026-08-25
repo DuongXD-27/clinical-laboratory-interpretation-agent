@@ -6,6 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.services.analyte_catalog import get_analyte_catalog_contract
+
 logger = logging.getLogger(__name__)
 
 # Canonical functional sections (ADR-010 CRIT-TREND-06). Keys match the
@@ -26,6 +28,15 @@ SECTION_LABELS: dict[str, str] = {
 
 DEFAULT_REFERENCE_RANGES_PATH = "data/reference/reference_ranges.json"
 
+CANONICAL_TO_LEGACY_SECTION: dict[str, str] = {
+    "hematology": HEMATOLOGY,
+    "electrolytes": CHEMISTRY,
+    "glucose": LIPIDS,
+    "renal": CHEMISTRY,
+    "liver": CHEMISTRY,
+    "lipids": LIPIDS,
+}
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -33,10 +44,11 @@ def _repo_root() -> Path:
 
 @lru_cache(maxsize=1)
 def _load_sections_by_analyte() -> dict[str, str]:
-    """Analyte canonical -> functional section, derived from the runtime catalog.
+    """Analyte canonical -> legacy functional section.
 
-    RI rules are authoritative for grouping; an analyte with no RI rule falls back
-    to any rule's section. Analytes absent from the catalog resolve to ``other``.
+    Canonical group metadata comes from analyte_catalog.json. The legacy
+    section keys stay unchanged for existing callers, and reference ranges only
+    define which analytes previously had an externally visible section.
     """
     path = _repo_root() / DEFAULT_REFERENCE_RANGES_PATH
     try:
@@ -48,17 +60,20 @@ def _load_sections_by_analyte() -> dict[str, str]:
         logger.error("reference ranges unparseable %s: %s", path, exc)
         return {}
 
-    by_analyte: dict[str, str] = {}
-    ri_first: dict[str, str] = {}
+    known_analytes: set[str] = set()
     for rule in rules:
         analyte = str(rule.get("analyte_canonical") or "").strip()
-        section = rule.get("section")
-        if not analyte or not section:
+        if analyte:
+            known_analytes.add(analyte)
+
+    sections: dict[str, str] = {}
+    catalog = get_analyte_catalog_contract()
+    for analyte in known_analytes:
+        entry = catalog.resolve(analyte)
+        if entry is None:
             continue
-        if rule.get("reference_type") == "RI" and analyte not in ri_first:
-            ri_first[analyte] = section
-        by_analyte.setdefault(analyte, section)
-    return {analyte: ri_first.get(analyte, by_analyte.get(analyte, OTHER)) for analyte in by_analyte}
+        sections[analyte] = CANONICAL_TO_LEGACY_SECTION.get(entry.group, OTHER)
+    return sections
 
 
 def analyte_section(analyte_canonical: str) -> str | None:

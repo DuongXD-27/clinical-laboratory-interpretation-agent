@@ -434,6 +434,15 @@ class OrchestratorRequest(BaseModel):
     ui_context: UIContext | None = None
     client_request_id: ServerReference | None = None
 
+    # Hoi thoai dang noi. Optional CO CHU Y: ban frontend da deploy goi
+    # `/orchestrator/message` khong kem id, va no phai tiep tuc chay chu khong
+    # duoc 422. Thieu id thi server dung hoi thoai gan nhat cua benh nhan.
+    #
+    # Day chi la mot GOI Y ve hoi thoai, khong phai bang chung so huu: route
+    # van tra id nay qua `conversation_repository` kem `patient_id` lay tu JWT.
+    # Gui id cua nguoi khac se ra 404, khong phai doc duoc hoi thoai do.
+    conversation_id: int | None = None
+
 
 class OrchestratorResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

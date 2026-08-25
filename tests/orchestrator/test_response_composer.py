@@ -173,6 +173,24 @@ async def test_composer_llm_unavailable_uses_deterministic_typed_fallback(monkey
 
 
 @pytest.mark.asyncio
+async def test_explanation_fallback_preserves_approved_explanation(monkeypatch):
+    monkeypatch.setattr(response_composer, "get_llm", lambda: (_ for _ in ()).throw(RuntimeError("no llm")))
+    payload = ExplanationDataPayload(
+        explanation="Bạch cầu tăng nhẹ so với khoảng tham chiếu.",
+        sources=["HD-BYT"],
+    )
+
+    response = await build_final_response(
+        intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
+        status=ResponseStatus.SUCCESS,
+        data=payload,
+    )
+
+    assert response.message == payload.explanation
+    assert response.sources == ["HD-BYT"]
+
+
+@pytest.mark.asyncio
 async def test_guardrail_blocked_result_does_not_call_response_composer(monkeypatch):
     calls = 0
 
