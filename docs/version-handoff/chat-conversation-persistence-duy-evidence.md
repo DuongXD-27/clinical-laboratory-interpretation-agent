@@ -3,9 +3,9 @@
 ```
 TASK_ID        = chat-conversation-persistence
 BRANCH         = feature/chat-conversation-persistence
-PR             = (điền sau khi mở PR)
+PR             = #87  https://github.com/AI20K-Build-Phase-Cohort-3/P-056/pull/87
 BASE_MAIN_SHA  = cf4643000951ad30044425188d69851ee112ece5
-HEAD_SHA       = 3674d7e069916b273a1ec42e7afda7e80683b47f
+HEAD_SHA       = 73eb16b9cec94f52a19e574c57e0c38c76e7027c
 ```
 
 ## GOAL
@@ -35,6 +35,36 @@ cuộc trò chuyện có context riêng, và hội thoại thuộc đúng bệnh
   trống vào ma trận quyền.
 - Đổi tên miền sang `lumilab.vercel.app` — việc riêng, đang bị chặn vì tên đó
   thuộc tài khoản Vercel khác.
+
+## DB_CHANGE / API_CHANGE / FRONTEND_CHANGE / BACKEND_CHANGE
+
+Bốn trường này để riêng thành một khối để soi nhanh; chi tiết ở các mục A–D bên dưới.
+
+```
+DB_CHANGE       = THÊM 2 bảng: conversations, conversation_messages.
+                  0 cột thêm vào bảng cũ, 0 rename, 0 đổi kiểu, 0 drop.
+                  2 index compound + 2 index FK. Chi tiết: mục A và C.
+
+API_CHANGE      = THÊM 4 endpoint dưới /api/v1/conversations (POST, GET,
+                  GET /{id}, GET /{id}/messages).
+                  SỬA: + conversation_id (optional) trên OrchestratorRequest.
+                  KHÔNG đổi OrchestratorResponse — một trường cũng không.
+                  Chi tiết: mục B.
+
+FRONTEND_CHANGE = 6 file. Danh sách hội thoại + nút New Chat trong ChatPanel;
+                  useOrchestratorChat giữ conversationId, nạp lại transcript
+                  khi vào trang; api.ts thêm 3 hàm + gửi conversation_id;
+                  conversationTranscript.mjs (logic thuần) + test;
+                  AssistantTurn vẽ lượt dựng lại; CSS cho danh sách.
+
+BACKEND_CHANGE  = conversation_repository (nơi DUY NHẤT enforce sở hữu);
+                  ConversationScopedSessionStore kế thừa InMemorySessionStore,
+                  chỉ đổi khoá + lưu DB, giữ nguyên logic chuyển trạng thái;
+                  handle_message được bọc thêm lớp gắn hội thoại + ghi
+                  transcript, lõi cũ đổi tên thành _handle_message_core với
+                  nội dung nguyên vẹn; acknowledge_onboarding nhận db +
+                  conversation (xem RISKS — chỗ này từng hỏng thật).
+```
 
 ---
 
@@ -277,7 +307,7 @@ thêm vào một bảng đã tồn tại. `add_missing_indexes()` phủ nốt ph
 
 ---
 
-## D. FILES_CHANGED — tự khai
+## FILES_CHANGED — tự khai
 
 ### File mới (chủ động tạo)
 
@@ -328,7 +358,7 @@ thêm vào một bảng đã tồn tại. `add_missing_indexes()` phủ nốt ph
 
 ---
 
-## E. TESTS
+## D. Test bắt buộc — CP-01..CP-12
 
 ### TESTS_ADDED
 
@@ -416,7 +446,7 @@ Bốn test đỏ ở lần chạy đầu, và tôi đã soi từng cái thay vì
 
 ---
 
-## MANUAL_PROBES — runtime thật, không phải ảnh IDE
+## E. Manual demo / MANUAL_PROBES — runtime thật, không phải ảnh IDE
 
 Backend chạy thật trên `127.0.0.1:8123`, DB SQLite riêng (`data/e2e_probe.db`,
 đã xoá sau khi đo), LLM thật. Toàn bộ qua `curl`.
