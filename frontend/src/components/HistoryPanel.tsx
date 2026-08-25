@@ -23,6 +23,7 @@ import type { SeverityLevel } from "@/types/doctor";
 type Props = {
   /** "patient" chỉ xem của mình; "doctor" tra được theo tên bệnh nhân. */
   mode: "patient" | "doctor";
+  /** Retained for call-site compatibility; visual accent is handled by severity badges. */
   accent?: "blue" | "indigo";
   id?: string;
   pageSize?: number;
@@ -31,19 +32,13 @@ type Props = {
   onUnauthorized: () => void;
 };
 
-const ACCENT = {
-  blue: { button: "bg-blue-600 hover:bg-blue-700", text: "text-blue-600" },
-  indigo: { button: "bg-indigo-600 hover:bg-indigo-700", text: "text-indigo-600" },
-};
-
 function reportSeverity(item: { has_critical_values: boolean; abnormal_count: number }): SeverityLevel {
   if (item.has_critical_values) return "critical";
   if (item.abnormal_count > 0) return "abnormal";
   return "normal";
 }
 
-export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, refreshToken = 0, onUnauthorized }: Props) {
-  const theme = ACCENT[accent];
+export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0, onUnauthorized }: Props) {
   const panelRef = useRef<HTMLElement | null>(null);
 
   const [fromDate, setFromDate] = useState("");
@@ -259,10 +254,10 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
   return (
     <section id={id} ref={panelRef} className="history-panel">
       <div className="history-panel-header">
-        <h2 className="text-lg font-semibold text-slate-950">
+        <h2 className="text-lg font-semibold text-foreground">
           {mode === "doctor" ? "Lịch sử xét nghiệm của bệnh nhân" : "Lịch sử xét nghiệm của tôi"}
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           {mode === "doctor"
             ? "Mở một phiếu để đọc kết quả, xem câu hỏi bệnh nhân đã chọn và ghi nhận xét."
             : "Mỗi lần bạn phân tích một phiếu, kết quả được lưu lại ở đây."}
@@ -324,21 +319,21 @@ export default function HistoryPanel({ mode, accent = "blue", id, pageSize = 5, 
       </div>
 
       {error && (
-        <div className="bg-red-50 py-4 text-sm text-red-600">
+        <div role="alert" className="patient-glass-clinical p-6 mt-4 text-[var(--status-critical-fg)]">
           {error}
         </div>
       )}
 
       {loading && (
         <div className="grid gap-3 py-5" role="status" aria-live="polite">
-          {Array.from({ length: pageSize }).map((_, index) => (
-            <div key={index} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+          {Array.from({ length: Math.min(pageSize, 5) }).map((_, index) => (
+            <div key={index} className="h-16 animate-pulse motion-reduce:animate-none rounded-xl bg-[var(--surface-subtle)] border border-[var(--border)]/60" />
           ))}
         </div>
       )}
 
       {!error && items.length === 0 && !loading && (
-        <div className="py-8 text-center text-sm text-slate-500">
+        <div className="patient-glass-clinical p-8 my-4 text-center text-sm text-muted-foreground">
           <p>
             {fromDate || toDate ? "Không có phiếu nào trong khoảng thời gian này." : "Chưa có phiếu xét nghiệm nào trong khoảng đã chọn."}
           </p>

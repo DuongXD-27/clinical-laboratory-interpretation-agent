@@ -3,6 +3,7 @@
 import Link from "next/link";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
+import { reportTone, sortIndicatorsBySeverity } from "@/lib/patientUi.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 type Props = {
   result: AnalysisResult;
@@ -27,6 +28,14 @@ export default function AnalysisResultView({
   const showCriticalBanner = hasCritical && !criticalAcknowledged;
   const reportId = result.saved_report_id ?? result.report_id ?? result.existing_report_id ?? null;
 
+  // Display-only grouping of backend-provided statuses so the patient can scan
+  // "cần chú ý" vs "bình thường" without reading every card. No reclassification.
+  const toneCounts = { critical: 0, abnormal: 0, unknown: 0, normal: 0 };
+  for (const indicator of result.indicators ?? []) {
+    toneCounts[reportTone(indicator.status)] += 1;
+  }
+  const orderedIndicators = sortIndicatorsBySeverity(result.indicators ?? []);
+
   return (
     <section className="results-section" aria-labelledby="result-title">
       {sourceMode === "ocr" && (
@@ -42,7 +51,7 @@ export default function AnalysisResultView({
       <div className="page-section-heading analysis-result-heading">
         <div>
           <span className="eyebrow">Kết quả phân tích</span>
-          <h2 id="result-title">Kết quả xét nghiệm</h2>
+          <h1 id="result-title">Kết quả xét nghiệm</h1>
           <p>Hệ thống đã phân tích {result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -75,6 +84,39 @@ export default function AnalysisResultView({
       <div className="patient-card p-5 sm:p-7">
         {result.summary && <div className="summary-box">{result.summary}</div>}
 
+        {(result.indicators?.length ?? 0) > 0 && (
+          <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Tổng quan tình trạng chỉ số">
+            {toneCounts.critical > 0 && (
+              <div className="flex items-center gap-1.5 font-medium text-[var(--status-critical-fg)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--status-critical-border)]" aria-hidden="true" />
+                <dt>Nguy kịch</dt>
+                <dd className="font-bold">{toneCounts.critical}</dd>
+              </div>
+            )}
+            {toneCounts.abnormal > 0 && (
+              <div className="flex items-center gap-1.5 font-medium text-[var(--status-abnormal-fg)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--status-abnormal-border)]" aria-hidden="true" />
+                <dt>Cần lưu ý</dt>
+                <dd className="font-bold">{toneCounts.abnormal}</dd>
+              </div>
+            )}
+            {toneCounts.unknown > 0 && (
+              <div className="flex items-center gap-1.5 font-medium text-[var(--status-unknown-fg)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--status-unknown-border)]" aria-hidden="true" />
+                <dt>Chưa đánh giá được</dt>
+                <dd className="font-bold">{toneCounts.unknown}</dd>
+              </div>
+            )}
+            {toneCounts.normal > 0 && (
+              <div className="flex items-center gap-1.5 font-medium text-[var(--status-normal-fg)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--status-normal-border)]" aria-hidden="true" />
+                <dt>Bình thường</dt>
+                <dd className="font-bold">{toneCounts.normal}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+
         {(result.out_of_scope_indicators?.length ?? 0) > 0 && (
           <div className="info-message mt-5" role="status">
             <p className="font-semibold text-slate-800">Chưa được hệ thống hỗ trợ diễn giải</p>
@@ -104,8 +146,8 @@ export default function AnalysisResultView({
           </div>
         )}
 
-        <div className="mt-5 grid gap-3">
-          {result.indicators?.map((indicator, index) => (
+        <div className="mt-6 grid gap-3">
+          {orderedIndicators.map((indicator, index) => (
             <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
           ))}
         </div>

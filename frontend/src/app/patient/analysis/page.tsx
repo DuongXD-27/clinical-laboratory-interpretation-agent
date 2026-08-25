@@ -132,7 +132,7 @@ export default function PatientAnalysisPage() {
   const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="space-y-8 pb-12">
       {result ? (
         <AnalysisResultView
           result={result}
