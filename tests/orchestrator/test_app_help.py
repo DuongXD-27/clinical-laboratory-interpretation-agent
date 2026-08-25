@@ -278,6 +278,25 @@ def test_clean_app_help_text_strips_heading_and_file_refs():
     assert "Cho phép bệnh nhân nhập kết quả xét nghiệm" in cleaned
 
 
+def test_clean_app_help_text_strips_raw_routes():
+    # Regression: found live in manual UI testing. Users navigate by
+    # clicking a menu item, not typing a URL — a raw "/patient/analysis"
+    # path in the chat reply reads as a dev leak, not a real answer.
+    from src.orchestrator.dispatcher import _clean_app_help_text
+
+    raw = (
+        "Người dùng tìm ở đâu?\n\n"
+        '- Menu điều hướng bên trái khu vực bệnh nhân: mục **"Phân tích xét nghiệm"** → route `/patient/analysis`.\n'
+        '- Từ trang Tổng quan (`/patient`), khối "Hành động nhanh" có thẻ **"Phân tích phiếu mới"** trỏ tới cùng route.'
+    )
+    cleaned = _clean_app_help_text(raw)
+    assert "/patient/analysis" not in cleaned
+    assert "/patient`" not in cleaned
+    assert "`/patient`" not in cleaned
+    assert 'mục **"Phân tích xét nghiệm"**' in cleaned
+    assert "Từ trang Tổng quan, khối" in cleaned
+
+
 @pytest.mark.asyncio
 async def test_app_help_build_final_response_surfaces_the_real_explanation(monkeypatch):
     # Regression: found live in manual UI testing. The first fix (blocking

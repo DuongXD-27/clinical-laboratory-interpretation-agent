@@ -405,6 +405,13 @@ _APP_HELP_EXTRA_RULES = """
         - You MAY: drop the leading heading line, remove `like_this.md` file
           references, turn a numbered/bulleted list into natural prose or
           keep it as a list (either is fine), and smooth the tone.
+        - The user navigates by clicking menu items on screen, not by typing
+          a URL — so ALWAYS drop raw route/API paths like `/patient/analysis`
+          or `/api/v1/ocr/policy`, and code-ish identifiers like
+          `HistoryPanel.tsx` or `getRole() === "patient"`. Keep the visible
+          menu/button label (e.g. mục "Phân tích xét nghiệm") — just cut the
+          technical path/identifier next to it. This is a subtraction, not
+          an invention, so it is always safe to do.
         - If in doubt, prefer copying a sentence unchanged over rephrasing it.
 """
 

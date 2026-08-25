@@ -257,12 +257,21 @@ APP_HELP_NOT_FOUND_MESSAGE = (
 def _clean_app_help_text(text: str) -> str:
     """Strip internal-docs artifacts from a corpus chunk before it becomes
     a chat message: the heading line (already redundant — it repeats the
-    question's topic) and inline `file.md` cross-references (meaningless to
-    an end user). Purely subtractive/deterministic — never changes a
-    remaining word, so it cannot introduce a new claim."""
+    question's topic), inline `file.md` cross-references, and the
+    "→ route `/path`" fragment that every "Người dùng tìm ở đâu?" section
+    opener uses (a raw URL is meaningless to a user who navigates by
+    clicking a menu item, not typing a path — see corpus template).
+    Purely subtractive/deterministic — never changes a remaining word, so
+    it cannot introduce a new claim. Other, less regular inline route
+    mentions (there are many phrasings across the corpus) are left for the
+    bounded LLM rewrite to smooth over — see _APP_HELP_EXTRA_RULES."""
     lines = text.split("\n", 1)
     body = lines[1].lstrip("\n") if len(lines) > 1 and lines[0].strip().endswith("?") else text
-    return re.sub(r"\s*\(xem file `[^`]+`\)", "", body).strip()
+    body = re.sub(r"\s*\(xem file `[^`]+`\)", "", body)
+    body = re.sub(r"\s*→\s*route\s*`[^`]+`", "", body)
+    # "Từ trang Tổng quan (`/patient`), ..." -> "Từ trang Tổng quan, ..."
+    body = re.sub(r"\s*\(`/[^`]+`\)", "", body)
+    return body.strip()
 
 
 def _app_help_role_caveat(chunk_role: str, requester_role: str | None) -> str | None:
