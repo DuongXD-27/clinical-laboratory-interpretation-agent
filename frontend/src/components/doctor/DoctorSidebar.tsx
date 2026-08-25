@@ -24,7 +24,8 @@ interface DoctorSidebarProps {
 
 export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSidebarProps) {
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-md border-r border-[var(--glass-border)] sticky top-0 h-dvh z-40">
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-xl border-r border-[var(--glass-border)] shadow-[4px_0_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] sticky top-0 h-dvh z-40 relative">
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
@@ -44,14 +45,14 @@ export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSi
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
+                "group flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
                 active 
                   ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" 
                   : "text-[var(--foreground-secondary)] hover:bg-[var(--surface-subtle)] hover:text-foreground"
               )}
             >
               {active && (
-                <div className="absolute left-0 top-2 bottom-2 w-1 bg-[var(--brand)] rounded-r-md shadow-[0_0_8px_var(--holo-cyan)]" aria-hidden="true" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[var(--brand)] rounded-r-full shadow-[0_0_12px_var(--holo-cyan)]" aria-hidden="true" />
               )}
               <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
               {item.label}

@@ -30,8 +30,9 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-md border-b border-[var(--glass-border)] shrink-0">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--glass-border)] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] shrink-0 relative">
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
+      <div className="flex items-center gap-3 relative z-10">
         {/* Mobile Hamburger Menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors" aria-label="Mở menu">
@@ -102,7 +103,7 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
         {/* Page Title */}
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Khu vực bác sĩ</span>
-          <h1 className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</h1>
+          <p className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</p>
         </div>
       </div>
       

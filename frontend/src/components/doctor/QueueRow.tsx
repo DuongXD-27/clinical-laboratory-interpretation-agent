@@ -1,5 +1,4 @@
 import Link from "next/link";
-import SeverityBadge from "@/components/common/SeverityBadge";
 import { formatDate } from "@/lib/patientUi.mjs";
 import type { DoctorQueueItem } from "@/types/doctor";
 import type { DoctorQueueTab } from "@/lib/api";
@@ -20,49 +19,94 @@ function waitText(value: string | null) {
   return `chờ ${Math.floor(hours / 24)} ngày`;
 }
 
-import { ChevronRight } from "lucide-react";
+import { AlertOctagon, CheckCircle2, ChevronRight } from "lucide-react";
 
 export default function QueueRow({ item, activeTab }: Props) {
-  const visibleFlags = item.flags.slice(0, 3);
-  const hiddenCount = Math.max(0, item.flags.length - visibleFlags.length);
+  const criticalFlag = item.flags.find((flag) => flag.code === "CRITICAL_VALUE");
+  const supportingFlags = item.flags.filter((flag) => flag.code !== "CRITICAL_VALUE");
+  const visibleFlags = supportingFlags.slice(0, 2);
+  const hiddenCount = Math.max(0, supportingFlags.length - visibleFlags.length);
+  const progress = item.findings_total > 0
+    ? Math.round((item.findings_reviewed / item.findings_total) * 100)
+    : 0;
+  const isVerified = activeTab === "verified";
+  const isCritical = item.severity_level === "critical";
+  const queueState = isVerified
+    ? "Đã xác minh"
+    : isCritical
+      ? "Giá trị khẩn cấp"
+      : item.severity_level === "abnormal"
+        ? "Bất thường"
+        : "Chờ đánh giá";
 
   return (
     <Link
       href={`/doctor/reports/${item.report_id}?tab=${activeTab}`}
-      className="group flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm hover:shadow-md hover:border-[var(--brand-soft)] transition-all duration-200 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="doctor-worklist-row group"
+      aria-label={`Mở phiếu của ${item.patient_name}, ${queueState}`}
     >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <strong className="text-base font-semibold text-foreground">{item.patient_name}</strong>
-          <span className="text-sm text-muted-foreground">· #{item.patient_id}</span>
+      <div className="doctor-worklist-row__identity">
+        <div className="doctor-worklist-row__patient">
+          <strong>{item.patient_name}</strong>
+          <span>#{item.patient_id}</span>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {formatDate(item.test_date)} <span className="mx-1">·</span> {item.findings_total} chỉ số
+        <div className="doctor-worklist-row__metadata">
+          <span>{formatDate(item.test_date)}</span>
+          <span aria-hidden="true">·</span>
+          <span>{item.findings_total} chỉ số</span>
+          {waitText(item.queued_at) && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{waitText(item.queued_at)}</span>
+            </>
+          )}
         </div>
+      </div>
+
+      <div className="doctor-worklist-row__reasons">
+        <span className="doctor-worklist-row__zone-label">Lý do cần xem</span>
+        {criticalFlag && (
+          <span className="doctor-worklist-row__critical-reason">
+            <AlertOctagon aria-hidden="true" />
+            {criticalFlag.detail}
+          </span>
+        )}
         {(visibleFlags.length > 0 || hiddenCount > 0) && (
-          <div className="flex flex-wrap items-center gap-2 mt-1">
+          <div className="doctor-worklist-row__chips">
             {visibleFlags.map((flag, index) => (
               <ReasonChip key={`${flag.code}-${flag.finding_id ?? "report"}-${index}`} flag={flag} />
             ))}
-            {hiddenCount > 0 && <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-[var(--surface-subtle)] text-[var(--foreground-secondary)] text-xs font-medium">+{hiddenCount}</span>}
+            {hiddenCount > 0 && <span className="doctor-worklist-row__more">+{hiddenCount} lý do</span>}
           </div>
+        )}
+        {!criticalFlag && visibleFlags.length === 0 && hiddenCount === 0 && (
+          <span className="doctor-worklist-row__quiet-reason">Đánh giá theo quy trình lâm sàng</span>
         )}
       </div>
 
-      <div className="flex flex-col md:items-end gap-2 shrink-0 border-t border-[var(--border)] md:border-t-0 pt-3 md:pt-0 mt-2 md:mt-0">
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">{item.findings_reviewed}/{item.findings_total} l.điểm</span>
-            {waitText(item.queued_at) && (
-              <span className="text-xs text-muted-foreground bg-[var(--surface-subtle)] px-2 py-0.5 rounded-full">{waitText(item.queued_at)}</span>
-            )}
-          </div>
-          {item.severity_level && item.severity_level !== "unknown" && (
-            <SeverityBadge level={item.severity_level} />
-          )}
+      <div className="doctor-worklist-row__workflow">
+        <div className="doctor-worklist-row__state-line">
+          <span className={`doctor-worklist-state doctor-worklist-state--${isVerified ? "verified" : isCritical ? "critical" : "neutral"}`}>
+            {isVerified && <CheckCircle2 aria-hidden="true" />}
+            {isCritical && <AlertOctagon aria-hidden="true" />}
+            {queueState}
+          </span>
+          <span className="doctor-worklist-row__progress-copy">
+            {item.findings_reviewed}/{item.findings_total} đã xử lý
+          </span>
         </div>
-        <div className="hidden md:flex items-center text-sm font-medium text-[var(--brand)] opacity-0 group-hover:opacity-100 transition-opacity">
-          Xem báo cáo <ChevronRight className="w-4 h-4 ml-1" />
+        <div
+          className="doctor-worklist-row__progress-track"
+          role="progressbar"
+          aria-label={`${item.findings_reviewed}/${item.findings_total} luận điểm đã xử lý`}
+          aria-valuemin={0}
+          aria-valuemax={item.findings_total}
+          aria-valuenow={item.findings_reviewed}
+        >
+          <span style={{ width: `${progress}%` }} />
+        </div>
+        <div className="doctor-worklist-row__open">
+          Mở phiếu <ChevronRight aria-hidden="true" />
         </div>
       </div>
     </Link>
