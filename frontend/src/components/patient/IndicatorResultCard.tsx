@@ -76,7 +76,7 @@ export default function IndicatorResultCard({ indicator }: Props) {
       </div>
       
       {/* LEVEL B — FACTUAL CLINICAL DATA */}
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="text-sm text-slate-600">
           {safeReference}
         </div>
@@ -90,16 +90,16 @@ export default function IndicatorResultCard({ indicator }: Props) {
 
       {/* LEVEL C — AI INTERPRETATION */}
       {hasAISection && (
-        <div className="mt-5 border-t border-slate-100/60 pt-5">
-          <div className="grid grid-cols-1 md:grid-cols-[140px_minmax(0,1fr)] gap-y-2 gap-x-6">
+        <div className="result-card-ai mt-3 border-t border-slate-100/70 pt-3">
+          <div className="grid grid-cols-1 gap-y-1.5 lg:grid-cols-[112px_minmax(0,1fr)] lg:gap-x-4">
             <div>
               {indicator.explanation && (
                 <p className="text-sm font-semibold text-slate-900">Giải thích của AI</p>
               )}
             </div>
-            <div className="space-y-4">
+            <div className="flex min-w-0 flex-col gap-2.5">
               {indicator.explanation && (
-                <p className="text-sm leading-6 text-slate-700">
+                <p className="text-sm leading-[1.55] text-slate-700">
                   {indicator.explanation}
                 </p>
               )}

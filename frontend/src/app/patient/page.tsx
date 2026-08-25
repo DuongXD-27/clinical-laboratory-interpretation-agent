@@ -11,6 +11,7 @@ import LatestReportSummary from "@/components/patient/dashboard/LatestReportSumm
 import NeedsAttention from "@/components/patient/dashboard/NeedsAttention";
 import RecentReports, { type DashboardReport } from "@/components/patient/dashboard/RecentReports";
 import Link from "next/link";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
 
 type DashboardSummary = {
   total_reports: number;
@@ -100,16 +101,12 @@ export default function PatientDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* PAGE HEADER */}
-      <section className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">
-          Xin chào, {isGuest ? "bạn" : username || "bạn"}
-        </h1>
-        <p className="text-muted-foreground">
-          Theo dõi và xem lại kết quả xét nghiệm của bạn.
-        </p>
-      </section>
+    <div className="patient-page-layout">
+      <PatientPageHeader
+        eyebrow="Tổng quan sức khỏe"
+        title={<>Xin chào, {isGuest ? "bạn" : username || "bạn"}</>}
+        description="Theo dõi và xem lại kết quả xét nghiệm của bạn."
+      />
 
       {/* MAIN CONTENT AREA */}
       {isGuest ? (

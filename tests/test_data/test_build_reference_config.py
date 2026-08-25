@@ -107,8 +107,8 @@ def test_actual_source_dry_run(tmp_path: Path) -> None:
     result = build_reference_config(SOURCE, tmp_path)
     report = result.report
 
-    assert report["input_rows"] == 65
-    assert report["structurally_eligible_rows"] == 65
+    assert report["input_rows"] == 67
+    assert report["structurally_eligible_rows"] == 67
     assert report["structurally_rejected_rows"] == 0
 
     accepted_analytes = set(report["accepted_analytes"])

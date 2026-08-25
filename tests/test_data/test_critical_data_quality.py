@@ -3,7 +3,7 @@ Data quality tests for the new reference data files.
 
 CRIT-01: No duplicate `name` within explanations.json
 CRIT-02: Canonical-only critical registry with no alias records
-CRIT-03: All 9 approved analytes present in all 3 files (coverage + case consistency)
+CRIT-03: All runtime-approved analytes present in all 3 files (coverage + case consistency)
 CRIT-04: Metric/unit match with units_metric.csv
 """
 from __future__ import annotations
@@ -25,8 +25,12 @@ UNITS_CSV_PATH     = REPO_ROOT / "data/reference/units_metric.csv"
 
 # Canonical names as defined in reference_checker_config.json
 APPROVED_ANALYTES = frozenset({
-    "WBC", "RBC", "HGB", "HCT", "PLT", "Sodium", "Potassium",
-    "Fasting plasma glucose", "Total bilirubin", "HbA1c", "LDL-C", "HDL-C", "Creatinine",
+    "WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC", "RDW-CV", "PLT",
+    "Neutrophils %", "Neutrophils abs", "Lymphocytes %", "Lymphocytes abs",
+    "Monocytes %", "Monocytes abs", "Eosinophils %", "Eosinophils abs",
+    "Sodium", "Potassium", "Chloride", "Fasting plasma glucose", "HbA1c",
+    "LDL-C", "HDL-C", "Creatinine", "Urea", "Uric acid", "AST", "ALT", "GGT",
+    "Total bilirubin", "Total protein", "Albumin", "Total cholesterol", "Triglyceride",
 })
 
 # Alias spellings forbidden as independent production registry records
@@ -260,7 +264,7 @@ def test_crit_02_production_registry_is_canonical_only_without_alias_records():
 # ── CRIT-03 ──────────────────────────────────────────────────────────────────
 
 def test_crit_03a_approved_analytes_in_explanation_new():
-    """All 9 approved analytes must be present in explanations.json (case-insensitive)."""
+    """All approved analytes must be present in explanations.json (case-insensitive)."""
     names_lower = {e["name"].lower() for e in _load_explanation()}
     missing = [a for a in sorted(APPROVED_ANALYTES) if a.lower() not in names_lower]
     assert not missing, f"Missing from explanations.json: {missing}"
@@ -272,7 +276,7 @@ def test_crit_03b_approved_analytes_in_critical_thresholds():
 
 
 def test_crit_03c_approved_analytes_in_reference_ranges():
-    """All 9 approved analytes must be present in reference_ranges.json (case-insensitive)."""
+    """All approved analytes must be present in reference_ranges.json (case-insensitive)."""
     canonical_lower = {r["analyte_canonical"].lower() for r in _load_reference()}
     missing = [a for a in sorted(APPROVED_ANALYTES) if a.lower() not in canonical_lower]
     assert not missing, f"Missing from reference_ranges.json: {missing}"

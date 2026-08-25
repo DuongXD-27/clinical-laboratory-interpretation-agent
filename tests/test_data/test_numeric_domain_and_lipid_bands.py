@@ -129,8 +129,8 @@ def test_reference_scope_and_contract_counts():
         rr = json.load(f)
 
     unique_analytes = sorted(list(set(r["analyte_canonical"] for r in rr)))
-    assert len(unique_analytes) == 34
-    assert set(unique_analytes) == set(LOCKED_35_ANALYTES) - {"Uric acid"}
+    assert len(unique_analytes) == 35
+    assert set(unique_analytes) == set(LOCKED_35_ANALYTES)
 
     # Rule type verification
     rule_types_by_analyte = {}
@@ -154,5 +154,5 @@ def test_reference_scope_and_contract_counts():
         t = list(types)[0]
         operational_counts[t] += 1
 
-    assert operational_counts == {"RI": 24, "BAND": 4, "CDL": 2, "ONE_SIDED_LIMIT": 4}
-    assert len(rr) == 65
+    assert operational_counts == {"RI": 25, "BAND": 4, "CDL": 2, "ONE_SIDED_LIMIT": 4}
+    assert len(rr) == 67

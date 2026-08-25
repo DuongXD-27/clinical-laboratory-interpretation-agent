@@ -23,6 +23,7 @@ import type {
   TrendFilter,
   TrendResponse,
 } from "@/types/analysis";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
 
 const TREND_DISCLAIMER =
   "Biểu đồ và phần giải thích xu hướng chỉ hỗ trợ theo dõi dữ liệu xét nghiệm theo thời gian, không phải chẩn đoán và không thay thế đánh giá của bác sĩ.";
@@ -338,13 +339,12 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="space-y-8 pb-12">
-      <section className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">Xu hướng chỉ số</h1>
-        <p className="text-muted-foreground">
-          Chọn một chỉ số để xem biến động qua các lần xét nghiệm đã lưu.
-        </p>
-      </section>
+    <div className="patient-page-layout">
+      <PatientPageHeader
+        eyebrow="Theo dõi dài hạn"
+        title="Xu hướng chỉ số"
+        description="Chọn một chỉ số để xem biến động qua các lần xét nghiệm đã lưu."
+      />
 
           {catalogLoading ? (
             <div className="loading-message mt-5" role="status">

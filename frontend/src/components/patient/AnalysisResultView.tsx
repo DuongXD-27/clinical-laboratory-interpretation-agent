@@ -5,6 +5,7 @@ import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import { reportTone, sortIndicatorsBySeverity } from "@/lib/patientUi.mjs";
 import type { AnalysisResult } from "@/types/analysis";
+import PatientPageHeader from "@/components/patient/PatientPageHeader";
 type Props = {
   result: AnalysisResult;
   criticalAcknowledged: boolean;
@@ -48,13 +49,13 @@ export default function AnalysisResultView({
           ))}
         </ol>
       )}
-      <div className="page-section-heading analysis-result-heading">
-        <div>
-          <span className="eyebrow">Kết quả phân tích</span>
-          <h1 id="result-title">Kết quả xét nghiệm</h1>
-          <p>Hệ thống đã phân tích {result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PatientPageHeader
+        eyebrow="Kết quả phân tích"
+        title="Kết quả xét nghiệm"
+        titleId="result-title"
+        description={`Hệ thống đã phân tích ${result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.`}
+        className="analysis-result-heading"
+        actions={<div className="flex flex-wrap gap-2">
           {reportId && (
             <Link href={`/patient/reports/${reportId}`} className="secondary-button">
               Mở trang chi tiết
@@ -63,8 +64,8 @@ export default function AnalysisResultView({
           <button type="button" onClick={onNewAnalysis} className="primary-button">
             Phân tích phiếu khác
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {showCriticalBanner && (
         <div className="critical-banner" role="alert">
