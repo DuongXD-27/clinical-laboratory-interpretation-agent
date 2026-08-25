@@ -46,6 +46,7 @@ class IntentEnum(StrEnum):
     ANALYZE_TREND = "ANALYZE_TREND"
     GET_DOCTOR_QUESTIONS = "GET_DOCTOR_QUESTIONS"
     SAFE_GENERAL = "SAFE_GENERAL"
+    APP_HELP = "APP_HELP"
 
 
 class OrchestratorRole(StrEnum):

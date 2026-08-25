@@ -30,7 +30,8 @@ export type OrchestratorIntent =
   | "VIEW_HISTORY"
   | "ANALYZE_TREND"
   | "GET_DOCTOR_QUESTIONS"
-  | "SAFE_GENERAL";
+  | "SAFE_GENERAL"
+  | "APP_HELP";
 
 export type OrchestratorDataType =
   | "analysis"

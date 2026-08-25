@@ -7,7 +7,9 @@ Validates:
 - CHAT-V1.5-001 unclear input behavior unchanged (S-10)
 - Medical and trend workflows unchanged (S-11, S-12)
 - Medical safety gates authoritative (S-13, S-14)
-- Supported capabilities and future APP_HELP preserved (S-15..S-17, S-20, S-21)
+- Supported capability requests stay SAFE_GENERAL (S-15); specific app-usage
+  how-to/where-is questions now route to APP_HELP instead of SAFE_GENERAL,
+  and remain NOT out-of-scope (S-16, S-17, S-20, S-21)
 - Negative controls: definition queries not overblocked (S-19), lab values not blocked (S-22)
 """
 
@@ -384,7 +386,7 @@ async def test_s14_treatment_safety_behavior():
 
 
 # ==============================================================================
-# S-15 to S-17, S-20, S-21: Supported Capability & App Help Preservation
+# S-15 to S-17, S-20, S-21: Supported Capability & App Help Routing
 # ==============================================================================
 
 @pytest.mark.asyncio
@@ -413,7 +415,7 @@ async def test_s16_where_to_upload_report_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -428,7 +430,7 @@ async def test_s17_how_to_use_ocr_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -443,7 +445,7 @@ async def test_s20_why_cannot_upload_report_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -458,7 +460,7 @@ async def test_s21_what_is_ocr_feature_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 # ==============================================================================

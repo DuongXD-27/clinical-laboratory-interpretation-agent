@@ -240,6 +240,70 @@ async def _dispatch_safe_general(_: DispatchContext) -> WorkflowResult:
 
 
 # ---------------------------------------------------------------------------
+# APP_HELP: "how/where do I use this app feature" questions, answered only
+# from the App Help corpus (data/app_how_to_use/), never from the medical
+# RAG or an LLM free-composing an answer. Fail-closed by design: below the
+# retriever's min_score threshold, nothing is returned — see AH-10/AH-12 in
+# yeu-cau-vu.txt, "must not invent a route/button that doesn't exist".
+# ---------------------------------------------------------------------------
+
+APP_HELP_NOT_FOUND_MESSAGE = (
+    "Tôi chưa tìm thấy hướng dẫn phù hợp cho câu hỏi này trong tài liệu hỗ trợ hiện có "
+    "của ứng dụng. Đây có thể là một tính năng chưa được hỗ trợ — bạn có thể mô tả rõ "
+    "hơn điều bạn đang tìm."
+)
+
+
+def _app_help_role_caveat(chunk_role: str, requester_role: str | None) -> str | None:
+    if requester_role not in {"patient", "doctor"}:
+        return None
+    allowed = {token.strip() for token in chunk_role.split(",") if token.strip()}
+    if not allowed or requester_role in allowed:
+        return None
+    if allowed == {"patient"}:
+        return "Lưu ý: đây là hướng dẫn dành cho tài khoản bệnh nhân, có thể không áp dụng cho vai trò bác sĩ."
+    if allowed == {"doctor"}:
+        return "Lưu ý: đây là hướng dẫn dành cho tài khoản bác sĩ, có thể không áp dụng cho vai trò bệnh nhân."
+    return None
+
+
+async def _dispatch_app_help(context: DispatchContext) -> WorkflowResult:
+    from src.services.app_help_retriever import AppHelpRetrieverError, get_app_help_retriever
+
+    message = context.message or ""
+    role = getattr(context.current_user, "role", None)
+
+    try:
+        retriever = get_app_help_retriever()
+    except AppHelpRetrieverError:
+        return WorkflowResult(
+            status=ResponseStatus.SUCCESS,
+            data=ExplanationDataPayload(explanation=APP_HELP_NOT_FOUND_MESSAGE, sources=[]),
+            workflow_selected="app_help_unavailable",
+        )
+
+    result = retriever.retrieve(message, requester_role=role)
+    if not result.has_match:
+        return WorkflowResult(
+            status=ResponseStatus.SUCCESS,
+            data=ExplanationDataPayload(explanation=APP_HELP_NOT_FOUND_MESSAGE, sources=[]),
+            workflow_selected="app_help_no_match",
+        )
+
+    top = result.matches[0]
+    explanation = top.text
+    caveat = _app_help_role_caveat(top.role, role)
+    if caveat:
+        explanation = f"{caveat}\n\n{explanation}"
+
+    return WorkflowResult(
+        status=ResponseStatus.SUCCESS,
+        data=ExplanationDataPayload(explanation=explanation, sources=[top.source_file]),
+        workflow_selected="app_help_retrieval",
+    )
+
+
+# ---------------------------------------------------------------------------
 # CHAT-V1.5-R1-G1: constrained provenance / source follow-up mode
 #
 # One canonical approved-source path. Sources come ONLY from the stored
@@ -387,6 +451,7 @@ WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {
     IntentEnum.GET_DOCTOR_QUESTIONS: _dispatch_questions,
     IntentEnum.UNSUPPORTED_OR_UNSAFE: _dispatch_unsupported,
     IntentEnum.SAFE_GENERAL: _dispatch_safe_general,
+    IntentEnum.APP_HELP: _dispatch_app_help,
 }
 
 
