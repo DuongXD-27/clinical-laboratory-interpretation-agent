@@ -83,6 +83,17 @@ def _compose_trend_message(data: TrendDataPayload) -> str:
     return "\n".join(lines)
 
 
+def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
+    questions = sorted(data.questions, key=lambda question: question.display_order)
+    if not questions:
+        return "Hiện chưa có câu hỏi gợi ý phù hợp cho phiếu hoặc chỉ số này."
+
+    lines = ["Bạn có thể trao đổi với bác sĩ các câu hỏi sau:"]
+    for index, question in enumerate(questions, start=1):
+        lines.append(f"{index}. {question.text}")
+    return "\n".join(lines)
+
+
 def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str:
     critical_names = {alert.indicator_name for alert in data.critical_alerts}
     for ind in data.indicators:
@@ -439,14 +450,6 @@ async def compose_message(
     if isinstance(data, TrendDataPayload):
         return fallback_message
     if isinstance(data, DoctorQuestionsPayload):
-        # HAL-039: persisted/guardrailed wording is authoritative. Render it
-        # deterministically so composer availability cannot alter or hide it.
-        return fallback_message
-    if isinstance(data, ExplanationDataPayload) and data.facts is not None:
-        # ORCH-V1.4C: one canonical deterministic path. The general composer
-        # LLM must NOT run for fact-bearing single-analyte explanations, so
-        # hostile or incorrect rewrites of value/unit/status/range/critical
-        # facts can never reach the final response.
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,

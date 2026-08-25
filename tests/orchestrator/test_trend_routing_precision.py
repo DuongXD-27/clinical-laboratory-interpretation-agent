@@ -18,6 +18,10 @@ from src.orchestrator.intent_router import _deterministic_route, contains_lab_va
         ("R2-T04", "Creatinine của em có xu hướng gì?"),
         ("R2-T05", "HbA1c gần đây tăng hay giảm?"),
         ("R2-T06", "HbA1c qua các lần xét nghiệm thay đổi ra sao?"),
+        ("R2-T07", "Cho em xem WBC thay đổi như thế nào"),
+        ("R2-T08", "WBC tăng bao nhiêu vậy?"),
+        ("R2-T09", "Chỉ số Creatinine của em theo thời gian thế nào?"),
+        ("R2-T10", "Sao WBC của em cứ tăng vậy?"),
     ),
 )
 def test_r2_trend_requests_route_deterministically(case_id: str, message: str) -> None:
@@ -34,6 +38,9 @@ def test_r2_trend_requests_route_deterministically(case_id: str, message: str) -
         ("R2-C02", "HbA1c gần nhất của em là bao nhiêu?"),
         ("R2-C03", "Giải thích HbA1c của em"),
         ("R2-C04", "HbA1c 6.8% có cao không?"),
+        ("R2-C05", "WBC của em thế nào?"),
+        ("R2-C06", "WBC của em sao rồi?"),
+        ("R2-C07", "WBC của em là sao vậy?"),
     ),
 )
 def test_r2_current_result_controls_do_not_route_to_trend(case_id: str, message: str) -> None:

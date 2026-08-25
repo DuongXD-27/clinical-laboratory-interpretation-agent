@@ -11,6 +11,11 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
+from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
+from src.services.measurement_conversion import (
+    cholesterol_mg_dl_to_mmol_l,
+    triglyceride_mg_dl_to_mmol_l,
+)
 from src.services.analyte_resolver import FROZEN_CLINICAL_RULE_BANDS, canonical_analyte_id
 
 
@@ -24,12 +29,19 @@ class ReferenceLookupResult:
     rule: dict[str, Any] | None
     canonical_analyte: str | None
     reason: str | None
+    comparison_value: Decimal | None = None
+    comparison_unit: str | None = None
 
 
 @dataclass(frozen=True)
 class AgeRange:
     min_age: Decimal
-    max_age: Decimal
+    max_age: Decimal | None
+
+    def contains(self, age: Decimal) -> bool:
+        if age < self.min_age:
+            return False
+        return self.max_age is None or age <= self.max_age
 
 
 class ReferenceRepository:
@@ -55,6 +67,7 @@ class ReferenceRepository:
         config: dict[str, Any],
         rules: list[dict[str, Any]],
         unit_rows: list[dict[str, str]] | None = None,
+        catalog_contract: AnalyteCatalogContract | None = None,
     ):
         self._validate_config(config)
         self._validate_rules(rules)
@@ -67,21 +80,34 @@ class ReferenceRepository:
         self.allowed_reference_types = frozenset(
             self._norm_text(value) for value in config_copy["allowed_reference_types"]
         )
+        if catalog_contract is not None:
+            self._validate_catalog_sync(config_copy, catalog_contract)
+            requested_approved = set(catalog_contract.approved_names)
+            alias_source = catalog_contract.runtime_alias_map()
+            explicit_pending: set[str] = set()
+        else:
+            requested_approved = {str(item).strip() for item in config_copy["approved_analytes"]}
+            alias_source = {
+                str(alias).strip(): str(canonical).strip()
+                for alias, canonical in config_copy["analyte_aliases"].items()
+            }
+            explicit_pending = {str(item).strip() for item in config_copy["pending_analytes"]}
+        self._catalog_contract = catalog_contract
         self.analyte_aliases = MappingProxyType(
             {
                 self._alias_key(alias): str(canonical).strip()
-                for alias, canonical in config_copy["analyte_aliases"].items()
+                for alias, canonical in alias_source.items()
             }
         )
         aliases_by_canonical: dict[str, list[str]] = {}
-        for alias, canonical in config_copy["analyte_aliases"].items():
+        for alias, canonical in alias_source.items():
             aliases_by_canonical.setdefault(str(canonical).strip(), []).append(str(alias).strip())
         self._aliases_by_canonical = MappingProxyType(
             {name: tuple(sorted(set(aliases), key=str.casefold)) for name, aliases in aliases_by_canonical.items()}
         )
         self.trend_max_gap_days = self._load_trend_gap_policy(
             config_copy.get("trend_max_gap_days"),
-            requested_approved=set(config_copy["approved_analytes"]),
+            requested_approved=requested_approved,
         )
         self.age_scope_aliases = MappingProxyType(
             {
@@ -95,8 +121,6 @@ class ReferenceRepository:
         self._rules = tuple(rules_copy)
         self._rules_by_analyte = self._index_rules(self._rules)
 
-        requested_approved = {str(item).strip() for item in config_copy["approved_analytes"]}
-        explicit_pending = {str(item).strip() for item in config_copy["pending_analytes"]}
         unit_conflicts = self._find_unit_conflicts(requested_approved, unit_rows_copy)
 
         self.unit_conflict_analytes = frozenset(unit_conflicts)
@@ -105,6 +129,43 @@ class ReferenceRepository:
 
         if not self.approved_analytes:
             raise ReferenceRepositoryError("no approved analytes remain after unit validation")
+
+    @staticmethod
+    def _validate_catalog_sync(
+        config: dict[str, Any],
+        catalog_contract: AnalyteCatalogContract,
+    ) -> None:
+        config_approved = {str(item).strip() for item in config["approved_analytes"]}
+        catalog_approved = set(catalog_contract.approved_names)
+        if config_approved != catalog_approved:
+            raise ReferenceRepositoryError(
+                "reference_checker_config approved_analytes drift from analyte_catalog"
+            )
+
+        config_aliases = {
+            str(alias).strip(): str(canonical).strip()
+            for alias, canonical in config["analyte_aliases"].items()
+        }
+        catalog_aliases = catalog_contract.runtime_alias_map()
+        if config_aliases != catalog_aliases:
+            raise ReferenceRepositoryError(
+                "reference_checker_config analyte_aliases drift from analyte_catalog"
+            )
+
+        config_holds = {
+            str(name).strip()
+            for name, metadata in config.get("hold_analytes", {}).items()
+            if isinstance(metadata, dict) and str(metadata.get("status", "")).strip().upper() == "HOLD"
+        }
+        catalog_holds = {
+            entry.canonical_name
+            for entry in catalog_contract.entries
+            if entry.runtime_status == "HOLD"
+        }
+        if config_holds != catalog_holds:
+            raise ReferenceRepositoryError(
+                "reference_checker_config hold_analytes drift from analyte_catalog"
+            )
 
     @staticmethod
     def _load_trend_gap_policy(
@@ -142,6 +203,7 @@ class ReferenceRepository:
             config_path=root / "data/reference/reference_checker_config.json",
             ranges_path=root / "data/reference/reference_ranges.json",
             units_path=root / "data/reference/units_metric.csv",
+            catalog_contract=get_analyte_catalog_contract(),
         )
 
     @classmethod
@@ -151,6 +213,7 @@ class ReferenceRepository:
         config_path: str | Path,
         ranges_path: str | Path,
         units_path: str | Path | None = None,
+        catalog_contract: AnalyteCatalogContract | None = None,
     ) -> ReferenceRepository:
         config_file = Path(config_path)
         ranges_file = Path(ranges_path)
@@ -164,7 +227,12 @@ class ReferenceRepository:
             raise ReferenceRepositoryError("runtime ranges JSON must be a list")
 
         unit_rows = cls._load_units_file(units_file) if units_file else []
-        return cls(config=config, rules=rules, unit_rows=unit_rows)
+        return cls(
+            config=config,
+            rules=rules,
+            unit_rows=unit_rows,
+            catalog_contract=catalog_contract,
+        )
 
     @staticmethod
     def default_repo_root() -> Path:
@@ -267,6 +335,7 @@ class ReferenceRepository:
         unit: str,
         patient_gender: str,
         patient_age: int | float | None,
+        value: Any = None,
     ) -> ReferenceLookupResult:
         canonical = self.resolve_analyte(analyte)
         if canonical is None:
@@ -287,7 +356,30 @@ class ReferenceRepository:
             return self._miss(canonical, "reference_type_not_supported")
 
         input_unit = self.normalize_unit(unit)
-        candidates = [rule for rule in candidates if self._rule_unit(rule) == input_unit]
+        exact_unit_candidates = [rule for rule in candidates if self._rule_unit(rule) == input_unit]
+        comparison_value = None
+        comparison_unit = None
+        if exact_unit_candidates:
+            candidates = exact_unit_candidates
+        else:
+            converted_value = None
+            converted_unit = None
+            converted_candidates = []
+            for rule in candidates:
+                rule_unit = self._rule_unit(rule)
+                candidate_value = self._convert_input_for_rule(
+                    canonical,
+                    value,
+                    input_unit,
+                    rule_unit,
+                )
+                if candidate_value is not None:
+                    converted_value = candidate_value
+                    converted_unit = rule_unit
+                    converted_candidates.append(rule)
+            candidates = converted_candidates
+            comparison_value = converted_value
+            comparison_unit = converted_unit
         if not candidates:
             return self._miss(canonical, "unit_not_supported")
 
@@ -296,7 +388,7 @@ class ReferenceRepository:
         if patient_age_decimal is not None:
             for rule in candidates:
                 age_range = self.parse_age_scope(rule.get("age_scope"))
-                if age_range and age_range.min_age <= patient_age_decimal <= age_range.max_age:
+                if age_range and age_range.contains(patient_age_decimal):
                     age_candidates.append(rule)
         if not age_candidates:
             return self._miss(canonical, "age_scope_not_supported")
@@ -339,6 +431,8 @@ class ReferenceRepository:
             rule=deepcopy(sex_candidates[0]),
             canonical_analyte=canonical,
             reason=None,
+            comparison_value=comparison_value,
+            comparison_unit=comparison_unit,
         )
 
     def resolve_band(
@@ -463,6 +557,16 @@ class ReferenceRepository:
     def resolve_analyte(self, analyte: str) -> str | None:
         return self.analyte_aliases.get(self._alias_key(analyte))
 
+    def runtime_status_for(self, analyte: str) -> str | None:
+        if self._catalog_contract is None:
+            canonical = self.resolve_analyte(analyte)
+            if canonical in self.approved_analytes:
+                return "APPROVED"
+            if canonical in self.pending_analytes:
+                return "HOLD"
+            return None
+        return self._catalog_contract.runtime_status_for(analyte)
+
     def parse_age_scope(self, value: Any) -> AgeRange | None:
         text = str(value or "").strip()
         if not text:
@@ -473,6 +577,12 @@ class ReferenceRepository:
 
         match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\s*", text)
         if not match:
+            match = re.fullmatch(r"\s*(?:>=|≥)\s*(\d+(?:\.\d+)?)\s*", text)
+            if match:
+                return AgeRange(min_age=Decimal(match.group(1)), max_age=None)
+            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*\+\s*", text)
+            if match:
+                return AgeRange(min_age=Decimal(match.group(1)), max_age=None)
             return None
         min_age = Decimal(match.group(1))
         max_age = Decimal(match.group(2))
@@ -504,6 +614,8 @@ class ReferenceRepository:
             "U/l": "U/L",
             "u/l": "U/L",
             "U/L": "U/L",
+            "%CV": "%",
+            "%cv": "%",
         }
         return unit_aliases.get(text, text)
 
@@ -554,6 +666,27 @@ class ReferenceRepository:
         raw_unit = rule.get("unit_canonical") or rule.get("unit_display_vn") or rule.get("unit_machine")
         unit = self.normalize_unit(raw_unit)
         return unit or None
+
+    @classmethod
+    def _convert_input_for_rule(
+        cls,
+        canonical_analyte: str,
+        value: Any,
+        input_unit: str,
+        rule_unit: str | None,
+    ) -> Decimal | None:
+        if value is None or rule_unit is None:
+            return None
+        if input_unit != "mg/dL" or rule_unit != "mmol/L":
+            return None
+        try:
+            if canonical_analyte in {"Total cholesterol", "HDL-C", "LDL-C"}:
+                return cholesterol_mg_dl_to_mmol_l(value)
+            if canonical_analyte == "Triglyceride":
+                return triglyceride_mg_dl_to_mmol_l(value)
+        except (TypeError, ValueError):
+            return None
+        return None
 
     @classmethod
     def _rule_sex(cls, rule: dict[str, Any]) -> str | None:
