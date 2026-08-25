@@ -575,6 +575,7 @@ async def handle_message(
         current_report_ref=resolved.current_report_ref,
         current_analyte=resolved.current_analyte,
         progress_callback=progress_callback,
+        message=request.message,
     )
     if provenance_turn:
         # CHAT-V1.5-R1-G1: canonical approved-source path for the CURRENT

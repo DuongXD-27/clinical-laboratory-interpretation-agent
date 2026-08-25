@@ -197,24 +197,35 @@ def _compose_explanation_message(data: ExplanationDataPayload) -> str:
     else:
         status_key = str(facts.status).casefold()
         status_label = _EXPLANATION_STATUS_LABELS.get(status_key, str(facts.status).upper())
-    lines = [
+    fact_lines = [
         f"Kết quả {facts.analyte_name} của bạn:",
-        f"- Giá trị: {facts.value} {facts.unit}",
-        f"- Trạng thái: {status_label}",
     ]
+    if data.presentation_mode == "status_first":
+        fact_lines.extend((
+            f"- Trạng thái: {status_label}",
+            f"- Giá trị: {facts.value} {facts.unit}",
+        ))
+    else:
+        fact_lines.extend((
+            f"- Giá trị: {facts.value} {facts.unit}",
+            f"- Trạng thái: {status_label}",
+        ))
     if facts.has_two_sided_reference_range:
-        lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
+        fact_lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
     if facts.critical_status == "critical_high":
-        lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} tăng tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
+        fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} tăng tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
     elif facts.critical_status == "critical_low":
-        lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} giảm tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
+        fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} giảm tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
     elif facts.approved_critical_message:
         # Approved existing critical warning, preserved verbatim.
-        lines.append(f"\n⚠️ {facts.approved_critical_message}")
+        fact_lines.append(f"\n⚠️ {facts.approved_critical_message}")
     approved_explanation = data.explanation.strip()
-    if approved_explanation:
-        lines.append("")
-        lines.append(approved_explanation)
+    if data.presentation_mode == "education_first" and approved_explanation:
+        lines = [approved_explanation, "", *fact_lines]
+    else:
+        lines = fact_lines
+        if approved_explanation:
+            lines.extend(("", approved_explanation))
     return "\n".join(lines)
 
 
