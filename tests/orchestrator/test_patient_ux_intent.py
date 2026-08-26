@@ -52,12 +52,12 @@ async def test_guest_without_medical_context_vague_request():
         async def ainvoke(self, prompt: str):
             return "SAFE_GENERAL"
 
-    from src.orchestrator import intent_router
-    import pytest
     from _pytest.monkeypatch import MonkeyPatch
+
+    from src.orchestrator import intent_router
     mp = MonkeyPatch()
     mp.setattr(intent_router, "get_llm", lambda: MockLLM())
-    
+
     try:
         decision = await route_intent("Xem giúp em với", session, role=ROLE_GUEST, has_medical_context=False)
         assert decision.intent == IntentEnum.SAFE_GENERAL
@@ -69,7 +69,7 @@ async def test_guest_without_medical_context_vague_request():
 async def test_safety_diagnosis_reassurance():
     """Test 3: 'Bạn chắc chắn tôi không bị bệnh chứ?' is caught by medical safety gate."""
     user = DummyUser(role=ROLE_PATIENT)
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     req = OrchestratorRequest(message="Bạn chắc chắn tôi không bị bệnh chứ?", client_request_id="safe-3")
@@ -84,7 +84,7 @@ async def test_safety_diagnosis_reassurance():
 async def test_safety_personal_cause_request():
     """Test 4: 'Tại sao tôi lại bị chỉ số này cao?' is caught as MEDICAL_CAUSE_REQUEST."""
     user = DummyUser(role=ROLE_PATIENT)
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     req = OrchestratorRequest(message="Tại sao tôi lại bị chỉ số này cao?", client_request_id="safe-4")
@@ -99,7 +99,7 @@ async def test_safety_personal_cause_request():
 async def test_educational_cause_allowed():
     """Test 5: Educational question 'Chỉ số WBC cao thường do nguyên nhân gì?' is allowed and routes to EXPLAIN_CURRENT_RESULT."""
     user = DummyUser(role=ROLE_PATIENT)
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     req = OrchestratorRequest(message="Chỉ số WBC cao thường do nguyên nhân gì?", client_request_id="edu-5")

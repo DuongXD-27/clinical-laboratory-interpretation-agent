@@ -10,10 +10,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import pytest
-
 from src.services.medical_knowledge_retriever import (
-
     ChromaMedicalKnowledgeRetriever,
 )
 

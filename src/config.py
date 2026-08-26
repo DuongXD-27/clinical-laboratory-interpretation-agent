@@ -73,6 +73,20 @@ class Settings(BaseSettings):
     embedding_dimension: int = Field(default=1536, ge=1)
     embedding_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
 
+    # App Help Vector Store (separate collection from medical_kb_v4 — must
+    # never share a collection name, VectorStore hard-fails metadata mixing)
+    app_help_rag_enabled: bool = False
+    app_help_collection_name: str = "app_help_kb_v1"
+    app_help_corpus_version: str = "app-help-kb-v1"
+    app_help_corpus_dir: str = "./data/app_how_to_use"
+    # Evidence-based, not a guess: with explicit analyte names stripped from
+    # the query (see strip_explicit_analyte), the genuine-question score
+    # floor measured ~0.73 while adjacent-but-unsupported questions (e.g.
+    # "xuất phiếu ra PDF ở đâu?") ceiling at ~0.68 — see the Phase 2
+    # implementation report for the measurement script/output.
+    app_help_retrieval_min_score: float = Field(default=0.70, ge=0.0, le=1.0)
+    app_help_retrieval_top_k: int = Field(default=3, ge=1, le=10)
+
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
 

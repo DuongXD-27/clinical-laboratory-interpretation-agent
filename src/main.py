@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
             changed = backfill_review_flags(db)
             if changed:
                 logger.info("doctor_review_backfill", extra={"reports_changed": changed})
-            
+
             backfill_metrics = backfill_legacy_canonical_indicators(db)
             if backfill_metrics and backfill_metrics.get("PARTIAL_ROWS_COMPLETED", 0) > 0:
                 logger.info("legacy_trend_backfill", extra=backfill_metrics)

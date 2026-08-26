@@ -5,6 +5,11 @@ line-length = 120
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]
 
+[lint.per-file-ignores]
+# Scripts chạy trực tiếp phải bootstrap sys.path trước khi import package
+# `src.*`, nên import muộn ở đầu file là chủ đích chứ không phải sơ suất.
+"src/scripts/**" = ["E402"]
+
 [format]
 quote-style = "double"
 indent-style = "space"

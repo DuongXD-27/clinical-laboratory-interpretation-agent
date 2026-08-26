@@ -45,7 +45,9 @@ def _minimal_blocked_response(**updates):
     return payload
 
 
-def test_ac1_intent_enum_has_exactly_seven_members():
+def test_ac1_intent_enum_has_exactly_eight_members():
+    # APP_HELP added deliberately for the App Help RAG feature (Phase 2,
+    # data/app_how_to_use/) — a frozen-contract update, not a drift.
     assert [member.name for member in IntentEnum] == [
         "UNSUPPORTED_OR_UNSAFE",
         "ANALYZE_REPORT",
@@ -54,6 +56,7 @@ def test_ac1_intent_enum_has_exactly_seven_members():
         "ANALYZE_TREND",
         "GET_DOCTOR_QUESTIONS",
         "SAFE_GENERAL",
+        "APP_HELP",
     ]
 
 

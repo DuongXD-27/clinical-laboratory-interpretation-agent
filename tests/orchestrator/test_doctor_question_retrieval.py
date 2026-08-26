@@ -122,7 +122,14 @@ def test_explicit_analyte_never_returns_unrelated_persisted_questions(test_db):
     texts = [question.text for question in payload.questions]
     assert texts
     assert "HbA1c persisted wording must not leak into WBC." not in texts
-    assert all("WBC" in text for text in texts)
+    # Scoping guarantee: every returned question is about the requested
+    # analyte. Asserted on the structured field, not a text substring — the
+    # approved question templates (data/reference/question_templates.json,
+    # frozen) render the Vietnamese display name ("bạch cầu") and never the
+    # raw token "WBC", so a substring check can never pass against approved
+    # wording. indicator_name is the analyte link the scoping filter itself
+    # keys on, making this a strictly stronger witness than the substring.
+    assert all(question.indicator_name == "WBC" for question in payload.questions)
 
 
 def test_matching_persisted_question_wording_is_preserved_exactly(test_db):

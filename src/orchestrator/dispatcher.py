@@ -296,6 +296,119 @@ async def _dispatch_safe_general(_: DispatchContext) -> WorkflowResult:
 
 
 # ---------------------------------------------------------------------------
+# APP_HELP: "how/where do I use this app feature" questions, answered only
+# from the App Help corpus (data/app_how_to_use/), never from the medical
+# RAG or an LLM free-composing an answer. Fail-closed by design: below the
+# retriever's min_score threshold, nothing is returned — see AH-10/AH-12 in
+# yeu-cau-vu.txt, "must not invent a route/button that doesn't exist".
+# ---------------------------------------------------------------------------
+
+APP_HELP_NOT_FOUND_MESSAGE = (
+    "Tôi chưa tìm thấy hướng dẫn phù hợp cho câu hỏi này trong tài liệu hỗ trợ hiện có "
+    "của ứng dụng. Đây có thể là một tính năng chưa được hỗ trợ — bạn có thể mô tả rõ "
+    "hơn điều bạn đang tìm."
+)
+
+
+def _clean_app_help_text(text: str) -> str:
+    """Strip internal-docs artifacts from a corpus chunk before it becomes
+    a chat message: the heading line (already redundant — it repeats the
+    question's topic), inline `file.md` cross-references, and the
+    "→ route `/path`" fragment that every "Người dùng tìm ở đâu?" section
+    opener uses (a raw URL is meaningless to a user who navigates by
+    clicking a menu item, not typing a path — see corpus template).
+    Purely subtractive/deterministic — never changes a remaining word, so
+    it cannot introduce a new claim.
+    Found during final-integration verification: doctor-questions.md also
+    writes locations as bare inline paths ("tại `/patient/analysis` và trên
+    `/patient/reports/{reportId}`") plus "(component `X.tsx`)" refs — forms
+    the rules above don't match, which previously relied on the bounded LLM
+    rewrite dropping them. A prompt is a request, not a guarantee (the
+    rewrite kept them verbatim in a live run), so these are now stripped
+    here too; the composer's artifact guard rejects any rewrite that still
+    shows them."""
+    lines = text.split("\n", 1)
+    body = lines[1].lstrip("\n") if len(lines) > 1 and lines[0].strip().endswith("?") else text
+    body = re.sub(r"\s*\(xem file `[^`]+`\)", "", body)
+    body = re.sub(r"\s*→\s*route\s*`[^`]+`", "", body)
+    # "Từ trang Tổng quan (`/patient`), ..." -> "Từ trang Tổng quan, ..."
+    body = re.sub(r"\s*\(`/[^`]+`\)", "", body)
+    # Bare inline app route paths: absorb one preceding connector/conjunction
+    # ("tại", "trên", "ở", "vào", optionally joined by "và"/"hoặc") so no
+    # dangling word is left behind:
+    # "... phân tích tại `/patient/analysis` và trên `/patient/reports/{id}`"
+    #   -> "... phân tích". Case-insensitive because list items capitalize
+    # the opener ("Vào `/doctor/trend-reviews`, lọc theo ...").
+    body = re.sub(
+        r"\s+(?:(?:và|hoặc)\s+)?(?:tại|trên|ở|vào)\s+`/(?:patient|doctor|api)[^`]*`",
+        "",
+        body,
+        flags=re.IGNORECASE,
+    )
+    # Any remaining standalone backticked route path (list-item openers like
+    # "Vào `/doctor/trend-reviews`, lọc theo ...").
+    body = re.sub(r"\s+`/(?:patient|doctor|api)[^`]*`", "", body, flags=re.IGNORECASE)
+    # Backticked code-file identifiers (`QuestionsForDoctorPanel.tsx`) — same
+    # dev/docs-leak rationale; visible human-readable labels stay untouched.
+    body = re.sub(r"\s*(?:\b(?:component|components)\s+)?`[^`]+\.(?:tsx|ts|jsx|mjs|py)`", "", body)
+    # Tidy parentheses left half-emptied by the identifier strip above:
+    # "(component , mục ...)" -> "(mục ...)"; "()" -> "" (absorbing the
+    # preceding space so "... phân tích ()." doesn't become "... phân tích .").
+    body = re.sub(r"\(\s*,\s*", "(", body)
+    body = re.sub(r"\s*\(\s*\)", "", body)
+    return body.strip()
+
+
+def _app_help_role_caveat(chunk_role: str, requester_role: str | None) -> str | None:
+    if requester_role not in {"patient", "doctor"}:
+        return None
+    allowed = {token.strip() for token in chunk_role.split(",") if token.strip()}
+    if not allowed or requester_role in allowed:
+        return None
+    if allowed == {"patient"}:
+        return "Lưu ý: đây là hướng dẫn dành cho tài khoản bệnh nhân, có thể không áp dụng cho vai trò bác sĩ."
+    if allowed == {"doctor"}:
+        return "Lưu ý: đây là hướng dẫn dành cho tài khoản bác sĩ, có thể không áp dụng cho vai trò bệnh nhân."
+    return None
+
+
+async def _dispatch_app_help(context: DispatchContext) -> WorkflowResult:
+    from src.services.app_help_retriever import AppHelpRetrieverError, get_app_help_retriever
+
+    message = context.message or ""
+    role = getattr(context.current_user, "role", None)
+
+    try:
+        retriever = get_app_help_retriever()
+    except AppHelpRetrieverError:
+        return WorkflowResult(
+            status=ResponseStatus.SUCCESS,
+            data=ExplanationDataPayload(explanation=APP_HELP_NOT_FOUND_MESSAGE, sources=[]),
+            workflow_selected="app_help_unavailable",
+        )
+
+    result = retriever.retrieve(message, requester_role=role)
+    if not result.has_match:
+        return WorkflowResult(
+            status=ResponseStatus.SUCCESS,
+            data=ExplanationDataPayload(explanation=APP_HELP_NOT_FOUND_MESSAGE, sources=[]),
+            workflow_selected="app_help_no_match",
+        )
+
+    top = result.matches[0]
+    explanation = _clean_app_help_text(top.text)
+    caveat = _app_help_role_caveat(top.role, role)
+    if caveat:
+        explanation = f"{caveat}\n\n{explanation}"
+
+    return WorkflowResult(
+        status=ResponseStatus.SUCCESS,
+        data=ExplanationDataPayload(explanation=explanation, sources=[top.source_file]),
+        workflow_selected="app_help_retrieval",
+    )
+
+
+# ---------------------------------------------------------------------------
 # CHAT-V1.5-R1-G1: constrained provenance / source follow-up mode
 #
 # One canonical approved-source path. Sources come ONLY from the stored
@@ -443,6 +556,7 @@ WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {
     IntentEnum.GET_DOCTOR_QUESTIONS: _dispatch_questions,
     IntentEnum.UNSUPPORTED_OR_UNSAFE: _dispatch_unsupported,
     IntentEnum.SAFE_GENERAL: _dispatch_safe_general,
+    IntentEnum.APP_HELP: _dispatch_app_help,
 }
 
 

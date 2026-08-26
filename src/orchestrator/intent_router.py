@@ -118,6 +118,61 @@ def _deterministic_route(
     normalized = _normalize(message)
     original_lower = message.casefold()
 
+    # 0. APP_HELP: navigational "how do I use this app feature" questions
+    # (upload, history, trends, OCR review, profile...). Must run BEFORE
+    # VIEW_HISTORY/ANALYZE_TREND/EXPLAIN_CURRENT_RESULT, since those match on
+    # bare feature nouns ("lich su", "xu huong", "tai sao") that also appear
+    # inside navigational phrasing like "xem lich su o dau". Requires a
+    # navigation cue AND an app-feature cue together so genuine medical
+    # questions ("tại sao WBC cao?", no feature cue) are never caught here.
+    app_help_explicit_patterns = (
+        "huong dan su dung", "huong dan dung", "huong dan toi su dung",
+        "huong dan toi tai phieu", "huong dan tai phieu", "huong dan dung ocr",
+        "huong dan toi dung ocr", "huong dan xem ket qua", "huong dan xem lich su",
+        "huong dan xem xu huong", "cach su dung", "cach dung ung dung",
+        "tai phieu xet nghiem o dau", "tai phieu o dau", "khong tai duoc phieu",
+        "chuc nang ocr", "ocr dung de lam gi", "ocr cua ung dung",
+        "tai sao phai xac nhan ocr", "vi sao phai xac nhan ocr",
+        "sua ho so o dau", "sua thong tin ca nhan o dau", "chinh sua ho so o dau",
+        "xem canh bao khan cap o dau",
+        # Explicitly required by phan-cong-vu.txt's own example question
+        # list — "cảnh báo khẩn cấp nghĩa là gì?" asks what the app's alert
+        # banner FEATURE means, not a medical question, but "nghia la gi"
+        # alone is a generic EXPLAIN_CURRENT_RESULT marker (matches medical
+        # "WBC nghĩa là gì?" too) so it needs the full phrase listed here
+        # rather than relying on the generic nav-cue+feature-cue combo.
+        "canh bao khan cap nghia la gi", "canh bao nguy kich nghia la gi",
+    )
+    app_help_nav_cues = (
+        "o dau", "lam sao", "huong dan", "cach ", "tai sao", "vi sao",
+        "sao khong", "khong duoc", "co can phai",
+        # "làm sao" is not the only common phrasing for "how" — found via
+        # manual testing that "làm thế nào"/"làm như nào" fell through this
+        # branch entirely and got misrouted to ANALYZE_REPORT (treated as
+        # "start a new upload now" instead of "explain how to upload").
+        "lam the nao", "the nao de", "nhu the nao", "lam nhu the nao",
+        "bang cach nao", "cach nao de",
+        # Colloquial contraction dropping "thế" ("làm như nào" instead of
+        # "làm như thế nào") — common in casual chat typing.
+        "nhu nao", "lam nhu nao",
+    )
+    app_help_feature_cues = (
+        "tai phieu", "tai anh", "upload", "tai len phieu",
+        "lich su", "xu huong", "trend",
+        "xac nhan ocr", "ocr",
+        "ho so", "thong tin ca nhan", "profile", "tai khoan",
+        "canh bao khan cap", "canh bao nguy kich",
+        "chuc nang", "tinh nang cua ung dung",
+        "cau hoi bac si", "cau hoi cho bac si", "hoi bac si", "gui cau hoi",
+        "bac si review", "yeu cau bac si",
+    )
+    is_app_help = any(term in normalized for term in app_help_explicit_patterns) or (
+        any(term in normalized for term in app_help_nav_cues)
+        and any(term in normalized for term in app_help_feature_cues)
+    )
+    if is_app_help:
+        return RouteDecision(intent=IntentEnum.APP_HELP, route_confidence=0.95)
+
     # 1. VIEW_HISTORY
     if any(term in normalized for term in ("lich su", "history", "lan truoc", "thang truoc", "xem lai", "lan truoc nua")):
         return RouteDecision(intent=IntentEnum.VIEW_HISTORY, route_confidence=0.95)
@@ -131,18 +186,13 @@ def _deterministic_route(
     if any(term in normalized for term in ("hoi bac si", "hoi gi bac si", "cau hoi", "doctor question")):
         return RouteDecision(intent=IntentEnum.GET_DOCTOR_QUESTIONS, route_confidence=0.95)
 
-    # 4. SAFE_GENERAL (Greetings, Capability Requests, and In-Scope App Help)
+    # 4. SAFE_GENERAL (Greetings and general capability questions — specific
+    # "how do I use feature X" questions are routed to APP_HELP above)
     safe_general_patterns = (
         "chao ban", "chao em", "chao bac", "chao anh", "chao chi", "xin chao",
         "hello", "cam on", "thank", "ban lam duoc gi", "tro ly nay giup gi",
         "bat dau tu dau", "ban la ai", "giup toi lam gi", "giup gi", "co the giup",
         "lam duoc gi", "ban giup duoc gi", "ban co the lam gi",
-        "huong dan su dung", "huong dan dung", "huong dan toi su dung",
-        "huong dan toi tai phieu", "huong dan tai phieu", "huong dan dung ocr",
-        "huong dan toi dung ocr", "huong dan xem ket qua", "huong dan xem lich su",
-        "huong dan xem xu huong", "cach su dung", "cach dung ung dung",
-        "tai phieu xet nghiem o dau", "tai phieu o dau", "khong tai duoc phieu",
-        "chuc nang ocr", "ocr dung de lam gi", "ocr cua ung dung",
     )
     if any(term in normalized for term in safe_general_patterns) or "hi" in normalized.split():
         return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
@@ -292,6 +342,7 @@ def _prompt_for(message: str, session: OrchestratorSessionContext, role: str, ha
         "- If the user is a patient with medical context and expresses general concern about their results (e.g. 'Em hơi lo', 'Có bất thường không?'), classify as EXPLAIN_CURRENT_RESULT.\n"
         "- Route ANALYZE_TREND when the user asks about changes over time, history comparisons, or trends (e.g. 'thay đổi thế nào', 'thay đổi ra sao', 'tăng hay giảm').\n"
         "- Route VIEW_HISTORY when asking about past reports (e.g. 'kết quả tháng trước', 'lần trước').\n"
+        "- Route APP_HELP when the user asks how/where to use an app feature itself (upload, history list, trends chart, OCR review, profile, alerts) rather than asking about their own medical data (e.g. 'Làm sao tải phiếu?', 'Tôi xem lịch sử ở đâu?', 'Tại sao phải xác nhận OCR?', 'Tôi sửa hồ sơ ở đâu?'). Never use APP_HELP for medical/educational questions or requests about the user's actual results.\n"
         "- Only route ANALYZE_REPORT when the user explicitly requests new report ingestion/processing or when there is an active pending OCR review (e.g. 'Phân tích phiếu này', 'Tôi có phiếu mới', 'Phân tích ảnh này').\n"
         "- If `pending_question` is present and the user gives a short response answering it, rely heavily on `last_intent`.\n"
         "- If the utterance is unclear, nonsense, off-topic, unsupported, or does not clearly match any supported intent, classify as UNSUPPORTED_OR_UNSAFE.\n"

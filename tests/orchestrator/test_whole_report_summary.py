@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.models.db import ROLE_DOCTOR, ROLE_PATIENT, LabReport
+from src.models.db import ROLE_PATIENT
 from src.models.orchestrator_schemas import (
     AnalysisDataPayload,
     DataType,
@@ -28,7 +27,7 @@ from src.models.schemas import (
     TrendResponse,
 )
 from src.orchestrator.dispatcher import DispatchContext, dispatch_workflow
-from src.orchestrator.response_composer import _format_whole_report_deterministic_summary, build_final_response
+from src.orchestrator.response_composer import _format_whole_report_deterministic_summary
 from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
 from src.services import history_repository, trend_service

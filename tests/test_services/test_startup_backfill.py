@@ -20,7 +20,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.models.db import (
-    Base,
     LabReport,
     ReportIndicator,
     ReportQuestion,

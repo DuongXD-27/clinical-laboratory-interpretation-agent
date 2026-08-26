@@ -24,8 +24,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, object_session, selectinload
 
-logger = logging.getLogger(__name__)
-
 from src.models.db import (
     ROLE_PATIENT,
     DoctorNote,
@@ -58,6 +56,8 @@ from src.services.indicator_catalog_service import (
 )
 from src.services.question_templates import GeneratedQuestion
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_indicator_name(name: str) -> str:
@@ -934,20 +934,20 @@ def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
         raw_unit = ind.raw_unit or ind.unit
 
         resolved_analyte = repo.resolve_analyte(raw_name)
-        
+
         # If unsupported analyte, fail closed
         if not resolved_analyte:
             unsupported_unit_rows += 1
             continue
-            
+
         # Check conflicts if canonical fields are already partially set
         conflict = False
         if ind.analyte_canonical is not None and ind.analyte_canonical != resolved_analyte:
             conflict = True
-            
+
         # Our invariant: we only populate canonical_value if we can map the unit
         resolved_unit = repo.normalize_unit(raw_unit)
-        
+
         # We must prove that this unit is supported for this analyte in the reference repository.
         # This prevents silently accepting arbitrary units that don't match our allowed constraints.
         rules = getattr(repo, "_rules_by_analyte", {}).get(resolved_analyte, ())
@@ -957,22 +957,22 @@ def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
                 u = repo._rule_unit(r)
                 if u is not None:
                     supported_units.add(u)
-        
+
         if resolved_unit not in supported_units:
             unsupported_unit_rows += 1
             continue
 
         if ind.canonical_unit is not None and ind.canonical_unit != resolved_unit:
             conflict = True
-            
+
         try:
             numeric_val = float(raw_value) if raw_value is not None else None
         except (TypeError, ValueError):
             numeric_val = None
-            
+
         if ind.canonical_value is not None and ind.canonical_value != numeric_val:
             conflict = True
-            
+
         if conflict:
             partial_rows_conflicting += 1
             logger.warning(
@@ -981,12 +981,12 @@ def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
                 ind.id
             )
             continue
-            
+
         if resolved_unit == raw_unit:
             exact_rows += 1
         else:
             equivalent_alias_rows += 1
-            
+
         ind.analyte_canonical = resolved_analyte
         ind.canonical_value = numeric_val
         ind.canonical_unit = resolved_unit

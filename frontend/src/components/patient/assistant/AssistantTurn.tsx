@@ -7,6 +7,7 @@ import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { Message, MessageContent, MessageHeader } from "@/components/ui/message";
 import { sanitizeSuggestedAction } from "@/lib/assistantActions.mjs";
+import { tokenizeInlineMarkdown } from "@/lib/inlineMarkdown.mjs";
 import { formatDate } from "@/lib/patientUi.mjs";
 import {
   authoritativeCriticalAlerts,
@@ -40,6 +41,18 @@ function actionLabel(action: SuggestedAction["action"]) {
     case "CONFIRM_OCR": return "Xác nhận OCR";
     case "RETRY": return "Thử lại";
   }
+}
+
+function InlineMarkdownText({ text }: { text: string }) {
+  return (
+    <>
+      {tokenizeInlineMarkdown(text).map((token, index) => {
+        if (token.type === "bold") return <strong key={index}>{token.value}</strong>;
+        if (token.type === "code") return <code key={index}>{token.value}</code>;
+        return <span key={index}>{token.value}</span>;
+      })}
+    </>
+  );
 }
 
 function statusLabel(status: OrchestratorResponse["status"]) {
@@ -220,7 +233,7 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
             ) : null}
             {turn.deliveryState === "COMPLETED" && response ? (
               <div className="assistant-completed-response">
-                <p className="assistant-prose">{response.message}</p>
+                <p className="assistant-prose"><InlineMarkdownText text={response.message} /></p>
                 {statusLabel(response.status) ? (
                   <span className="assistant-response-status" data-status={response.status}>{statusLabel(response.status)}</span>
                 ) : null}

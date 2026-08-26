@@ -11,7 +11,6 @@ from src.models.orchestrator_schemas import (
     ConversationState,
     IntentEnum,
     OrchestratorRequest,
-    ReasonCode,
     ResponseStatus,
     UIContext,
 )
@@ -21,9 +20,7 @@ from src.models.schemas import (
     LabReportSummarySchema,
     TrendPointResponse,
     TrendResponse,
-    VerificationStatus,
 )
-from src.orchestrator.medical_context import resolve_medical_context
 from src.orchestrator.service import handle_message
 from src.orchestrator.session_store import default_session_store
 from src.services import history_repository, trend_service
@@ -94,7 +91,7 @@ async def test_latest_report_fetch_without_ui_context(monkeypatch):
     fetch the patient's latest report from DB.
     """
     user = DummyPatientUser()
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     mock_db = MagicMock()
@@ -138,7 +135,7 @@ async def test_dashboard_chat_flow(monkeypatch):
     Orchestrator must autonomously fetch latest report and generate questions.
     """
     user = DummyPatientUser()
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     mock_db = MagicMock()
@@ -179,7 +176,7 @@ async def test_trend_request_without_page_navigation(monkeypatch):
     Trend service should be called with extracted analyte directly.
     """
     user = DummyPatientUser()
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     mock_db = MagicMock()
@@ -253,7 +250,7 @@ async def test_knowledge_only_does_not_fetch_report(monkeypatch):
     General / knowledge questions must NEVER trigger autonomous report fetching.
     """
     user = DummyPatientUser()
-    session = default_session_store.get_or_create(user)
+    default_session_store.get_or_create(user)
     default_session_store.acknowledge_onboarding(user)
 
     mock_db = MagicMock()

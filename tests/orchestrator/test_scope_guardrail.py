@@ -7,7 +7,9 @@ Validates:
 - CHAT-V1.5-001 unclear input behavior unchanged (S-10)
 - Medical and trend workflows unchanged (S-11, S-12)
 - Medical safety gates authoritative (S-13, S-14)
-- Supported capabilities and future APP_HELP preserved (S-15..S-17, S-20, S-21)
+- Supported capability requests stay SAFE_GENERAL (S-15); specific app-usage
+  how-to/where-is questions now route to APP_HELP instead of SAFE_GENERAL,
+  and remain NOT out-of-scope (S-16, S-17, S-20, S-21)
 - Negative controls: definition queries not overblocked (S-19), lab values not blocked (S-22)
 """
 
@@ -118,8 +120,8 @@ def active_wbc_setup(monkeypatch):
     monkeypatch.setattr(history_repository, "to_detail", MagicMock(return_value=detail))
     monkeypatch.setattr(history_repository, "list_reports", MagicMock(return_value=(1, [mock_db_report])))
 
+    from src.models.schemas import TrendPointResponse, TrendResponse
     from src.services import trend_service
-    from src.models.schemas import TrendResponse, TrendPointResponse
     dummy_trend = TrendResponse(
         analyte_canonical="HbA1c",
         display_name="HbA1c",
@@ -383,8 +385,45 @@ async def test_s14_treatment_safety_behavior():
     assert gate_res == ReasonCode.TREATMENT_REQUEST
 
 
+@pytest.mark.asyncio
+async def test_ah08_treatment_safety_unchanged_by_app_help(active_wbc_setup):
+    """AH-08 (yeu-cau-vu.txt mục E): 'Tôi nên làm gì để hạ HbA1c?' ->
+    still a treatment-safety request, never reachable as APP_HELP. The
+    medical_safety_gate runs upstream of intent routing (see gates.py),
+    so adding APP_HELP cannot regress this."""
+    assert medical_safety_gate("Tôi nên làm gì để hạ HbA1c?") == ReasonCode.TREATMENT_REQUEST
+    user, runtime, db = active_wbc_setup
+    res = await handle_message(
+        OrchestratorRequest(message="Tôi nên làm gì để hạ HbA1c?", client_request_id="ah08"),
+        current_user=user,
+        db=db,
+        runtime=runtime,
+    )
+    assert res.status == ResponseStatus.BLOCKED
+    assert res.intent != IntentEnum.APP_HELP
+
+
+@pytest.mark.asyncio
+async def test_ah09_out_of_scope_python_unchanged_by_app_help(active_wbc_setup):
+    """AH-09 (yeu-cau-vu.txt mục E): 'Hướng dẫn viết Python' stays
+    OUT_OF_SCOPE — out_of_scope_gate runs before intent routing, so it
+    never reaches the APP_HELP branch even though both share the word
+    "hướng dẫn"."""
+    user, runtime, db = active_wbc_setup
+    res = await handle_message(
+        OrchestratorRequest(message="Hướng dẫn viết Python", client_request_id="ah09"),
+        current_user=user,
+        db=db,
+        runtime=runtime,
+    )
+    assert res.status == ResponseStatus.BLOCKED
+    assert res.intent == IntentEnum.UNSUPPORTED_OR_UNSAFE
+    assert res.reason_code == ReasonCode.OUT_OF_SCOPE
+    assert res.intent != IntentEnum.APP_HELP
+
+
 # ==============================================================================
-# S-15 to S-17, S-20, S-21: Supported Capability & App Help Preservation
+# S-15 to S-17, S-20, S-21: Supported Capability & App Help Routing
 # ==============================================================================
 
 @pytest.mark.asyncio
@@ -413,7 +452,7 @@ async def test_s16_where_to_upload_report_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -428,7 +467,7 @@ async def test_s17_how_to_use_ocr_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -443,7 +482,7 @@ async def test_s20_why_cannot_upload_report_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 @pytest.mark.asyncio
@@ -458,7 +497,7 @@ async def test_s21_what_is_ocr_feature_not_out_of_scope(active_wbc_setup):
         runtime=runtime,
     )
     assert res.status == ResponseStatus.SUCCESS
-    assert res.intent == IntentEnum.SAFE_GENERAL
+    assert res.intent == IntentEnum.APP_HELP
 
 
 # ==============================================================================

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "corpus_version": "app-help-kb-v1",
+  "collection_name": "app_help_kb_v1",
+  "corpus_dir": "data/app_how_to_use",
+  "corpus_sha256": "af8085d571b4451ae59de703e782f86c2754e6dec426b1640b66179a5533f3a4",
+  "chunk_count": 50,
+  "source_file_count": 10,
+  "chunk_builder_version": "app_help_corpus_builder",
+  "embedding_provider": "gemini",
+  "embedding_model": "gemini-embedding-001",
+  "embedding_dimension": 3072
+}

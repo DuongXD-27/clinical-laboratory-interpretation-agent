@@ -152,10 +152,21 @@ class InMemorySessionStore:
             if should_clear_analyte
             else (current_analyte if current_analyte is not None else context.current_analyte)
         )
+        # Onboarding chỉ tiến về phía trước qua acknowledge_onboarding, nên nó
+        # được đọc từ bản ghi MỚI NHẤT trong store chứ không phải từ `context`
+        # tham số: một caller giữ tham chiếu context cũ hơn (lấy ra trước khi
+        # acknowledge) từng vô tình ghi đè flag đã lưu thành False, khiến lượt
+        # kế tiếp bị chặn ONBOARDING_REQUIRED dù người dùng đã xác nhận.
+        try:
+            stored_key, _, _ = self._key_and_context_id(current_user)
+            stored_record = self._records.get(stored_key)
+        except ValueError:
+            stored_record = None
+        stored_context = stored_record.context if stored_record is not None else context
         updated = OrchestratorSessionContext.from_server(
             session_id=context.session_id,
             user_role=context.user_role,
-            onboarding_acknowledged=context.onboarding_acknowledged,
+            onboarding_acknowledged=stored_context.onboarding_acknowledged or context.onboarding_acknowledged,
             current_report_ref=current_report_ref or context.current_report_ref,
             current_analyte=resolved_analyte,
             last_intent=last_intent,

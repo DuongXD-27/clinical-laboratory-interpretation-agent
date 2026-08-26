@@ -12,6 +12,7 @@ Three distinct state surfaces must never be merged:
 
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal
@@ -46,6 +47,7 @@ class IntentEnum(StrEnum):
     ANALYZE_TREND = "ANALYZE_TREND"
     GET_DOCTOR_QUESTIONS = "GET_DOCTOR_QUESTIONS"
     SAFE_GENERAL = "SAFE_GENERAL"
+    APP_HELP = "APP_HELP"
 
 
 class OrchestratorRole(StrEnum):
@@ -113,9 +115,6 @@ class UIContext(BaseModel):
     view: ServerReference | None = None
     candidate_analyte: ServerReference | None = None
     candidate_report_ref: ServerReference | None = None
-
-
-import time
 
 
 class ConversationState(BaseModel):

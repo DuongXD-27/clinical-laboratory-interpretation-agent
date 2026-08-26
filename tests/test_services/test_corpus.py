@@ -2,27 +2,21 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-import pytest
 
-from src.models.corpus_schemas import CorpusAnalyteRecord, CorpusSourceRecord
+from src.scripts.ingest_kb import ingest, load_corpus
 from src.services.analyte_resolver import (
     CANONICAL_ANALYTE_ID_MAP,
-    FROZEN_CLINICAL_RULE_BANDS,
     LOCKED_35_ANALYTES,
     canonical_analyte_id,
 )
 from src.services.corpus_builder import (
-    build_chunks_from_analyte,
     build_corpus_chunks,
     generate_chunk_id,
-    parse_analyte_record,
 )
 from src.services.corpus_validator import CorpusValidator
 from src.services.medical_knowledge_retriever import ChromaMedicalKnowledgeRetriever
 from src.services.vector_store import VectorStore
-from src.scripts.ingest_kb import ingest, load_corpus
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

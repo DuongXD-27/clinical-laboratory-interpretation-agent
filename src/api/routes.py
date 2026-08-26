@@ -14,6 +14,7 @@ from src.models.schemas import (
     AnalyzeResponse,
     IndicatorResultSchema,
 )
+from src.orchestrator.session_store import default_session_store
 from src.services import history_repository
 from src.services.doctor_review_service import refresh_review_flags
 from src.services.question_templates import (
@@ -21,7 +22,6 @@ from src.services.question_templates import (
     reconcile_after_guardrail,
 )
 from src.services.request_timing import timing_span
-from src.orchestrator.session_store import default_session_store
 
 logger = logging.getLogger(__name__)
 

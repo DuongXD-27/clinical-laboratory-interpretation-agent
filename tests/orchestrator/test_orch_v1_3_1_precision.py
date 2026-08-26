@@ -7,11 +7,11 @@ Validates:
 """
 
 import pytest
+
 from src.models.orchestrator_schemas import (
     IntentEnum,
     OrchestratorSessionContext,
     ReasonCode,
-    ResponseStatus,
 )
 from src.orchestrator.gates import medical_safety_gate
 from src.orchestrator.intent_router import route_intent
