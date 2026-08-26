@@ -29,6 +29,7 @@ from src.orchestrator.dispatcher import (
     dispatch_workflow,
 )
 from src.orchestrator.gates import (
+    emergency_safety_gate,
     is_provenance_request,
     medical_safety_gate,
     onboarding_gate,
@@ -180,8 +181,8 @@ def _is_unclear_input(message: str) -> bool:
     if not raw:
         return True
 
-    # 1. Any medical safety trigger (diagnosis, cause, treatment) is coherent
-    if medical_safety_gate(message) is not None:
+    # 1. Any medical safety trigger (emergency, diagnosis, cause, treatment) is coherent
+    if emergency_safety_gate(message) is not None or medical_safety_gate(message) is not None:
         return False
 
     # 2. Any explicit analyte or lab value or OCR bypass is coherent
@@ -391,6 +392,30 @@ async def _handle_message_core(
         return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ.")
 
     route: RouteDecision | None = None
+
+    # 0. Emergency / Urgent symptom safety gate (deterministic short-circuit)
+    emergency_reason = emergency_safety_gate(request.message)
+    if emergency_reason is not None:
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            reason_code=emergency_reason,
+            route_confidence=1.0,
+        )
+        response = _blocked_response(
+            route.intent,
+            route.reason_code,
+            _safety_refusal_message(route.reason_code),
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
 
     reason = onboarding_gate(session)
     if reason is not None:

@@ -223,6 +223,7 @@ def test_ac8_request_rejects_server_authority_fields(extra):
 
 def test_ac9_reason_code_has_exact_contract_members():
     assert [member.name for member in ReasonCode] == [
+        "EMERGENCY_INPUT_SAFETY",
         "ONBOARDING_REQUIRED",
         "OCR_REVIEW_REQUIRED",
         "OCR_CONFIRM_INVALID",

@@ -305,6 +305,12 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
 
 
 def _safety_refusal_message(reason_code: ReasonCode | None) -> str:
+    if reason_code == ReasonCode.EMERGENCY_INPUT_SAFETY:
+        return (
+            "Nếu bạn đang gặp các triệu chứng cấp cứu hoặc khó chịu nghiêm trọng (như khó thở, đau tức ngực dữ dội), "
+            "bạn không nên chờ đợi phản hồi từ trợ lý ảo. "
+            "Vui lòng liên hệ ngay cơ sở y tế gần nhất hoặc dịch vụ cấp cứu y tế tại địa phương để được hỗ trợ và xử trí kịp thời."
+        )
     if reason_code == ReasonCode.MEDICAL_DIAGNOSIS_REQUEST:
         return (
             "Mình không thể đưa ra chẩn đoán bệnh hoặc khẳng định tình trạng bệnh lý của bạn. "
