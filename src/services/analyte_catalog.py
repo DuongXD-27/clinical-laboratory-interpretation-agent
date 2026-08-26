@@ -8,13 +8,12 @@ semantic retrieval or an embedding model.
 from __future__ import annotations
 
 import json
-import re
-import unicodedata
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.services.analyte_name_resolution import normalize_analyte_lookup_key
 from src.services.analyte_resolver import canonical_analyte_id
 
 
@@ -212,11 +211,7 @@ class AnalyteDefinition:
 
 
 def _lookup_key(value: Any) -> str:
-    decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
-    without_accents = "".join(
-        character for character in decomposed if not unicodedata.combining(character)
-    )
-    return " ".join(re.findall(r"[a-z0-9]+", without_accents))
+    return normalize_analyte_lookup_key(value)
 
 
 class AnalyteCatalog:

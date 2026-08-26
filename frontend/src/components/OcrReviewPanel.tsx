@@ -423,7 +423,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
 
           {unsupportedRows.length > 0 && (
             <div className="info-message mt-4" role="status">
-              <p className="font-semibold text-slate-800">Một số chỉ số hiện chưa được hỗ trợ</p>
+              <p className="font-semibold text-slate-800">Một số chỉ số cần được xem lại</p>
               <div className="mt-2 grid gap-1">
                 {unsupportedRows.map((row) => (
                   <p key={row.draft_id}>

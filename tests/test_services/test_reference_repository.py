@@ -592,6 +592,32 @@ def test_u02a_default_repository_rejects_generic_glucose_names(generic_name):
     repo = ReferenceRepository.from_default_files()
 
     assert repo.resolve_analyte(generic_name) is None
+    assert repo.resolve_analyte_result(generic_name).status == "AMBIGUOUS"
+
+
+@pytest.mark.parametrize(
+    ("hospital_label", "canonical"),
+    [
+        ("Định lượng Cholesterol toàn phần (máu)", "Total cholesterol"),
+        ("Định lượng Triglycerid (máu) [Máu]", "Triglyceride"),
+    ],
+)
+def test_u02c_default_repository_resolves_safe_hospital_wrappers(
+    hospital_label,
+    canonical,
+):
+    repo = ReferenceRepository.from_default_files()
+
+    assert repo.resolve_analyte(hospital_label) == canonical
+
+
+def test_u02d_default_repository_keeps_hospital_glucose_ambiguous():
+    repo = ReferenceRepository.from_default_files()
+
+    resolution = repo.resolve_analyte_result("Định lượng Glucose [Máu]")
+
+    assert resolution.status == "AMBIGUOUS"
+    assert resolution.canonical_name is None
 
 
 @pytest.mark.parametrize(

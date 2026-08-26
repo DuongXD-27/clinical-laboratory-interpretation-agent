@@ -3,6 +3,7 @@ import pytest
 from src.agents.nodes import reference_range_checker_node as checker_module
 from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.services.analyte_catalog import AnalyteCatalog, AnalyteDefinition
+from src.services.analyte_resolver import canonical_analyte_id
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
@@ -138,6 +139,40 @@ def assert_contract_shape(assessment):
     assert isinstance(assessment["sources"], list)
     assert "category" not in assessment
     assert "range" + "_flag" not in assessment
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("raw_name", "value", "canonical"),
+    [
+        ("Định lượng Cholesterol toàn phần (máu)", 4.0, "Total cholesterol"),
+        ("Định lượng Triglycerid (máu) [Máu]", 1.0, "Triglyceride"),
+    ],
+)
+async def test_real_hospital_lipid_names_reach_reference_checker(
+    raw_name,
+    value,
+    canonical,
+):
+    result = await run_checker(
+        [{"name": raw_name, "value": value, "unit": "mmol/L"}]
+    )
+    assessment = only_indicator(result)
+
+    assert assessment["name"] == raw_name
+    assert assessment["analyte_id"] == canonical_analyte_id(canonical)
+    assert assessment["status"] == "normal"
+
+
+@pytest.mark.asyncio
+async def test_hospital_generic_glucose_never_reaches_fasting_rule():
+    result = await run_checker(
+        [{"name": "Định lượng Glucose [Máu]", "value": 5.2, "unit": "mmol/L"}]
+    )
+    assessment = only_indicator(result)
+
+    assert assessment["name"] == "Định lượng Glucose [Máu]"
+    assert_unknown(assessment)
 
 
 @pytest.mark.asyncio
