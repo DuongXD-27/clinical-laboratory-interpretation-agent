@@ -357,6 +357,23 @@ async def analyzer_node(state: AgentState) -> dict:
     if not indicators:
         return {"retrieved_contexts": []}
 
+    review_indicators = [
+        dict(indicator)
+        for indicator in indicators
+        if indicator.get("input_integrity_status") == "NEED_REVIEW"
+    ]
+    analyzable_indicators = [
+        indicator
+        for indicator in indicators
+        if indicator.get("input_integrity_status") != "NEED_REVIEW"
+    ]
+    if not analyzable_indicators:
+        return {
+            "indicators": review_indicators,
+            "explanations": [],
+            "retrieved_contexts": [],
+        }
+
     try:
         structured_llm = get_llm().with_structured_output(ExplanationOutput)
     except Exception as exc:
@@ -395,7 +412,7 @@ async def analyzer_node(state: AgentState) -> dict:
                 patient_gender_raw=patient_gender,
                 patient_age_raw=patient_age_value,
             )
-            for indicator in indicators
+            for indicator in analyzable_indicators
         ]
     )
 
@@ -406,6 +423,16 @@ async def analyzer_node(state: AgentState) -> dict:
         updated_indicators.append(updated_indicator)
         explanations.append(explanation)
         retrieved_contexts.extend(chunks)
+
+    # Keep review-only rows visible and preserve input order, but never send
+    # those rows to retrieval or an LLM.
+    analyzed = iter(updated_indicators)
+    updated_indicators = [
+        dict(item)
+        if item.get("input_integrity_status") == "NEED_REVIEW"
+        else next(analyzed)
+        for item in indicators
+    ]
 
     return {
         "indicators": updated_indicators,

@@ -112,6 +112,11 @@ async def reference_range_checker_node(state: AgentState) -> dict:
     patient_gender = state.get("patient_gender", "A")
     patient_age = state.get("patient_age")
     indicators: list[IndicatorAssessment] = []
+    integrity_by_index = {
+        int(result["index"]): result
+        for result in state.get("input_integrity_results", [])
+        if isinstance(result, dict) and "index" in result
+    }
 
     try:
         repository = get_reference_repository()
@@ -124,12 +129,27 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         logger.error("Analyte catalog unavailable: %s", exc)
         catalog = None
 
-    for ind in raw_indicators:
+    for index, ind in enumerate(raw_indicators):
         name = ind.get("name", "")
         val = ind.get("value")
         unit = ind.get("unit", "")
 
         assessment = _unknown_assessment(name, val, unit)
+        integrity = integrity_by_index.get(index)
+        if integrity is not None:
+            assessment["input_integrity_status"] = integrity.get("status", "VALID")
+            assessment["input_integrity_reason_code"] = integrity.get("reason_code")
+            assessment["input_integrity_message"] = integrity.get("message", "")
+            assessment["input_integrity_rule_id"] = integrity.get("rule_id")
+            assessment["input_integrity_source_id"] = integrity.get("source_id")
+            assessment["analyte_canonical"] = integrity.get("canonical_analyte")
+            assessment["canonical_value"] = integrity.get("observed_value")
+            assessment["canonical_unit"] = integrity.get("canonical_unit")
+            if integrity.get("status") == "NEED_REVIEW":
+                assessment["evaluation_reason"] = integrity.get("reason_code")
+                assessment["explanation"] = integrity.get("message", "")
+                indicators.append(assessment)
+                continue
         numeric_value = _parse_value(val)
         if repository is None or numeric_value is None:
             indicators.append(assessment)

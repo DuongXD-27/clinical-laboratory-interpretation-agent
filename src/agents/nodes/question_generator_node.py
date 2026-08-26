@@ -32,7 +32,11 @@ def question_generator_node(state: AgentState) -> dict:
     thích như bình thường.
     """
 
-    indicators = state.get("indicators") or []
+    indicators = [
+        indicator
+        for indicator in (state.get("indicators") or [])
+        if indicator.get("input_integrity_status") != "NEED_REVIEW"
+    ]
 
     try:
         generated = generate_questions(indicators)

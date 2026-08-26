@@ -198,6 +198,11 @@ class IndicatorResultSchema(BaseModel):
     band_id: str | None = None
     upper_operator: str | None = None
     evaluation_reason: str | None = None
+    input_integrity_status: Literal["VALID", "NEED_REVIEW"] | None = None
+    input_integrity_reason_code: str | None = None
+    input_integrity_message: str = ""
+    input_integrity_rule_id: str | None = None
+    input_integrity_source_id: str | None = None
 
     review_outcome: ReviewOutcome = "pending"
     doctor_note: str | None = None
