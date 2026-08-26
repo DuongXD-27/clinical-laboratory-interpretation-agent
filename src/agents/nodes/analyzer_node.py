@@ -27,6 +27,10 @@ from src.services.medical_safety_assets import (
     ensure_reference_qualification,
 )
 from src.services.request_timing import add_timing_event
+from src.services.safe_grounding import (
+    build_safe_grounding_view,
+    filter_safe_grounding_text,
+)
 from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
@@ -54,6 +58,22 @@ async def call_llm_with_retry(structured_llm, prompt: str) -> ExplanationOutput:
 
 def _deduplicate(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
+
+
+def _deterministic_explanation(
+    *,
+    name: str,
+    value: Any,
+    unit: str,
+    safe_grounding: str,
+) -> str:
+    """Combine structured facts with approved-safe prose only."""
+    parts: list[str] = []
+    if name and value is not None and unit:
+        parts.append(f"Giá trị {name} là {value} {unit}.")
+    if safe_grounding:
+        parts.append(safe_grounding)
+    return " ".join(parts).strip()
 
 
 def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> list[str]:
@@ -206,8 +226,6 @@ async def process_single_indicator(
     else:
         curated_explanation = raw_explanation
 
-    fallback_explanation = curated_explanation or load_templates().fallback_explanation
-
     chunks = await _retrieve_optional_context(
         retriever=retriever,
         rag_semaphore=rag_semaphore,
@@ -225,8 +243,22 @@ async def process_single_indicator(
     known_sources = _known_sources(indicator, chunks)
     if definition and not known_sources:
         known_sources = list(definition.sources)
-    rag_context = build_bounded_context(chunks, max_chars=get_settings().max_analyzer_context_chars)
-    context = rag_context or curated_explanation
+    safe_chunks = build_safe_grounding_view(chunks)
+    rag_context = build_bounded_context(
+        safe_chunks,
+        max_chars=get_settings().max_analyzer_context_chars,
+    )
+    safe_curated_explanation = filter_safe_grounding_text(curated_explanation)
+    safe_neutral_explanation = filter_safe_grounding_text(
+        definition.curated_explanation if definition is not None else ""
+    )
+    context = rag_context or safe_curated_explanation or safe_neutral_explanation
+    fallback_explanation = _deterministic_explanation(
+        name=name,
+        value=value,
+        unit=unit,
+        safe_grounding=context,
+    ) or load_templates().fallback_explanation
 
     prompt = textwrap.dedent(
         f"""\
@@ -315,7 +347,7 @@ async def process_single_indicator(
     updated_indicator = dict(indicator)
     updated_indicator["explanation"] = explanation_text
     updated_indicator["sources"] = known_sources
-    return updated_indicator, explanation, chunks
+    return updated_indicator, explanation, safe_chunks
 
 
 async def analyzer_node(state: AgentState) -> dict:

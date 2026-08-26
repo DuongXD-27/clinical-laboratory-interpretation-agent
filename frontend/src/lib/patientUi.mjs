@@ -117,14 +117,14 @@ export function renderReferenceRange(indicator) {
       return null;
     }
     if (indicator.reference_low !== null || indicator.reference_high !== null) {
-      return `Tham chiếu: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
+      return `Khoảng tham chiếu hệ thống: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
     }
     return null;
   }
 
   // Legacy case: rule_type is null
   if (indicator.reference_low !== null && indicator.reference_high !== null) {
-    return `Tham chiếu: ${indicator.reference_low} – ${indicator.reference_high}`;
+    return `Khoảng tham chiếu hệ thống: ${indicator.reference_low} – ${indicator.reference_high}`;
   }
 
   return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";

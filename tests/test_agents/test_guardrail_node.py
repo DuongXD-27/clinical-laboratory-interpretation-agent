@@ -2,6 +2,7 @@ import pytest
 
 from src.agents.nodes.guardrail_node import DEFAULT_DISCLAIMER, guardrail_node
 from src.agents.state import AgentState
+from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.template_loader import load_templates
 
 
@@ -218,3 +219,125 @@ async def test_question_rewrite_reads_text_from_content_blocks():
     result = await rewrite_questions_with_llm(_StubLLM(content), ["câu hỏi gốc"])
 
     assert result == ["Chỉ số này có ý nghĩa gì?", "Tôi cần theo dõi thêm gì?"]
+
+
+@pytest.mark.asyncio
+async def test_urea_retry_reuses_safe_grounding_then_falls_back_to_safe_facts(monkeypatch):
+    from langchain_core.messages import AIMessage
+
+    unsafe = "Ure máu tăng có thể do suy giảm chức năng bài tiết của thận."
+    safe = "Ure là sản phẩm chuyển hóa của protein."
+
+    class UnsafeRewriteLLM:
+        def __init__(self):
+            self.prompts = []
+
+        async def ainvoke(self, messages):
+            self.prompts.append(messages[0].content)
+            return AIMessage(content=unsafe)
+
+    llm = UnsafeRewriteLLM()
+    monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: llm)
+    result = await guardrail_node(
+        {
+            "indicators": [
+                {
+                    "name": "Urea",
+                    "value": 7.9,
+                    "unit": "mmol/L",
+                    "status": "high",
+                    "is_critical": False,
+                    "explanation": unsafe,
+                }
+            ],
+            "explanations": [
+                {
+                    "indicator_name": "Urea",
+                    "status": "high",
+                    "is_critical": False,
+                    "explanation": unsafe,
+                }
+            ],
+            "retrieved_contexts": [
+                {
+                    "indicator_name": "Urea",
+                    "text": f"{unsafe} {safe}",
+                    "source": "https://trusted.test/urea",
+                    "sources": ["https://trusted.test/urea"],
+                    "score": 0.9,
+                }
+            ],
+            "disclaimer": "",
+        }
+    )
+
+    explanation = result["explanations"][0]["explanation"]
+    assert result["guardrail_passed"] is False
+    assert all("có thể do" not in prompt.split("<context>", 1)[1] for prompt in llm.prompts)
+    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "cao so với khoảng tham chiếu được hệ thống sử dụng" in explanation
+    assert safe in explanation
+    assert unsafe not in explanation
+    assert explanation != load_templates().fallback_explanation
+    assert MedicalSafetyValidator().validate(explanation) == []
+
+
+@pytest.mark.asyncio
+async def test_all_unsafe_grounding_without_llm_keeps_deterministic_facts(monkeypatch):
+    unsafe = "Ure máu tăng có thể do nhiều nguyên nhân."
+    monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: None)
+
+    result = await guardrail_node(
+        {
+            "indicators": [
+                {
+                    "name": "Urea",
+                    "value": 7.9,
+                    "unit": "mmol/L",
+                    "status": "high",
+                    "is_critical": False,
+                    "explanation": unsafe,
+                }
+            ],
+            "explanations": [
+                {
+                    "indicator_name": "Urea",
+                    "status": "high",
+                    "is_critical": False,
+                    "explanation": unsafe,
+                }
+            ],
+            "retrieved_contexts": [
+                {
+                    "indicator_name": "Urea",
+                    "text": unsafe,
+                    "source": "https://trusted.test/urea",
+                    "sources": ["https://trusted.test/urea"],
+                    "score": 0.9,
+                }
+            ],
+            "disclaimer": "",
+        }
+    )
+
+    explanation = result["explanations"][0]["explanation"]
+    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "cao so với khoảng tham chiếu được hệ thống sử dụng" in explanation
+    assert unsafe not in explanation
+    assert MedicalSafetyValidator().validate(explanation) == []
+
+
+@pytest.mark.asyncio
+async def test_plt_policy_control_keeps_risk_oriented_explanation():
+    risk_text = "Số lượng tiểu cầu giảm có thể làm tăng nguy cơ xuất huyết."
+    result = await guardrail_node(
+        {
+            "indicators": [{"name": "PLT", "explanation": risk_text}],
+            "explanations": [{"indicator_name": "PLT", "explanation": risk_text}],
+            "disclaimer": "",
+        }
+    )
+
+    assert result["guardrail_passed"] is True
+    assert result["explanations"][0]["explanation"] == risk_text
+    assert MedicalSafetyValidator().validate(risk_text) == []
