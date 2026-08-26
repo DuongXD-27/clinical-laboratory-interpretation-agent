@@ -6,6 +6,7 @@ import {
   indicatorStatusText,
   reportStatusText,
   reportTone,
+  renderReferenceRange,
   sortIndicatorsBySeverity,
   sourceHostname,
 } from "./patientUi.mjs";
@@ -76,4 +77,17 @@ test("severity ordering keeps within-group order stable and handles empty input"
 
 test("uses a compact source label while preserving the original URL", () => {
   assert.equal(sourceHostname("https://www.mayoclinic.org/tests"), "mayoclinic.org");
+});
+
+test("labels approved result ranges as system reference ranges", () => {
+  assert.equal(
+    renderReferenceRange({
+      status: "high",
+      rule_type: "RI",
+      reference_low: 2.5,
+      reference_high: 7.8,
+      unit: "mmol/L",
+    }),
+    "Khoảng tham chiếu hệ thống: 2.5 – 7.8",
+  );
 });

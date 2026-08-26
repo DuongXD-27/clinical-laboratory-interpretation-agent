@@ -116,7 +116,7 @@ def test_fix2_ocr_generic_glucose_is_unsupported_but_explicit_fasting_is_support
 
     generic, explicit_fasting = drafts
     assert generic.supported is False
-    assert generic.unsupported_reason
+    assert "chưa đủ thông tin" in generic.unsupported_reason
     assert explicit_fasting.supported is True
     assert explicit_fasting.unsupported_reason == ""
 
@@ -285,7 +285,7 @@ async def test_ocr_upload_marks_unsupported_rows(client, monkeypatch):
     assert indicators[0]["supported"] is True
     assert indicators[1]["name"] == "Glucose"
     assert indicators[1]["supported"] is False
-    assert "chưa được hỗ trợ" in indicators[1]["unsupported_reason"]
+    assert "chưa đủ thông tin" in indicators[1]["unsupported_reason"]
 
 
 @pytest.mark.asyncio
@@ -466,4 +466,25 @@ def test_ocr_review_gate_alias_support_and_safety():
 
     # Negative/safety case: generic Glucose remains fail-closed (supported = False)
     assert by_name["Glucose"].supported is False
-    assert "chưa được hỗ trợ" in by_name["Glucose"].unsupported_reason
+    assert "chưa đủ thông tin" in by_name["Glucose"].unsupported_reason
+
+
+def test_ocr_hospital_labels_resolve_safe_lipids_and_expose_glucose_ambiguity():
+    names = [
+        "Định lượng Cholesterol toàn phần (máu)",
+        "Định lượng Triglycerid (máu) [Máu]",
+        "Định lượng Glucose [Máu]",
+    ]
+    drafts, _ = prepare_review(
+        [
+            OCRIndicatorDraft(name=name, value=1.0, unit="mmol/L", confidence=0.95)
+            for name in names
+        ],
+        username="benhnhan",
+    )
+    by_name = {draft.name: draft for draft in drafts}
+
+    assert by_name[names[0]].supported is True
+    assert by_name[names[1]].supported is True
+    assert by_name[names[2]].supported is False
+    assert "chưa đủ thông tin" in by_name[names[2]].unsupported_reason

@@ -33,13 +33,13 @@ function renderSafeReferenceRange(indicator: IndicatorResult) {
       return null;
     }
     if (indicator.reference_low !== null || indicator.reference_high !== null) {
-      return `Khoảng tham chiếu: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
+      return `Khoảng tham chiếu hệ thống: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
     }
     return null;
   }
 
   if (indicator.reference_low !== null && indicator.reference_high !== null) {
-    return `Khoảng tham chiếu: ${indicator.reference_low} – ${indicator.reference_high}`;
+    return `Khoảng tham chiếu hệ thống: ${indicator.reference_low} – ${indicator.reference_high}`;
   }
 
   return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";

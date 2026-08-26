@@ -14,6 +14,7 @@ from src.services.medical_safety_assets import (
 )
 from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.request_timing import add_timing_event
+from src.services.safe_grounding import build_safe_grounding_view
 from src.services.template_loader import load_templates
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,10 @@ async def guardrail_node(state: AgentState) -> dict:
     disclaimer = state.get("disclaimer", "")
     questions_for_doctor = list(state.get("questions_for_doctor", []))
     retrieved_contexts = list(state.get("retrieved_contexts", []))
+    safe_retrieved_contexts = build_safe_grounding_view(
+        retrieved_contexts,
+        validator=validator,
+    )
 
     flags: list[str] = []
     violation_detected = False
@@ -165,11 +170,48 @@ async def guardrail_node(state: AgentState) -> dict:
         normalized_name = indicator_name.strip().casefold()
         chunks = [
             chunk
-            for chunk in retrieved_contexts
+            for chunk in safe_retrieved_contexts
             if str(chunk.get("indicator_name", "")).strip().casefold() == normalized_name
             and str(chunk.get("text", "")).strip()
         ]
         return build_bounded_context(chunks, max_chars=get_settings().max_guardrail_context_chars)
+
+    def deterministic_safe_fallback(
+        indicator_name: str,
+        *,
+        status: str,
+        critical_status: str | None,
+        is_critical: bool,
+    ) -> str:
+        normalized_name = indicator_name.strip().casefold()
+        matched_indicator = next(
+            (
+                indicator
+                for indicator in indicators
+                if str(indicator.get("name", "")).strip().casefold() == normalized_name
+            ),
+            None,
+        )
+        parts: list[str] = []
+        if matched_indicator is not None:
+            value = matched_indicator.get("value")
+            unit = str(matched_indicator.get("unit", "")).strip()
+            display_name = str(matched_indicator.get("name", "")).strip()
+            if display_name and value is not None and unit:
+                parts.append(f"Giá trị {display_name} là {value} {unit}.")
+        safe_context = grounding_context_for(indicator_name)
+        if safe_context:
+            parts.append(safe_context)
+        candidate = " ".join(parts).strip()
+        if not candidate:
+            return templates.fallback_explanation
+        candidate = ensure_reference_qualification(
+            candidate,
+            status,
+            critical_status=critical_status,
+            is_critical=is_critical,
+        )
+        return candidate if not validator.validate(candidate) else templates.fallback_explanation
 
     llm = None
     llm_loaded = False
@@ -220,7 +262,12 @@ async def guardrail_node(state: AgentState) -> dict:
                 else text
             )
             if rewrite_requires_fallback(rewritten, f"explanation {indicator_name} sau retry"):
-                explanation["explanation"] = templates.fallback_explanation
+                explanation["explanation"] = deterministic_safe_fallback(
+                    indicator_name,
+                    status=str(explanation.get("status", "unknown")),
+                    critical_status=explanation.get("critical_status"),
+                    is_critical=bool(explanation.get("is_critical", False)),
+                )
             else:
                 explanation["explanation"] = ensure_reference_qualification(
                     rewritten,
@@ -246,7 +293,12 @@ async def guardrail_node(state: AgentState) -> dict:
                 else text
             )
             if rewrite_requires_fallback(rewritten, f"indicator {indicator_name} sau retry"):
-                indicator["explanation"] = templates.fallback_explanation
+                indicator["explanation"] = deterministic_safe_fallback(
+                    indicator_name,
+                    status=str(indicator.get("status", "unknown")),
+                    critical_status=indicator.get("critical_status"),
+                    is_critical=bool(indicator.get("is_critical", False)),
+                )
             else:
                 indicator["explanation"] = ensure_reference_qualification(
                     rewritten,

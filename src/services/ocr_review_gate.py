@@ -39,6 +39,11 @@ OCR_REVIEW_CONSUMED = "CONSUMED"
 OCR_REVIEW_EXPIRED = "EXPIRED"
 OCRReviewStatus = Literal["PENDING", "CONSUMED", "EXPIRED", "INVALID", "NONE"]
 
+AMBIGUOUS_ANALYTE_MESSAGE = (
+    "Đã nhận diện đây là xét nghiệm Glucose, nhưng chưa đủ thông tin để xác định "
+    "đây có phải glucose lúc đói hay không."
+)
+
 
 class OCRReviewGateError(ValueError):
     """OCR review evidence is invalid, incomplete, forged, or expired."""
@@ -64,6 +69,16 @@ def _is_supported_analyte(name: str) -> bool:
 
     canonical = repository.resolve_analyte(name)
     return canonical in repository.approved_analytes
+
+
+def _unsupported_reason(name: str) -> str:
+    try:
+        resolution = _get_reference_repository().resolve_analyte_result(name)
+    except ReferenceRepositoryError:
+        return "Chỉ số này hiện tại chưa được hỗ trợ."
+    if resolution.status == "AMBIGUOUS":
+        return AMBIGUOUS_ANALYTE_MESSAGE
+    return "Chỉ số này hiện tại chưa được hỗ trợ."
 
 
 def _utcnow() -> datetime:
@@ -273,7 +288,7 @@ def prepare_review(
                     "unsupported_reason": (
                         ""
                         if supported
-                        else "Chỉ số này hiện tại chưa được hỗ trợ."
+                        else _unsupported_reason(draft.name)
                     ),
                 }
             )
@@ -467,7 +482,7 @@ def validate_review(
             needs_review=is_low_confidence,
             supported=supported,
             unsupported_reason=(
-                "" if supported else "Chỉ số này hiện tại chưa được hỗ trợ."
+                "" if supported else _unsupported_reason(row.name)
             ),
         )
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import json
 import re
-import unicodedata
 from copy import deepcopy
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -12,6 +11,12 @@ from types import MappingProxyType
 from typing import Any
 
 from src.services.analyte_catalog import AnalyteCatalogContract, get_analyte_catalog_contract
+from src.services.analyte_name_resolution import (
+    SAFE_RUNTIME_ALIASES,
+    AnalyteNameResolution,
+    normalize_analyte_lookup_key,
+    resolve_analyte_name,
+)
 from src.services.analyte_resolver import FROZEN_CLINICAL_RULE_BANDS, canonical_analyte_id
 from src.services.measurement_conversion import (
     cholesterol_mg_dl_to_mmol_l,
@@ -93,14 +98,24 @@ class ReferenceRepository:
             }
             explicit_pending = {str(item).strip() for item in config_copy["pending_analytes"]}
         self._catalog_contract = catalog_contract
-        self.analyte_aliases = MappingProxyType(
-            {
-                self._alias_key(alias): str(canonical).strip()
-                for alias, canonical in alias_source.items()
-            }
-        )
+        effective_alias_source = dict(alias_source)
+        for alias, canonical in SAFE_RUNTIME_ALIASES.items():
+            if canonical not in requested_approved:
+                continue
+            effective_alias_source[alias] = canonical
+
+        normalized_aliases: dict[str, str] = {}
+        for alias, canonical in effective_alias_source.items():
+            key = self._alias_key(alias)
+            existing = normalized_aliases.get(key)
+            if existing is not None and existing != canonical:
+                raise ReferenceRepositoryError(
+                    f"deterministic alias collision for {alias!r}: {existing!r} vs {canonical!r}"
+                )
+            normalized_aliases[key] = str(canonical).strip()
+        self.analyte_aliases = MappingProxyType(normalized_aliases)
         aliases_by_canonical: dict[str, list[str]] = {}
-        for alias, canonical in alias_source.items():
+        for alias, canonical in effective_alias_source.items():
             aliases_by_canonical.setdefault(str(canonical).strip(), []).append(str(alias).strip())
         self._aliases_by_canonical = MappingProxyType(
             {name: tuple(sorted(set(aliases), key=str.casefold)) for name, aliases in aliases_by_canonical.items()}
@@ -555,16 +570,24 @@ class ReferenceRepository:
         return bands[chosen_index]
 
     def resolve_analyte(self, analyte: str) -> str | None:
-        return self.analyte_aliases.get(self._alias_key(analyte))
+        return self.resolve_analyte_result(analyte).canonical_name
+
+    def resolve_analyte_result(self, analyte: str) -> AnalyteNameResolution:
+        """Return a structured exact, ambiguous, or unsupported outcome."""
+        return resolve_analyte_name(analyte, self.analyte_aliases)
 
     def runtime_status_for(self, analyte: str) -> str | None:
+        canonical = self.resolve_analyte(analyte)
         if self._catalog_contract is None:
-            canonical = self.resolve_analyte(analyte)
+            if canonical is None:
+                return None
             if canonical in self.approved_analytes:
                 return "APPROVED"
             if canonical in self.pending_analytes:
                 return "HOLD"
             return None
+        if canonical is not None:
+            return self._catalog_contract.runtime_status_for(canonical)
         return self._catalog_contract.runtime_status_for(analyte)
 
     def parse_age_scope(self, value: Any) -> AgeRange | None:
@@ -632,10 +655,7 @@ class ReferenceRepository:
 
     @staticmethod
     def _alias_key(value: Any) -> str:
-        text = unicodedata.normalize("NFKD", str(value or "").strip().casefold())
-        text = "".join(character for character in text if not unicodedata.combining(character))
-        text = text.replace("đ", "d")
-        return re.sub(r"[^a-z0-9]+", " ", text).strip()
+        return normalize_analyte_lookup_key(value)
 
     @staticmethod
     def _norm_text(value: Any) -> str:

@@ -7,6 +7,8 @@ import pytest
 
 from src.agents.nodes import analyzer_node as analyzer_module
 from src.agents.nodes.analyzer_node import ExplanationOutput, analyzer_node
+from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
+from src.services.medical_safety_validator import MedicalSafetyValidator
 
 
 def indicator():
@@ -315,3 +317,170 @@ async def test_analyzer_critical_status_qualification_with_separated_status(monk
     assert ind["critical_status"] == "critical_high"
     assert "vượt ngưỡng cảnh báo nguy kịch" in ind["explanation"]
     assert "Phát hiện nội dung có thể chứa yếu tố suy đoán" not in ind["explanation"]
+
+
+@pytest.mark.asyncio
+async def test_urea_high_uses_only_safe_grounding_segments(monkeypatch):
+    assessment = await reference_range_checker_node(
+        {
+            "patient_age": 30,
+            "patient_gender": "female",
+            "raw_indicators": [{"name": "Urea", "value": 7.9, "unit": "mmol/L"}],
+        }
+    )
+    urea = assessment["indicators"][0]
+    assert (urea["reference_low"], urea["reference_high"], urea["status"]) == (
+        2.5,
+        7.8,
+        "high",
+    )
+
+    class CapturingStructuredLLM:
+        prompt = ""
+
+        async def ainvoke(self, messages):
+            self.prompt = messages[0].content
+            return ExplanationOutput(
+                explanation=(
+                    "Giá trị Urea là 7.9 mmol/L. "
+                    "Ure là sản phẩm chuyển hóa của protein."
+                )
+            )
+
+    structured_llm = CapturingStructuredLLM()
+
+    class FakeLLM:
+        def with_structured_output(self, _schema):
+            return structured_llm
+
+    class FakeRetriever:
+        def retrieve(self, **_kwargs):
+            return [
+                {
+                    "indicator_name": "Urea",
+                    "text": (
+                        "Ure máu tăng có thể do suy giảm chức năng bài tiết của thận. "
+                        "Ure là sản phẩm chuyển hóa của protein."
+                    ),
+                    "source": "https://trusted.test/urea",
+                    "sources": ["https://trusted.test/urea"],
+                    "score": 0.9,
+                    "note_type": "high_note",
+                }
+            ]
+
+    monkeypatch.setattr(analyzer_module, "get_llm", lambda: FakeLLM())
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_medical_knowledge_retriever",
+        lambda: FakeRetriever(),
+    )
+
+    result = await analyzer_node({"indicators": [urea], "patient_gender": "female"})
+    explanation = result["indicators"][0]["explanation"]
+    retrieved_text = " ".join(chunk["text"] for chunk in result["retrieved_contexts"])
+
+    assert result["indicators"][0]["status"] == "high"
+    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "cao so với khoảng tham chiếu được hệ thống sử dụng" in explanation
+    assert "có thể do" not in structured_llm.prompt
+    assert "có thể do" not in retrieved_text
+    assert "Ure là sản phẩm chuyển hóa của protein" in retrieved_text
+    assert MedicalSafetyValidator().validate(explanation) == []
+
+
+@pytest.mark.asyncio
+async def test_all_unsafe_retrieval_and_no_llm_use_safe_deterministic_urea_path(monkeypatch):
+    class UnsafeOnlyRetriever:
+        def retrieve(self, **_kwargs):
+            return [
+                {
+                    "indicator_name": "Urea",
+                    "text": "Ure máu tăng có thể do nhiều nguyên nhân.",
+                    "source": "https://trusted.test/urea",
+                    "sources": ["https://trusted.test/urea"],
+                    "score": 0.9,
+                    "note_type": "high_note",
+                }
+            ]
+
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_llm",
+        lambda: (_ for _ in ()).throw(RuntimeError("no llm")),
+    )
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_medical_knowledge_retriever",
+        lambda: UnsafeOnlyRetriever(),
+    )
+    urea = {
+        "name": "Urea",
+        "analyte_id": "urea",
+        "value": 7.9,
+        "unit": "mmol/L",
+        "status": "high",
+        "is_abnormal": True,
+        "is_critical": False,
+        "explanation": "Ure máu tăng có thể do nhiều nguyên nhân.",
+        "sources": ["https://trusted.test/urea"],
+    }
+
+    result = await analyzer_node({"indicators": [urea], "patient_gender": "female"})
+    explanation = result["indicators"][0]["explanation"]
+
+    assert result["retrieved_contexts"] == []
+    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "có thể do" not in explanation
+    assert MedicalSafetyValidator().validate(explanation) == []
+
+
+@pytest.mark.asyncio
+async def test_plt_risk_oriented_grounding_remains_available(monkeypatch):
+    risk_text = "Số lượng tiểu cầu giảm có thể làm tăng nguy cơ xuất huyết."
+
+    class EchoStructuredLLM:
+        async def ainvoke(self, _messages):
+            return ExplanationOutput(explanation=f"Giá trị PLT là 142 10^9/L. {risk_text}")
+
+    class FakeLLM:
+        def with_structured_output(self, _schema):
+            return EchoStructuredLLM()
+
+    class FakeRetriever:
+        def retrieve(self, **_kwargs):
+            return [
+                {
+                    "indicator_name": "PLT",
+                    "text": risk_text,
+                    "source": "https://trusted.test/plt",
+                    "sources": ["https://trusted.test/plt"],
+                    "score": 0.9,
+                    "note_type": "low_note",
+                }
+            ]
+
+    monkeypatch.setattr(analyzer_module, "get_llm", lambda: FakeLLM())
+    monkeypatch.setattr(
+        analyzer_module,
+        "get_medical_knowledge_retriever",
+        lambda: FakeRetriever(),
+    )
+    plt = {
+        "name": "PLT",
+        "analyte_id": "plt",
+        "value": 142,
+        "unit": "10^9/L",
+        "status": "low",
+        "is_abnormal": True,
+        "is_critical": False,
+        "explanation": "",
+        "sources": ["https://trusted.test/plt"],
+    }
+
+    result = await analyzer_node({"indicators": [plt], "patient_gender": "female"})
+    explanation = result["indicators"][0]["explanation"]
+
+    assert risk_text in result["retrieved_contexts"][0]["text"]
+    assert risk_text in explanation
+    assert MedicalSafetyValidator().validate(explanation) == []
