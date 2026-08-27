@@ -22,6 +22,30 @@ async def _auth_headers(client):
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
+@pytest.mark.parametrize("name", ["HGB", "Hemoglobin", "Hemoglobin (HGB)", "Huyết sắc tố"])
+def test_hgb_approved_ocr_aliases_are_supported(name):
+    drafts, _ = prepare_review(
+        [OCRIndicatorDraft(name=name, value=140, unit="g/L", confidence=0.95)],
+        username="benhnhan",
+    )
+    assert drafts[0].supported is True
+    assert drafts[0].unsupported_reason == ""
+
+
+def test_unapproved_hb_abbreviation_and_crp_remain_unsupported():
+    drafts, _ = prepare_review(
+        [
+            OCRIndicatorDraft(name="Hb", value=140, unit="g/L", confidence=0.95),
+            OCRIndicatorDraft(name="CRP", value=5, unit="mg/L", confidence=0.95),
+        ],
+        username="benhnhan",
+    )
+    assert all(draft.supported is False for draft in drafts)
+    assert "Hb" in drafts[0].unsupported_reason
+    assert "CRP" in drafts[1].unsupported_reason
+    assert "LumiLab" in drafts[1].unsupported_reason
+
+
 def _review_payload(*, acknowledged: bool, reviewed: bool = True, test_db=None):
     review_id = None
     expires_at = None

@@ -75,10 +75,10 @@ def _unsupported_reason(name: str) -> str:
     try:
         resolution = _get_reference_repository().resolve_analyte_result(name)
     except ReferenceRepositoryError:
-        return "Chỉ số này hiện tại chưa được hỗ trợ."
+        return f"{name} hiện chưa nằm trong danh sách chỉ số được LumiLab hỗ trợ phân tích."
     if resolution.status == "AMBIGUOUS":
         return AMBIGUOUS_ANALYTE_MESSAGE
-    return "Chỉ số này hiện tại chưa được hỗ trợ."
+    return f"{name} hiện chưa nằm trong danh sách chỉ số được LumiLab hỗ trợ phân tích."
 
 
 def _utcnow() -> datetime:
