@@ -116,3 +116,59 @@ export type SpanTree = {
   aggregates: Array<{ name: string; duration_ms: number }>;
   total_ms: number | null;
 };
+
+/** Một mốc thời gian. `null` = không đo được, KHÔNG phải 0. */
+export type TimeseriesPoint = {
+  start: string;
+  count: number;
+  p50_ms: number | null;
+  p95_ms: number | null;
+  p99_ms: number | null;
+  error_count: number;
+  error_rate_pct: number | null;
+  errors_by_type: Record<string, number>;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number | null;
+  llm_call_count: number;
+  llm_error_count: number;
+  guardrail_fallback_count: number;
+  guardrail_rewrite_count: number;
+  /** Tỉ lệ lượt phải thay bằng văn bản dựng sẵn — đo được, không phải groundedness. */
+  guardrail_fallback_rate_pct: number | null;
+};
+
+export type Timeseries = {
+  group: string;
+  bucket_minutes: number;
+  since: string;
+  until: string;
+  points: TimeseriesPoint[];
+  error_types: string[];
+};
+
+export type Slo = {
+  name: string;
+  target_pct: number;
+  actual_pct: number | null;
+  status: string;
+  sample_count: number;
+  budget_used_pct: number | null;
+  budget_remaining: number | null;
+  detail: string;
+};
+
+export type ErrorBreakdown = {
+  error_type: string;
+  count: number;
+  example_exception: string | null;
+};
+
+export type SloReport = {
+  overall_status: string;
+  slos: Slo[];
+  errors: ErrorBreakdown[];
+  window_hours: number;
+  /** Ngưỡng hiện tại là ĐỀ XUẤT, nhóm phải chốt lại — màn hình phải nói ra. */
+  thresholds_provisional: boolean;
+};

@@ -17,12 +17,19 @@ from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 
-from src.services import llm_cost
+from src.services import error_taxonomy, llm_cost
 
 # Ten event cua moi loi goi LLM. Dinh nghia TAI DAY chu khong o `llm_usage`:
 # `llm_usage` da phu thuoc module nay (no goi `add_timing_event`), nen dat hang
 # so ben do roi import nguoc lai la vong tron import.
 LLM_CALL_EVENT = "llm-call"
+
+# Guardrail phai thay van ban cua LLM bang van ban an toan dung san.
+GUARDRAIL_FALLBACK_EVENT = "guardrail-fallback"
+# Guardrail yeu cau LLM viet lai mot lan truoc khi roi ve van ban dung san.
+GUARDRAIL_REWRITE_EVENT = "guardrail-rewrite"
+# Ngoai le da bi chan o exception handler.
+ERROR_EVENT = "unhandled-error"
 
 _SERVER_TIMING_NAME_RE = re.compile(r"[^a-zA-Z0-9_-]+")
 _current_timing: ContextVar[RequestTiming | None] = ContextVar(
@@ -200,6 +207,33 @@ class RequestTiming:
             "llm_unpriced_call_count": unpriced,
         }
 
+    def _quality_summary(self, events: list[TimingEvent]) -> dict[str, object]:
+        """Tin hieu chat luong va nhom loi — do duoc, khong suy dien.
+
+        `guardrail_fallback_count` la tin hieu chat luong THAT duy nhat co the do
+        o thoi diem nay: guardrail thay van ban cua LLM bang van ban dung san
+        nghia la benh nhan nhan noi dung xuong cap, ma response van 200 va khong
+        co ma loi nao. Do dung cai bay ma CLAUDE.md ghi lai.
+
+        KHONG co "groundedness" o day. Do la con so can mot bo danh gia truc
+        tuyen cham diem tung cau tra loi; bay gio chua co, va dat mot con so
+        phan tram ve do dung y khoa ma khong do duoc la loai bia nguy hiem nhat.
+        """
+
+        error_events = [event for event in events if event.name == ERROR_EVENT]
+        raw_type = str(error_events[-1].attributes.get("exception_type", "")) if error_events else ""
+
+        return {
+            "guardrail_fallback_count": sum(
+                1 for event in events if event.name == GUARDRAIL_FALLBACK_EVENT
+            ),
+            "guardrail_rewrite_count": sum(
+                1 for event in events if event.name == GUARDRAIL_REWRITE_EVENT
+            ),
+            "error_raw_type": raw_type or None,
+            "error_type": error_taxonomy.classify_exception(raw_type) if raw_type else None,
+        }
+
     def as_log_fields(
         self,
         *,
@@ -233,6 +267,7 @@ class RequestTiming:
             "db_query_count": counters.get("db-query", 0),
             "db_ms": metrics.get("db-query"),
             **self._llm_summary(raw_events),
+            **self._quality_summary(raw_events),
             "method": method,
             "path": path,
             "status_code": status_code,

@@ -27,6 +27,7 @@ from src.services.logging_config import configure_logging
 from src.services.medical_knowledge_retriever import get_rag_readiness
 from src.services.request_timing import (
     RequestTiming,
+    add_timing_event,
     reset_current_timing,
     set_current_timing,
 )
@@ -231,6 +232,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             "exception_type": type(exc).__name__,
         },
     )
+
+    # Ghi them mot event de nhom loi vao duoc bang trace. Truoc day card admin
+    # chi hien "5xx = 3" ma khong noi duoc ba loi do la gi — phai grep log bang
+    # tay, doc traceback, doi chieu tham so SQL. Chi ghi TEN LOP ngoai le, khong
+    # ghi noi dung: thong bao loi cua nha cung cap da tung mang theo mot phan
+    # API key.
+    add_timing_event("unhandled-error", 0.0, exception_type=type(exc).__name__)
 
     return JSONResponse(
         status_code=500,

@@ -21,13 +21,18 @@ from src.api.deps import CurrentUser, require_roles
 from src.config import get_settings
 from src.models.db import ROLE_ADMIN, get_db
 from src.models.schemas import (
+    ErrorBreakdownSchema,
     LatencyGroupSchema,
     LatencyGroupsResponse,
     RequestTraceListResponse,
     RequestTraceSchema,
+    SloResponse,
+    SloSchema,
     SpanAggregateSchema,
     SpanRowSchema,
     SpanTreeResponse,
+    TimeseriesPointSchema,
+    TimeseriesResponse,
     TraceSummarySchema,
     TracingStatusSchema,
 )
@@ -37,6 +42,8 @@ from src.services import (
     span_tree,
     trace_metrics,
     trace_repository,
+    trace_slo,
+    trace_timeseries,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -79,6 +86,59 @@ async def traces_summary(
     since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
     data = trace_repository.summarise(db, since=since)
     return TraceSummarySchema(**data, window_hours=window_hours)
+
+
+@router.get("/traces/timeseries", response_model=TimeseriesResponse)
+async def traces_timeseries(
+    window_hours: int = Query(default=24, ge=1, le=24 * 30),
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> TimeseriesResponse:
+    """Chuoi thoi gian cho bon bieu do: do tre, loi theo nhom, token/tien, chat luong.
+
+    Chi nhom AI. Tron voi API thuong thi duong P95 bi hon mot nghin request
+    ~50ms de xuong, dung nhu con so trung binh 85ms da lam.
+    """
+
+    until = datetime.now(UTC).replace(tzinfo=None)
+    since = until - timedelta(hours=window_hours)
+    rows = trace_repository.load_traces_for_analysis(db, since=since)
+    data = trace_timeseries.build_timeseries(rows, since=since, until=until)
+    return TimeseriesResponse(
+        group=str(data["group"]),
+        bucket_minutes=int(data["bucket_minutes"]),
+        since=str(data["since"]),
+        until=str(data["until"]),
+        points=[TimeseriesPointSchema(**point) for point in data["points"]],
+        error_types=list(data["error_types"]),
+    )
+
+
+@router.get("/traces/slo", response_model=SloResponse)
+async def traces_slo(
+    window_hours: int = Query(default=24, ge=1, le=24 * 30),
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> SloResponse:
+    """SLO, error budget, va phan bo nhom loi.
+
+    Bien card "Loi 5xx = 3" thanh doc duoc: ba loi do la gi. Va tra loi cau ma
+    so lieu tho khong tu tra loi duoc — "the nao moi duoc coi la on".
+    """
+
+    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
+    rows = trace_repository.load_traces_for_analysis(db, since=since)
+    slo_data = trace_slo.evaluate_slos(rows)
+    return SloResponse(
+        overall_status=str(slo_data["overall_status"]),
+        slos=[SloSchema(**item) for item in slo_data["slos"]],
+        errors=[
+            ErrorBreakdownSchema(**item)
+            for item in trace_timeseries.total_error_breakdown(rows)
+        ],
+        window_hours=window_hours,
+        thresholds_provisional=bool(slo_data["thresholds_provisional"]),
+    )
 
 
 @router.get("/traces/latency", response_model=LatencyGroupsResponse)

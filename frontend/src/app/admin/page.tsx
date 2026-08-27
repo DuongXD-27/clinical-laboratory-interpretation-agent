@@ -8,6 +8,8 @@ import {
   UnauthorizedError,
   clearSession,
   fetchTraceLatency,
+  fetchTraceSlo,
+  fetchTraceTimeseries,
   fetchTraceSummary,
   fetchTraces,
   fetchTracingStatus,
@@ -16,11 +18,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import AdminCharts from "@/components/admin/AdminCharts";
+import { errorLabel } from "@/lib/chartPalette.mjs";
 import { cn } from "@/lib/utils";
 import type {
   LatencyGroup,
   LatencyGroups,
   RequestTrace,
+  SloReport,
+  Timeseries,
   TraceSummary,
   TracingStatus,
 } from "@/types/admin";
@@ -64,7 +70,9 @@ function statusVariant(status: number): "success" | "warning" | "destructive" {
   return "success";
 }
 
-type KpiProps = { label: string; value: string | number; hint: string; alert?: boolean };
+// `ReactNode` chu khong chi `string | number`: o "Trang thai SLO" can to mau
+// rieng cho tung trang thai, va nhet mau vao trong chuoi thi khong lam duoc.
+type KpiProps = { label: string; value: React.ReactNode; hint: string; alert?: boolean };
 
 /** Một ô số liệu trong bảng phân vị. `null` hiện dấu gạch, không hiện 0. */
 function Cell({ value, suffix = "ms" }: { value: number | null; suffix?: string }) {
@@ -96,6 +104,161 @@ function formatTokens(n: number): string {
  * 2. `unpriced_call_count > 0` phải cảnh báo: con số chi phí đang báo thấp hơn
  *    thực tế vì có lượt gọi model chưa có trong bảng giá.
  */
+const SLO_TONE: Record<string, { label: string; cls: string }> = {
+  HEALTHY: { label: "ỔN", cls: "text-[var(--status-normal-fg)]" },
+  AT_RISK: { label: "SẮP HẾT NGÂN SÁCH", cls: "text-[var(--status-abnormal-fg)]" },
+  BREACHED: { label: "VI PHẠM", cls: "text-[var(--status-critical-fg)]" },
+  NO_DATA: { label: "CHƯA CÓ DỮ LIỆU", cls: "text-muted-foreground" },
+};
+
+function sloByName(slo: SloReport, name: string) {
+  return slo.slos.find((item) => item.name === name) ?? null;
+}
+
+/** Sáu ô trả lời "có vấn đề không" trong một cái nhìn.
+ *
+ * Không có ô "Trung bình", và không có ô "Gọi LLM" trần: cả hai đều là con số
+ * đúng mà trả lời sai câu hỏi. Sáu ô ở đây đều là con số có ngưỡng để so.
+ */
+function KpiRow({ latency, slo }: { latency: LatencyGroups; slo: SloReport }) {
+  const ai = latency.ai;
+  const quality = sloByName(slo, "quality");
+  const tone = SLO_TONE[slo.overall_status] ?? SLO_TONE.NO_DATA;
+
+  const p95 = ai.p95_ms;
+  const errorRate = ai.error_rate_pct;
+
+  return (
+    <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <Kpi
+        label="Tần suất request"
+        value={ai.requests_per_min === null ? "—" : `${ai.requests_per_min}/phút`}
+        hint="chỉ đường AI"
+      />
+      <Kpi
+        label="P95 độ trễ"
+        value={p95 === null ? "—" : p95 >= 1000 ? `${(p95 / 1000).toFixed(2)}s` : `${Math.round(p95)}ms`}
+        hint="SLO: dưới 8s"
+        alert={p95 !== null && p95 >= 8000}
+      />
+      <Kpi
+        label="Tỉ lệ lỗi"
+        value={errorRate === null ? "—" : `${errorRate}%`}
+        hint="chỉ 5xx · SLO: dưới 0.5%"
+        alert={errorRate !== null && errorRate > 0.5}
+      />
+      <Kpi
+        label="Chi phí LLM"
+        value={ai.cost_usd === null ? "—" : `$${ai.cost_usd.toFixed(4)}`}
+        hint={ai.unpriced_call_count > 0 ? "đang báo THẤP hơn thực tế" : "ước lượng theo bảng giá"}
+        alert={ai.unpriced_call_count > 0}
+      />
+      <Kpi
+        label="Không phải thay văn bản"
+        value={quality?.actual_pct === null || quality === null ? "—" : `${quality.actual_pct}%`}
+        hint="đo được — KHÔNG phải groundedness"
+        alert={quality?.status === "BREACHED"}
+      />
+      <Kpi
+        label="Trạng thái SLO"
+        value={<span className={tone.cls}>{tone.label}</span>}
+        hint={`lấy theo SLO tệ nhất trong ${slo.slos.length}`}
+        alert={slo.overall_status === "BREACHED"}
+      />
+    </section>
+  );
+}
+
+/** SLO, error budget, và phân bố nhóm lỗi.
+ *
+ * Error budget mới là phần đổi cách làm việc: SLO 99.5% nghĩa là ĐƯỢC PHÉP 0.5%
+ * lỗi, và ngân sách biến con số đó thành một lượng cụ thể. Hết ngân sách thì
+ * việc cần làm không phải bàn xem 0.5% có hợp lý không, mà là dừng thả tính năng.
+ */
+function SloPanel({ slo }: { slo: SloReport }) {
+  return (
+    <Card className="gap-0 py-4">
+      <CardContent className="px-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            SLO và ngân sách lỗi
+          </span>
+          {slo.thresholds_provisional ? (
+            /* Nói ra rằng ngưỡng chưa được nhóm chốt. Trình bày một ngưỡng đề
+               xuất như đã thống nhất là cách chắc nhất để sau này không ai dám
+               sửa nó, kể cả khi số đo cho thấy nó sai. */
+            <span className="text-xs text-[var(--status-abnormal-fg)]">
+              Ngưỡng là ĐỀ XUẤT, chọn từ số đo thật — nhóm cần chốt lại
+            </span>
+          ) : null}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[34rem] border-collapse text-sm tabular-nums">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <th className="py-2 pr-3 font-semibold">SLO</th>
+                <th className="py-2 px-3 text-right font-semibold">Mục tiêu</th>
+                <th className="py-2 px-3 text-right font-semibold">Thực tế</th>
+                <th className="py-2 px-3 text-right font-semibold">Ngân sách đã dùng</th>
+                <th className="py-2 pl-3 text-right font-semibold">Còn lại</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slo.slos.map((item) => {
+                const tone = SLO_TONE[item.status] ?? SLO_TONE.NO_DATA;
+                const over = (item.budget_used_pct ?? 0) > 100;
+                return (
+                  <tr key={item.name} className="border-b border-[var(--border)]/50 last:border-0">
+                    <td className="py-2.5 pr-3">
+                      <span className="block font-medium text-foreground">{item.detail}</span>
+                      <span className={cn("block text-xs", tone.cls)}>{tone.label}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-muted-foreground">{item.target_pct}%</td>
+                    <td className="py-2.5 px-3 text-right font-semibold">
+                      {item.actual_pct === null ? <span className="text-muted-foreground">—</span> : `${item.actual_pct}%`}
+                    </td>
+                    <td className={cn("py-2.5 px-3 text-right", over && "font-semibold text-[var(--status-critical-fg)]")}>
+                      {item.budget_used_pct === null ? "—" : `${item.budget_used_pct}%`}
+                    </td>
+                    <td className="py-2.5 pl-3 text-right text-muted-foreground">
+                      {item.budget_remaining === null ? "—" : item.budget_remaining}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {slo.errors.length > 0 ? (
+          <div className="mt-4 border-t border-[var(--border)] pt-3">
+            {/* Bien card "Loi 5xx = 3" thanh doc duoc: ba loi do la gi. */}
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Lỗi theo nhóm
+            </span>
+            <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+              {slo.errors.map((item) => (
+                <li key={item.error_type} className="flex items-baseline justify-between gap-3">
+                  <span>
+                    {errorLabel(item.error_type)}
+                    {item.example_exception ? (
+                      <code className="ml-2 font-mono text-xs text-muted-foreground">
+                        {item.example_exception}
+                      </code>
+                    ) : null}
+                  </span>
+                  <span className="tabular-nums font-medium">{item.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function CostPanel({ latency }: { latency: LatencyGroups }) {
   const ai = latency.ai;
   const totalTokens = ai.input_tokens + ai.output_tokens;
@@ -278,6 +441,8 @@ export default function AdminTracePage() {
   const [status, setStatus] = useState<TracingStatus | null>(null);
   const [summary, setSummary] = useState<TraceSummary | null>(null);
   const [latency, setLatency] = useState<LatencyGroups | null>(null);
+  const [series, setSeries] = useState<Timeseries | null>(null);
+  const [slo, setSlo] = useState<SloReport | null>(null);
   const [traces, setTraces] = useState<RequestTrace[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -311,10 +476,12 @@ export default function AdminTracePage() {
     try {
       const parsedDuration = appliedDuration.trim() === "" ? undefined : Number(appliedDuration);
 
-      const [statusData, summaryData, latencyData, listData] = await Promise.all([
+      const [statusData, summaryData, latencyData, seriesData, sloData, listData] = await Promise.all([
         fetchTracingStatus(),
         fetchTraceSummary(windowHours),
         fetchTraceLatency(windowHours),
+        fetchTraceTimeseries(windowHours),
+        fetchTraceSlo(windowHours),
         fetchTraces({
           limit: PAGE_SIZE,
           offset,
@@ -330,6 +497,8 @@ export default function AdminTracePage() {
       setStatus(statusData);
       setSummary(summaryData);
       setLatency(latencyData);
+      setSeries(seriesData);
+      setSlo(sloData);
       setTraces(listData.items);
       setTotal(listData.total);
       setLoadedAt(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
@@ -450,31 +619,20 @@ export default function AdminTracePage() {
         </Card>
       ) : null}
 
+      {/* Thu tu man hinh, theo dung muc tieu "biet he thong dang xau di truoc
+          khi user phan anh": SAU CARD tra loi "co van de khong" trong mot cai
+          nhin, BON BIEU DO tra loi "xau di tu bao gio", roi moi den BANG TRACE
+          de dao vao mot request cu the. Dat bang truoc thi nguoi mo man hinh
+          bat dau bang viec doc 1213 dong log. */}
+      {latency && slo ? <KpiRow latency={latency} slo={slo} /> : null}
+
+      {slo ? <SloPanel slo={slo} /> : null}
+
+      {series ? <AdminCharts series={series} /> : null}
+
       {latency ? <LatencyTable latency={latency} /> : null}
 
       {latency ? <CostPanel latency={latency} /> : null}
-
-      {summary ? (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-          <Kpi label="Request" value={summary.request_count} hint="trong khoảng đang xem" />
-          {/* Ô "Trung bình" đã bị bỏ, không phải quên: 85ms trên 1213 request
-              trong khi request AI mất 4–7 giây là một con số gây hiểu sai. Ai
-              cần độ trễ thì đọc bảng phân vị ở trên. */}
-          <Kpi label="Gọi LLM" value={summary.llm_call_count} hint="lượt" />
-          <Kpi
-            label="LLM lỗi"
-            value={summary.llm_error_count}
-            hint="vẫn trả về 200"
-            alert={summary.llm_error_count > 0}
-          />
-          <Kpi
-            label="Lỗi 5xx"
-            value={summary.server_error_count}
-            hint="request hỏng"
-            alert={summary.server_error_count > 0}
-          />
-        </section>
-      ) : null}
 
       {/* LLM hỏng thì analyzer âm thầm rơi về nội dung dựng sẵn, response vẫn
           200, và chỉ bệnh nhân nhận ra chất lượng đi xuống. Nên nhắc chủ động,
