@@ -14,6 +14,7 @@ import {
   progressLabel,
   safeHttpSources,
 } from "@/lib/orchestratorChat.mjs";
+import { publicSourceLabel } from "@/lib/citationUi.mjs";
 import type { Role } from "@/lib/api";
 import type { CriticalAlert } from "@/types/analysis";
 import type {
@@ -168,10 +169,11 @@ function Sources({ sources }: { sources: string[] }) {
       <ol>
         {sources.map((source) => {
           const hostname = new URL(source).hostname.replace(/^www\./, "");
+          const label = publicSourceLabel(source);
           return (
             <li key={source}>
               <a href={source} target="_blank" rel="noopener noreferrer" aria-label={`Mở nguồn ${hostname} trong thẻ mới`}>
-                <span>{hostname}</span>
+                <span>{label}</span>
                 <ExternalLink aria-hidden="true" />
               </a>
             </li>
