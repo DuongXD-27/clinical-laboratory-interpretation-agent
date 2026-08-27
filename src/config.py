@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     openai_max_tokens: int = Field(default=2048, ge=1, le=8192)
     llm_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
+    # VMEC-05: opt-in chat vertical slice.  The legacy orchestrator remains
+    # the fallback whenever this is disabled or the V2 runtime is unavailable.
+    agent_chat_v2: bool = Field(default=False, alias="AGENT_CHAT_V2")
 
     # Vision LLM Adapter (OCR — ADR-006)
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")

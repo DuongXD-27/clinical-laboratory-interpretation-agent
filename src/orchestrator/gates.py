@@ -152,6 +152,15 @@ _AMBIGUOUS_FOLLOWUP_EXCLUSIONS = (
     "ung dung", "lich su", "tai khoan", "mat khau", "tieng anh",
     "code", "lap trinh", "game", "nau an", "world cup",
 )
+_BLOCKED_TREATMENT_FOLLOWUPS = (
+    "an gi",
+    "an gi nhi",
+    "the an gi",
+    "uong gi",
+    "lam gi",
+    "con cach nao",
+    "the phai lam sao",
+)
 
 
 def _has_treatment_medical_anchor(normalized: str, original_lower: str) -> bool:
@@ -312,17 +321,27 @@ def _matches_personal_medical_advice_form(normalized: str, original_lower: str) 
     return False
 
 
-def treatment_followup_gate(message: str, session: object) -> ReasonCode | None:
+def treatment_followup_gate(
+    message: str,
+    session: object,
+    prior_reason_code: ReasonCode | None = None,
+) -> ReasonCode | None:
     """CHAT-V1.5-R1-G4 layer 2: elevate ambiguous action follow-ups to
     TREATMENT_REQUEST only when an authenticated active report/analyte
     context exists. Without active context this gate never fires, so the
     bare sentence alone can never manufacture a medical safety refusal."""
+    normalized = _normalize(message)
+    if prior_reason_code == ReasonCode.TREATMENT_REQUEST and any(
+        normalized == phrase for phrase in _BLOCKED_TREATMENT_FOLLOWUPS
+    ):
+        return ReasonCode.TREATMENT_REQUEST
+
     has_active_context = getattr(session, "current_report_ref", None) is not None or getattr(
         session, "current_analyte", None
     ) is not None
     if not has_active_context:
         return None
-    if _is_ambiguous_treatment_followup(_normalize(message)):
+    if _is_ambiguous_treatment_followup(normalized):
         return ReasonCode.TREATMENT_REQUEST
     return None
 
@@ -794,7 +813,7 @@ def _is_educational_or_non_personal(normalized: str, raw_message: str) -> bool:
 
 def emergency_safety_gate(message: str) -> ReasonCode | None:
     """VMEC-05 TIP-P0-SAFETY-002: Deterministic emergency & urgent symptom gate.
-    
+
     Detects personal acute symptom reports and emergency distress pleas BEFORE
     ordinary intent routing and session context resolution.
     """

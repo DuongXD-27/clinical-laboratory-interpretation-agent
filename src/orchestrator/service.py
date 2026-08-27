@@ -48,6 +48,7 @@ from src.orchestrator.response_composer import (
 from src.orchestrator.session_store import (
     SessionStore,
     bind_conversation,
+    current_binding,
     default_session_store,
 )
 from src.services import conversation_repository
@@ -363,6 +364,39 @@ def _persist_message(
         logger.warning("conversation_message_persist_failed", exc_info=True)
 
 
+def _immediately_previous_reason_code(
+    db: object,
+    current_user: object,
+) -> ReasonCode | None:
+    """Read the assistant turn directly preceding the current persisted user turn."""
+
+    binding = current_binding()
+    patient_id = getattr(current_user, "user_id", None)
+    if binding is None or not isinstance(patient_id, int):
+        return None
+    _, conversation = binding
+    conversation_id = getattr(conversation, "id", None)
+    if not isinstance(conversation_id, int):
+        return None
+    rows = conversation_repository.list_messages(
+        db,
+        conversation_id=conversation_id,
+        patient_id=patient_id,
+    )
+    if not rows or len(rows) < 2:
+        return None
+    previous, current = rows[-2], rows[-1]
+    if (
+        previous.role != conversation_repository.ROLE_ASSISTANT
+        or current.role != conversation_repository.ROLE_USER
+    ):
+        return None
+    try:
+        return ReasonCode(previous.reason_code) if previous.reason_code else None
+    except ValueError:
+        return None
+
+
 async def _handle_message_core(
     request: OrchestratorRequest,
     *,
@@ -522,7 +556,11 @@ async def _handle_message_core(
     # TREATMENT_REQUEST only when an authenticated active report/analyte
     # context exists; without context this gate never fires. Context may
     # elevate safety but never downgrade it.
-    followup_reason = treatment_followup_gate(request.message, session)
+    followup_reason = treatment_followup_gate(
+        request.message,
+        session,
+        prior_reason_code=_immediately_previous_reason_code(db, current_user),
+    )
     if followup_reason is not None:
         route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0)
         response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
@@ -556,9 +594,54 @@ async def _handle_message_core(
         )
         return response
 
-    # 6. Intent router
+    # VMEC-05 fast slice: deterministic input gates above retain precedence.
+    # Only authenticated patients enter the tool-calling graph; guests keep
+    # the established capability policy. Any V2 runtime failure falls through
+    # to the complete legacy path below.
+    from src.config import get_settings
     from src.models.db import ROLE_PATIENT
 
+    if get_settings().agent_chat_v2 and role == ROLE_PATIENT:
+        await emit_progress(progress_callback, ProgressStage.ROUTING)
+        try:
+            from src.orchestrator.agent_v2 import run_agent_v2
+
+            agent_result = await run_agent_v2(
+                message=request.message,
+                current_user=current_user,
+                db=db,
+                current_report_ref=session.current_report_ref,
+                current_analyte=session.current_analyte,
+            )
+        except Exception:
+            logger.warning("Agent Chat V2 unavailable; falling back to legacy orchestrator", exc_info=True)
+        else:
+            from src.models.orchestrator_schemas import ConversationState
+
+            runtime.session_store.update_after_turn(
+                current_user,
+                session,
+                last_intent=agent_result.response.intent,
+                current_report_ref=agent_result.current_report_ref,
+                current_analyte=agent_result.current_analyte,
+                transient_ui_context=request.ui_context,
+                conversation_state=ConversationState(),
+            )
+            _log_turn(
+                request_id=request_id,
+                session_id=session.session_id,
+                role=role,
+                route=RouteDecision(intent=agent_result.response.intent, route_confidence=1.0),
+                workflow_selected=agent_result.workflow_selected,
+                failure_code=agent_result.response.reason_code,
+                started_at=started_at,
+                guardrail_triggered=(
+                    agent_result.response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
+                ),
+            )
+            return agent_result.response
+
+    # 6. Intent router
     # 6a. CHAT-V1.5-R1-G1: constrained provenance follow-up mode.
     # A bare stored-provenance question ("Thông tin này dựa trên đâu?") is
     # routed deterministically to the canonical approved-source path BEFORE
