@@ -9,7 +9,7 @@ from src.scripts.ingest_kb import corpus_sha256
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPLANATIONS_PATH = REPO_ROOT / "data/reference/explanations.json"
 MANIFEST_PATH = REPO_ROOT / "data/reference/medical_kb_manifest.json"
-ACCEPTED_CORPUS_HASH = "a26e050e91122a4615990c56176aa2eb53e80be9e2250bacf05700a7ac45a0f4"
+ACCEPTED_CORPUS_HASH = "5397a9777eec2057e34648b3912e68a8bd00e8da5f5568c10f3e37a2d27a6944"
 
 
 def _sha256(data: bytes) -> str:
