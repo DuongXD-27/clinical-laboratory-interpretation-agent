@@ -56,3 +56,32 @@ export type TraceQuery = {
   onlyLlmErrors?: boolean;
   windowHours?: number;
 };
+
+/** Số liệu độ trễ của MỘT nhóm endpoint.
+ *
+ * Không có `avg`, và đó là quyết định chứ không phải bỏ sót: để trung bình ở
+ * đây là mời người đọc quay lại đúng con số đã che mất long tail.
+ *
+ * `null` nghĩa là chưa có mẫu — phân biệt rõ với 0, vì trên màn hình vận hành
+ * "0ms" đọc như nhanh tuyệt đối.
+ */
+export type LatencyGroup = {
+  group: string;
+  count: number;
+  p50_ms: number | null;
+  p95_ms: number | null;
+  p99_ms: number | null;
+  max_ms: number | null;
+  error_count: number;
+  error_rate_pct: number | null;
+  requests_per_min: number | null;
+  llm_call_count: number;
+  llm_error_count: number;
+};
+
+export type LatencyGroups = {
+  ai: LatencyGroup;
+  api: LatencyGroup;
+  window_hours: number;
+  window_minutes: number | null;
+};

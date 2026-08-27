@@ -7,6 +7,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
   clearSession,
+  fetchTraceLatency,
   fetchTraceSummary,
   fetchTraces,
   fetchTracingStatus,
@@ -16,7 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { RequestTrace, TraceSummary, TracingStatus } from "@/types/admin";
+import type {
+  LatencyGroup,
+  LatencyGroups,
+  RequestTrace,
+  TraceSummary,
+  TracingStatus,
+} from "@/types/admin";
 
 const WINDOW_OPTIONS = [
   { hours: 1, label: "1 giờ qua" },
@@ -59,6 +66,92 @@ function statusVariant(status: number): "success" | "warning" | "destructive" {
 
 type KpiProps = { label: string; value: string | number; hint: string; alert?: boolean };
 
+/** Một ô số liệu trong bảng phân vị. `null` hiện dấu gạch, không hiện 0. */
+function Cell({ value, suffix = "ms" }: { value: number | null; suffix?: string }) {
+  if (value === null) {
+    // Dấu gạch, không phải "0ms". Trên màn hình vận hành, 0ms đọc như nhanh
+    // tuyệt đối — nhầm nó với "chưa đo được" dẫn tới kết luận sai về một hệ
+    // thống đang chết.
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const shown = suffix === "ms" && value >= 1000 ? `${(value / 1000).toFixed(2)}s` : `${Math.round(value)}${suffix}`;
+  return <span>{shown}</span>;
+}
+
+/** Phân vị độ trễ, tách nhóm AI và API thường.
+ *
+ * Đây là thứ thay cho ô "Trung bình" cũ. Trên dữ liệu thật, trung bình toàn hệ
+ * thống ra 85ms trong khi request AI mất 4–7 giây: khoảng 1200 request API
+ * thường đè con số đó xuống. Trung bình không sai về toán học, nó chỉ trả lời
+ * một câu không ai cần hỏi — "hệ thống nhìn chung thế nào" — thay vì câu cần
+ * hỏi là "bệnh nhân đang chờ bao lâu".
+ */
+function LatencyTable({ latency }: { latency: LatencyGroups }) {
+  const rows: Array<{ label: string; hint: string; data: LatencyGroup }> = [
+    { label: "Đường AI", hint: "analyze · chatbot · OCR · xu hướng", data: latency.ai },
+    { label: "API thường", hint: "đăng nhập · lịch sử · admin", data: latency.api },
+  ];
+
+  return (
+    <Card className="gap-0 py-4">
+      <CardContent className="px-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Độ trễ theo phân vị
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Trộn hai nhóm này lại thì mọi phân vị đều vô nghĩa
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[36rem] border-collapse text-sm tabular-nums">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <th className="py-2 pr-3 font-semibold">Nhóm</th>
+                <th className="py-2 px-3 text-right font-semibold">Request</th>
+                <th className="py-2 px-3 text-right font-semibold">P50</th>
+                <th className="py-2 px-3 text-right font-semibold">P95</th>
+                <th className="py-2 px-3 text-right font-semibold">P99</th>
+                <th className="py-2 px-3 text-right font-semibold">Max</th>
+                <th className="py-2 px-3 text-right font-semibold">Lỗi</th>
+                <th className="py-2 pl-3 text-right font-semibold">Req/phút</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ label, hint, data }) => (
+                <tr key={data.group} className="border-b border-[var(--border)]/50 last:border-0">
+                  <td className="py-2.5 pr-3">
+                    <span className="block font-medium text-foreground">{label}</span>
+                    <span className="block text-xs text-muted-foreground">{hint}</span>
+                  </td>
+                  <td className="py-2.5 px-3 text-right">{data.count}</td>
+                  <td className="py-2.5 px-3 text-right"><Cell value={data.p50_ms} /></td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-foreground">
+                    <Cell value={data.p95_ms} />
+                  </td>
+                  <td className="py-2.5 px-3 text-right"><Cell value={data.p99_ms} /></td>
+                  <td className="py-2.5 px-3 text-right"><Cell value={data.max_ms} /></td>
+                  <td
+                    className={cn(
+                      "py-2.5 px-3 text-right",
+                      data.error_count > 0 && "font-semibold text-[var(--status-critical-fg)]",
+                    )}
+                  >
+                    <Cell value={data.error_rate_pct} suffix="%" />
+                  </td>
+                  <td className="py-2.5 pl-3 text-right text-muted-foreground">
+                    <Cell value={data.requests_per_min} suffix="" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Kpi({ label, value, hint, alert = false }: KpiProps) {
   return (
     <Card
@@ -92,6 +185,7 @@ export default function AdminTracePage() {
 
   const [status, setStatus] = useState<TracingStatus | null>(null);
   const [summary, setSummary] = useState<TraceSummary | null>(null);
+  const [latency, setLatency] = useState<LatencyGroups | null>(null);
   const [traces, setTraces] = useState<RequestTrace[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -125,9 +219,10 @@ export default function AdminTracePage() {
     try {
       const parsedDuration = appliedDuration.trim() === "" ? undefined : Number(appliedDuration);
 
-      const [statusData, summaryData, listData] = await Promise.all([
+      const [statusData, summaryData, latencyData, listData] = await Promise.all([
         fetchTracingStatus(),
         fetchTraceSummary(windowHours),
+        fetchTraceLatency(windowHours),
         fetchTraces({
           limit: PAGE_SIZE,
           offset,
@@ -142,6 +237,7 @@ export default function AdminTracePage() {
 
       setStatus(statusData);
       setSummary(summaryData);
+      setLatency(latencyData);
       setTraces(listData.items);
       setTotal(listData.total);
       setLoadedAt(new Date().toLocaleTimeString("vi-VN", { hour12: false }));
@@ -262,11 +358,14 @@ export default function AdminTracePage() {
         </Card>
       ) : null}
 
+      {latency ? <LatencyTable latency={latency} /> : null}
+
       {summary ? (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
           <Kpi label="Request" value={summary.request_count} hint="trong khoảng đang xem" />
-          <Kpi label="Trung bình" value={formatMs(summary.avg_duration_ms)} hint="mỗi request" />
-          <Kpi label="Chậm nhất" value={formatMs(summary.max_duration_ms)} hint="một lượt" />
+          {/* Ô "Trung bình" đã bị bỏ, không phải quên: 85ms trên 1213 request
+              trong khi request AI mất 4–7 giây là một con số gây hiểu sai. Ai
+              cần độ trễ thì đọc bảng phân vị ở trên. */}
           <Kpi label="Gọi LLM" value={summary.llm_call_count} hint="lượt" />
           <Kpi
             label="LLM lỗi"

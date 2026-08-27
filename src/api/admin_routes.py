@@ -21,12 +21,14 @@ from src.api.deps import CurrentUser, require_roles
 from src.config import get_settings
 from src.models.db import ROLE_ADMIN, get_db
 from src.models.schemas import (
+    LatencyGroupSchema,
+    LatencyGroupsResponse,
     RequestTraceListResponse,
     RequestTraceSchema,
     TraceSummarySchema,
     TracingStatusSchema,
 )
-from src.services import langfuse_tracing, trace_repository
+from src.services import langfuse_tracing, trace_metrics, trace_repository
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -68,6 +70,38 @@ async def traces_summary(
     since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
     data = trace_repository.summarise(db, since=since)
     return TraceSummarySchema(**data, window_hours=window_hours)
+
+
+@router.get("/traces/latency", response_model=LatencyGroupsResponse)
+async def traces_latency(
+    window_hours: int = Query(default=24, ge=1, le=24 * 30),
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> LatencyGroupsResponse:
+    """Phan vi do tre, tach nhom AI va API thuong.
+
+    Endpoint RIENG chu khong nhoi vao `/traces/summary`: `summary` dang duoc
+    giao dien hien tai dung, va doi hop dong cua no la lam hong man hinh dang
+    chay. Them mot endpoint thi ban frontend cu tiep tuc song, ban moi doc cai
+    nay — cung nguyen tac tuong thich nguoc da ap cho `conversation_id`.
+
+    Dat TRUOC `/traces/{request_id}` trong file nay, neu khong FastAPI se khop
+    "latency" thanh mot request_id. Cung cai bay da gap voi `/traces/summary`.
+    """
+
+    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
+    data = trace_repository.summarise_latency_groups(
+        db,
+        since=since,
+        window_minutes=window_hours * 60,
+    )
+    groups = data["groups"]
+    return LatencyGroupsResponse(
+        ai=LatencyGroupSchema(**groups[trace_metrics.GROUP_AI]),
+        api=LatencyGroupSchema(**groups[trace_metrics.GROUP_API]),
+        window_hours=window_hours,
+        window_minutes=data["window_minutes"],
+    )
 
 
 @router.get("/traces", response_model=RequestTraceListResponse)

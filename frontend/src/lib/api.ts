@@ -28,6 +28,7 @@ import type {
   LabReportListResponse,
   ReportQuestion,
 } from "@/types/history";
+import type { LatencyGroups } from "@/types/admin";
 import type {
   OrchestratorResponse,
   OrchestratorStreamEvent,
@@ -524,6 +525,20 @@ export async function fetchTracingStatus(): Promise<TracingStatus> {
   if (!response.ok) {
     throw new Error(await readErrorDetail(response, "Không đọc được trạng thái tracing"));
   }
+  return response.json();
+}
+
+
+/** Phân vị tách nhóm AI và API thường.
+ *
+ * Endpoint riêng chứ không thay `fetchTraceSummary`: bản frontend đã deploy vẫn
+ * đọc `/traces/summary`, và đổi hợp đồng của nó là làm hỏng màn hình đang chạy.
+ */
+export async function fetchTraceLatency(windowHours = 24): Promise<LatencyGroups> {
+  const response = await authFetch(`/api/v1/admin/traces/latency?window_hours=${windowHours}`);
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Không tải được số liệu độ trễ"));
   return response.json();
 }
 
