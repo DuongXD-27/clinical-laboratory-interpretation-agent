@@ -854,14 +854,25 @@ class Conversation(Base):
     # chuyện: sinh ra cùng nhau, chết cùng nhau, và không bao giờ chia sẻ.
     onboarding_acknowledged = Column(Boolean, nullable=False, default=False)
     current_report_ref = Column(String(64), nullable=True)
-    current_analyte = Column(String(64), nullable=True)
+    # Ten chi so co the la ten benh nhan tu go, khong phai id canonical ngan.
+    current_analyte = Column(String(255), nullable=True)
+    # Gia tri cua IntentEnum — day thuc su la ma ngan, gioi han o day la dung.
     last_intent = Column(String(64), nullable=True)
 
     # `ConversationState` được trải phẳng thành ba cột thay vì nhét JSON: câu
     # hỏi treo là thứ cần soi được khi gỡ lỗi, mà JSON thì không lọc được bằng SQL.
-    pending_question = Column(String(64), nullable=True)
+    # `Text`, KHONG phai String(64). `pending_question` giu NGUYEN VAN cau hoi
+    # lai cua tro ly ("Ban muon xem chi so nao? ... vi du: - WBC - Glucose ..."),
+    # khong phai mot ma ngan. Toi da khai String(64) va bo test 1473 case van
+    # xanh vi SQLite KHONG cuong che do dai VARCHAR — Postgres thi co, nen
+    # production nem StringDataRightTruncation, session bi poison, va ca luot
+    # tra loi cua tro ly khong duoc luu.
+    #
+    # Bat ky cot nao giu van ban do NGUOI hoac LLM sinh ra deu phai la Text.
+    # Do dai gioi han chi dat cho ma va dinh danh.
+    pending_question = Column(Text, nullable=True)
     pending_question_at = Column(Float, nullable=True)
-    expected_entity = Column(String(64), nullable=True)
+    expected_entity = Column(String(255), nullable=True)
 
     messages = relationship(
         "ConversationMessage",
