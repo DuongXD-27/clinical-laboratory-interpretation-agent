@@ -8,11 +8,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-WBC-001",
-        "source_title": "Ý nghĩa chỉ số bạch cầu trong xét nghiệm máu",
+        "source_title": "Ý nghĩa các chỉ số trong xét nghiệm máu",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-bach-cau-trong-xet-nghiem-mau-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-cac-chi-so-trong-xet-nghiem-mau-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt trong hệ thống miễn dịch giúp cơ thể chống lại các tác nhân gây bệnh như vi khuẩn, virus, ký sinh trùng và các yếu tố gây viêm nhiễm. Nồng độ bạch cầu trong máu phản ánh tình trạng miễn dịch và phản ứng viêm của cơ thể.",
@@ -24,11 +24,11 @@
       },
       {
         "source_id": "SRC-LC-WBC-002",
-        "source_title": "Chỉ số WBC trong xét nghiệm máu là gì?",
+        "source_title": "WBC trong xét nghiệm máu là gì? Ý nghĩa chỉ số và cách đọc kết quả",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-wbc-trong-xet-nghiem-mau-la-gi-co-y-nghia-nhu-the-nao.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/giai-dap-thac-mac-chi-so-wbc-trong-xet-nghiem-mau-la-gi-68482.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "WBC (White Blood Cell) là số lượng tế bào bạch cầu có trong một đơn vị thể tích máu. Bạch cầu là các tế bào phòng vệ giúp cơ thể chống lại nhiễm trùng và phản ứng viêm.",
@@ -64,8 +64,8 @@
         "organization": "Mayo Clinic",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.mayoclinic.org/symptoms/high-white-blood-cell-count/basics/definition/sym-20050611",
-        "section": "Definition",
+        "url": "https://www.mayoclinic.org/symptoms/high-white-blood-cell-count/basics/causes/sym-20050611",
+        "section": "Causes",
         "language": "vi",
         "high_note": "Tăng bạch cầu là sự gia tăng số lượng tế bào chống lại bệnh tật trong máu, thường là dấu hiệu cơ thể đang đối phó với nhiễm trùng hoặc viêm."
       }
@@ -80,11 +80,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-RBC-001",
-        "source_title": "Ý nghĩa chỉ số RBC trong xét nghiệm công thức máu",
+        "source_title": "Ý nghĩa xét nghiệm hồng cầu trong máu",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-rbc-trong-xet-nghiem-cong-thuc-mau-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-hong-cau-trong-mau-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "RBC (Red Blood Cell) là số lượng tế bào hồng cầu trong một thể tích máu. Hồng cầu là thành phần tế bào chiếm số lượng lớn nhất trong máu, chứa hemoglobin giúp vận chuyển oxy từ phổi đến các mô và đưa khí carbonic từ mô về phổi để đào thải.",
@@ -95,11 +95,11 @@
       },
       {
         "source_id": "SRC-LC-RBC-002",
-        "source_title": "Chỉ số RBC trong xét nghiệm máu nói lên điều gì?",
+        "source_title": "RBC thấp có sao không? Nguyên nhân và cách cải thiện an toàn",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-rbc-trong-xet-nghiem-mau-noi-len-dieu-gi.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/rbc-thap-co-sao-khong-nguyen-nhan-va-cach-cai-thien-an-toan.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "RBC phản ánh số lượng hồng cầu lưu thông trong hệ tuần hoàn của cơ thể, đảm nhiệm chức năng hô hấp chuyên chở oxy.",
@@ -123,8 +123,8 @@
         "organization": "Mayo Clinic",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.mayoclinic.org/symptoms/high-red-blood-cell-count/basics/definition/sym-20050858",
-        "section": "Definition",
+        "url": "https://www.mayoclinic.org/symptoms/high-red-blood-cell-count/basics/causes/sym-20050858",
+        "section": "Causes",
         "language": "vi",
         "high_note": "Tăng số lượng hồng cầu có thể làm tăng nguy cơ biến cố đông máu nếu mật độ tế bào máu quá cao."
       }
@@ -139,11 +139,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-HGB-001",
-        "source_title": "Chỉ số hemoglobin trong xét nghiệm máu là gì?",
+        "source_title": "Chỉ số HGB trong xét nghiệm máu có ý nghĩa gì?",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-hemoglobin-trong-xet-nghiem-mau-la-gi-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-gi-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "Hemoglobin (HGB) là một loại protein giàu sắt nằm bên trong tế bào hồng cầu, có nhiệm vụ vận chuyển oxy từ phổi đến khắp các tế bào trong cơ thể và đưa khí carbon dioxide từ các mô về phổi để đào thải. Nồng độ hemoglobin là chỉ số trực tiếp đánh giá khả năng vận chuyển oxy của máu.",
@@ -154,11 +154,11 @@
       },
       {
         "source_id": "SRC-LC-HGB-002",
-        "source_title": "Chỉ số Hemoglobin (HGB) trong máu có ý nghĩa gì?",
+        "source_title": "Hgb trong xét nghiệm máu là gì? Cách đọc kết quả và kiểm soát chỉ số",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-hgb-trong-xet-nghiem-mau-co-y-nghia-nhu-the-nao.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-xet-nghiem-mau-hgb-la-gi-70837.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "Hemoglobin là protein vận chuyển oxy chính trong hồng cầu, phản ánh dung tích oxy của hệ tuần hoàn.",
@@ -642,11 +642,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-GLU-001",
-        "source_title": "Chỉ số đường huyết lúc đói là gì?",
+        "source_title": "Xét nghiệm glucose huyết tương lúc đói là gì?",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-glucose-khi-doi-la-gi-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/xet-nghiem-glucose-huyet-tuong-luc-doi-la-gi-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "Đường huyết lúc đói (Fasting Plasma Glucose) phản ánh nồng độ glucose trong máu sau khi người bệnh đã nhịn ăn (không nạp calo) ít nhất 8 giờ. Glucose là nguồn năng lượng chính cung cấp cho các tế bào của cơ thể, đặc biệt là não bộ và hệ thần kinh.",
@@ -661,11 +661,11 @@
       },
       {
         "source_id": "SRC-LC-GLU-002",
-        "source_title": "Đường huyết lúc đói bao nhiêu là bình thường?",
+        "source_title": "Chỉ số đường huyết lúc sáng sớm bao nhiêu là bình thường?",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-glucose-khi-doi-la-gi-bao-nhieu-la-binh-thuong.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-duong-huyet-luc-sang-som-bao-nhieu-la-binh-thuong.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "Glucose huyết tương lúc đói là xét nghiệm quan trọng để tầm soát và chẩn đoán sớm bệnh đái tháo đường."
@@ -698,7 +698,7 @@
         "organization": "American Diabetes Association (ADA)",
         "source_tier": "TIER_1",
         "publication_date": "2026",
-        "url": "https://diabetesjournals.org/care/issue/49/Supplement_1",
+        "url": "https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes",
         "section": "Table 2.1",
         "language": "vi",
         "description": "Tiêu chuẩn chẩn đoán và phân loại đái tháo đường theo Hiệp hội Đái tháo đường Hoa Kỳ (ADA 2026)."
@@ -714,11 +714,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-A1C-001",
-        "source_title": "Xét nghiệm HbA1c là gì và có ý nghĩa như thế nào?",
+        "source_title": "Ý nghĩa xét nghiệm HbA1c trong bệnh đái tháo đường",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/xet-nghiem-hba1c-la-gi-va-co-y-nghia-nhu-the-nao-trong-chan-doan-dieu-tri-tieu-duong-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-xet-nghiem-hba1c-trong-benh-dai-thao-duong-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "HbA1c (Hemoglobin A1c) là một dạng hemoglobin gắn kết với glucose, phản ánh nồng độ đường huyết trung bình của cơ thể trong suốt khoảng thời gian 2 đến 3 tháng gần nhất (tương ứng với đời sống của tế bào hồng cầu).",
@@ -731,11 +731,11 @@
       },
       {
         "source_id": "SRC-LC-A1C-002",
-        "source_title": "Chỉ số HbA1c có ý nghĩa gì trong chẩn đoán tiểu đường?",
+        "source_title": "Xét nghiệm A1c là gì? Ý nghĩa của HbA1c trong việc kiểm soát đường huyết",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/xet-nghiem-hba1c-la-gi-y-nghia-cua-chi-so-hba1c-trong-chan-doan-tieu-duong.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/xet-nghiem-a1c-la-gi-y-nghia-cua-hb-a1c-trong-viec-kiem-soat-duong-huyet.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "HbA1c là thước đo đường huyết trung bình trong 2-3 tháng giúp theo dõi hiệu quả điều trị đái tháo đường."
@@ -779,21 +779,10 @@
         "organization": "American Diabetes Association (ADA)",
         "source_tier": "TIER_1",
         "publication_date": "2026",
-        "url": "https://diabetesjournals.org/care/issue/49/Supplement_1",
+        "url": "https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes",
         "section": "Section 2",
         "language": "vi",
         "description": "Khuyến cáo chính thức của ADA về tiêu chuẩn chẩn đoán đái tháo đường bằng HbA1c."
-      },
-      {
-        "source_id": "SRC-CDC-A1C-MGMT",
-        "source_title": "All About Your A1C",
-        "organization": "Centers for Disease Control and Prevention (CDC)",
-        "source_tier": "TIER_2",
-        "publication_date": "2024",
-        "url": "https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html",
-        "section": "Managing blood sugar",
-        "language": "vi",
-        "description": "Xét nghiệm A1C đo mức đường huyết trung bình trong 3 tháng qua và là công cụ chính để quản lý bệnh đái tháo đường."
       },
       {
         "source_id": "SRC-ADA-A1C-PATIENT",
@@ -863,17 +852,6 @@
         "description": "Thông tin từ National Kidney Foundation về vai trò của xét nghiệm creatinine trong bệnh thận."
       },
       {
-        "source_id": "SRC-TAMANH-CRE",
-        "source_title": "Xét nghiệm creatinine đánh giá chức năng thận",
-        "organization": "Bệnh viện Đa khoa Tâm Anh",
-        "source_tier": "TIER_2",
-        "publication_date": "2024",
-        "url": "https://tamanhhospital.vn",
-        "section": "Xét nghiệm",
-        "language": "vi",
-        "description": "Hướng dẫn về xét nghiệm creatinine trong kiểm tra sức khỏe định kỳ."
-      },
-      {
         "source_id": "SRC-UHNM-NHS-CREATININE",
         "source_title": "Creatinine Pathology Test Directory",
         "organization": "University Hospitals of North Midlands NHS Trust",
@@ -922,7 +900,7 @@
         "organization": "European Alliance of Associations for Rheumatology (EULAR)",
         "source_tier": "TIER_1",
         "publication_date": "2017",
-        "url": "https://ard.bmj.com/content/76/1/29",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/27457514/",
         "section": "Diagnosis and management of hyperuricaemia",
         "language": "vi",
         "description": "Acid uric (Uric acid) là sản phẩm chuyển hóa cuối cùng của các hợp chất chứa nhân purin (có trong tế bào cơ thể và thực phẩm giàu đạm như hải sản, nội tạng động vật, thịt đỏ và bia rượu).",
@@ -1080,7 +1058,7 @@
         "organization": "National Heart, Lung, and Blood Institute (NHLBI)",
         "source_tier": "TIER_1",
         "publication_date": "2002",
-        "url": "https://www.nhlbi.nih.gov/files/docs/guidelines/atp3full.pdf",
+        "url": "https://www.nhlbi.nih.gov/resources/third-report-expert-panel-detection-evaluation-and-treatment-high-blood-cholesterol-0",
         "section": "Section II, Table II.1-1",
         "language": "vi",
         "description": "Cholesterol toàn phần (Total cholesterol) đo lường tổng lượng cholesterol có trong tất cả các lipoprotein lưu hành trong máu (gồm LDL, HDL và VLDL), là hợp chất lipid thiết yếu tham gia cấu trúc màng tế bào và tổng hợp hormone steroid.",
@@ -1106,7 +1084,7 @@
         "organization": "National Heart, Lung, and Blood Institute (NHLBI)",
         "source_tier": "TIER_1",
         "publication_date": "2002",
-        "url": "https://www.nhlbi.nih.gov/files/docs/guidelines/atp3full.pdf",
+        "url": "https://www.nhlbi.nih.gov/resources/third-report-expert-panel-detection-evaluation-and-treatment-high-blood-cholesterol-0",
         "section": "Table II.1-1: Classification of Serum Triglycerides",
         "language": "vi",
         "description": "Triglyceride là dạng chất béo trung tính dự trữ năng lượng chủ yếu của cơ thể, được tổng hợp từ calo dư thừa trong khẩu phần ăn và lưu hành trong máu dưới dạng lipoprotein.",
@@ -1129,11 +1107,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-HDL-001",
-        "source_title": "Ý nghĩa chỉ số mỡ máu HDL-Choleterol",
+        "source_title": "Phân biệt giữa LDL cholesterol và HDL cholesterol",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/y-nghia-chi-so-mo-mau-hdl-choleterol-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/phan-biet-giua-ldl-cholesterol-va-hdl-cholesterol-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "HDL-C (High-Density Lipoprotein Cholesterol) được gọi là 'cholesterol tốt' nhờ vai trò vận chuyển cholesterol dư thừa từ các mô ngoại vi và thành mạch máu quay trở về gan để chuyển hóa và đào thải, giúp ngăn ngừa xơ vữa động mạch.",
@@ -1146,11 +1124,11 @@
       },
       {
         "source_id": "SRC-LC-HDL-002",
-        "source_title": "Chỉ số HDL Cholesterol trong xét nghiệm máu nói lên điều gì?",
+        "source_title": "HDL cholesterol là gì? Những cảnh báo sức khoẻ khi chỉ số HDL cholesterol giảm",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-hdl-cholesterol-trong-xet-nghiem-mau-noi-len-dieu-gi.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/hdl-cholesterol-la-gi-va-nhung-canh-bao-suc-khoe-khi-chi-so-hdl-cholesterol-giam-59240.html",
         "section": "Tổng quan",
         "language": "vi",
         "description": "HDL Cholesterol giúp dọn dẹp mỡ thừa trong lòng mạch và bảo vệ sức khỏe tim mạch."
@@ -1183,7 +1161,7 @@
         "organization": "National Heart, Lung, and Blood Institute (NHLBI)",
         "source_tier": "TIER_1",
         "publication_date": "2002",
-        "url": "https://www.nhlbi.nih.gov/files/docs/guidelines/atp3full.pdf",
+        "url": "https://www.nhlbi.nih.gov/resources/third-report-expert-panel-detection-evaluation-and-treatment-high-blood-cholesterol-0",
         "section": "Table II.1-1",
         "language": "vi",
         "description": "Phân tầng HDL-C theo hướng dẫn của NCEP ATP III."
@@ -1210,11 +1188,11 @@
     "sources": [
       {
         "source_id": "SRC-VM-LDL-001",
-        "source_title": "Xét nghiệm LDL-Cholesterol và ý nghĩa các chỉ số",
+        "source_title": "Chỉ số LDL cholesterol trong máu là gì?",
         "organization": "Hệ thống Y tế Vinmec",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.vinmec.com/vie/bai-viet/xet-nghiem-ldl-cholesterol-va-y-nghia-cac-chi-so-vi",
+        "url": "https://www.vinmec.com/vie/bai-viet/chi-so-ldl-cholesterol-trong-mau-la-gi-vi",
         "section": "Ý nghĩa lâm sàng",
         "language": "vi",
         "description": "LDL-C (Low-Density Lipoprotein Cholesterol) thường được gọi là 'cholesterol xấu' vì khi nồng độ lưu hành trong máu vượt quá nhu cầu cơ thể, các hạt LDL dễ bị oxy hóa và lắng đọng tại thành mạch, hình thành nên các mảng xơ vữa động mạch.",
@@ -1229,11 +1207,11 @@
       },
       {
         "source_id": "SRC-LC-LDL-002",
-        "source_title": "Chỉ số LDL Cholesterol trong xét nghiệm máu là gì?",
+        "source_title": "Những điều cần biết về chỉ số LDL cholesterol trong máu",
         "organization": "Nhà thuốc Long Châu",
         "source_tier": "TIER_3",
         "publication_date": "2024",
-        "url": "https://nhathuoclongchau.com.vn/bai-viet/chi-so-ldl-cholesterol-trong-xet-nghiem-mau-la-gi.html",
+        "url": "https://nhathuoclongchau.com.vn/bai-viet/nhung-dieu-can-biet-ve-chi-so-ldl-cholesterol-trong-mau.html/",
         "section": "Tổng quan",
         "language": "vi",
         "description": "LDL Cholesterol là chỉ số đánh giá nguy cơ lắng đọng mảng xơ vữa trong lòng mạch máu."
@@ -1255,7 +1233,7 @@
         "organization": "Centers for Disease Control and Prevention (CDC)",
         "source_tier": "TIER_2",
         "publication_date": "2024",
-        "url": "https://www.cdc.gov/cholesterol/ldl-hdl.htm",
+        "url": "https://www.cdc.gov/cholesterol/about/ldl-and-hdl-cholesterol-and-triglycerides.html",
         "section": "Overview",
         "language": "vi",
         "description": "Hướng dẫn của CDC về kiểm soát nồng độ LDL cholesterol."
@@ -1277,7 +1255,7 @@
         "organization": "National Lipid Association & NCEP ATP III",
         "source_tier": "TIER_1",
         "publication_date": "2014",
-        "url": "https://www.lipidjournal.com/article/S1933-2874(14)00272-6/fulltext",
+        "url": "https://www.lipid.org/resource/nla-recommendations-for-patient-centered-management-of-dyslipidemia/",
         "section": "Table 2",
         "language": "vi",
         "description": "Khuyến cáo phân loại LDL-C theo NLA 2014."

@@ -298,7 +298,7 @@ async def test_unknown_status_skips_rag_and_llm_but_keeps_curated_catalog(monkey
     assert indicator_result["status"] == "unknown"
     assert indicator_result["is_critical"] is False
     assert "Acid uric" in indicator_result["explanation"]
-    assert indicator_result["sources"] == ["https://ard.bmj.com/content/76/1/29"]
+    assert indicator_result["sources"] == ["https://pubmed.ncbi.nlm.nih.gov/27457514/"]
 
 
 @pytest.mark.asyncio
