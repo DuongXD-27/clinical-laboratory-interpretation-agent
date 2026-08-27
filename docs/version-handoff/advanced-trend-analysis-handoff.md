@@ -6,7 +6,7 @@
 - **Tên tính năng:** Phân tích xu hướng nâng cao (Advanced Trend Analysis)
 - **Mã dự án:** P-056
 - **Nhánh code:** `feature/advanced-trend-analysis` (chưa merge vào `main`)
-- **ADR tham chiếu:** ADR-010 (`docs/architecture-decision-record/adr-010-trend-interpretation-safety-contract.md`) — status **ACCEPTED**, ngày phê duyệt 2026-08-18. Đây là tài liệu tham chiếu chính; mọi thay đổi hành vi của trend service phải đọc ADR này trước.
+- **ADR tham chiếu:** ADR-010 (`docs/adr/adr-010-trend-interpretation-safety-contract.md`) — status **ACCEPTED**, ngày phê duyệt 2026-08-18. Đây là tài liệu tham chiếu chính; mọi thay đổi hành vi của trend service phải đọc ADR này trước.
 
 ### Mục tiêu kinh doanh / vấn đề được giải quyết
 Nguồn: Business Description `nhan-xet-phan-tich-xh.docx`. Nhóm trưởng đưa ra 3 nhận xét cần đóng trước khi triển khai:

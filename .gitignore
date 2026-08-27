@@ -40,6 +40,7 @@ logs/
 htmlcov/
 .coverage
 coverage.xml
+eval/raw/pytest_tmp_*/
 
 # Docker
 docker-compose.override.yml

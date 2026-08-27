@@ -68,7 +68,7 @@ Hệ thống hiện đang được bảo vệ ở **Mức độ Cao (Validator R
 
 - Gate UI_Review trên frontend — frontend/src/app/patient/page.tsx: handleOcrUpload() gọi /api/v1/ocr/upload, trả bản nháp; updateEdit() cho người dùng chỉnh sửa; handleOcrConfirm() (L128-134) lấy bản nháp đã xem xét rồi mới gọi /api/v1/analyze. Không có luồng tự bypass bước này.
 
-- ADR-006 — docs/architecture-decision-record/adr-006-ocr-openrouter.md (Accepted, 2026-08-04): ghi lý do chọn Vision LLM qua OpenRouter thay Tesseract/OCR cục bộ, lý do đưa OCR sớm hơn lộ trình gốc, lịch sử đổi model từ nvidia/nemotron-nano-12b-v2-vl:free sang google/gemma-4-26b-a4b-it:free.
+- ADR-006 — docs/adr/adr-006-ocr-openrouter.md (Accepted, 2026-08-04): ghi lý do chọn Vision LLM qua OpenRouter thay Tesseract/OCR cục bộ, lý do đưa OCR sớm hơn lộ trình gốc, lịch sử đổi model từ nvidia/nemotron-nano-12b-v2-vl:free sang google/gemma-4-26b-a4b-it:free.
 
 - Guardrail retry — src/agents/nodes/guardrail_node.py L55-77 (hàm rewrite_with_llm) + L180-236: khi phát hiện vi phạm trong summary, explanations, indicators, questions_for_doctor, thử LLM rewrite 1 lần — nếu vẫn vi phạm sau rewrite thì mới fallback về template. Áp dụng cho cả 2 nhánh dự phòng (giải thích và câu hỏi cho bác sĩ).
 
