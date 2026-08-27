@@ -106,6 +106,29 @@ def _compare_critical(
     return False
 
 
+def _critical_alert_message(
+    *,
+    name: str,
+    direction: str,
+    original_value: float,
+    original_unit: str,
+    comparison_value: float | Decimal,
+    operator: str,
+    threshold: float | Decimal,
+    comparison_unit: str,
+) -> str:
+    comparison = f"{comparison_value} {operator} {threshold} {comparison_unit}"
+    if not _is_unit_compatible(original_unit, comparison_unit):
+        comparison = (
+            f"giá trị nhập {original_value} {original_unit}; "
+            f"giá trị quy đổi chỉ để so ngưỡng: {comparison}"
+        )
+    return (
+        f"CẢNH BÁO: {name} {direction} tới ngưỡng nguy kịch "
+        f"({comparison}). Yêu cầu can thiệp y tế."
+    )
+
+
 def _resolve_active_side(
     thresholds: dict[str, Any],
     side: str,
@@ -250,6 +273,21 @@ async def detect_critical_values_node(state: AgentState) -> dict:
 
         thresholds = CRITICAL_THRESHOLDS[canonical_key]
         threshold_unit = thresholds.get("unit", "")
+        source_url = str(thresholds.get("source_url") or "").strip()
+        if source_url:
+            new_ind["critical_threshold_source"] = {
+                "source_id": str(thresholds.get("source_id") or ""),
+                "title": str(thresholds.get("source_title") or ""),
+                "organization": str(thresholds.get("source_organization") or ""),
+                "url": source_url,
+                "section_or_context": (
+                    f"Page {thresholds['source_page']}: {thresholds['source_literal']}"
+                    if thresholds.get("source_page") and thresholds.get("source_literal")
+                    else str(thresholds.get("source_literal") or "").strip() or None
+                ),
+                "analyte": canonical_analyte,
+                "note_type": "critical_threshold",
+            }
 
         # Blocker 03: compare directly only in the same normalized unit. The
         # sole cross-unit path is the human-approved, explicitly configured
@@ -328,7 +366,16 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                     "indicator_name": name,
                     "value": val,
                     "unit": input_unit,
-                    "message": f"CẢNH BÁO: {name} giảm tới ngưỡng nguy kịch ({comparison_value} {low_operator} {low_val} {comparison_unit}). Yêu cầu can thiệp y tế.",
+                    "message": _critical_alert_message(
+                        name=name,
+                        direction="giảm",
+                        original_value=val,
+                        original_unit=input_unit,
+                        comparison_value=comparison_value,
+                        operator=low_operator,
+                        threshold=low_val,
+                        comparison_unit=comparison_unit,
+                    ),
                 })
         elif high_side is not None and _compare_critical(comparison_value, high_side[0], high_side[1]):
             high_val, high_operator = high_side
@@ -342,7 +389,16 @@ async def detect_critical_values_node(state: AgentState) -> dict:
                     "indicator_name": name,
                     "value": val,
                     "unit": input_unit,
-                    "message": f"CẢNH BÁO: {name} tăng tới ngưỡng nguy kịch ({comparison_value} {high_operator} {high_val} {comparison_unit}). Yêu cầu can thiệp y tế.",
+                    "message": _critical_alert_message(
+                        name=name,
+                        direction="tăng",
+                        original_value=val,
+                        original_unit=input_unit,
+                        comparison_value=comparison_value,
+                        operator=high_operator,
+                        threshold=high_val,
+                        comparison_unit=comparison_unit,
+                    ),
                 })
         else:
             new_ind["is_critical"] = False

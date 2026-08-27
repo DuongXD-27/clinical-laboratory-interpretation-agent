@@ -7,6 +7,7 @@ from langgraph.graph import END, StateGraph
 from src.agents.nodes.analyzer_node import analyzer_node
 from src.agents.nodes.critical_detector_node import detect_critical_values_node
 from src.agents.nodes.guardrail_node import guardrail_node
+from src.agents.nodes.input_integrity_node import input_integrity_node
 from src.agents.nodes.question_generator_node import question_generator_node
 from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 from src.agents.state import AgentState
@@ -37,7 +38,7 @@ def route_on_input(state: AgentState) -> str:
     if ocr_drafts and not is_ocr_reviewed:
         return "ui_review_gate"
 
-    return "reference_range_checker"
+    return "input_integrity"
 
 
 def _timed_node(metric_name, node):
@@ -59,6 +60,10 @@ def build_graph() -> StateGraph:
 
     # Đăng ký các node
     graph.add_node(
+        "input_integrity",
+        _timed_node("analysis-input-integrity", input_integrity_node),
+    )
+    graph.add_node(
         "reference_range_checker",
         _timed_node("analysis-reference-range", reference_range_checker_node),
     )
@@ -78,15 +83,16 @@ def build_graph() -> StateGraph:
 
     # Định tuyến ngay từ đầu bằng Conditional Entry Point
     graph.set_conditional_entry_point(
-        route_on_input, {"ui_review_gate": "ui_review_gate", "reference_range_checker": "reference_range_checker"}
+        route_on_input, {"ui_review_gate": "ui_review_gate", "input_integrity": "input_integrity"}
     )
 
     # Nối cạnh (Edges)
     # Sau khi người dùng resume luồng từ Gate, hệ thống sẽ chạy qua ui_review_node
-    # và đi thẳng sang bước đối chiếu reference_range_checker
-    graph.add_edge("ui_review_gate", "reference_range_checker")
+    # rồi qua integrity gate trước bước đối chiếu reference_range_checker
+    graph.add_edge("ui_review_gate", "input_integrity")
 
     # Các cạnh thông thường
+    graph.add_edge("input_integrity", "reference_range_checker")
     graph.add_edge("reference_range_checker", "critical_detector")
     graph.add_edge("critical_detector", "analyzer")
 

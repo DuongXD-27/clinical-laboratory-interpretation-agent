@@ -89,6 +89,7 @@ class Settings(BaseSettings):
 
     # Agent Rules / Reference
     critical_thresholds_path: str = "./data/reference/critical_thresholds.json"
+    input_integrity_rules_path: str = "./data/reference/input_integrity_rules.json"
 
     # Dang nhap bang Google (Google Identity Services)
     #

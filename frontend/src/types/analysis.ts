@@ -5,6 +5,16 @@ export type CriticalAlert = {
   message: string;
 };
 
+export type Citation = {
+  source_id: string;
+  title: string;
+  organization: string;
+  url: string;
+  section_or_context?: string | null;
+  analyte?: string | null;
+  note_type?: string | null;
+};
+
 export type IndicatorResult = {
   name: string;
   value: number;
@@ -22,6 +32,12 @@ export type IndicatorResult = {
   reviewed_by_username?: string | null;
   reviewed_at?: string | null;
   sources?: string[];
+  citations?: Citation[];
+  explanation_sources?: Citation[];
+  reference_range_source?: Citation | null;
+  critical_threshold_source?: Citation | null;
+  input_integrity_status?: string | null;
+  input_integrity_message?: string | null;
   /** Nhóm chức năng (ADR-010 CRIT-TREND-06) — null khi chỉ số chưa khớp được nhóm nào. */
   section?: string | null;
   section_label?: string | null;

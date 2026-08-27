@@ -5,6 +5,7 @@ import MetricInput from "@/components/MetricInput";
 import UploadDropzone from "@/components/UploadDropzone";
 import { API_BASE, authFetch } from "@/lib/api";
 import { getOcrIndicators, parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
+import { friendlyOcrError } from "@/lib/ocrErrors.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import { ScanLine } from "lucide-react";
 
@@ -36,14 +37,6 @@ type Props = {
   onUnauthorized: () => void;
   accent?: "blue" | "indigo";
 };
-
-function friendlyUploadError(status: number, detail: unknown) {
-  if (status >= 500) {
-    return "Không thể đọc rõ phiếu xét nghiệm này. Hãy thử ảnh rõ hơn hoặc nhập kết quả thủ công.";
-  }
-  if (typeof detail === "string" && detail.trim()) return detail;
-  return "Không thể đọc rõ phiếu xét nghiệm này. Hãy thử ảnh rõ hơn hoặc nhập kết quả thủ công.";
-}
 
 function getConfirmReadiness(meta: { age: string; date: string }, rows: ReviewRow[]) {
   const age = Number(meta.age);
@@ -163,7 +156,11 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
         return;
       }
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(friendlyUploadError(response.status, data.detail));
+      if (!response.ok) throw new Error(friendlyOcrError(
+        response.status,
+        data.detail,
+        response.headers.get("X-OCR-Error-Code"),
+      ));
 
       const indicators = getOcrIndicators(data);
       if (indicators.length === 0) {
@@ -390,7 +387,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
                     low_confidence_acknowledged: false,
                   })}
                   removeLabel="Không đưa vào phân tích"
-                  attentionMessage={row.needs_review ? "Cần bạn kiểm tra lại" : undefined}
+                  attentionMessage={row.needs_review ? "Độ tin cậy OCR thấp — cần đối chiếu với phiếu gốc" : undefined}
                 >
                   {row.raw_text && <p className="ocr-evidence">Nội dung OCR: “{row.raw_text}”</p>}
                 </MetricInput>
@@ -423,7 +420,7 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
 
           {unsupportedRows.length > 0 && (
             <div className="info-message mt-4" role="status">
-              <p className="font-semibold text-slate-800">Một số chỉ số cần được xem lại</p>
+              <p className="font-semibold text-slate-800">Chỉ số chưa được hỗ trợ</p>
               <div className="mt-2 grid gap-1">
                 {unsupportedRows.map((row) => (
                   <p key={row.draft_id}>

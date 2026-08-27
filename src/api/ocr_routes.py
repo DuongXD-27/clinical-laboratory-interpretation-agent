@@ -21,6 +21,18 @@ from src.services.image_processor import (
     ImageProcessor,
     ImageProcessorError,
 )
+from src.services.ocr_errors import (
+    NO_INDICATORS_FOUND,
+    NO_SUPPORTED_ANALYTES,
+    OCR_EXTRACTION_FAILED,
+    PROVIDER_UNAVAILABLE,
+    REVIEW_REQUIRED,
+    UNSUPPORTED_FILE,
+    image_processor_reason,
+)
+from src.services.ocr_errors import (
+    headers as ocr_error_headers,
+)
 from src.services.ocr_review_gate import (
     OCRReviewGateError,
     consume_review_lifecycle,
@@ -179,6 +191,7 @@ async def ocr_upload(
         raise HTTPException(
             status_code=503,
             detail="Tính năng tải ảnh phiếu đang tạm tắt.",
+            headers=ocr_error_headers(PROVIDER_UNAVAILABLE),
         )
 
     # ------------------------------------------------------------------
@@ -190,6 +203,7 @@ async def ocr_upload(
             detail=(
                 f"Cần xác nhận trước khi tải ảnh: {CONSENT_TEXT}"
             ),
+            headers=ocr_error_headers(REVIEW_REQUIRED),
         )
 
     # Ảnh gốc chỉ tồn tại trong RAM trong vòng đời request.
@@ -218,6 +232,7 @@ async def ocr_upload(
                 "không nhận ảnh tự tải lên. "
                 "Vui lòng chọn một ảnh mẫu để thử."
             ),
+            headers=ocr_error_headers(UNSUPPORTED_FILE),
         )
 
     # Không khởi tạo external Vision client trước khi request vượt qua
@@ -228,6 +243,7 @@ async def ocr_upload(
         raise HTTPException(
             status_code=503,
             detail=str(exc),
+            headers=ocr_error_headers(PROVIDER_UNAVAILABLE),
         ) from exc
 
     try:
@@ -240,6 +256,7 @@ async def ocr_upload(
         raise HTTPException(
             status_code=400,
             detail=str(exc),
+            headers=ocr_error_headers(image_processor_reason(str(exc))),
         ) from exc
 
     try:
@@ -251,7 +268,8 @@ async def ocr_upload(
     except VisionAdapterError as exc:
         raise HTTPException(
             status_code=502,
-            detail=str(exc),
+            detail="Dịch vụ OCR chưa thể trích xuất phiếu lúc này.",
+            headers=ocr_error_headers(OCR_EXTRACTION_FAILED),
         ) from exc
 
     if not drafts:
@@ -262,6 +280,7 @@ async def ocr_upload(
                 "Hãy dùng ảnh chụp rõ toàn bộ phiếu xét nghiệm, "
                 "không dùng ảnh chụp màn hình của ứng dụng."
             ),
+            headers=ocr_error_headers(NO_INDICATORS_FOUND),
         )
 
     source_image = _clean_source_filename(file.filename)
@@ -329,6 +348,7 @@ async def ocr_confirm(
         raise HTTPException(
             status_code=400,
             detail=str(exc),
+            headers=ocr_error_headers(REVIEW_REQUIRED),
         ) from exc
 
     # Chỉ đưa analyte có reference support vào LangGraph.
@@ -346,6 +366,7 @@ async def ocr_confirm(
                 "Phiếu này chưa có chỉ số nào nằm trong "
                 "danh sách hiện được hỗ trợ."
             ),
+            headers=ocr_error_headers(NO_SUPPORTED_ANALYTES),
         )
 
     try:
@@ -359,6 +380,7 @@ async def ocr_confirm(
         raise HTTPException(
             status_code=400,
             detail=str(exc),
+            headers=ocr_error_headers(REVIEW_REQUIRED),
         ) from exc
 
     with timing_span("ocr-build-analysis-request"):

@@ -116,6 +116,9 @@ def test_band_chunk_generation_and_metadata_flattening():
         "sources": [
             {
                 "source_id": "SRC-NLA-2014",
+                "source_title": "LDL guidance",
+                "organization": "National Lipid Association",
+                "section": "Recommendations",
                 "source_tier": "TIER_1",
                 "url": "https://nla.org/ldl",
                 "description": "LDL cholesterol overview",
@@ -140,6 +143,9 @@ def test_band_chunk_generation_and_metadata_flattening():
     # Validate Chroma metadata is flat scalar
     for chunk in chunks:
         meta = chunk.to_chroma_metadata()
+        assert meta["source_title"] == "LDL guidance"
+        assert meta["organization"] == "National Lipid Association"
+        assert meta["source_section"] == "Recommendations"
         for k, v in meta.items():
             assert isinstance(v, (str, int, float, bool)), f"Non-scalar metadata: {k}={v}"
 
@@ -222,6 +228,46 @@ def test_validator_rejects_non_band_defining_band_notes():
     report = CorpusValidator.validate([bad_entry], mode="development")
     assert not report.is_valid
     assert any("prohibited" in err for err in report.errors)
+
+
+def test_validator_rejects_incomplete_or_invalid_source_metadata():
+    entry = {
+        "canonical_name": "WBC",
+        "analyte_id": "wbc",
+        "rule_type": "RI",
+        "sources": [{"source_id": "SRC-BAD", "url": "ftp://invalid", "description": "Overview"}],
+    }
+    report = CorpusValidator.validate([entry], mode="development")
+    assert any("missing source_title" in error for error in report.errors)
+    assert any("missing organization" in error for error in report.errors)
+    assert any("invalid URL schema" in error for error in report.errors)
+
+
+def test_validator_rejects_duplicate_source_id_and_source_without_note():
+    source = {
+        "source_id": "SRC-DUP",
+        "source_title": "Title",
+        "organization": "Organization",
+        "url": "https://example.org/source",
+    }
+    entries = [
+        {"canonical_name": "WBC", "analyte_id": "wbc", "rule_type": "RI", "sources": [source]},
+        {
+            "canonical_name": "RBC",
+            "analyte_id": "rbc",
+            "rule_type": "RI",
+            "sources": [{**source, "description": "RBC overview"}],
+        },
+    ]
+    report = CorpusValidator.validate(entries, mode="development")
+    assert any("Duplicate source_id" in error for error in report.errors)
+    assert any("has no analyte note type" in error for error in report.errors)
+
+
+def test_current_corpus_duplicate_urls_are_reported_as_maintenance_warnings():
+    report = CorpusValidator.validate(load_corpus(), mode="development")
+    assert report.is_valid
+    assert any("Duplicate exact URL" in warning for warning in report.warnings)
 
 
 # ---------------------------------------------------------------------------

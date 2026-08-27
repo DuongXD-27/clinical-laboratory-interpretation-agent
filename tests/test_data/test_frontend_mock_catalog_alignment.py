@@ -5,11 +5,13 @@ import re
 import unicodedata
 from pathlib import Path
 
+from scripts.generate_frontend_analyte_catalog import is_current, render_catalog
 from src.services.analyte_catalog import get_analyte_catalog_contract
 from src.services.reference_repository import ReferenceRepository
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANUAL_ENTRY = REPO_ROOT / "frontend/src/lib/manualEntry.mjs"
+GENERATED_CATALOG = REPO_ROOT / "frontend/src/generated/analyteCatalog.mjs"
 MOCK_DIRS = (
     REPO_ROOT / "data/mock/templates",
     REPO_ROOT / "data/mock/generated",
@@ -86,15 +88,22 @@ def _lookup_key(value: object) -> str:
 
 
 def _manual_entries() -> list[dict[str, str]]:
-    text = MANUAL_ENTRY.read_text(encoding="utf-8")
+    text = GENERATED_CATALOG.read_text(encoding="utf-8")
     pattern = re.compile(
-        r'\{\s*name:\s*"(?P<name>[^"]+)",\s*label:\s*"[^"]+",\s*'
-        r'unit:\s*"(?P<unit>[^"]+)",\s*category:\s*"(?P<category>[^"]+)",\s*'
+        r'\{\s*name:\s*"(?P<name>[^"]+)",\s*unit:\s*"(?P<unit>[^"]+)",\s*'
         r'analyteId:\s*"(?P<analyte_id>[^"]+)",\s*'
         r'canonicalGroup:\s*"(?P<group>[^"]+)",\s*'
         r'runtimeStatus:\s*"(?P<runtime_status>[^"]+)"\s*\}'
     )
-    return [match.groupdict() for match in pattern.finditer(text)]
+    entries = [match.groupdict() for match in pattern.finditer(text)]
+    for entry in entries:
+        entry["category"] = GROUP_LABELS[entry["group"]]
+    return entries
+
+
+def test_generated_frontend_catalog_is_current() -> None:
+    assert GENERATED_CATALOG.read_text(encoding="utf-8") == render_catalog()
+    assert is_current()
 
 
 def _mock_indicators() -> list[dict[str, str]]:

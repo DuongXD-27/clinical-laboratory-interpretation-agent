@@ -160,6 +160,16 @@ class AnalyzeRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CitationSchema(BaseModel):
+    source_id: str
+    title: str
+    organization: str
+    url: str
+    section_or_context: str | None = None
+    analyte: str
+    note_type: str
+
+
 class IndicatorResultSchema(BaseModel):
     """Kết quả đối chiếu + giải thích cho một chỉ số.
 
@@ -198,6 +208,15 @@ class IndicatorResultSchema(BaseModel):
     band_id: str | None = None
     upper_operator: str | None = None
     evaluation_reason: str | None = None
+    input_integrity_status: Literal["VALID", "NEED_REVIEW"] | None = None
+    input_integrity_reason_code: str | None = None
+    input_integrity_message: str = ""
+    input_integrity_rule_id: str | None = None
+    input_integrity_source_id: str | None = None
+    citations: list[CitationSchema] = Field(default_factory=list)
+    explanation_sources: list[CitationSchema] = Field(default_factory=list)
+    reference_range_source: CitationSchema | None = None
+    critical_threshold_source: CitationSchema | None = None
 
     review_outcome: ReviewOutcome = "pending"
     doctor_note: str | None = None

@@ -18,6 +18,7 @@ from src.config import get_settings
 from src.services.analyte_catalog import get_analyte_catalog
 from src.services.context_budget import build_bounded_context
 from src.services.llm import get_llm
+from src.services.medical_citations import get_medical_citation_repository
 from src.services.medical_knowledge_retriever import (
     MedicalKnowledgeRetriever,
     get_medical_knowledge_retriever,
@@ -26,10 +27,14 @@ from src.services.medical_safety_assets import (
     GENERATION_SAFETY_CONTRACT,
     ensure_reference_qualification,
 )
+from src.services.patient_explanation import (
+    build_patient_explanation,
+    filter_patient_education_text,
+    plain_definition,
+)
 from src.services.request_timing import add_timing_event
 from src.services.safe_grounding import (
     build_safe_grounding_view,
-    filter_safe_grounding_text,
 )
 from src.services.template_loader import load_templates
 
@@ -60,22 +65,6 @@ def _deduplicate(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
 
 
-def _deterministic_explanation(
-    *,
-    name: str,
-    value: Any,
-    unit: str,
-    safe_grounding: str,
-) -> str:
-    """Combine structured facts with approved-safe prose only."""
-    parts: list[str] = []
-    if name and value is not None and unit:
-        parts.append(f"Giá trị {name} là {value} {unit}.")
-    if safe_grounding:
-        parts.append(safe_grounding)
-    return " ".join(parts).strip()
-
-
 def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> list[str]:
     sources = [str(source) for source in indicator.get("sources", []) if str(source)]
     for chunk in chunks:
@@ -83,6 +72,38 @@ def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> l
         if chunk.get("source"):
             sources.append(str(chunk["source"]))
     return _deduplicate(sources)
+
+
+def _known_citations(
+    *,
+    analyte: str,
+    sources: list[str],
+    chunks: list[RetrievedChunk],
+) -> list[dict[str, Any]]:
+    """Resolve structured metadata only from corpus-owned records."""
+    repository = get_medical_citation_repository()
+    citations = repository.resolve_many(
+        analyte=analyte,
+        sources=sources,
+    )
+    for chunk in chunks:
+        citation = repository.resolve(
+            analyte=analyte,
+            source_id=str(chunk.get("source_id") or ""),
+            url=str(chunk.get("source_url") or chunk.get("source") or ""),
+            note_type=str(chunk.get("note_type") or "") or None,
+        )
+        if citation is not None:
+            citations.append(citation)
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for citation in citations:
+        key = (citation.source_id, citation.note_type)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(citation.as_dict())
+    return unique
 
 
 def _resolve_band_fallback(
@@ -244,20 +265,31 @@ async def process_single_indicator(
     if definition and not known_sources:
         known_sources = list(definition.sources)
     safe_chunks = build_safe_grounding_view(chunks)
+    safe_chunks = [
+        {**chunk, "text": filtered}
+        for chunk in safe_chunks
+        if (filtered := filter_patient_education_text(str(chunk.get("text", ""))))
+    ]
     rag_context = build_bounded_context(
         safe_chunks,
         max_chars=get_settings().max_analyzer_context_chars,
     )
-    safe_curated_explanation = filter_safe_grounding_text(curated_explanation)
-    safe_neutral_explanation = filter_safe_grounding_text(
-        definition.curated_explanation if definition is not None else ""
+    safe_curated_explanation = filter_patient_education_text(curated_explanation)
+    safe_neutral_explanation = plain_definition(
+        analyte_id=analyte_id,
+        curated_description=(definition.curated_explanation if definition is not None else ""),
     )
     context = rag_context or safe_curated_explanation or safe_neutral_explanation
-    fallback_explanation = _deterministic_explanation(
+    fallback_explanation = build_patient_explanation(
+        analyte_id=analyte_id,
         name=name,
         value=value,
         unit=unit,
-        safe_grounding=context,
+        status=status,
+        critical_status=critical_status,
+        is_critical=is_critical,
+        curated_description=(definition.curated_explanation if definition is not None else raw_explanation),
+        supplemental_text=context,
     ) or load_templates().fallback_explanation
 
     prompt = textwrap.dedent(
@@ -277,7 +309,7 @@ async def process_single_indicator(
         </context>
 
         Nhiệm vụ:
-        1. Nêu ngắn gọn giá trị và ý nghĩa của trạng thái theo hợp đồng an toàn bên dưới. Chỉ giải thích chỉ số LÀ GÌ khi định nghĩa đó xuất hiện rõ trong context; nếu context không định nghĩa thì bỏ phần này.
+        1. Viết tối đa hai câu bổ sung bằng tiếng Việt thông dụng. Không lặp lại giá trị hoặc trạng thái; hệ thống sẽ ghép các dữ kiện đó riêng.
         2. Không thay đổi trạng thái, khoảng tham chiếu, đơn vị hoặc mức critical.
         3. KHÔNG chẩn đoán, suy đoán nguyên nhân, kê đơn hay đề nghị điều trị.
         4. Chỉ dùng thông tin có trong context. Nếu context không đủ, giữ lời giải thích tối thiểu.
@@ -317,7 +349,17 @@ async def process_single_indicator(
                     outcome="success",
                 )
             if result.explanation.strip():
-                explanation_text = result.explanation.strip()
+                explanation_text = build_patient_explanation(
+                    analyte_id=analyte_id,
+                    name=name,
+                    value=value,
+                    unit=unit,
+                    status=status,
+                    critical_status=critical_status,
+                    is_critical=is_critical,
+                    curated_description=(definition.curated_explanation if definition is not None else raw_explanation),
+                    supplemental_text=result.explanation.strip(),
+                )
         except Exception as exc:
             logger.error("LLM explanation failed for %s; using curated fallback: %s", name, exc)
 
@@ -326,6 +368,11 @@ async def process_single_indicator(
         status,
         critical_status=critical_status,
         is_critical=is_critical,
+    )
+    citations = _known_citations(
+        analyte=(definition.indicator if definition is not None else name),
+        sources=known_sources,
+        chunks=safe_chunks,
     )
 
     explanation: IndicatorExplanation = {
@@ -343,10 +390,13 @@ async def process_single_indicator(
         "band_id": indicator.get("band_id"),
         "upper_operator": indicator.get("upper_operator"),
         "evaluation_reason": indicator.get("evaluation_reason"),
+        "citations": citations,
     }
     updated_indicator = dict(indicator)
     updated_indicator["explanation"] = explanation_text
     updated_indicator["sources"] = known_sources
+    updated_indicator["citations"] = citations
+    updated_indicator["explanation_sources"] = citations
     return updated_indicator, explanation, safe_chunks
 
 
@@ -356,6 +406,23 @@ async def analyzer_node(state: AgentState) -> dict:
     indicators = state.get("indicators", [])
     if not indicators:
         return {"retrieved_contexts": []}
+
+    review_indicators = [
+        dict(indicator)
+        for indicator in indicators
+        if indicator.get("input_integrity_status") == "NEED_REVIEW"
+    ]
+    analyzable_indicators = [
+        indicator
+        for indicator in indicators
+        if indicator.get("input_integrity_status") != "NEED_REVIEW"
+    ]
+    if not analyzable_indicators:
+        return {
+            "indicators": review_indicators,
+            "explanations": [],
+            "retrieved_contexts": [],
+        }
 
     try:
         structured_llm = get_llm().with_structured_output(ExplanationOutput)
@@ -395,7 +462,7 @@ async def analyzer_node(state: AgentState) -> dict:
                 patient_gender_raw=patient_gender,
                 patient_age_raw=patient_age_value,
             )
-            for indicator in indicators
+            for indicator in analyzable_indicators
         ]
     )
 
@@ -406,6 +473,16 @@ async def analyzer_node(state: AgentState) -> dict:
         updated_indicators.append(updated_indicator)
         explanations.append(explanation)
         retrieved_contexts.extend(chunks)
+
+    # Keep review-only rows visible and preserve input order, but never send
+    # those rows to retrieval or an LLM.
+    analyzed = iter(updated_indicators)
+    updated_indicators = [
+        dict(item)
+        if item.get("input_integrity_status") == "NEED_REVIEW"
+        else next(analyzed)
+        for item in indicators
+    ]
 
     return {
         "indicators": updated_indicators,

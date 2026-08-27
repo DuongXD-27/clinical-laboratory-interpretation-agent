@@ -127,6 +127,11 @@ class ChromaMedicalKnowledgeRetriever:
             "sources": sources,
             "score": score,
             "note_type": str(metadata.get("note_type", "")),
+            "source_id": str(metadata.get("source_id", "")),
+            "source_title": str(metadata.get("source_title", "")),
+            "organization": str(metadata.get("organization", "")),
+            "source_url": str(metadata.get("source_url", "")),
+            "source_section": str(metadata.get("source_section", "")),
         }
 
     def _metadata_score(

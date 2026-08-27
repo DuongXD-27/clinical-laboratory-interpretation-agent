@@ -55,7 +55,8 @@ type Props = {
 export default function IndicatorResultCard({ indicator }: Props) {
   const tone = reportTone(indicator.status);
   
-  const hasAISection = !!(indicator.explanation || indicator.doctor_note || (indicator.sources && indicator.sources.length > 0));
+  const explanationCitations = indicator.explanation_sources ?? indicator.citations ?? [];
+  const hasAISection = !!(indicator.explanation || indicator.doctor_note || explanationCitations.length > 0 || (indicator.sources && indicator.sources.length > 0));
   const safeReference = renderSafeReferenceRange(indicator);
   
   return (
@@ -74,6 +75,13 @@ export default function IndicatorResultCard({ indicator }: Props) {
           </p>
         </div>
       </div>
+
+      {String(indicator.input_integrity_status || "").toUpperCase() === "NEED_REVIEW" && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+          <strong>Cần kiểm tra dữ liệu đầu vào.</strong>{" "}
+          {indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc."}
+        </div>
+      )}
       
       {/* LEVEL B — FACTUAL CLINICAL DATA */}
       <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -110,7 +118,7 @@ export default function IndicatorResultCard({ indicator }: Props) {
                   reviewedAt={indicator.reviewed_at}
                 />
               )}
-              <SourcesDisclosure sources={indicator.sources} />
+              <SourcesDisclosure sources={indicator.sources} citations={explanationCitations} />
             </div>
           </div>
         </div>

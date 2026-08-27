@@ -70,7 +70,10 @@ class CorpusChunk(BaseModel):
     band_label: str | None = None
 
     source_id: str
+    source_title: str = ""
+    organization: str = ""
     source_url: str = ""
+    source_section: str = ""
     source_tier: str = "TIER_1"
 
     language: str = "vi"
@@ -90,7 +93,10 @@ class CorpusChunk(BaseModel):
             "band_id": str(self.band_id or ""),
             "band_label": str(self.band_label or ""),
             "source_id": str(self.source_id),
+            "source_title": str(self.source_title),
+            "organization": str(self.organization),
             "source_tier": str(self.source_tier),
             "source_url": str(self.source_url),
+            "source_section": str(self.source_section),
             "language": str(self.language),
         }
