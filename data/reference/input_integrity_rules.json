@@ -13,6 +13,12 @@
       "canonical_unit": "mmol/L",
       "status": "BLOCKED_BY_MEDICAL_DATA_AUTHORITY",
       "reason": "Repository audit found no approved reportable, analytical-measurement, biological-plausibility, impossible-value, or input-sanity bound. Reference intervals and critical thresholds are not valid substitutes."
+    },
+    {
+      "analyte": "HGB",
+      "canonical_unit": "g/L",
+      "status": "BLOCKED_BY_MEDICAL_DATA_AUTHORITY",
+      "reason": "Official device measurement ranges differ by analyzer and do not authorize a universal patient-input plausibility bound without method, analyzer, and specimen identity."
     }
   ]
 }

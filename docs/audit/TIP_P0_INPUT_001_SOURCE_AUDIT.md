@@ -1,7 +1,8 @@
 # TIP-P0-INPUT-001 — Input-integrity source audit
 
 Audit date: 2026-08-27  
-Scope: repository-approved data only
+Scope: repository-approved data; superseded for external Wave 2 investigation
+by `WAVE2_PLAUSIBILITY_AUTHORITY_AUDIT.md`
 
 ## Searched artifacts
 
