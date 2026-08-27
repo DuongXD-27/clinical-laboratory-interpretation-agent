@@ -54,6 +54,8 @@ def _require_patient(current_user: CurrentUser) -> None:
 
 
 def _profile_response(patient) -> PatientProfileSchema:
+    raw_style = getattr(patient, "response_style", None)
+    safe_style = raw_style if raw_style in {"concise", "simple", "detailed"} else "simple"
     return PatientProfileSchema(
         patient_id=patient.id,
         username=patient.username,
@@ -61,7 +63,7 @@ def _profile_response(patient) -> PatientProfileSchema:
         date_of_birth=patient.date_of_birth,
         sex=patient.sex,
         email=patient.email,
-        response_style=getattr(patient, "response_style", None) or "simple",
+        response_style=safe_style,
         created_at=patient.created_at,
         updated_at=patient.updated_at,
     )

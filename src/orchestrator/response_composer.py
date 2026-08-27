@@ -266,12 +266,12 @@ def _compose_explanation_message(data: ExplanationDataPayload, response_style: s
         ))
     if facts.has_two_sided_reference_range:
         fact_lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
-    if facts.critical_status == "critical_high":
+    if facts.approved_critical_message:
+        fact_lines.append(f"\n⚠️ {facts.approved_critical_message}")
+    elif facts.critical_status == "critical_high":
         fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} tăng tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
     elif facts.critical_status == "critical_low":
         fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} giảm tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
-    elif facts.approved_critical_message:
-        fact_lines.append(f"\n⚠️ {facts.approved_critical_message}")
 
     approved_explanation = data.explanation.strip()
     norm_style = str(response_style).casefold()
@@ -665,11 +665,23 @@ async def compose_message(
 
 
 _UNGROUNDED_SYMPTOM_RE = re.compile(
-    r"\b(?:bạn|em|người bệnh)\s+(?:có thể\s+)?(?:(?:đang|cảm thấy|gặp|bị|có|mắc|triệu chứng)\s+)+(?:khó thở|mệt mỏi|chóng mặt|đau ngực|hoa mắt|buồn nôn|sốt|co giật|ngất)\b",
+    r"\b(?:ban|em|nguoi benh)\s+(?:co the\s+)?(?:(?:dang|cam thay|gap|bi|co|mac|xuat hien|trieu chung)\s+)*(?:kho tho|met moi|chong mat|dau nguc|hoa mat|buon non|sot|co giat|ngat|dau dau|tuc nguc|danh trong nguc)\b",
     re.IGNORECASE,
 )
 _UNGROUNDED_DIAGNOSIS_RE = re.compile(
-    r"\b(?:bạn|em|người bệnh)\s+(?:có thể\s+)?(?:(?:đang|chắc chắn|bị|mắc|mắc phải|chẩn đoán|có nguy cơ|nguy cơ cao mắc|nguy cơ)\s+)+(?:thiếu máu|bệnh tim|tiểu đường|ung thư|suy thận|suy gan|nhiễm trùng|tai biến|đột quỵ)\b",
+    r"\b(?:ban|em|nguoi benh)\s+(?:co the\s+)?(?:(?:dang|chac chan|bi|mac|mac phai|chan doan|co nguy co|nguy co cao mac|nguy co|dau hieu cua)\s+)+(?:thieu mau|benh tim|tieu duong|dai thao duong|ung thu|suy than|suy gan|nhiem trung|tai bien|dot quy|viem gan|xo gan|da hong cau)\b",
+    re.IGNORECASE,
+)
+_UNGROUNDED_PHYSIO_RE = re.compile(
+    r"\b(?:"
+    r"co the (?:ban|nguoi benh)?\s*(?:dang |duoc )?(?:cung cap oxy|thieu oxy|thieu mau|phuc hoi|hoi phuc|on dinh|khoe manh)"
+    r"|khien co the (?:ban )?(?:bi )?(?:thieu|met|suy|giam|thieu oxy)"
+    r"|lam co the (?:ban )?(?:bi )?(?:thieu|met|suy|giam|thieu oxy)"
+    r"|chuc nang (?:gan|than|tim|phoi|tao mau|mien dich) cua ban"
+    r"|cho thay (?:co the|suc khoe|ban) (?:dang |da )?(?:phuc hoi|tien trien tot|hoan toan khoe|khong co benh)"
+    r"|(?:ban|nguoi benh) (?:hoan toan khoe manh|khong co benh)"
+    r"|(?:ban|nguoi benh) (?:can|nen|phai) (?:uong|dung|tiem|bo sung|dieu tri|su dung thuoc|dung thuoc|mua thuoc|ngung thuoc)"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -677,22 +689,34 @@ _UNGROUNDED_DIAGNOSIS_RE = re.compile(
 def _validate_patient_grounding(message: str, user_message: str | None = None) -> bool:
     """Deterministic output-side grounding validator.
 
-    Rejects ungrounded symptom attributions and ungrounded disease diagnoses.
+    Detects and rejects unsupported patient-specific:
+    - Symptom attribution (unless explicitly reported by user)
+    - Disease diagnosis
+    - Causation and physiological state inferences
+    - Unsupported prognosis & reassurance
+    - Treatment implications
     """
     if not message:
         return True
+    normalized_msg = _normalize(message)
     normalized_user = _normalize(user_message or "")
 
-    match_symptom = _UNGROUNDED_SYMPTOM_RE.search(message)
+    if _UNGROUNDED_PHYSIO_RE.search(normalized_msg):
+        return False
+
+    if _UNGROUNDED_DIAGNOSIS_RE.search(normalized_msg):
+        return False
+
+    match_symptom = _UNGROUNDED_SYMPTOM_RE.search(normalized_msg)
     if match_symptom:
-        matched_phrase = _normalize(match_symptom.group(0))
-        symptom_keywords = ("kho tho", "met moi", "chong mat", "dau nguc", "hoa mat", "buon non", "sot", "co giat", "ngat")
+        matched_phrase = match_symptom.group(0)
+        symptom_keywords = (
+            "kho tho", "met moi", "chong mat", "dau nguc", "hoa mat",
+            "buon non", "sot", "co giat", "ngat", "dau dau", "tuc nguc", "danh trong nguc",
+        )
         matched_tokens = [t for t in symptom_keywords if t in matched_phrase]
         if not all(sym in normalized_user for sym in matched_tokens):
             return False
-
-    if _UNGROUNDED_DIAGNOSIS_RE.search(message):
-        return False
 
     return True
 
