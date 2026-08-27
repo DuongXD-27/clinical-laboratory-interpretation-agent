@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -38,10 +39,27 @@ def render_catalog() -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def is_current() -> bool:
+    return TARGET.exists() and TARGET.read_text(encoding="utf-8") == render_catalog()
+
+
+def main(*, check: bool = False) -> None:
+    if check:
+        if not is_current():
+            raise SystemExit(
+                "Generated analyte catalog is stale; run "
+                "python scripts/generate_frontend_analyte_catalog.py"
+            )
+        return
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_text(render_catalog(), encoding="utf-8")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero when the generated frontend artifact is stale.",
+    )
+    main(check=parser.parse_args().check)

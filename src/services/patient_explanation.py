@@ -34,6 +34,8 @@ _PATIENT_UNGROUNDED_PATTERNS = tuple(
     re.compile(pattern, re.IGNORECASE)
     for pattern in (
         r"\b(?:bạn|bệnh nhân)\s+(?:đang|bị|mắc|có thể bị|có)\b",
+        r"\b(?:cơ thể bạn|cơ thể của bạn)\b",
+        r"\b(?:kết quả|chỉ số|giá trị)\s+(?:này\s+)?(?:cho thấy|chứng tỏ|khẳng định)\b",
         r"\b(?:mệt mỏi|khó thở|chóng mặt|xanh xao|nhợt nhạt|tê|buồn nôn|đau nhức|khó ngủ|táo bón|chướng bụng|co giật|hôn mê)\b",
         r"\b(?:các bệnh|bệnh lý|danh sách bệnh|liên quan đến|gặp trong).{0,100}\b(?:thiếu máu|đa hồng cầu|bệnh tim|bệnh phổi|bệnh thận|đái tháo đường)\b",
         r"\b(?:có thể do|thường do|nguyên nhân|thường gặp khi|gây ra)\b",

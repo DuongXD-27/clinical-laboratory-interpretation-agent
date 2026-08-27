@@ -107,7 +107,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Server-Timing", "X-Request-ID"],
+    expose_headers=["Server-Timing", "X-Request-ID", "X-OCR-Error-Code"],
 )
 
 

@@ -5,7 +5,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-from scripts.generate_frontend_analyte_catalog import render_catalog
+from scripts.generate_frontend_analyte_catalog import is_current, render_catalog
 from src.services.analyte_catalog import get_analyte_catalog_contract
 from src.services.reference_repository import ReferenceRepository
 
@@ -103,6 +103,7 @@ def _manual_entries() -> list[dict[str, str]]:
 
 def test_generated_frontend_catalog_is_current() -> None:
     assert GENERATED_CATALOG.read_text(encoding="utf-8") == render_catalog()
+    assert is_current()
 
 
 def _mock_indicators() -> list[dict[str, str]]:

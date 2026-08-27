@@ -184,6 +184,12 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
     assert response.status_code == 503
     assert "GOOGLE_API_KEY" in response.json()["detail"]
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert response.headers["X-OCR-Error-Code"] == "PROVIDER_UNAVAILABLE"
+    exposed = {
+        value.strip().casefold()
+        for value in response.headers["access-control-expose-headers"].split(",")
+    }
+    assert "x-ocr-error-code" in exposed
 
 
 @pytest.mark.asyncio
