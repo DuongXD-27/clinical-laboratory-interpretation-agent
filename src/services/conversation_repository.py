@@ -203,7 +203,15 @@ def append_message(
         conversation.title = cleaned[:TITLE_MAX_CHARS] or None
 
     conversation.updated_at = _utcnow()
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        # ROLLBACK, khong chi nem len. Mot flush that bai lam session vao trang
+        # thai "pending rollback", va MOI truy van sau do — ke ca viec ghi tin
+        # nhan cua tro ly — deu chet theo voi PendingRollbackError. Do la cach
+        # mot loi nho bien thanh mat ca luot tra loi khoi transcript.
+        db.rollback()
+        raise
     db.refresh(message)
     return message
 
@@ -228,7 +236,11 @@ def save_context(db: Session, *, conversation: Conversation, context: object) ->
     conversation.expected_entity = getattr(state, "expected_entity", None) if state else None
 
     conversation.updated_at = _utcnow()
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 __all__ = [
