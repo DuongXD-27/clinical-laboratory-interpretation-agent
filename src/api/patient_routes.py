@@ -61,6 +61,7 @@ def _profile_response(patient) -> PatientProfileSchema:
         date_of_birth=patient.date_of_birth,
         sex=patient.sex,
         email=patient.email,
+        response_style=getattr(patient, "response_style", None) or "simple",
         created_at=patient.created_at,
         updated_at=patient.updated_at,
     )

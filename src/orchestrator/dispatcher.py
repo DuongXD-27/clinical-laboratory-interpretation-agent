@@ -135,6 +135,25 @@ async def _dispatch_analyze_report(context: DispatchContext) -> WorkflowResult:
 
 
 async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
+    presentation_mode = _explanation_presentation_mode(context.message)
+
+    # Pure educational inquiry without requiring active report
+    if presentation_mode == "education_first" and context.current_analyte:
+        if not _is_supported_analyte(context.current_analyte):
+            return _blocked(ReasonCode.UNSUPPORTED_ANALYTE)
+        if not context.current_report_ref:
+            edu_explanation, edu_sources = _approved_educational_definition(context.current_analyte)
+            if edu_explanation:
+                return WorkflowResult(
+                    status=ResponseStatus.SUCCESS,
+                    data=ExplanationDataPayload(
+                        explanation=edu_explanation,
+                        sources=edu_sources,
+                        presentation_mode=presentation_mode,
+                    ),
+                    workflow_selected="get_analyte_definition",
+                )
+
     if not context.current_report_ref:
         role = getattr(context.current_user, "role", None)
         if role == ROLE_GUEST:
@@ -151,7 +170,6 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
             return _blocked(ReasonCode.UNSUPPORTED_ANALYTE)
 
         report = get_my_report(context.current_user, context.db, context.current_report_ref)
-        presentation_mode = _explanation_presentation_mode(context.message)
         for indicator in report.indicators:
             names = {
                 indicator.name,
@@ -174,13 +192,6 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
                 value = getattr(indicator, "value", None)
                 unit = getattr(indicator, "unit", None)
                 status = getattr(indicator, "status", None)
-                # ORCH-V1.4C: stop dropping authoritative facts. Carry the
-                # canonical fact block so deterministic single-analyte
-                # composition can present value/unit/status/range/critical
-                # verbatim, with the approved explanation kept supplemental.
-                # Fail-safe: an incomplete snapshot (no authoritative
-                # value/unit/status) keeps the legacy prose-only contract
-                # instead of inventing partial facts.
                 if value is None or unit is None or status is None:
                     return WorkflowResult(
                         status=ResponseStatus.SUCCESS,
@@ -193,8 +204,6 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
                     )
                 reference_low = getattr(indicator, "reference_low", None)
                 reference_high = getattr(indicator, "reference_high", None)
-                # Preserve the APPROVED critical warning of the same
-                # detector run for this analyte, verbatim (display only).
                 approved_critical_message = None
                 for alert in getattr(report, "critical_alerts", None) or []:
                     if getattr(alert, "indicator_name", None) in names:
@@ -224,6 +233,21 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
                     ),
                     workflow_selected="get_my_report",
                 )
+
+        # If analyte is not in active report, but requested educationally, return approved definition
+        if presentation_mode == "education_first":
+            edu_explanation, edu_sources = _approved_educational_definition(context.current_analyte)
+            if edu_explanation:
+                return WorkflowResult(
+                    status=ResponseStatus.SUCCESS,
+                    data=ExplanationDataPayload(
+                        explanation=edu_explanation,
+                        sources=edu_sources,
+                        presentation_mode=presentation_mode,
+                    ),
+                    workflow_selected="get_analyte_definition",
+                )
+
         return _needs_input(
             ReasonCode.AMBIGUOUS_CONTEXT,
             "Vui lòng chọn một chỉ số có trong phiếu hiện tại.",

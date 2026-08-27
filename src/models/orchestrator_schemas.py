@@ -78,6 +78,12 @@ class StreamEventType(StrEnum):
     ERROR = "error"
 
 
+class ResponseStyle(StrEnum):
+    CONCISE = "concise"
+    SIMPLE = "simple"
+    DETAILED = "detailed"
+
+
 class ReasonCode(StrEnum):
     EMERGENCY_INPUT_SAFETY = "EMERGENCY_INPUT_SAFETY"
     ONBOARDING_REQUIRED = "ONBOARDING_REQUIRED"
@@ -86,6 +92,7 @@ class ReasonCode(StrEnum):
     MEDICAL_DIAGNOSIS_REQUEST = "MEDICAL_DIAGNOSIS_REQUEST"
     MEDICAL_CAUSE_REQUEST = "MEDICAL_CAUSE_REQUEST"
     TREATMENT_REQUEST = "TREATMENT_REQUEST"
+    PERSONAL_MEDICAL_ADVICE = "PERSONAL_MEDICAL_ADVICE"
     UNSUPPORTED_ANALYTE = "UNSUPPORTED_ANALYTE"
     UNSUPPORTED_CAPABILITY = "UNSUPPORTED_CAPABILITY"
     AMBIGUOUS_CONTEXT = "AMBIGUOUS_CONTEXT"
@@ -116,6 +123,7 @@ class UIContext(BaseModel):
     view: ServerReference | None = None
     candidate_analyte: ServerReference | None = None
     candidate_report_ref: ServerReference | None = None
+    response_style: ResponseStyle | Literal["concise", "simple", "detailed"] | None = None
 
 
 class ConversationState(BaseModel):
@@ -152,6 +160,7 @@ class OrchestratorSessionContext(BaseModel):
     last_intent: IntentEnum | None = None
     transient_ui_context: UIContext | None = None
     conversation_state: ConversationState = Field(default_factory=ConversationState)
+    response_style: ResponseStyle = ResponseStyle.SIMPLE
 
     _pending_ocr_review: bool = PrivateAttr(default=False)
 
@@ -175,7 +184,13 @@ class OrchestratorSessionContext(BaseModel):
         pending_ocr_review: bool = False,
         transient_ui_context: UIContext | None = None,
         conversation_state: ConversationState | None = None,
+        response_style: ResponseStyle | str = ResponseStyle.SIMPLE,
     ) -> OrchestratorSessionContext:
+        resolved_style = (
+            response_style
+            if isinstance(response_style, ResponseStyle)
+            else ResponseStyle(response_style) if response_style in set(ResponseStyle) else ResponseStyle.SIMPLE
+        )
         context = cls(
             session_id=session_id,
             user_role=user_role,
@@ -185,6 +200,7 @@ class OrchestratorSessionContext(BaseModel):
             last_intent=last_intent,
             transient_ui_context=transient_ui_context,
             conversation_state=conversation_state or ConversationState(),
+            response_style=resolved_style,
         )
         context._pending_ocr_review = bool(pending_ocr_review)
         return context

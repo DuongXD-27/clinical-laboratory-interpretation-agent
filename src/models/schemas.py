@@ -576,6 +576,7 @@ class PatientProfileSchema(BaseModel):
     date_of_birth: date | None = None
     sex: str | None = None
     email: str | None = None
+    response_style: Literal["concise", "simple", "detailed"] = "simple"
     created_at: datetime
     updated_at: datetime
 
@@ -585,6 +586,7 @@ class PatientProfileUpdateRequest(BaseModel):
     date_of_birth: date | None = None
     sex: Literal["male", "female", "other"] | None = None
     email: str | None = Field(default=None, max_length=320)
+    response_style: Literal["concise", "simple", "detailed"] | None = None
 
 
 class PatientDashboardReportSchema(BaseModel):

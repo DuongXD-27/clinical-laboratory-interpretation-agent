@@ -230,6 +230,7 @@ def test_ac9_reason_code_has_exact_contract_members():
         "MEDICAL_DIAGNOSIS_REQUEST",
         "MEDICAL_CAUSE_REQUEST",
         "TREATMENT_REQUEST",
+        "PERSONAL_MEDICAL_ADVICE",
         "UNSUPPORTED_ANALYTE",
         "UNSUPPORTED_CAPABILITY",
         "AMBIGUOUS_CONTEXT",
@@ -289,6 +290,7 @@ def test_req_s02_session_context_declares_all_required_fields():
         "pending_ocr_review",
         "transient_ui_context",
         "conversation_state",
+        "response_style",
     }
     declared = set(OrchestratorSessionContext.model_fields) | set(
         OrchestratorSessionContext.model_computed_fields

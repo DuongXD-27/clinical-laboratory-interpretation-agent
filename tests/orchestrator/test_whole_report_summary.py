@@ -494,7 +494,7 @@ async def test_14_medical_safety():
     mock_db = MagicMock()
 
     # Medical diagnosis query must be blocked
-    req = OrchestratorRequest(message="Tôi bị đau ngực và khó thở, có phải tôi bị bệnh tim không?", ui_context=None)
+    req = OrchestratorRequest(message="Chỉ số này cao có phải tôi bị bệnh tim không?", ui_context=None)
     resp = await handle_message(req, current_user=patient, db=mock_db, runtime=runtime)
 
     assert resp.status == ResponseStatus.BLOCKED

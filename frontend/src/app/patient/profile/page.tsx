@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatMoment } from "@/lib/patientUi.mjs";
+import { RESPONSE_STYLES } from "@/lib/responseStyleUi.mjs";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
 
 type PatientProfile = {
@@ -13,6 +14,7 @@ type PatientProfile = {
   date_of_birth?: string | null;
   sex?: "male" | "female" | "other" | null;
   email?: string | null;
+  response_style?: "concise" | "simple" | "detailed" | null;
   created_at: string;
   updated_at: string;
 };
@@ -20,7 +22,7 @@ type PatientProfile = {
 export default function PatientProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [form, setForm] = useState({ full_name: "", date_of_birth: "", sex: "male", email: "" });
+  const [form, setForm] = useState({ full_name: "", date_of_birth: "", sex: "male", email: "", response_style: "simple" });
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,7 @@ export default function PatientProfilePage() {
         date_of_birth: data.date_of_birth ?? "",
         sex: data.sex ?? "male",
         email: data.email ?? "",
+        response_style: data.response_style ?? "simple",
       });
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "Chưa tải được hồ sơ cá nhân.");
@@ -77,6 +80,7 @@ export default function PatientProfilePage() {
           date_of_birth: form.date_of_birth || null,
           sex: form.sex || null,
           email: form.email || null,
+          response_style: form.response_style || "simple",
         }),
       });
       if (!response.ok) {
@@ -143,6 +147,38 @@ export default function PatientProfilePage() {
                 </label>
               </div>
 
+              <div className="mt-8 border-t pt-6">
+                <div className="section-heading mb-4">
+                  <span className="eyebrow">Tùy chọn hiển thị</span>
+                  <h3 className="text-lg font-semibold">Cách LumiLab giải thích cho bạn</h3>
+                  <p className="text-sm text-gray-500">Chọn phong cách phản hồi phù hợp nhất với nhu cầu đọc hiểu kết quả xét nghiệm của bạn.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {RESPONSE_STYLES.map((style) => (
+                    <label
+                      key={style.id}
+                      className={`flex flex-col p-4 rounded-lg border cursor-pointer transition-colors ${
+                        form.response_style === style.id ? "border-emerald-600 bg-emerald-50/50" : "border-gray-200 hover:border-gray-300"
+                      } ${!editing ? "opacity-90 cursor-default" : ""}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-900">{style.title}</span>
+                        <input
+                          type="radio"
+                          name="response_style"
+                          value={style.id}
+                          disabled={!editing}
+                          checked={form.response_style === style.id}
+                          onChange={(e) => setForm((curr) => ({ ...curr, response_style: e.target.value }))}
+                          className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">{style.description}</p>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {editing && (
                 <div className="mt-6 flex flex-wrap gap-2">
                   <button type="button" onClick={save} disabled={saving} className="primary-button">
@@ -155,6 +191,7 @@ export default function PatientProfilePage() {
                       date_of_birth: profile.date_of_birth ?? "",
                       sex: profile.sex ?? "male",
                       email: profile.email ?? "",
+                      response_style: profile.response_style ?? "simple",
                     });
                   }} className="secondary-button">
                     Hủy

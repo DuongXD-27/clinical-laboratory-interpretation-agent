@@ -105,6 +105,8 @@ async def _response_from_workflow(
     result: WorkflowResult,
     *,
     progress_callback: ProgressCallback | None = None,
+    response_style: str = "simple",
+    user_message: str | None = None,
 ) -> OrchestratorResponse:
     await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
     return await build_final_response(
@@ -112,6 +114,8 @@ async def _response_from_workflow(
         status=result.status,
         data=result.data,
         reason_code=result.reason_code,
+        response_style=response_style,
+        user_message=user_message,
     )
 
 
@@ -725,10 +729,27 @@ async def _handle_message_core(
         await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
         final_response = build_provenance_response(result.data)
     else:
+        # Resolve effective response style: per-message override takes precedence over persisted user style
+        effective_style = "simple"
+        if request.ui_context and getattr(request.ui_context, "response_style", None):
+            style_val = str(request.ui_context.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+        elif getattr(current_user, "response_style", None):
+            style_val = str(current_user.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+        elif getattr(session, "response_style", None):
+            style_val = str(session.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+
         final_response = await _response_from_workflow(
             route.intent,
             result,
             progress_callback=progress_callback,
+            response_style=effective_style,
+            user_message=request.message,
         )
 
     # Save conversation state with active timestamp

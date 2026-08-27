@@ -46,6 +46,10 @@ def update_patient_profile(
     patient.date_of_birth = payload.date_of_birth
     patient.sex = payload.sex
     patient.email = email
+    if payload.response_style is not None:
+        if payload.response_style not in {"concise", "simple", "detailed"}:
+            raise PatientServiceError("Phong cách phản hồi không hợp lệ.")
+        patient.response_style = payload.response_style
     patient.updated_at = datetime.now(UTC)
 
     try:

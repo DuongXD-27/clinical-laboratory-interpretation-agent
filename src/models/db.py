@@ -155,6 +155,7 @@ class User(Base):
     # Nullable: tai khoan cu va tai khoan bac si/admin khong co email. UNIQUE
     # chap nhan nhieu NULL o ca SQLite lan Postgres, nen khong sao.
     email = Column(String(320), unique=True, nullable=True, index=True)
+    response_style = Column(String, nullable=False, default="simple")
 
     created_at = Column(
     DateTime(timezone=True),
@@ -1064,44 +1065,51 @@ def backfill_added_column_defaults() -> None:
 
     now = datetime.now(UTC).replace(tzinfo=None)
 
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
     with engine.begin() as conn:
-        conn.execute(
-            text(
-                "UPDATE users SET created_at = COALESCE(created_at, :now), "
-                "updated_at = COALESCE(updated_at, :now)"
-            ),
-            {"now": now},
-        )
-        conn.execute(
-            text(
-                "UPDATE lab_reports SET status = COALESCE(status, "
-                "CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+        if "users" in existing_tables:
+            conn.execute(
+                text(
+                    "UPDATE users SET created_at = COALESCE(created_at, :now), "
+                    "updated_at = COALESCE(updated_at, :now), "
+                    "response_style = COALESCE(response_style, 'simple')"
+                ),
+                {"now": now},
             )
-        )
-        conn.execute(
-            text(
-                "UPDATE lab_reports SET verification_status = "
-                "COALESCE(verification_status, 'unverified'), "
-                "priority_score = COALESCE(priority_score, 0), "
-                "findings_total = COALESCE(findings_total, "
-                "(SELECT COUNT(*) FROM report_indicators "
-                "WHERE report_indicators.report_id = lab_reports.id)), "
-                "findings_reviewed = COALESCE(findings_reviewed, 0)"
+        if "lab_reports" in existing_tables:
+            conn.execute(
+                text(
+                    "UPDATE lab_reports SET status = COALESCE(status, "
+                    "CASE WHEN has_critical_values THEN 'CRITICAL' ELSE 'NORMAL' END)"
+                )
             )
-        )
-        conn.execute(
-            text(
-                "UPDATE report_indicators SET critical_status = status "
-                "WHERE critical_status IS NULL "
-                "AND status IN ('critical_low', 'critical_high')"
+            conn.execute(
+                text(
+                    "UPDATE lab_reports SET verification_status = "
+                    "COALESCE(verification_status, 'unverified'), "
+                    "priority_score = COALESCE(priority_score, 0), "
+                    "findings_total = COALESCE(findings_total, "
+                    "(SELECT COUNT(*) FROM report_indicators "
+                    "WHERE report_indicators.report_id = lab_reports.id)), "
+                    "findings_reviewed = COALESCE(findings_reviewed, 0)"
+                )
             )
-        )
-        conn.execute(
-            text(
-                "UPDATE report_indicators SET review_outcome = "
-                "COALESCE(review_outcome, 'pending')"
+        if "report_indicators" in existing_tables:
+            conn.execute(
+                text(
+                    "UPDATE report_indicators SET critical_status = status "
+                    "WHERE critical_status IS NULL "
+                    "AND status IN ('critical_low', 'critical_high')"
+                )
             )
-        )
+            conn.execute(
+                text(
+                    "UPDATE report_indicators SET review_outcome = "
+                    "COALESCE(review_outcome, 'pending')"
+                )
+            )
 
 
 def seed_demo_users(db: Session) -> None:
