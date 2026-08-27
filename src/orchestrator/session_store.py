@@ -14,6 +14,7 @@ from src.models.orchestrator_schemas import (
     IntentEnum,
     OrchestratorRole,
     OrchestratorSessionContext,
+    ResponseStyle,
     UIContext,
 )
 from src.services.auth import ROLE_GUEST
@@ -55,6 +56,8 @@ class InMemorySessionStore:
 
         if role == ROLE_PATIENT:
             account_key = getattr(current_user, "user_id", None)
+            if account_key is None and isinstance(getattr(current_user, "id", None), int):
+                account_key = current_user.id
             if not isinstance(account_key, int):
                 raise ValueError("patient user_id is required")
             session_id = self._patient_sessions.setdefault(account_key, secrets.token_urlsafe(16))
@@ -68,9 +71,11 @@ class InMemorySessionStore:
         if record is not None:
             return record.context
 
+        user_style = getattr(current_user, "response_style", None) or ResponseStyle.SIMPLE
         context = OrchestratorSessionContext.from_server(
             session_id=session_id,
             user_role=role,
+            response_style=user_style,
         )
         self._records[key] = _SessionRecord(context=context)
         return context
@@ -91,6 +96,7 @@ class InMemorySessionStore:
             pending_ocr_review=context.pending_ocr_review,
             transient_ui_context=context.transient_ui_context,
             conversation_state=context.conversation_state,
+            response_style=getattr(current_user, "response_style", None) or context.response_style,
         )
         self.save(current_user, updated)
         return updated
@@ -108,6 +114,7 @@ class InMemorySessionStore:
             pending_ocr_review=context.pending_ocr_review,
             transient_ui_context=context.transient_ui_context,
             conversation_state=context.conversation_state,
+            response_style=getattr(current_user, "response_style", None) or context.response_style,
         )
         self.save(current_user, updated)
         return updated
@@ -129,6 +136,7 @@ class InMemorySessionStore:
             pending_ocr_review=pending_ocr_review,
             transient_ui_context=context.transient_ui_context,
             conversation_state=context.conversation_state,
+            response_style=getattr(current_user, "response_style", None) or context.response_style,
         )
         self.save(current_user, updated)
         return updated
@@ -173,6 +181,7 @@ class InMemorySessionStore:
             pending_ocr_review=context.pending_ocr_review,
             transient_ui_context=transient_ui_context or context.transient_ui_context,
             conversation_state=conversation_state or context.conversation_state,
+            response_style=getattr(current_user, "response_style", None) or context.response_style,
         )
         self.save(current_user, updated)
         return updated

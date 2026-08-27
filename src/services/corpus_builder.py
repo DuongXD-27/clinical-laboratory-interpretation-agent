@@ -147,7 +147,10 @@ def build_chunks_from_analyte(analyte: CorpusAnalyteRecord) -> list[CorpusChunk]
                         band_id=None,
                         band_label=None,
                         source_id=sid,
+                        source_title=source.source_title,
+                        organization=source.organization,
                         source_url=source.url,
+                        source_section=source.section,
                         source_tier=source.source_tier,
                         language=source.language,
                     )
@@ -174,7 +177,10 @@ def build_chunks_from_analyte(analyte: CorpusAnalyteRecord) -> list[CorpusChunk]
                             band_id=band_id,
                             band_label=band_id.replace("_", " ").capitalize(),
                             source_id=sid,
+                            source_title=source.source_title,
+                            organization=source.organization,
                             source_url=source.url,
+                            source_section=source.section,
                             source_tier=source.source_tier,
                             language=source.language,
                         )

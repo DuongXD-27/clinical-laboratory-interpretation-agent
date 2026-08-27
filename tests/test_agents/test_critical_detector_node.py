@@ -425,7 +425,22 @@ async def test_converted_alert_preserves_original_measurement_fields(monkeypatch
 
     assert alert["value"] == 3.050
     assert alert["unit"] == "mmol/L"
+    assert "giá trị nhập 3.05 mmol/L" in alert["message"]
+    assert "giá trị quy đổi chỉ để so ngưỡng" in alert["message"]
     assert "54.9475495 < 55 mg/dL" in alert["message"]
+
+
+@pytest.mark.asyncio
+async def test_fpg_83_alert_labels_converted_comparison_without_changing_math():
+    result = await detect_critical_values_node(_glucose_state(83, "mmol/L"))
+    indicator = result["indicators"][0]
+    alert = result["critical_alerts"][0]
+
+    assert indicator["value"] == 83
+    assert indicator["unit"] == "mmol/L"
+    assert indicator["critical_status"] == "critical_high"
+    assert "giá trị nhập 83 mmol/L" in alert["message"]
+    assert "1495.29397 > 450 mg/dL" in alert["message"]
 
 
 @pytest.mark.asyncio

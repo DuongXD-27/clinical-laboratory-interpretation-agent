@@ -23,7 +23,7 @@ MOCK_DIRS = (
     REPO_ROOT / "data/mock/templates",
     REPO_ROOT / "data/mock/generated",
 )
-MANUAL_ENTRY = REPO_ROOT / "frontend/src/lib/manualEntry.mjs"
+MANUAL_ENTRY = REPO_ROOT / "frontend/src/generated/analyteCatalog.mjs"
 
 
 # Known current mock spellings that do not resolve through the runtime reference
@@ -93,10 +93,7 @@ def _units() -> dict[str, str]:
 
 def _manual_entries() -> list[dict[str, str]]:
     text = MANUAL_ENTRY.read_text(encoding="utf-8")
-    pattern = re.compile(
-        r'\{\s*name:\s*"(?P<name>[^"]+)",\s*label:\s*"[^"]+",\s*'
-        r'unit:\s*"(?P<unit>[^"]+)",\s*category:\s*"(?P<category>[^"]+)"[^}]*\}'
-    )
+    pattern = re.compile(r'\{\s*name:\s*"(?P<name>[^"]+)"[^}]*\}')
     return [match.groupdict() for match in pattern.finditer(text)]
 
 

@@ -39,6 +39,15 @@ class IndicatorAssessment(TypedDict, total=False):
     band_id: str | None
     upper_operator: str | None
     evaluation_reason: str | None
+    input_integrity_status: Literal["VALID", "NEED_REVIEW"]
+    input_integrity_reason_code: str | None
+    input_integrity_message: str
+    input_integrity_rule_id: str | None
+    input_integrity_source_id: str | None
+    citations: list[dict]
+    explanation_sources: list[dict]
+    reference_range_source: dict | None
+    critical_threshold_source: dict | None
 
 
 class RetrievedChunk(TypedDict, total=False):
@@ -50,6 +59,11 @@ class RetrievedChunk(TypedDict, total=False):
     sources: list[str]
     score: float
     note_type: str  # description | high_note | low_note | critical_high_note | critical_low_note
+    source_id: str
+    source_title: str
+    organization: str
+    source_url: str
+    source_section: str
 
 
 class IndicatorExplanation(TypedDict, total=False):
@@ -67,6 +81,7 @@ class IndicatorExplanation(TypedDict, total=False):
     band_id: str | None
     upper_operator: str | None
     evaluation_reason: str | None
+    citations: list[dict]
 
 
 class DoctorQuestionMeta(TypedDict, total=False):
@@ -112,6 +127,9 @@ class AgentState(TypedDict, total=False):
     test_date: str
     language: str
     raw_indicators: list[IndicatorInput]
+
+    # --- Deterministic input-integrity gate (before medical classification) ---
+    input_integrity_results: list[dict]
 
     # --- OCR & Gate UI_Review: Bản nháp trích xuất từ ảnh & trạng thái kiểm duyệt ---
     # ocr_drafts: Danh sách các bản nháp chỉ số trích xuất từ Vision LLM Adapter (Vũ).

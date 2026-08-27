@@ -94,7 +94,7 @@ def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
     return "\n".join(lines)
 
 
-def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str:
+def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, response_style: str = "simple") -> str:
     critical_names = {alert.indicator_name for alert in data.critical_alerts}
     for ind in data.indicators:
         if getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None):
@@ -131,6 +131,63 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload) -> str
         and ind.name not in critical_ind_names
         and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
     )
+
+    norm_style = str(response_style).casefold()
+    if norm_style == "concise":
+        lines = ["Tổng hợp kết quả xét nghiệm:"]
+        if data.critical_alerts or critical_indicators:
+            lines.append("⚠️ NGUY KỊCH:")
+            if data.critical_alerts:
+                for alert in data.critical_alerts:
+                    lines.append(f"- {alert.indicator_name}: {alert.value} {alert.unit} ({alert.message})")
+            else:
+                for ind in critical_indicators:
+                    name = ind.analyte_canonical or ind.name
+                    lines.append(f"- {name}: {ind.value} {ind.unit} [NGUY KỊCH]")
+        if abnormal_indicators:
+            lines.append("Bất thường:")
+            for ind in abnormal_indicators:
+                name = ind.analyte_canonical or ind.name
+                status_str = "CAO" if str(ind.status).casefold() == "high" else "THẤP"
+                lines.append(f"- {name}: {ind.value} {ind.unit} [{status_str}]")
+        if normal_count > 0:
+            lines.append(f"{normal_count} chỉ số khác bình thường.")
+        if not critical_indicators and not abnormal_indicators and normal_count > 0:
+            lines = ["Tất cả chỉ số nằm trong khoảng tham chiếu bình thường."]
+        return "\n".join(lines)
+
+    if norm_style == "detailed":
+        lines = ["Dưới đây là bảng tổng hợp chi tiết kết quả xét nghiệm của bạn:"]
+        if data.critical_alerts or critical_indicators:
+            lines.append("\n### ⚠️ Chỉ số nguy kịch cần can thiệp:")
+            if data.critical_alerts:
+                for alert in data.critical_alerts:
+                    lines.append(f"- {alert.indicator_name}: {alert.value} {alert.unit} - {alert.message}")
+            else:
+                for ind in critical_indicators:
+                    name = ind.analyte_canonical or ind.name
+                    lines.append(f"- {name}: {ind.value} {ind.unit} (NGUY KỊCH)")
+        if abnormal_indicators:
+            lines.append("\n### Chỉ số nằm ngoài khoảng tham chiếu:")
+            for ind in abnormal_indicators:
+                name = ind.analyte_canonical or ind.name
+                status_str = "CAO" if str(ind.status).casefold() == "high" else "THẤP"
+                ref_str = f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})" if ind.reference_low is not None and ind.reference_high is not None else ""
+                lines.append(f"- {name}: {ind.value} {ind.unit}{ref_str} [{status_str}]")
+        if unknown_indicators:
+            lines.append("\n### Chỉ số chưa xác định khoảng tham chiếu:")
+            for ind in unknown_indicators:
+                name = ind.analyte_canonical or ind.name
+                lines.append(f"- {name}: {ind.value} {ind.unit}")
+        if normal_count > 0:
+            lines.append(f"\n### Chỉ số trong khoảng bình thường:\n- Có {normal_count} chỉ số đạt mức tham chiếu chuẩn.")
+        if not critical_indicators and not abnormal_indicators and not unknown_indicators and normal_count > 0:
+            lines = ["Tất cả các chỉ số xét nghiệm đã phân tích đều nằm trong khoảng tham chiếu thông thường."]
+        if abnormal_indicators or critical_indicators:
+            first_notable = (critical_indicators + abnormal_indicators)[0]
+            name = first_notable.analyte_canonical or first_notable.name
+            lines.append(f"\n### Hướng dẫn tiếp theo:\nBạn có thể hỏi thêm về chỉ số cụ thể (ví dụ: 'Giải thích kỹ hơn {name}') để chuẩn bị trao đổi cùng bác sĩ.")
+        return "\n".join(lines)
 
     lines = ["Dưới đây là tổng hợp kết quả xét nghiệm của bạn:"]
 
@@ -185,23 +242,14 @@ _CRITICAL_SIDE_LABELS = {
 }
 
 
-def _compose_explanation_message(data: ExplanationDataPayload) -> str:
+def _compose_explanation_message(data: ExplanationDataPayload, response_style: str = "simple") -> str:
     """ORCH-V1.4C deterministic single-analyte composition.
 
-    One canonical path:
-        ExplanationDataPayload with structured facts,
-        deterministic single-analyte composer,
-        final response.
-
     Output = DETERMINISTIC FACT BLOCK + EXISTING APPROVED EXPLANATION PROSE.
-    The general composer LLM is never invoked for this path, so it can never
-    rewrite value, unit, reference status, range or critical facts. Numeric
-    and unit formatting reuses the existing conventions (no rounding, no
-    invented operators); the two-sided range is rendered ONLY when both
-    authoritative bounds are available.
+    Facts (analyte, value, unit, status, range, critical) are 100% immutable across styles.
     """
     facts = data.facts
-    if facts is None:  # pragma: no cover - callers guarantee facts
+    if facts is None:
         return ""
     if facts.critical_status is not None:
         status_label = _CRITICAL_SIDE_LABELS.get(facts.critical_status, facts.critical_status.upper())
@@ -223,20 +271,60 @@ def _compose_explanation_message(data: ExplanationDataPayload) -> str:
         ))
     if facts.has_two_sided_reference_range:
         fact_lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
-    if facts.critical_status == "critical_high":
+    if facts.approved_critical_message:
+        fact_lines.append(f"\n⚠️ {facts.approved_critical_message}")
+    elif facts.critical_status == "critical_high":
         fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} tăng tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
     elif facts.critical_status == "critical_low":
         fact_lines.append(f"\n⚠️ CẢNH BÁO: {facts.analyte_name} giảm tới ngưỡng nguy kịch. Yêu cầu can thiệp y tế.")
-    elif facts.approved_critical_message:
-        # Approved existing critical warning, preserved verbatim.
-        fact_lines.append(f"\n⚠️ {facts.approved_critical_message}")
+
     approved_explanation = data.explanation.strip()
-    if data.presentation_mode == "education_first" and approved_explanation:
-        lines = [approved_explanation, "", *fact_lines]
-    else:
-        lines = fact_lines
+    norm_style = str(response_style).casefold()
+    if norm_style == "concise":
         if approved_explanation:
-            lines.extend(("", approved_explanation))
+            first_sentence = approved_explanation.split("\n")[0].split(". ")[0]
+            if not first_sentence.endswith("."):
+                first_sentence += "."
+            if data.presentation_mode == "education_first":
+                lines = [first_sentence, "", *fact_lines]
+            else:
+                lines = [*fact_lines, "", first_sentence]
+        else:
+            lines = fact_lines
+    elif norm_style == "detailed":
+        if approved_explanation:
+            if data.presentation_mode == "education_first":
+                lines = [
+                    f"Thông tin giáo dục về {facts.analyte_name}:",
+                    approved_explanation,
+                    "",
+                    *fact_lines,
+                    "",
+                    "Lưu ý: Kết quả cần được bác sĩ đánh giá kết hợp cùng triệu chứng lâm sàng và tiền sử bệnh của bạn.",
+                ]
+            else:
+                lines = [
+                    *fact_lines,
+                    "",
+                    "Thông tin tham khảo y khoa:",
+                    approved_explanation,
+                    "",
+                    "Lưu ý: Kết quả cần được bác sĩ đánh giá kết hợp cùng triệu chứng lâm sàng và tiền sử bệnh của bạn.",
+                ]
+        else:
+            lines = [
+                *fact_lines,
+                "",
+                "Lưu ý: Kết quả cần được bác sĩ đánh giá kết hợp cùng triệu chứng lâm sàng và tiền sử bệnh của bạn.",
+            ]
+    else:
+        if data.presentation_mode == "education_first" and approved_explanation:
+            lines = [approved_explanation, "", *fact_lines]
+        else:
+            lines = list(fact_lines)
+            if approved_explanation:
+                lines.extend(("", approved_explanation))
+
     return "\n".join(lines)
 
 
@@ -248,7 +336,21 @@ def _compose_doctor_questions_message(data: DoctorQuestionsPayload) -> str:
     return "\n".join(lines)
 
 
-def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | None, intent: IntentEnum, data: DataPayload | None = None) -> str:
+def deterministic_message_for(
+    status: ResponseStatus,
+    reason_code: ReasonCode | None,
+    intent: IntentEnum,
+    data: DataPayload | None = None,
+    response_style: str = "simple",
+) -> str:
+    if reason_code in {
+        ReasonCode.EMERGENCY_INPUT_SAFETY,
+        ReasonCode.MEDICAL_DIAGNOSIS_REQUEST,
+        ReasonCode.MEDICAL_CAUSE_REQUEST,
+        ReasonCode.TREATMENT_REQUEST,
+        ReasonCode.PERSONAL_MEDICAL_ADVICE,
+    }:
+        return _safety_refusal_message(reason_code)
     if reason_code == ReasonCode.OUT_OF_SCOPE:
         from src.orchestrator.service import OUT_OF_SCOPE_MESSAGE
         return OUT_OF_SCOPE_MESSAGE
@@ -279,32 +381,59 @@ def deterministic_message_for(status: ResponseStatus, reason_code: ReasonCode | 
         return "Hiện chưa có câu hỏi phù hợp cho phiếu xét nghiệm này."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
         if isinstance(data, AnalysisDataPayload):
-            return _format_whole_report_deterministic_summary(data)
+            return _format_whole_report_deterministic_summary(data, response_style=response_style)
         if isinstance(data, ExplanationDataPayload):
             if data.facts is not None:
-                return _compose_explanation_message(data)
-            # 0e128c5 contract: approved bare prose (no fact block) surfaces
-            # VERBATIM in the deterministic path — never swapped for a
-            # generic placeholder. A later refactor in the same PR range
-            # dropped this branch; restored.
+                return _compose_explanation_message(data, response_style=response_style)
             return data.explanation or "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
         return "Đây là phần giải thích đã được tạo cho chỉ số hiện tại."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.APP_HELP:
-        # The dispatcher already put the exact (verbatim, grounded) answer
-        # in data.explanation — this function must surface it as-is, not
-        # fall through to the generic AnalysisDataPayload-shaped message
-        # below (which ignores ExplanationDataPayload entirely).
         if isinstance(data, ExplanationDataPayload):
             return data.explanation
         return "Tôi chưa tìm thấy hướng dẫn phù hợp cho câu hỏi này."
     if status == ResponseStatus.SUCCESS:
         if isinstance(data, AnalysisDataPayload):
-            return _format_whole_report_deterministic_summary(data)
+            return _format_whole_report_deterministic_summary(data, response_style=response_style)
         return "Đây là kết quả phân tích hiện có."
     return "Tôi cần thêm thông tin để tiếp tục an toàn."
 
 
+STYLE_PROFILES: dict[str, dict[str, str]] = {
+    "concise": {
+        "name": "Ngắn gọn",
+        "instructions": (
+            "- Trả lời trực diện vào trọng tâm câu hỏi trước.\n"
+            "- Trình bày tối giản, ngắn gọn (1-2 đoạn ngắn).\n"
+            "- Giảm thiểu thuật ngữ phức tạp, không trích dẫn kiến thức sách giáo khoa dài dòng."
+        ),
+    },
+    "simple": {
+        "name": "Dễ hiểu",
+        "instructions": (
+            "- Dùng tiếng Việt bình dị, câu văn ngắn gọn, dễ tiếp cận cho người bệnh.\n"
+            "- Nếu có thuật ngữ y khoa cần thiết, giải thích ngay bằng từ ngữ đời thường.\n"
+            "- Trả lời từng khái niệm một, rõ ràng, thân thiện."
+        ),
+    },
+    "detailed": {
+        "name": "Chi tiết",
+        "instructions": (
+            "- Cung cấp thêm thông tin giáo dục y khoa liên quan một cách có cấu trúc rõ ràng.\n"
+            "- Thuật ngữ y khoa chỉ được dùng khi có giải thích kèm theo.\n"
+            "- Có thể chia thành các mục rõ ràng (ý nghĩa, vai trò sinh lý tổng quan).\n"
+            "- TUYỆT ĐỐI KHÔNG chuyển sang chế độ chẩn đoán bệnh, không suy đoán nguyên nhân cá nhân hay đề xuất điều trị."
+        ),
+    },
+}
+
+
 def _safety_refusal_message(reason_code: ReasonCode | None) -> str:
+    if reason_code == ReasonCode.EMERGENCY_INPUT_SAFETY:
+        return (
+            "Nếu bạn đang gặp các triệu chứng cấp cứu hoặc khó chịu nghiêm trọng (như khó thở, đau tức ngực dữ dội), "
+            "bạn không nên chờ đợi phản hồi từ trợ lý ảo. "
+            "Vui lòng liên hệ ngay cơ sở y tế gần nhất hoặc dịch vụ cấp cứu y tế tại địa phương để được hỗ trợ và xử trí kịp thời."
+        )
     if reason_code == ReasonCode.MEDICAL_DIAGNOSIS_REQUEST:
         return (
             "Mình không thể đưa ra chẩn đoán bệnh hoặc khẳng định tình trạng bệnh lý của bạn. "
@@ -321,6 +450,12 @@ def _safety_refusal_message(reason_code: ReasonCode | None) -> str:
         return (
             "Mình không thể hướng dẫn phương pháp điều trị hay tư vấn sử dụng thuốc. "
             "Bạn nên tham khảo ý kiến bác sĩ để có kế hoạch chăm sóc và điều trị phù hợp và an toàn nhất."
+        )
+    if reason_code == ReasonCode.PERSONAL_MEDICAL_ADVICE:
+        return (
+            "Mình không thể đưa ra tư vấn về chế độ ăn uống, thực phẩm bổ sung, hoặc điều trị cá nhân hóa. "
+            "Bạn nên tham khảo ý kiến bác sĩ hoặc chuyên gia dinh dưỡng để có chế độ phù hợp với tình trạng sức khỏe của bạn. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa các chỉ số xét nghiệm hoặc gợi ý câu hỏi để bạn trao đổi cùng bác sĩ."
         )
     return "Tôi không thể hỗ trợ yêu cầu này an toàn."
 
@@ -451,11 +586,23 @@ def _composer_prompt(
     reason_code: ReasonCode | None,
     data: DataPayload,
     fallback_message: str,
+    response_style: str = "simple",
 ) -> str:
+    style_entry = STYLE_PROFILES.get(response_style, STYLE_PROFILES["simple"])
+    style_rules = style_entry["instructions"]
     extra_rules = _APP_HELP_EXTRA_RULES if intent == IntentEnum.APP_HELP else ""
     return textwrap.dedent(
         f"""\
         You write one short patient-facing message in Vietnamese.
+
+        STYLE PROFILE: {style_entry['name']} ({response_style})
+        {style_rules}
+
+        PATIENT GROUNDING CONSTRAINTS (MANDATORY):
+        - You must ONLY refer to symptoms explicitly reported by the user in their messages.
+        - NEVER infer, speculate, or claim that the patient has symptoms (e.g. fatigue, shortness of breath, dizziness) that they have not reported.
+        - NEVER give a disease diagnosis or state that the patient has a specific condition (e.g. "bạn bị thiếu máu", "bạn mắc bệnh tim").
+        - You may state general medical facts about what an analyte does (e.g. "Hemoglobin có vai trò vận chuyển oxy"), but do not assert the patient has any specific illness.
 
         You may rewrite or summarize approved canonical information only.
         You may not recalculate medical status, reinterpret reference ranges,
@@ -486,6 +633,8 @@ async def compose_message(
     reason_code: ReasonCode | None,
     data: DataPayload,
     fallback_message: str,
+    response_style: str = "simple",
+    user_message: str | None = None,
 ) -> str:
     if status != ResponseStatus.SUCCESS:
         return fallback_message
@@ -494,15 +643,15 @@ async def compose_message(
     if isinstance(data, DoctorQuestionsPayload):
         return fallback_message
     if isinstance(data, ExplanationDataPayload) and data.facts is not None:
-        # ORCH-V1.4C: one canonical deterministic path. The general composer
-        # LLM must NOT run for fact-bearing single-analyte explanations, so
-        # hostile or incorrect rewrites of value/unit/status/range/critical
-        # facts can never reach the final response. Restored after the
-        # conversation-persistence refactor dropped it: with a live LLM the
-        # rewrite reordered the deterministic fact block and destroyed both
-        # the ORCH-V1.4C contracts and the G2 education-first ordering
-        # ("WBC là gì?" must lead with approved education, "WBC là bao
-        # nhiêu?" must lead with the fact block — in BOTH composer modes).
+        return fallback_message
+    # WAVE2-FIX: Whole-report AnalysisDataPayload summaries are 100%
+    # deterministic (_format_whole_report_deterministic_summary). Routing them
+    # through the LLM allows the model to generate unsafe patient-specific
+    # inferences (e.g. physiological state assertions) that then fail
+    # enforce_final_response, producing a false GUARDRAIL_BLOCKED result for
+    # a valid structured report read. The deterministic fallback is both safe
+    # and complete — no LLM rewrite is needed or appropriate here.
+    if isinstance(data, AnalysisDataPayload):
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,
@@ -510,6 +659,7 @@ async def compose_message(
         reason_code=reason_code,
         data=data,
         fallback_message=fallback_message,
+        response_style=response_style,
     )
     try:
         structured_llm = get_llm().with_structured_output(ComposedMessage)
@@ -520,39 +670,81 @@ async def compose_message(
         return fallback_message
     message = composed.message.strip() or fallback_message
     if intent == IntentEnum.APP_HELP and _app_help_rewrite_introduces_new_label(message, fallback_message):
-        # Safety net, not just a prompt instruction: the LLM is asked not to
-        # invent routes/button names, but a prompt is a request, not a
-        # guarantee (yeu-cau-vu.txt AH-10 needs a guarantee). If the rewrite
-        # names a quoted UI label or route that isn't in the source text,
-        # discard the rewrite and fall back to the verbatim corpus text.
         logger.info("App Help rewrite introduced an unverified label/route; using verbatim fallback")
         return fallback_message
     if intent == IntentEnum.APP_HELP and _app_help_rewrite_keeps_forbidden_artifact(message):
-        # Second, independent net: raw route paths / code filenames / chunk
-        # IDs must never reach the chat regardless of whether they existed in
-        # the source — the deterministic cleanup already stripped them from
-        # the fallback text, so a rewrite still carrying one reintroduced or
-        # retained it. Found live during final-integration verification: the
-        # model kept doctor-questions.md's inline `/patient/analysis`-style
-        # paths verbatim despite _APP_HELP_EXTRA_RULES.
         logger.info("App Help rewrite kept a forbidden artifact; using verbatim fallback")
         return fallback_message
     return message
 
 
+_UNGROUNDED_SYMPTOM_RE = re.compile(
+    r"\b(?:ban|em|nguoi benh)\s+(?:co the\s+)?(?:(?:dang|cam thay|gap|bi|co|mac|xuat hien|trieu chung)\s+)*(?:kho tho|met moi|chong mat|dau nguc|hoa mat|buon non|sot|co giat|ngat|dau dau|tuc nguc|danh trong nguc)\b",
+    re.IGNORECASE,
+)
+_UNGROUNDED_DIAGNOSIS_RE = re.compile(
+    r"\b(?:ban|em|nguoi benh)\s+(?:co the\s+)?(?:(?:dang|chac chan|bi|mac|mac phai|chan doan|co nguy co|nguy co cao mac|nguy co|dau hieu cua)\s+)+(?:thieu mau|benh tim|tieu duong|dai thao duong|ung thu|suy than|suy gan|nhiem trung|tai bien|dot quy|viem gan|xo gan|da hong cau)\b",
+    re.IGNORECASE,
+)
+_UNGROUNDED_PHYSIO_RE = re.compile(
+    r"\b(?:"
+    r"co the (?:ban|nguoi benh)?\s*(?:dang |duoc )?(?:cung cap oxy|thieu oxy|thieu mau|phuc hoi|hoi phuc|on dinh|khoe manh)"
+    r"|khien co the (?:ban )?(?:bi )?(?:thieu|met|suy|giam|thieu oxy)"
+    r"|lam co the (?:ban )?(?:bi )?(?:thieu|met|suy|giam|thieu oxy)"
+    r"|chuc nang (?:gan|than|tim|phoi|tao mau|mien dich) cua ban"
+    r"|cho thay (?:co the|suc khoe|ban) (?:dang |da )?(?:phuc hoi|tien trien tot|hoan toan khoe|khong co benh)"
+    r"|(?:ban|nguoi benh) (?:hoan toan khoe manh|khong co benh)"
+    r"|(?:ban|nguoi benh) (?:can|nen|phai) (?:uong|dung|tiem|bo sung|dieu tri|su dung thuoc|dung thuoc|mua thuoc|ngung thuoc)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _validate_patient_grounding(message: str, user_message: str | None = None) -> bool:
+    """Deterministic output-side grounding validator.
+
+    Detects and rejects unsupported patient-specific:
+    - Symptom attribution (unless explicitly reported by user)
+    - Disease diagnosis
+    - Causation and physiological state inferences
+    - Unsupported prognosis & reassurance
+    - Treatment implications
+    """
+    if not message:
+        return True
+    normalized_msg = _normalize(message)
+    normalized_user = _normalize(user_message or "")
+
+    if _UNGROUNDED_PHYSIO_RE.search(normalized_msg):
+        return False
+
+    if _UNGROUNDED_DIAGNOSIS_RE.search(normalized_msg):
+        return False
+
+    match_symptom = _UNGROUNDED_SYMPTOM_RE.search(normalized_msg)
+    if match_symptom:
+        matched_phrase = match_symptom.group(0)
+        symptom_keywords = (
+            "kho tho", "met moi", "chong mat", "dau nguc", "hoa mat",
+            "buon non", "sot", "co giat", "ngat", "dau dau", "tuc nguc", "danh trong nguc",
+        )
+        matched_tokens = [t for t in symptom_keywords if t in matched_phrase]
+        if not all(sym in normalized_user for sym in matched_tokens):
+            return False
+
+    return True
+
+
 _QUOTED_LABEL_RE = re.compile(r'"([^"]{2,60})"|\*\*([^*]{2,60})\*\*')
 _ROUTE_PATH_RE = re.compile(r"/[a-zA-Z][a-zA-Z0-9/_-]*")
 _FORBIDDEN_ARTIFACT_RE = re.compile(
-    r"`?/(?:patient|doctor|api)\b"  # raw app/API route path
-    r"|[\w.-]+\.(?:tsx|ts|jsx|mjs|py|md)\b"  # code/doc filename
-    r"|\w+::[\w-]+"  # internal chunk ID ("feature::section")
+    r"`?/(?:patient|doctor|api)\b"
+    r"|[\w.-]+\.(?:tsx|ts|jsx|mjs|py|md)\b"
+    r"|\w+::[\w-]+"
 )
 
 
 def _app_help_rewrite_keeps_forbidden_artifact(rewritten: str) -> bool:
-    """True if `rewritten` still shows any raw route path, code/doc filename,
-    or internal chunk ID — artifacts that must never reach an APP_HELP chat
-    message no matter what the source contained."""
     return bool(_FORBIDDEN_ARTIFACT_RE.search(rewritten))
 
 
@@ -568,8 +760,6 @@ def _extract_labels_and_routes(text: str) -> set[str]:
 
 
 def _app_help_rewrite_introduces_new_label(rewritten: str, source: str) -> bool:
-    """True if `rewritten` names a quoted UI label/button or a route path
-    that never appeared in `source` — i.e. the LLM likely invented it."""
     source_labels = _extract_labels_and_routes(source)
     rewritten_labels = _extract_labels_and_routes(rewritten)
     return not rewritten_labels.issubset(source_labels)
@@ -640,7 +830,7 @@ def _validate_actions(actions: Sequence[object]) -> list[SuggestedAction]:
     return [_ACTION_ADAPTER.validate_python(action) for action in actions]
 
 
-def enforce_final_response(response: OrchestratorResponse) -> OrchestratorResponse:
+def enforce_final_response(response: OrchestratorResponse, user_message: str | None = None) -> OrchestratorResponse:
     try:
         validated = OrchestratorResponse.model_validate(response.model_dump())
     except Exception:
@@ -650,6 +840,8 @@ def enforce_final_response(response: OrchestratorResponse) -> OrchestratorRespon
     if validator.validate(validated.message):
         return _guardrail_blocked_response(validated.intent)
     if _message_contradicts_canonical_data(validated.message, validated.data):
+        return _guardrail_blocked_response(validated.intent)
+    if not _validate_patient_grounding(validated.message, user_message):
         return _guardrail_blocked_response(validated.intent)
     return validated
 
@@ -661,8 +853,10 @@ async def build_final_response(
     data: DataPayload,
     reason_code: ReasonCode | None = None,
     suggested_actions: Sequence[object] = (),
+    response_style: str = "simple",
+    user_message: str | None = None,
 ) -> OrchestratorResponse:
-    fallback_message = deterministic_message_for(status, reason_code, intent, data)
+    fallback_message = deterministic_message_for(status, reason_code, intent, data, response_style=response_style)
 
     if isinstance(data, NeedsInputPayload):
         friendly_prompt = map_needs_input_prompt(data.missing_fields, fallback_message)
@@ -675,6 +869,8 @@ async def build_final_response(
         reason_code=reason_code,
         data=data,
         fallback_message=fallback_message,
+        response_style=response_style,
+        user_message=user_message,
     )
     try:
         actions = _validate_actions(suggested_actions)
@@ -691,18 +887,11 @@ async def build_final_response(
         sources=_sources_from_data(data),
         safety_notice=data.safety_notice if isinstance(data, BlockedPayload) else None,
     )
-    return enforce_final_response(response)
+    return enforce_final_response(response, user_message=user_message)
 
 
 def build_provenance_response(data: ExplanationDataPayload) -> OrchestratorResponse:
-    """CHAT-V1.5-R1-G1: deterministic provenance response assembly.
-
-    The provenance wording rendered by the dispatcher is authoritative and is
-    copied verbatim into the final message. The general composer LLM never
-    runs on this path, so it can never invent or rewrite a source identity.
-    The assembled response still passes the same final safety guardrails as
-    every other response.
-    """
+    """CHAT-V1.5-R1-G1: deterministic provenance response assembly."""
     return enforce_final_response(
         OrchestratorResponse(
             intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
@@ -717,6 +906,7 @@ def build_provenance_response(data: ExplanationDataPayload) -> OrchestratorRespo
 
 __all__ = [
     "ComposedMessage",
+    "STYLE_PROFILES",
     "build_final_response",
     "build_provenance_response",
     "compose_message",

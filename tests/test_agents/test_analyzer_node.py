@@ -38,7 +38,8 @@ async def test_analyzer_uses_curated_fallback_when_llm_and_rag_are_unavailable(m
     result = await analyzer_node({"indicators": [indicator()], "patient_gender": "male"})
 
     assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
-    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])
+    assert indicator()["explanation"] in result["indicators"][0]["explanation"]
+    assert "không tự xác định bệnh" in result["indicators"][0]["explanation"]
     assert result["retrieved_contexts"] == []
 
 
@@ -59,7 +60,7 @@ async def test_retrieval_failure_does_not_fail_analysis(monkeypatch):
 
     assert result["indicators"][0]["status"] == "normal"
     assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
-    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])
+    assert indicator()["explanation"] in result["indicators"][0]["explanation"]
     assert result["retrieved_contexts"] == []
 
 
@@ -131,7 +132,7 @@ async def test_slow_llm_times_out_and_uses_curated_fallback(monkeypatch):
     )
 
     assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in result["indicators"][0]["explanation"]
-    assert result["indicators"][0]["explanation"].endswith(indicator()["explanation"])
+    assert indicator()["explanation"] in result["indicators"][0]["explanation"]
 
 
 @pytest.mark.asyncio
@@ -162,6 +163,13 @@ async def test_analyzer_rag_disabled_produces_curated_explanation(monkeypatch):
     assert "Phát hiện nội dung có thể chứa yếu tố suy đoán" not in explanation
     assert "nằm trong khoảng tham chiếu được hệ thống sử dụng" in explanation
     assert len(result["indicators"][0]["sources"]) > 0
+    citation = result["indicators"][0]["explanation_sources"][0]
+    assert citation["source_id"]
+    assert citation["title"]
+    assert citation["organization"]
+    assert citation["url"].startswith("https://")
+    assert citation["analyte"] == "Potassium"
+    assert citation["note_type"]
 
 
 @pytest.mark.asyncio
@@ -381,7 +389,7 @@ async def test_urea_high_uses_only_safe_grounding_segments(monkeypatch):
     retrieved_text = " ".join(chunk["text"] for chunk in result["retrieved_contexts"])
 
     assert result["indicators"][0]["status"] == "high"
-    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "Kết quả Urea là 7.9 mmol/L" in explanation
     assert "cao so với khoảng tham chiếu được hệ thống sử dụng" in explanation
     assert "có thể do" not in structured_llm.prompt
     assert "có thể do" not in retrieved_text
@@ -430,7 +438,7 @@ async def test_all_unsafe_retrieval_and_no_llm_use_safe_deterministic_urea_path(
     explanation = result["indicators"][0]["explanation"]
 
     assert result["retrieved_contexts"] == []
-    assert "Giá trị Urea là 7.9 mmol/L" in explanation
+    assert "Kết quả Urea là 7.9 mmol/L" in explanation
     assert "có thể do" not in explanation
     assert MedicalSafetyValidator().validate(explanation) == []
 

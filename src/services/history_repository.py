@@ -54,10 +54,21 @@ from src.services.indicator_catalog_service import (
     IndicatorConfigurationService,
     get_indicator_configuration_service,
 )
+from src.services.medical_citations import get_medical_citation_repository
 from src.services.question_templates import GeneratedQuestion
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 logger = logging.getLogger(__name__)
+
+
+def _structured_explanation_sources(indicator: ReportIndicator) -> list[dict]:
+    return [
+        citation.as_dict()
+        for citation in get_medical_citation_repository().resolve_many(
+            analyte=indicator.analyte_canonical or indicator.name,
+            sources=list(indicator.sources or []),
+        )
+    ]
 
 
 def _normalize_indicator_name(name: str) -> str:
@@ -671,6 +682,8 @@ def to_detail(
                 ),
                 reviewed_at=indicator.reviewed_at,
                 sources=list(indicator.sources or []),
+                citations=_structured_explanation_sources(indicator),
+                explanation_sources=_structured_explanation_sources(indicator),
             )
             for indicator in report.indicators
         ],

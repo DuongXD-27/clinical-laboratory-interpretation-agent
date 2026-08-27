@@ -29,6 +29,7 @@ from src.orchestrator.dispatcher import (
     dispatch_workflow,
 )
 from src.orchestrator.gates import (
+    emergency_safety_gate,
     is_provenance_request,
     medical_safety_gate,
     onboarding_gate,
@@ -104,6 +105,8 @@ async def _response_from_workflow(
     result: WorkflowResult,
     *,
     progress_callback: ProgressCallback | None = None,
+    response_style: str = "simple",
+    user_message: str | None = None,
 ) -> OrchestratorResponse:
     await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
     return await build_final_response(
@@ -111,6 +114,8 @@ async def _response_from_workflow(
         status=result.status,
         data=result.data,
         reason_code=result.reason_code,
+        response_style=response_style,
+        user_message=user_message,
     )
 
 
@@ -180,8 +185,8 @@ def _is_unclear_input(message: str) -> bool:
     if not raw:
         return True
 
-    # 1. Any medical safety trigger (diagnosis, cause, treatment) is coherent
-    if medical_safety_gate(message) is not None:
+    # 1. Any medical safety trigger (emergency, diagnosis, cause, treatment) is coherent
+    if emergency_safety_gate(message) is not None or medical_safety_gate(message) is not None:
         return False
 
     # 2. Any explicit analyte or lab value or OCR bypass is coherent
@@ -242,6 +247,7 @@ def _log_turn(
     workflow_selected: str,
     failure_code: ReasonCode | None,
     started_at: float,
+    guardrail_triggered: bool = False,
 ) -> None:
     logger.info(
         "orchestrator_turn",
@@ -254,7 +260,7 @@ def _log_turn(
             "workflow_selected": workflow_selected,
             "workflow_outcome": "blocked" if failure_code else "completed",
             "failure_code": failure_code.value if failure_code is not None else None,
-            "guardrail_triggered": False,
+            "guardrail_triggered": guardrail_triggered,
             "authorization_outcome":"denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
@@ -391,6 +397,30 @@ async def _handle_message_core(
         return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ.")
 
     route: RouteDecision | None = None
+
+    # 0. Emergency / Urgent symptom safety gate (deterministic short-circuit)
+    emergency_reason = emergency_safety_gate(request.message)
+    if emergency_reason is not None:
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
+            reason_code=emergency_reason,
+            route_confidence=1.0,
+        )
+        response = _blocked_response(
+            route.intent,
+            route.reason_code,
+            _safety_refusal_message(route.reason_code),
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected="",
+            failure_code=route.reason_code,
+            started_at=started_at,
+        )
+        return response
 
     reason = onboarding_gate(session)
     if reason is not None:
@@ -700,10 +730,27 @@ async def _handle_message_core(
         await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
         final_response = build_provenance_response(result.data)
     else:
+        # Resolve effective response style: per-message override takes precedence over persisted user style
+        effective_style = "simple"
+        if request.ui_context and getattr(request.ui_context, "response_style", None):
+            style_val = str(request.ui_context.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+        elif getattr(current_user, "response_style", None):
+            style_val = str(current_user.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+        elif getattr(session, "response_style", None):
+            style_val = str(session.response_style).casefold()
+            if style_val in {"concise", "simple", "detailed"}:
+                effective_style = style_val
+
         final_response = await _response_from_workflow(
             route.intent,
             result,
             progress_callback=progress_callback,
+            response_style=effective_style,
+            user_message=request.message,
         )
 
     # Save conversation state with active timestamp
@@ -736,6 +783,9 @@ async def _handle_message_core(
         workflow_selected=result.workflow_selected,
         failure_code=result.reason_code,
         started_at=started_at,
+        guardrail_triggered=(
+            final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
+        ),
     )
     return final_response
 
