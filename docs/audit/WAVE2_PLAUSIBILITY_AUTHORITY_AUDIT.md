@@ -1,6 +1,6 @@
 # Wave 2 plausibility authority audit
 
-Audit date: 2026-08-27  
+Audit date: 2026-08-27
 Scope: Potassium, fasting plasma glucose, and HGB input-integrity activation
 
 ## External authority reviewed
