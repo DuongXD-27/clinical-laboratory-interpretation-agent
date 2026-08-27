@@ -986,6 +986,14 @@ class LatencyGroupSchema(BaseModel):
     requests_per_min: float | None = None
     llm_call_count: int
     llm_error_count: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    # `None` = chua tinh duoc gia cho model nao trong nhom nay. Khong phai 0.0:
+    # 0 doc nhu mien phi chu khong nhu khong biet.
+    cost_usd: float | None = None
+    # Khac 0 nghia la con so chi phi dang bao THAP hon thuc te.
+    unpriced_call_count: int = 0
+    cost_per_call_usd: float | None = None
 
 
 class LatencyGroupsResponse(BaseModel):
@@ -999,6 +1007,10 @@ class LatencyGroupsResponse(BaseModel):
     api: LatencyGroupSchema
     window_hours: int
     window_minutes: float | None = None
+    # Ngay cap nhat bang gia. Chi phi la so CAU HINH chu khong phai so DO DUOC —
+    # nha cung cap doi gia ma khong hoi ai — nen man hinh phai noi con so nay cu
+    # bao nhieu thay vi trinh bay no nhu su that do luong.
+    pricing_updated: str | None = None
 
 
 class TraceSummarySchema(BaseModel):

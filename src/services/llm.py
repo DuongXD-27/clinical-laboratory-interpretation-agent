@@ -4,6 +4,7 @@ from langchain_openai import ChatOpenAI
 
 from src.config import get_settings
 from src.services.langfuse_tracing import get_callback_handler
+from src.services.llm_usage import LlmUsageCallback
 
 
 def get_llm() -> BaseChatModel:
@@ -20,7 +21,13 @@ def get_llm() -> BaseChatModel:
 
     settings = get_settings()
     handler = get_callback_handler()
-    callbacks = [handler] if handler is not None else []
+    # `LlmUsageCallback` LUON duoc gan, khong phu thuoc Langfuse: no la nguon duy
+    # nhat cho `llm_call_count`, token va chi phi. Truoc day con so do suy tu
+    # event ma chi `analyzer_node` phat ra, nen no dem thieu 5 trong 6 cho goi
+    # LLM — xem `llm_usage.py`.
+    callbacks: list[object] = [LlmUsageCallback()]
+    if handler is not None:
+        callbacks.append(handler)
 
     if settings.llm_provider == "gemini":
         return ChatGoogleGenerativeAI(

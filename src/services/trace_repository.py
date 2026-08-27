@@ -76,6 +76,17 @@ def record_trace(
             llm_call_count=int(_num("llm_call_count")),
             llm_ms=_num("llm_ms"),
             llm_error_count=int(_num("llm_error_count")),
+            llm_input_tokens=int(_num("llm_input_tokens")),
+            llm_output_tokens=int(_num("llm_output_tokens")),
+            # KHONG dung `_num` cho chi phi: `_num` doi None thanh 0.0, ma o day
+            # `None` mang thong tin — "chua tinh duoc gia". Ep ve 0.0 la bien
+            # "khong biet" thanh "mien phi".
+            llm_cost_usd=(
+                float(fields["llm_cost_usd"])
+                if fields.get("llm_cost_usd") is not None
+                else None
+            ),
+            llm_unpriced_call_count=int(_num("llm_unpriced_call_count")),
             user_role=user_role,
             server_timing=server_timing,
         )
@@ -223,6 +234,10 @@ def summarise_latency_groups(
         RequestTrace.status_code,
         RequestTrace.llm_call_count,
         RequestTrace.llm_error_count,
+        RequestTrace.llm_input_tokens,
+        RequestTrace.llm_output_tokens,
+        RequestTrace.llm_cost_usd,
+        RequestTrace.llm_unpriced_call_count,
     )
     if since is not None:
         query = query.where(RequestTrace.created_at >= since)

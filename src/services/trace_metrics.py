@@ -108,6 +108,12 @@ class GroupMetrics:
     requests_per_min: float | None = None
     llm_call_count: int = 0
     llm_error_count: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    # `None` = khong loi goi nao trong nhom nay tinh duoc gia. Khong phai 0.0.
+    cost_usd: float | None = None
+    unpriced_call_count: int = 0
+    cost_per_call_usd: float | None = None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -122,6 +128,11 @@ class GroupMetrics:
             "requests_per_min": self.requests_per_min,
             "llm_call_count": self.llm_call_count,
             "llm_error_count": self.llm_error_count,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "cost_usd": self.cost_usd,
+            "unpriced_call_count": self.unpriced_call_count,
+            "cost_per_call_usd": self.cost_per_call_usd,
         }
 
 
@@ -131,6 +142,11 @@ class _Accumulator:
     error_count: int = 0
     llm_call_count: int = 0
     llm_error_count: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    priced_any: bool = False
+    unpriced_call_count: int = 0
 
 
 def summarise_by_group(
@@ -171,6 +187,14 @@ def summarise_by_group(
 
         acc.llm_call_count += int(getattr(row, "llm_call_count", 0) or 0)
         acc.llm_error_count += int(getattr(row, "llm_error_count", 0) or 0)
+        acc.input_tokens += int(getattr(row, "llm_input_tokens", 0) or 0)
+        acc.output_tokens += int(getattr(row, "llm_output_tokens", 0) or 0)
+        acc.unpriced_call_count += int(getattr(row, "llm_unpriced_call_count", 0) or 0)
+
+        row_cost = getattr(row, "llm_cost_usd", None)
+        if row_cost is not None:
+            acc.cost_usd += float(row_cost)
+            acc.priced_any = True
 
     result: dict[str, dict[str, object]] = {}
     for group, acc in buckets.items():
@@ -189,6 +213,18 @@ def summarise_by_group(
             ),
             llm_call_count=acc.llm_call_count,
             llm_error_count=acc.llm_error_count,
+            input_tokens=acc.input_tokens,
+            output_tokens=acc.output_tokens,
+            cost_usd=round(acc.cost_usd, 6) if acc.priced_any else None,
+            unpriced_call_count=acc.unpriced_call_count,
+            # Chia cho SO LUOT GOI LLM, khong phai so request: mot request
+            # `/analyze` nhieu chi so goi LLM nhieu lan, con mot request khong
+            # goi LLM thi khong nen keo con so nay xuong.
+            cost_per_call_usd=(
+                round(acc.cost_usd / acc.llm_call_count, 6)
+                if acc.priced_any and acc.llm_call_count
+                else None
+            ),
         )
         result[group] = metrics.as_dict()
 

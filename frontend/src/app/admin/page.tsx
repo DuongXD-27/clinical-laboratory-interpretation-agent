@@ -78,6 +78,98 @@ function Cell({ value, suffix = "ms" }: { value: number | null; suffix?: string 
   return <span>{shown}</span>;
 }
 
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+/** Chi phí LLM: token và tiền.
+ *
+ * Trước đây màn này chỉ có "GỌI LLM: 27 lượt" — biết số lượt mà không biết tốn
+ * bao nhiêu tiền, endpoint nào tốn nhất.
+ *
+ * Hai điều bảng này phải nói thật:
+ *
+ * 1. `cost_usd === null` hiện dấu gạch kèm lời giải thích, KHÔNG hiện "$0.00".
+ *    `$0.00` đọc như miễn phí, dấu gạch đọc như không biết.
+ * 2. `unpriced_call_count > 0` phải cảnh báo: con số chi phí đang báo thấp hơn
+ *    thực tế vì có lượt gọi model chưa có trong bảng giá.
+ */
+function CostPanel({ latency }: { latency: LatencyGroups }) {
+  const ai = latency.ai;
+  const totalTokens = ai.input_tokens + ai.output_tokens;
+  const unpriced = ai.unpriced_call_count;
+
+  return (
+    <Card className="gap-0 py-4">
+      <CardContent className="px-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Chi phí LLM
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {/* Giá là số CẤU HÌNH, không phải số đo được — nhà cung cấp đổi giá
+                mà không hỏi ai. Nói ngày cập nhật để người đọc biết nó cũ bao
+                nhiêu, thay vì trình bày như sự thật đo lường. */}
+            Ước lượng theo bảng giá cập nhật {latency.pricing_updated ?? "—"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          <div>
+            <span className="block text-xs text-muted-foreground">Token vào</span>
+            <strong className="block text-lg font-semibold tabular-nums">
+              {formatTokens(ai.input_tokens)}
+            </strong>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Token ra</span>
+            <strong className="block text-lg font-semibold tabular-nums">
+              {formatTokens(ai.output_tokens)}
+            </strong>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Chi phí</span>
+            <strong className="block text-lg font-semibold tabular-nums">
+              {ai.cost_usd === null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                `$${ai.cost_usd.toFixed(4)}`
+              )}
+            </strong>
+          </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">Mỗi lượt gọi</span>
+            <strong className="block text-lg font-semibold tabular-nums">
+              {ai.cost_per_call_usd === null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                `$${ai.cost_per_call_usd.toFixed(5)}`
+              )}
+            </strong>
+          </div>
+        </div>
+
+        {ai.cost_usd === null && totalTokens > 0 ? (
+          <p className="m-0 mt-3 text-xs leading-relaxed text-muted-foreground">
+            Đã đếm được {formatTokens(totalTokens)} token nhưng chưa có giá cho model đang dùng, nên
+            không quy ra tiền được. Token thì đo được, giá thì phải khai trong{" "}
+            <code className="font-mono">llm_cost.py</code>.
+          </p>
+        ) : null}
+
+        {unpriced > 0 ? (
+          <p className="m-0 mt-3 rounded border border-[var(--status-abnormal-border)] bg-[var(--status-abnormal-bg)] px-3 py-2 text-xs leading-relaxed text-[var(--status-abnormal-fg)]">
+            {unpriced} lượt gọi dùng model chưa có trong bảng giá nên bị bỏ ngoài phép tính. Con số
+            chi phí ở trên đang <strong>thấp hơn thực tế</strong>.
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** Phân vị độ trễ, tách nhóm AI và API thường.
  *
  * Đây là thứ thay cho ô "Trung bình" cũ. Trên dữ liệu thật, trung bình toàn hệ
@@ -359,6 +451,8 @@ export default function AdminTracePage() {
       ) : null}
 
       {latency ? <LatencyTable latency={latency} /> : null}
+
+      {latency ? <CostPanel latency={latency} /> : null}
 
       {summary ? (
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">

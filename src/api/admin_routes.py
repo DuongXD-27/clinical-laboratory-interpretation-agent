@@ -31,7 +31,13 @@ from src.models.schemas import (
     TraceSummarySchema,
     TracingStatusSchema,
 )
-from src.services import langfuse_tracing, span_tree, trace_metrics, trace_repository
+from src.services import (
+    langfuse_tracing,
+    llm_cost,
+    span_tree,
+    trace_metrics,
+    trace_repository,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -104,6 +110,7 @@ async def traces_latency(
         api=LatencyGroupSchema(**groups[trace_metrics.GROUP_API]),
         window_hours=window_hours,
         window_minutes=data["window_minutes"],
+        pricing_updated=llm_cost.PRICING_UPDATED,
     )
 
 

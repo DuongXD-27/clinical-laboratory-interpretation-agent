@@ -980,6 +980,22 @@ class RequestTrace(Base):
     # xuống cấp, chỉ bệnh nhân nhận ra.
     llm_error_count = Column(Integer, nullable=False, default=0)
 
+    # --- token va chi phi ---
+    #
+    # Nguon la callback gan o `get_llm()` (xem `llm_usage.py`), tuc phu ca sau
+    # cho goi LLM. `llm_call_count` phia tren truoc day chi dem cho analyzer nen
+    # no dem thieu; tu 27/08 no dung.
+    llm_input_tokens = Column(Integer, nullable=False, default=0)
+    llm_output_tokens = Column(Integer, nullable=False, default=0)
+    # `nullable=True` va mac dinh None, KHONG phai 0.0: `None` nghia la chua
+    # tinh duoc gia (model chua co trong bang gia), con 0.0 doc nhu mien phi.
+    # Tren mot man hinh dung de quyet dinh chuyen tien thi nham hai thu do la
+    # nham dat.
+    llm_cost_usd = Column(Float, nullable=True)
+    # Bao nhieu luot bi bo ngoai phep tinh tien. Khac 0 nghia la con so chi phi
+    # dang bao THAP hon thuc te, va man hinh phai noi ra.
+    llm_unpriced_call_count = Column(Integer, nullable=False, default=0)
+
     user_role = Column(String(20), nullable=True)
 
     # Chuỗi Server-Timing, giữ nguyên để màn chi tiết dựng lại được cây span mà

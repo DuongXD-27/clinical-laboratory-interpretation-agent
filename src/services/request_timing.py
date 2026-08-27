@@ -17,6 +17,13 @@ from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 
+from src.services import llm_cost
+
+# Ten event cua moi loi goi LLM. Dinh nghia TAI DAY chu khong o `llm_usage`:
+# `llm_usage` da phu thuoc module nay (no goi `add_timing_event`), nen dat hang
+# so ben do roi import nguoc lai la vong tron import.
+LLM_CALL_EVENT = "llm-call"
+
 _SERVER_TIMING_NAME_RE = re.compile(r"[^a-zA-Z0-9_-]+")
 _current_timing: ContextVar[RequestTiming | None] = ContextVar(
     "current_request_timing",
@@ -113,25 +120,73 @@ class RequestTiming:
         return ", ".join(f'{name};dur={duration:.3f}' for name, duration in metrics)
 
     def _llm_summary(self, events: list[TimingEvent]) -> dict[str, object]:
-        """Gom các lần gọi LLM thành ba con số phẳng.
+        """Gom moi loi goi LLM thanh cac con so phang: so luot, ms, loi, token, tien.
 
-        Suy từ event đã có sẵn chứ không bắt `analyzer_node` ghi thêm — nó vốn
-        đã ghi `llm-explanation-call` kèm `outcome` cho từng chỉ số.
+        ## Nguon la event `llm-call` do callback o `get_llm()` phat ra
 
-        Cần phẳng vì `events` là một chuỗi JSON trong dòng log: hỏi "request nào
-        LLM chạy quá 5 giây" mà phải parse chuỗi đó thì không ai hỏi.
+        Truoc day ham nay dem event `llm-explanation-call`, ma **chi
+        `analyzer_node` phat ra**. Co sau cho goi `get_llm()`: analyzer,
+        guardrail, intent_router, response_composer va hai service xu huong.
+        Nen `llm_call_count` DEM THIEU nam trong sau cho, va `llm_error_count`
+        — field ma ca lop quan sat ton tai vi no — sai theo dung cach do.
 
-        ``llm_error_count`` là field đáng giá nhất ở đây. Khi LLM hỏng, analyzer
-        im lặng rơi về curated explanation và bệnh nhân nhận nội dung xuống cấp —
-        không mã lỗi, không cảnh báo, response vẫn 200. Có con số này thì "LLM
-        đang hỏng bao nhiêu phần trăm" là một truy vấn log, thay vì phải gọi API
-        rồi bấm giờ bằng tay.
+        Callback gan o `get_llm()` thi theo cau truc phu het, ke ca cho them sau
+        nay. Doi lai: **con so nay se TANG so voi bang cu**. Do la sua sai, khong
+        phai hoi quy — nhung ai so sanh so lieu truoc va sau ngay 27/08 can biet.
+
+        Van giu nhanh du phong doc `llm-explanation-call`: trace cu trong DB va
+        vai test dung truc tiep event do, va mat con so con te hon con so tang.
+
+        ## Chi phi la UOC LUONG, va co the khong tinh duoc
+
+        `llm_cost_usd` la `None` khi khong loi goi nao doc duoc gia (model chua
+        co trong bang gia). KHONG tra 0.0 — 0 doc nhu mien phi chu khong nhu
+        khong biet. `llm_unpriced_call_count` noi ro bao nhieu luot bi bo ngoai
+        phep tinh, de mot bang gia cu khong am tham lam chi phi bao thap di.
         """
 
-        calls = [event for event in events if event.name == "llm-explanation-call"]
+        calls = [event for event in events if event.name == LLM_CALL_EVENT]
+        if not calls:
+            calls = [event for event in events if event.name == "llm-explanation-call"]
 
         if not calls:
-            return {"llm_call_count": 0, "llm_ms": None, "llm_error_count": 0}
+            return {
+                "llm_call_count": 0,
+                "llm_ms": None,
+                "llm_error_count": 0,
+                "llm_input_tokens": 0,
+                "llm_output_tokens": 0,
+                "llm_cost_usd": None,
+                "llm_unpriced_call_count": 0,
+            }
+
+        input_tokens = 0
+        output_tokens = 0
+        cost_total = 0.0
+        priced_any = False
+        unpriced = 0
+
+        for call in calls:
+            call_in = int(call.attributes.get("input_tokens", 0) or 0)
+            call_out = int(call.attributes.get("output_tokens", 0) or 0)
+            input_tokens += call_in
+            output_tokens += call_out
+
+            if call.attributes.get("outcome") == "error":
+                # Loi thi khong co token va khong co tien — nha cung cap khong
+                # tinh phi mot lan goi that bai truoc khi sinh.
+                continue
+
+            model = str(call.attributes.get("model", "") or "")
+            call_cost = llm_cost.cost_usd(model, call_in, call_out)
+            if call_cost is None:
+                # Chi tinh la "chua co gia" khi that su co token de tinh. Mot
+                # luot 0 token thi khong co gi bi bo ngoai phep tinh.
+                if call_in or call_out:
+                    unpriced += 1
+            else:
+                cost_total += call_cost
+                priced_any = True
 
         return {
             "llm_call_count": len(calls),
@@ -139,6 +194,10 @@ class RequestTiming:
             "llm_error_count": sum(
                 1 for call in calls if call.attributes.get("outcome") == "error"
             ),
+            "llm_input_tokens": input_tokens,
+            "llm_output_tokens": output_tokens,
+            "llm_cost_usd": round(cost_total, 6) if priced_any else None,
+            "llm_unpriced_call_count": unpriced,
         }
 
     def as_log_fields(

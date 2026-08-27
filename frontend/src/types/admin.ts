@@ -77,6 +77,13 @@ export type LatencyGroup = {
   requests_per_min: number | null;
   llm_call_count: number;
   llm_error_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  /** `null` = chưa tính được giá cho model nào trong nhóm. Không phải 0. */
+  cost_usd: number | null;
+  /** Khác 0 nghĩa là con số chi phí đang báo THẤP hơn thực tế. */
+  unpriced_call_count: number;
+  cost_per_call_usd: number | null;
 };
 
 export type LatencyGroups = {
@@ -84,6 +91,8 @@ export type LatencyGroups = {
   api: LatencyGroup;
   window_hours: number;
   window_minutes: number | null;
+  /** Ngày cập nhật bảng giá — chi phí là số cấu hình, không phải số đo được. */
+  pricing_updated: string | null;
 };
 
 /** Một dòng trong cây span, đã phẳng hoá theo `depth`.
