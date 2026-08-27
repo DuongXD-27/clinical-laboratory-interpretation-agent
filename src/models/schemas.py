@@ -934,6 +934,38 @@ class RequestTraceListResponse(BaseModel):
     items: list[RequestTraceSchema] = Field(default_factory=list)
 
 
+class SpanRowSchema(BaseModel):
+    """Mot dong trong cay span, da phang hoa theo `depth`.
+
+    Tra danh sach phang chu khong tra cau truc long: giao dien chi can thut le
+    theo `depth`, va mot danh sach phang thi khong de quy sai duoc.
+    """
+
+    name: str
+    duration_ms: float
+    depth: int
+    # Phan thoi gian cua nut nay khong nam trong bat ky con nao. `None` o la —
+    # khac han 0.0, von nghia la "co con va chung giai thich het thoi gian".
+    unaccounted_ms: float | None = None
+    share_pct: float | None = None
+
+
+class SpanAggregateSchema(BaseModel):
+    """So do bang CONG DON qua ca request, khong phai mot khoang lien mach."""
+
+    name: str
+    duration_ms: float
+
+
+class SpanTreeResponse(BaseModel):
+    """Cay span cua mot request — tra loi "4.99 giay cham vi dau"."""
+
+    request_id: str
+    rows: list[SpanRowSchema] = Field(default_factory=list)
+    aggregates: list[SpanAggregateSchema] = Field(default_factory=list)
+    total_ms: float | None = None
+
+
 class LatencyGroupSchema(BaseModel):
     """So lieu do tre cua MOT nhom endpoint.
 

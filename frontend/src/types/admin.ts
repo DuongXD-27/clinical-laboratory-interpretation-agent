@@ -85,3 +85,25 @@ export type LatencyGroups = {
   window_hours: number;
   window_minutes: number | null;
 };
+
+/** Một dòng trong cây span, đã phẳng hoá theo `depth`.
+ *
+ * Cấu trúc cây do backend dựng (`src/services/span_tree.py`). Bảng quan hệ
+ * cha–con KHÔNG nhân đôi sang đây: nhân đôi một bảng phân cấp sang hai ngôn ngữ
+ * là đúng loại trôi đã xảy ra với question_templates.json khi đổi analyte id.
+ */
+export type SpanRow = {
+  name: string;
+  duration_ms: number;
+  depth: number;
+  /** `null` ở lá — lá không có gì để khẳng định. `0` nghĩa là con giải thích hết. */
+  unaccounted_ms: number | null;
+  share_pct: number | null;
+};
+
+export type SpanTree = {
+  request_id: string;
+  rows: SpanRow[];
+  aggregates: Array<{ name: string; duration_ms: number }>;
+  total_ms: number | null;
+};

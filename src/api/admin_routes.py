@@ -25,10 +25,13 @@ from src.models.schemas import (
     LatencyGroupsResponse,
     RequestTraceListResponse,
     RequestTraceSchema,
+    SpanAggregateSchema,
+    SpanRowSchema,
+    SpanTreeResponse,
     TraceSummarySchema,
     TracingStatusSchema,
 )
-from src.services import langfuse_tracing, trace_metrics, trace_repository
+from src.services import langfuse_tracing, span_tree, trace_metrics, trace_repository
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -143,6 +146,39 @@ async def list_traces(
     return RequestTraceListResponse(
         total=total,
         items=[RequestTraceSchema.model_validate(row) for row in rows],
+    )
+
+
+@router.get("/traces/{request_id}/spans", response_model=SpanTreeResponse)
+async def get_trace_spans(
+    request_id: str,
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> SpanTreeResponse:
+    """Cay span cua mot request: request -> graph -> tung node -> LLM.
+
+    Endpoint RIENG chu khong them truong `spans` vao `RequestTraceSchema`: schema
+    do dung chung cho ca danh sach, va nhoi cay span vao day se lam moi trang
+    danh sach nang len vi mot thu chi man chi tiet can.
+
+    Bang quan he cha-con chi ton tai o `span_tree.py` chu khong nhan doi sang
+    TypeScript. Nhan doi mot bang phan cap sang hai ngon ngu la dung loai troi
+    da xay ra voi `question_templates.json` khi doi ten analyte id.
+    """
+
+    trace = trace_repository.get_trace(db, request_id)
+    if trace is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy trace với request_id này.",
+        )
+
+    tree = span_tree.build_span_tree(trace.server_timing)
+    return SpanTreeResponse(
+        request_id=request_id,
+        rows=[SpanRowSchema(**row) for row in tree["rows"]],
+        aggregates=[SpanAggregateSchema(**agg) for agg in tree["aggregates"]],
+        total_ms=tree["total_ms"],
     )
 
 
