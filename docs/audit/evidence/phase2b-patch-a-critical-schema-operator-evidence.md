@@ -16,7 +16,7 @@ that work without removing those invariants.
 - `src/agents/nodes/critical_detector_node.py`
 - `tests/test_agents/test_critical_detector_node.py`
 - `tests/test_data/test_critical_data_quality.py`
-- `docs/version-handoff/phase2b-patch-a-critical-schema-operator-evidence.md`
+- `docs/audit/evidence/phase2b-patch-a-critical-schema-operator-evidence.md`
 
 No production data file was edited by Patch A.
 

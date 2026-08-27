@@ -1,9 +1,7 @@
-﻿# coding=utf-8
 import json
-import logging
-import unicodedata
 from collections import defaultdict
 from pathlib import Path
+
 from src.config import get_settings
 from src.services.context_budget import build_bounded_context
 from src.services.embedding_provider import get_embedding_provider
@@ -28,6 +26,7 @@ _NOTE_TO_STATUS = {
     "normal_note": "normal",
 }
 
+
 def _analyte_status_pairs(store: VectorStore) -> list[tuple[str, str]]:
     raw = store.get_collection(create_if_missing=False).get(include=["metadatas"])
     by_analyte: dict[str, set[str]] = defaultdict(set)
@@ -43,6 +42,7 @@ def _analyte_status_pairs(store: VectorStore) -> list[tuple[str, str]]:
     pairs = [(analyte, status) for analyte, statuses in sorted(by_analyte.items()) for status in sorted(statuses)]
     return pairs
 
+
 def get_primary_note(status: str) -> str:
     if "critical" in status:
         return f"{status}_note"
@@ -51,6 +51,7 @@ def get_primary_note(status: str) -> str:
     if status not in ["normal", "unknown"]:
         return "band_note"
     return "description"
+
 
 def main() -> None:
     settings = get_settings()
@@ -64,13 +65,14 @@ def main() -> None:
     )
     retriever = ChromaMedicalKnowledgeRetriever(store)
     pairs = _analyte_status_pairs(store)
-    max_k = max(TOP_K_CANDIDATES)
 
     candidates_by_pair: dict[tuple[str, str], list] = {}
     for analyte_id, status in pairs:
         critical_status = status if "critical" in status else None
-        band_id = status if status not in ["normal", "low", "high", "critical_high", "critical_low", "unknown"] else None
-        
+        band_id = (
+            status if status not in ["normal", "low", "high", "critical_high", "critical_low", "unknown"] else None
+        )
+
         candidates = retriever.retrieve(
             query=_QUERY_TEXT.get(analyte_id, "Gi?i thích"),
             analyte_id=analyte_id,
@@ -90,7 +92,9 @@ def main() -> None:
             total_chunks = 0
             total_ctx_chars = 0
             for analyte_id, status in pairs:
-                chunks = [c for c in candidates_by_pair[(analyte_id, status)] if float(c.get("score", 0.0)) >= min_score][:top_k]
+                chunks = [
+                    c for c in candidates_by_pair[(analyte_id, status)] if float(c.get("score", 0.0)) >= min_score
+                ][:top_k]
                 if not chunks:
                     fallback_count += 1
                     continue
@@ -113,7 +117,9 @@ def main() -> None:
                 }
             )
 
-    RESULT_PATH.write_text(json.dumps({"pairs_tested": len(pairs), "results": sweep_results}, indent=2, ensure_ascii=False))
+    RESULT_PATH.write_text(
+        json.dumps({"pairs_tested": len(pairs), "results": sweep_results}, indent=2, ensure_ascii=False)
+    )
 
     lines = [
         "# Retrieval parameter sweep (RETRIEVAL_MIN_SCORE x top_k)",
@@ -131,6 +137,6 @@ def main() -> None:
     REPORT_PATH.write_text("\n".join(lines) + "\n")
     print(f"Wrote {RESULT_PATH} and {REPORT_PATH}")
 
+
 if __name__ == "__main__":
     main()
-

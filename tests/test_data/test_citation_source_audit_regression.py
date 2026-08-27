@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import pytest
 
 from src.scripts.ingest_kb import corpus_sha256
 from src.services.corpus_builder import build_corpus_chunks
@@ -691,7 +690,7 @@ AUDIT_RECORDS = [
     {
         "analyte": "HDL-C",
         "source_id": "SRC-MEDLINEPLUS-HDL",
-        "source_title": "HDL: The \"Good\" Cholesterol",
+        "source_title": 'HDL: The "Good" Cholesterol',
         "organization": "National Library of Medicine (MedlinePlus)",
         "source_tier": "TIER_2",
         "current_url": "https://medlineplus.gov/hdlthegoodcholesterol.html",
@@ -751,7 +750,7 @@ AUDIT_RECORDS = [
     {
         "analyte": "LDL-C",
         "source_id": "SRC-MEDLINEPLUS-LDL",
-        "source_title": "LDL: The \"Bad\" Cholesterol",
+        "source_title": 'LDL: The "Bad" Cholesterol',
         "organization": "National Library of Medicine (MedlinePlus)",
         "source_tier": "TIER_2",
         "current_url": "https://medlineplus.gov/ldlthebadcholesterol.html",
@@ -864,9 +863,7 @@ def test_every_replacement_url_matches_approved_manifest_exactly():
         assert sid in sources_map, f"Source ID {sid} must be present in explanations.json"
         actual_url = sources_map[sid]["url"]
         expected_url = r["replacement_url"]
-        assert actual_url == expected_url, (
-            f"Source ID {sid} URL mismatch: expected {expected_url}, got {actual_url}"
-        )
+        assert actual_url == expected_url, f"Source ID {sid} URL mismatch: expected {expected_url}, got {actual_url}"
 
 
 def test_all_keep_records_remain_unchanged():
@@ -896,9 +893,7 @@ def test_no_homepage_only_citation_remains_for_creatinine_or_tamanh():
     sources_map = _load_sources_map()
     assert "SRC-TAMANH-CRE" not in sources_map
     for sid, src in sources_map.items():
-        assert src["url"] != "https://tamanhhospital.vn", (
-            f"Homepage-only URL found on source {sid}"
-        )
+        assert src["url"] != "https://tamanhhospital.vn", f"Homepage-only URL found on source {sid}"
 
 
 def test_source_metadata_consistency():
@@ -959,7 +954,9 @@ def test_runtime_provenance_representative_cases():
 
     # 2. HbA1c: SRC-CDC-A1C-MGMT absent, active CDC citation preserved
     assert repo.resolve(analyte="HbA1c", source_id="SRC-CDC-A1C-MGMT") is None
-    assert repo.resolve(analyte="HbA1c", url="https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html") is None
+    assert (
+        repo.resolve(analyte="HbA1c", url="https://www.cdc.gov/diabetes/managing/managing-blood-sugar/a1c.html") is None
+    )
     cdc_active = repo.resolve(analyte="HbA1c", source_id="SRC-CDC-A1C")
     assert cdc_active is not None
     assert cdc_active.url == "https://www.cdc.gov/diabetes/diabetes-testing/prediabetes-a1c-test.html"
@@ -982,7 +979,10 @@ def test_runtime_provenance_representative_cases():
     # LDL-C: NLA canonical & CDC canonical
     nla_citation = repo.resolve(analyte="LDL-C", source_id="SRC-NLA-NCEP-2014")
     assert nla_citation is not None
-    assert nla_citation.url == "https://www.lipid.org/resource/nla-recommendations-for-patient-centered-management-of-dyslipidemia/"
+    assert (
+        nla_citation.url
+        == "https://www.lipid.org/resource/nla-recommendations-for-patient-centered-management-of-dyslipidemia/"
+    )
 
     cdc_ldl = repo.resolve(analyte="LDL-C", source_id="SRC-CDC-LDL")
     assert cdc_ldl is not None

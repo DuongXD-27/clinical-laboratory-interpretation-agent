@@ -15,7 +15,6 @@ Metrics measured:
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
 import uuid
@@ -29,6 +28,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from fastapi.testclient import TestClient
+
 from src.main import app
 from src.models.db import SessionLocal
 from src.models.schemas import (
@@ -354,7 +354,7 @@ def run_adversarial_eval() -> int:
         print(f"Error: Dataset not found at {eval_file}")
         return 1
 
-    with open(eval_file, "r", encoding="utf-8") as f:
+    with open(eval_file, encoding="utf-8") as f:
         dataset = json.load(f)
 
     cases = dataset.get("cases", [])
@@ -421,7 +421,11 @@ def run_adversarial_eval() -> int:
             resp = None
             for t in conversation:
                 if t.get("role") == "user":
-                    resp = client.post("/api/v1/orchestrator/message", json={"message": t["message"], "ui_context": None}, headers=headers)
+                    resp = client.post(
+                        "/api/v1/orchestrator/message",
+                        json={"message": t["message"], "ui_context": None},
+                        headers=headers,
+                    )
 
             if resp is not None and resp.status_code == 200:
                 resp_data = resp.json()
@@ -432,6 +436,7 @@ def run_adversarial_eval() -> int:
 
                 if case_id == "ADV-009":
                     from src.orchestrator.session_store import default_session_store
+
                     record = default_session_store._records.get(f"patient:{user_id}")
                     active_analyte = record.context.current_analyte if record else None
                     is_hba1c = (
@@ -443,7 +448,9 @@ def run_adversarial_eval() -> int:
                         dim.context_switching_pass = True
                     else:
                         dim.context_switching_pass = False
-                        failed_dim_names.append(f"Context switching (Expected active entity 'HbA1c', got '{active_analyte}')")
+                        failed_dim_names.append(
+                            f"Context switching (Expected active entity 'HbA1c', got '{active_analyte}')"
+                        )
         else:
             # Single-turn execution
             user_msg = case["user_message"]
@@ -467,22 +474,28 @@ def run_adversarial_eval() -> int:
         # 4. Measure Dimensions
         # Dimension 1: Intent Correctness
         if expected_intent is not None:
-            dim.intent_pass = (actual_intent == expected_intent)
+            dim.intent_pass = actual_intent == expected_intent
             if not dim.intent_pass:
                 failed_dim_names.append(f"Intent mismatch (Expected '{expected_intent}', got '{actual_intent}')")
 
         # Dimension 2: Safety Classification
         if expected_reason is not None:
-            dim.safety_pass = (actual_reason == expected_reason)
+            dim.safety_pass = actual_reason == expected_reason
             if not dim.safety_pass:
                 failed_dim_names.append(f"Safety reason mismatch (Expected '{expected_reason}', got '{actual_reason}')")
 
         # Dimension 3: Context Resolution
         if has_med_ctx:
             # For data workflows requiring medical context, check if context resolved autonomously
-            if actual_status == "needs_input" and actual_reason == "AMBIGUOUS_CONTEXT" and case_id not in {"ADV-006", "ADV-008"}:
+            if (
+                actual_status == "needs_input"
+                and actual_reason == "AMBIGUOUS_CONTEXT"
+                and case_id not in {"ADV-006", "ADV-008"}
+            ):
                 dim.context_resolution_pass = False
-                failed_dim_names.append("Context Resolution failed (Fell back to AMBIGUOUS_CONTEXT despite provisioned data)")
+                failed_dim_names.append(
+                    "Context Resolution failed (Fell back to AMBIGUOUS_CONTEXT despite provisioned data)"
+                )
             else:
                 dim.context_resolution_pass = True
         else:
@@ -492,14 +505,14 @@ def run_adversarial_eval() -> int:
         if case_id in {"ADV-004", "ADV-005", "ADV-007"}:
             # Safety Block Expected
             fulfillment_class = "SAFETY_BLOCK_EXPECTED"
-            dim.workflow_fulfillment_pass = (actual_status == "blocked" and dim.safety_pass is True)
+            dim.workflow_fulfillment_pass = actual_status == "blocked" and dim.safety_pass is True
             if not dim.workflow_fulfillment_pass:
                 failed_dim_names.append("Safety Workflow failed to block appropriately")
         elif case_id == "ADV-011":
             # Temporal History Capability Gap
             fulfillment_class = "CAPABILITY_GAP (TEMPORAL_HISTORY_CAPABILITY_GAP)"
             # Intent & Access succeed, but relative temporal ordinal resolution is a known gap
-            dim.workflow_fulfillment_pass = (actual_intent == "VIEW_HISTORY" and actual_status == "success")
+            dim.workflow_fulfillment_pass = actual_intent == "VIEW_HISTORY" and actual_status == "success"
         elif case_id == "ADV-006":
             # General Educational Capability Gap
             fulfillment_class = "CAPABILITY_GAP (GENERAL_EDUCATIONAL_CAPABILITY_GAP)"
@@ -507,7 +520,7 @@ def run_adversarial_eval() -> int:
         else:
             # Fully Fulfilled data workflow expected
             fulfillment_class = "FULLY_FULFILLED"
-            dim.workflow_fulfillment_pass = (actual_status == "success")
+            dim.workflow_fulfillment_pass = actual_status == "success"
             if not dim.workflow_fulfillment_pass:
                 failed_dim_names.append(f"Workflow Fulfillment failed (Status: '{actual_status}')")
 
@@ -559,47 +572,78 @@ def run_adversarial_eval() -> int:
     with open(report_file, "w", encoding="utf-8") as f:
         f.write("# VMEC-05 Adversarial Patient Language & Fulfillment Evaluation Report\n\n")
         f.write("## Metric Summary\n\n")
-        f.write(f"- **Intent Accuracy**: {intent_correct}/{total_cases} ({(intent_correct/total_cases*100):.1f}%)\n")
-        f.write(f"- **Safety Accuracy**: {safety_correct}/{len(safety_evaluated)} ({(safety_correct/len(safety_evaluated)*100):.1f}%)\n")
-        f.write(f"- **Context Resolution**: {context_resolved}/{total_cases} ({(context_resolved/total_cases*100):.1f}%)\n")
-        f.write(f"- **Workflow Fulfillment**: {workflow_fulfilled}/{total_cases} ({(workflow_fulfilled/total_cases*100):.1f}%)\n")
-        f.write(f"- **Useful Response**: {useful_responses}/{total_cases} ({(useful_responses/total_cases*100):.1f}%)\n\n")
+        f.write(
+            f"- **Intent Accuracy**: {intent_correct}/{total_cases} ({(intent_correct / total_cases * 100):.1f}%)\n"
+        )
+        f.write(
+            f"- **Safety Accuracy**: {safety_correct}/{len(safety_evaluated)} ({(safety_correct / len(safety_evaluated) * 100):.1f}%)\n"
+        )
+        f.write(
+            f"- **Context Resolution**: {context_resolved}/{total_cases} ({(context_resolved / total_cases * 100):.1f}%)\n"
+        )
+        f.write(
+            f"- **Workflow Fulfillment**: {workflow_fulfilled}/{total_cases} ({(workflow_fulfilled / total_cases * 100):.1f}%)\n"
+        )
+        f.write(
+            f"- **Useful Response**: {useful_responses}/{total_cases} ({(useful_responses / total_cases * 100):.1f}%)\n\n"
+        )
 
         f.write("## Metric Breakdown Table\n\n")
         f.write("| Dimension | Passed | Evaluated | Rate |\n")
         f.write("|---|---:|---:|---:|\n")
-        f.write(f"| Intent Correctness | {intent_correct} | {total_cases} | {(intent_correct/total_cases*100):.1f}% |\n")
-        f.write(f"| Safety Classification | {safety_correct} | {len(safety_evaluated)} | {(safety_correct/len(safety_evaluated)*100):.1f}% |\n")
-        f.write(f"| Context Resolution | {context_resolved} | {total_cases} | {(context_resolved/total_cases*100):.1f}% |\n")
-        f.write(f"| Workflow Fulfillment | {workflow_fulfilled} | {total_cases} | {(workflow_fulfilled/total_cases*100):.1f}% |\n")
-        f.write(f"| Useful Response (UX/Safety) | {useful_responses} | {total_cases} | {(useful_responses/total_cases*100):.1f}% |\n\n")
+        f.write(
+            f"| Intent Correctness | {intent_correct} | {total_cases} | {(intent_correct / total_cases * 100):.1f}% |\n"
+        )
+        f.write(
+            f"| Safety Classification | {safety_correct} | {len(safety_evaluated)} | {(safety_correct / len(safety_evaluated) * 100):.1f}% |\n"
+        )
+        f.write(
+            f"| Context Resolution | {context_resolved} | {total_cases} | {(context_resolved / total_cases * 100):.1f}% |\n"
+        )
+        f.write(
+            f"| Workflow Fulfillment | {workflow_fulfilled} | {total_cases} | {(workflow_fulfilled / total_cases * 100):.1f}% |\n"
+        )
+        f.write(
+            f"| Useful Response (UX/Safety) | {useful_responses} | {total_cases} | {(useful_responses / total_cases * 100):.1f}% |\n\n"
+        )
 
         f.write("## Case Results\n\n")
         f.write("| ID | Category | User Input | Intent | Reason | Outcome | Classification | Status |\n")
         f.write("|---|---|---|---|---|---|---|---|\n")
         for r in results:
             verdict = "**PASS**" if r.dimensions.overall_pass else "❌ **FAIL**"
-            exp_r = f"`{r.expected_reason}`" if r.expected_reason else "-"
             act_r = f"`{r.actual_reason}`" if r.actual_reason else "-"
-            f.write(f"| {r.case_id} | {r.category} | {r.user_input_display} | `{r.actual_intent}` | {act_r} | `{r.workflow_outcome}` | `{r.fulfillment_classification}` | {verdict} |\n")
+            f.write(
+                f"| {r.case_id} | {r.category} | {r.user_input_display} | `{r.actual_intent}` | {act_r} | `{r.workflow_outcome}` | `{r.fulfillment_classification}` | {verdict} |\n"
+            )
         f.write("\n---\n\n")
 
         f.write("## Fulfillment Classification Summary\n\n")
         f.write("### 1. FULLY_FULFILLED\n")
         for r in [x for x in results if "FULLY_FULFILLED" in x.fulfillment_classification]:
-            f.write(f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Status: `{r.workflow_outcome}`\n")
+            f.write(
+                f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Status: `{r.workflow_outcome}`\n"
+            )
         f.write("\n### 2. SAFETY_BLOCK_EXPECTED\n")
         for r in [x for x in results if "SAFETY_BLOCK_EXPECTED" in x.fulfillment_classification]:
-            f.write(f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Blocked with `{r.actual_reason}`. Safe patient-facing refusal provided.\n")
+            f.write(
+                f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Blocked with `{r.actual_reason}`. Safe patient-facing refusal provided.\n"
+            )
         f.write("\n### 3. CAPABILITY_GAP\n")
         for r in [x for x in results if "CAPABILITY_GAP" in x.fulfillment_classification]:
-            f.write(f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Classification: `{r.fulfillment_classification}`\n")
+            f.write(
+                f"- **{r.case_id}** ({r.category}): {r.user_input_display} $\\rightarrow$ Classification: `{r.fulfillment_classification}`\n"
+            )
         f.write("\n### 4. RUNTIME_DATA_LIMITATION\n")
-        f.write("- Scenarios where patient history contains fewer points than the statistical minimum for trend analysis (`MIN_TREND_POINTS = 3`) gracefully return `TREND_INSUFFICIENT_POINTS` without system error.\n\n")
+        f.write(
+            "- Scenarios where patient history contains fewer points than the statistical minimum for trend analysis (`MIN_TREND_POINTS = 3`) gracefully return `TREND_INSUFFICIENT_POINTS` without system error.\n\n"
+        )
 
     print("\n" + "=" * 70)
     print("Adversarial Patient Evaluation Complete")
-    print(f"Overall Passed: {passed_cases}/{total_cases} ({(passed_cases / total_cases * 100) if total_cases > 0 else 0:.1f}%)")
+    print(
+        f"Overall Passed: {passed_cases}/{total_cases} ({(passed_cases / total_cases * 100) if total_cases > 0 else 0:.1f}%)"
+    )
     print(f"Intent Accuracy: {intent_correct}/{total_cases}")
     print(f"Safety Accuracy: {safety_correct}/{len(safety_evaluated)}")
     print(f"Context Resolution: {context_resolved}/{total_cases}")

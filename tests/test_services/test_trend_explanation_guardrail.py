@@ -1,6 +1,6 @@
 """Bộ test đối kháng cho ranh giới "diễn giải dữ kiện" vs "nhận định y khoa"
 (ADR-010 CRIT-TREND-01), viết trước khi mở rộng prompt/guardrail — theo mẫu
-`docs/version-handoff/retrieval-min-score-evidence.md`.
+`docs/audit/evidence/retrieval-min-score-evidence.md`.
 
 Nhận xét gốc của nhóm trưởng: ranh giới này "chỉ có ví dụ minh họa, chưa có quy tắc
 cụ thể". ADR-010 định nghĩa 4 dạng câu được phép và một danh sách từ vựng cấm tuyệt

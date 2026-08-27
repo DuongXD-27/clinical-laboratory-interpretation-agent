@@ -17,7 +17,7 @@ trực tiếp trong code — không có ý nào bị bỏ qua:
 | --- | --- | --- | --- |
 | 1 | Metadata-prong cho điểm 1.0 cứng, tin tưởng mù quáng vào nhãn, bỏ qua chất lượng nội dung thật | Sửa 2 lần: (a) length-taper — chunk quá ngắn bị loại, chunk vừa đủ dài không còn ăn trần điểm; (b) sau khi bị chỉ ra length ≠ quality, thêm **cross-check ngữ nghĩa** — điểm cuối = `min(length_ceiling, cosine_similarity(chunk, query))`, dùng lại embedding đã lưu sẵn trong Chroma (không tốn thêm API call) | `_metadata_score()` trong `medical_knowledge_retriever.py`; test `test_long_correctly_labeled_but_semantically_off_topic_metadata_chunk_is_capped` |
 | 2 | Dedup bằng ngưỡng cứng 0.6 (containment) — rủi ro gộp nhầm 2 nguyên nhân khác nhau, hoặc bỏ sót 2 câu cùng ý khác chữ | **Bỏ hẳn** cơ chế này, không tinh chỉnh ngưỡng. Giờ chỉ dedup khi trùng y hệt từng chữ (exact-text) | Grep `src/services/medical_knowledge_retriever.py` không còn `SequenceMatcher`; test `test_reviewer_false_positive_pair_is_preserved` tái hiện đúng case nhận xét nêu |
-| 3 | Chốt cứng `RETRIEVAL_MIN_SCORE=0.3`/`top_k=3` không chứng minh | Đo bằng thực nghiệm, không đoán: `eval/rag/adversarial_threshold_test.py` chèn rác thật (9 loại × 3 miền độc lập) cạnh nội dung thật, tìm ra ranh giới phân tách rồi mới chốt **0.8** (không phải 0.3). `top_k=3` xác nhận đủ dùng qua `eval/rag/retrieval_param_sweep.py` (tăng lên không giúp gì thêm). **Xem chi tiết đầy đủ và cách tái tạo tại `docs/version-handoff/retrieval-min-score-evidence.md`** | file evidence riêng nêu trên |
+| 3 | Chốt cứng `RETRIEVAL_MIN_SCORE=0.3`/`top_k=3` không chứng minh | Đo bằng thực nghiệm, không đoán: `eval/rag/adversarial_threshold_test.py` chèn rác thật (9 loại × 3 miền độc lập) cạnh nội dung thật, tìm ra ranh giới phân tách rồi mới chốt **0.8** (không phải 0.3). `top_k=3` xác nhận đủ dùng qua `eval/rag/retrieval_param_sweep.py` (tăng lên không giúp gì thêm). **Xem chi tiết đầy đủ và cách tái tạo tại `docs/audit/evidence/retrieval-min-score-evidence.md`** | file evidence riêng nêu trên |
 | 4 | `GENERATION_SAFETY_CONTRACT`/`STATUS_QUALIFIERS` viết tay 2 lần ở analyzer và guardrail — rủi ro drift | Gom về `src/services/medical_safety_assets.py`, cả 2 node cùng import. Khi verify lại phát hiện guardrail lúc đầu vẫn viết tay rule riêng và chưa gọi `ensure_reference_qualification()` sau rewrite — đã vá luôn | mục 5 bên dưới; test `test_safety_remediation.py` |
 | 5 | Context length chưa giới hạn (nối chunk trực tiếp) | Thêm `context_budget.py::build_bounded_context` — ngân sách ký tự, không cắt giữa chunk, wire vào cả 3 nơi nối context | mục 5 "Context budget" bên dưới |
 
@@ -212,7 +212,7 @@ qua được lớp 1. Lớp cross-check ngữ nghĩa chặn thêm trường hợ
 dung thực sự (qua embedding) không liên quan tới câu hỏi, điểm bị hạ xuống
 đúng mức độ liên quan thật, không còn ăn trần chỉ vì khớp nhãn. Xem thêm giới
 hạn của cách này (không bắt được nội dung sai nhưng viết trôi chảy đúng chủ
-đề) tại `docs/version-handoff/retrieval-min-score-evidence.md`.
+đề) tại `docs/audit/evidence/retrieval-min-score-evidence.md`.
 
 **Dense-prong (kênh bổ sung)** — semantic search với câu hỏi từ 4a, filter
 `analyte_id` + `note_type` đúng trạng thái, `k = max(top_k*2, số note_type
@@ -341,7 +341,7 @@ Cả 3 nơi nối context (analyzer, guardrail `grounding_context_for`, guardrai
 | `RAG_CORPUS_VERSION` | `medical-kb-v2` | Ghi vào metadata collection, đối chiếu khi mở lại collection |
 | `EMBEDDING_PROVIDER` | `disabled` | `disabled` / `openai` / `gemini` |
 | `EMBEDDING_MODEL_NAME`, `EMBEDDING_DIMENSION`, `EMBEDDING_TIMEOUT_SECONDS` | — | Cấu hình model embedding |
-| `RETRIEVAL_MIN_SCORE` | `0.8` | Ngưỡng relevance gate. **Giá trị này được chứng minh bằng thực nghiệm, không phải đoán** — xem đầy đủ cách đo, số liệu và giới hạn tại **`docs/version-handoff/retrieval-min-score-evidence.md`** (tóm tắt: sàn điểm nội dung thật đo được là 0.807 trên 3 miền độc lập, 0.8 là ngưỡng an toàn tối đa trước khi bắt đầu mất nội dung thật) |
+| `RETRIEVAL_MIN_SCORE` | `0.8` | Ngưỡng relevance gate. **Giá trị này được chứng minh bằng thực nghiệm, không phải đoán** — xem đầy đủ cách đo, số liệu và giới hạn tại **`docs/audit/evidence/retrieval-min-score-evidence.md`** (tóm tắt: sàn điểm nội dung thật đo được là 0.807 trên 3 miền độc lập, 0.8 là ngưỡng an toàn tối đa trước khi bắt đầu mất nội dung thật) |
 | `RETRIEVAL_TOP_K` | `3` | Số chunk tối đa trả về mỗi lần retrieve |
 | `METADATA_PRONG_ENABLED` | `true` | Bật/tắt kênh metadata |
 | `METADATA_MIN_CHUNK_LENGTH` | `30` | Chunk ngắn hơn ngưỡng này (sau khi bỏ dấu) bị loại khỏi candidate pool |
@@ -368,7 +368,7 @@ khác nhau.
   nội dung thật. Đây là giới hạn cấu trúc, không phải lỗ hổng cần tinh chỉnh
   thêm — lớp chặn thật sự cho việc này là `GENERATION_SAFETY_CONTRACT` +
   `MedicalSafetyValidator` ở guardrail. Chi tiết:
-  `docs/version-handoff/retrieval-min-score-evidence.md`.
+  `docs/audit/evidence/retrieval-min-score-evidence.md`.
 - **`hba1c/critical_high` có biên an toàn mỏng** so với ngưỡng 0.8 (chỉ cách
   ~0.005-0.006) — không nguy hiểm (rơi về fallback vẫn an toàn) nhưng nên
   theo dõi khi đổi embedding model hoặc cách viết query.

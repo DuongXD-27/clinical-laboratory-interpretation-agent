@@ -15,9 +15,7 @@ all six frozen response quality golden suites:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-import os
 import re
 import sys
 import time
@@ -35,6 +33,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from fastapi.testclient import TestClient
+
 from src.agents.state import RetrievedChunk
 from src.main import app
 from src.models.db import SessionLocal
@@ -46,8 +45,6 @@ from src.models.schemas import (
     IndicatorResultSchema,
 )
 from src.services import history_repository
-from src.services.context_budget import build_bounded_context
-from src.services.llm import get_llm
 
 GLOBAL_FORBIDDEN_LEAKAGE_TERMS = [
     "current_analyte",
@@ -334,15 +331,12 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
         # 1. Multiple reports list (e.g. CRQ-001, CRQ-015, CRQ-020)
         if "reports" in fixture and isinstance(fixture["reports"], list):
             for idx, r_data in enumerate(fixture["reports"]):
-                t_date = _parse_date(r_data.get("test_date") or f"2026-0{idx+6}-15")
+                t_date = _parse_date(r_data.get("test_date") or f"2026-0{idx + 6}-15")
                 raw_inds = r_data.get("indicators", [])
                 if not raw_inds:
                     raw_inds = [{"analyte": "WBC", "value": 7.0, "unit": "G/L", "status": "normal"}]
                 indicators = [_build_indicator_schema(ind) for ind in raw_inds]
-                alerts = [
-                    _build_critical_alert_schema(ca)
-                    for ca in r_data.get("critical_alerts", [])
-                ]
+                alerts = [_build_critical_alert_schema(ca) for ca in r_data.get("critical_alerts", [])]
                 has_crit = len(alerts) > 0 or any(ind.is_critical for ind in indicators)
                 req = AnalyzeRequest(
                     patient_age=35,
@@ -355,7 +349,7 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
                     indicators=indicators,
                     critical_alerts=alerts,
                     has_critical_values=has_crit,
-                    summary=f"Report {r_data.get('report_ref', idx+1)}",
+                    summary=f"Report {r_data.get('report_ref', idx + 1)}",
                     guardrail_passed=True,
                 )
                 history_repository.save_report(db, patient_id=user_id, request=req, response=resp)
@@ -367,12 +361,14 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
             for analyte, pts in fixture["longitudinal_data"].items():
                 for pt in pts:
                     d_str = pt.get("date", "2026-08-15")
-                    by_date.setdefault(d_str, []).append({
-                        "analyte": analyte,
-                        "value": pt.get("value", 0.0),
-                        "unit": pt.get("unit", "G/L"),
-                        "status": pt.get("status", "normal"),
-                    })
+                    by_date.setdefault(d_str, []).append(
+                        {
+                            "analyte": analyte,
+                            "value": pt.get("value", 0.0),
+                            "unit": pt.get("unit", "G/L"),
+                            "status": pt.get("status", "normal"),
+                        }
+                    )
             for d_str, inds in sorted(by_date.items()):
                 t_date = _parse_date(d_str)
                 schema_inds = [_build_indicator_schema(ind) for ind in inds]
@@ -394,17 +390,22 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
             return True
 
         # 3. Longitudinal points list (e.g. TRQ-001, TRQ-005, GRQ-016, HAL-016)
-        if ("points" in fixture and isinstance(fixture["points"], list)) or (
-            "trend_points" in fixture and isinstance(fixture["trend_points"], list)
-        ) or (
-            isinstance(fixture.get("deterministic_payload"), dict) and "trend_points" in fixture["deterministic_payload"]
+        if (
+            ("points" in fixture and isinstance(fixture["points"], list))
+            or ("trend_points" in fixture and isinstance(fixture["trend_points"], list))
+            or (
+                isinstance(fixture.get("deterministic_payload"), dict)
+                and "trend_points" in fixture["deterministic_payload"]
+            )
         ):
             pts = (
                 fixture.get("points")
                 or fixture.get("trend_points")
                 or fixture.get("deterministic_payload", {}).get("trend_points", [])
             )
-            analyte = fixture.get("selected_analyte") or fixture.get("deterministic_payload", {}).get("analyte") or "WBC"
+            analyte = (
+                fixture.get("selected_analyte") or fixture.get("deterministic_payload", {}).get("analyte") or "WBC"
+            )
             default_unit = fixture.get("unit") or fixture.get("deterministic_payload", {}).get("unit") or "G/L"
 
             for pt in pts:
@@ -412,12 +413,14 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
                 val = pt.get("value", 0.0)
                 u = pt.get("unit", default_unit)
                 st = pt.get("status", "normal")
-                ind = _build_indicator_schema({
-                    "analyte": analyte,
-                    "value": val,
-                    "unit": u,
-                    "status": st,
-                })
+                ind = _build_indicator_schema(
+                    {
+                        "analyte": analyte,
+                        "value": val,
+                        "unit": u,
+                        "status": st,
+                    }
+                )
                 crit_alerts = []
                 for ca in fixture.get("critical_alerts", []):
                     if ca.get("date") == pt.get("date") or not ca.get("date"):
@@ -458,7 +461,9 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
                 patient_gender="male",
                 test_date=_parse_date(prev_data.get("date")),
                 language="vi",
-                indicators=[{"name": analyte, "value": prev_data.get("value", 0.0), "unit": prev_data.get("unit", "%")}],
+                indicators=[
+                    {"name": analyte, "value": prev_data.get("value", 0.0), "unit": prev_data.get("unit", "%")}
+                ],
             )
             resp_p = AnalyzeResponse(
                 indicators=[_build_indicator_schema({"analyte": analyte, **prev_data})],
@@ -474,7 +479,9 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
                 patient_gender="male",
                 test_date=_parse_date(curr_data.get("date")),
                 language="vi",
-                indicators=[{"name": analyte, "value": curr_data.get("value", 0.0), "unit": curr_data.get("unit", "%")}],
+                indicators=[
+                    {"name": analyte, "value": curr_data.get("value", 0.0), "unit": curr_data.get("unit", "%")}
+                ],
             )
             resp_c = AnalyzeResponse(
                 indicators=[_build_indicator_schema({"analyte": analyte, **curr_data})],
@@ -506,16 +513,13 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
 
         if indicators_raw:
             t_date = _parse_date(
-                fixture.get("test_date")
-                or fixture.get("deterministic_payload", {}).get("test_date")
-                or "2026-08-15"
+                fixture.get("test_date") or fixture.get("deterministic_payload", {}).get("test_date") or "2026-08-15"
             )
             indicators = [_build_indicator_schema(ind) for ind in indicators_raw]
-            alerts_raw = fixture.get("critical_alerts") or fixture.get("deterministic_payload", {}).get("critical_alerts", [])
-            alerts = [
-                _build_critical_alert_schema(ca)
-                for ca in alerts_raw
-            ]
+            alerts_raw = fixture.get("critical_alerts") or fixture.get("deterministic_payload", {}).get(
+                "critical_alerts", []
+            )
+            alerts = [_build_critical_alert_schema(ca) for ca in alerts_raw]
             has_crit = len(alerts) > 0 or any(ind.is_critical for ind in indicators)
             req = AnalyzeRequest(
                 patient_age=35,
@@ -537,9 +541,7 @@ def seed_fixture_to_db(user_id: int, case_dict: dict) -> bool:
         return False
 
 
-def _matches_expected_status(
-    actual_status: str | None, expected_status: str | None, actual_reason: str | None
-) -> bool:
+def _matches_expected_status(actual_status: str | None, expected_status: str | None, actual_reason: str | None) -> bool:
     if not expected_status:
         return True
     if expected_status == "needs_input_or_safe_clarification":
@@ -551,10 +553,7 @@ def _matches_expected_status(
 
 def _requires_successful_trend_execution(suite_name: str, case_dict: dict) -> bool:
     """Return whether the approved case contract requires a real Trend success."""
-    return (
-        suite_name == "trend_response_quality"
-        and case_dict.get("expected", {}).get("response_status") == "success"
-    )
+    return suite_name == "trend_response_quality" and case_dict.get("expected", {}).get("response_status") == "success"
 
 
 def _expected_trend_analyte(case_dict: dict) -> str | None:
@@ -629,8 +628,7 @@ def _evaluate_trend_execution_contract(
             reason=(
                 None
                 if workflow_ok
-                else "Expected get_my_indicator_trend, "
-                f"got {execution_trace.workflow_selected or 'none'}"
+                else f"Expected get_my_indicator_trend, got {execution_trace.workflow_selected or 'none'}"
             ),
         )
     )
@@ -672,11 +670,7 @@ def _evaluate_trend_execution_contract(
                 name="Trend analyte match",
                 passed=analyte_ok,
                 failure_tag=None if analyte_ok else "ANALYTE_IDENTITY_FAILURE",
-                reason=(
-                    None
-                    if analyte_ok
-                    else f"Expected analyte {expected_analyte}, got {actual_analyte}"
-                ),
+                reason=(None if analyte_ok else f"Expected analyte {expected_analyte}, got {actual_analyte}"),
             )
         )
         if not analyte_ok:
@@ -687,10 +681,7 @@ def _evaluate_trend_execution_contract(
         returned_points = trend.get("points")
         actual_result_count = trend.get("result_count")
         actual_point_count = len(returned_points) if isinstance(returned_points, list) else None
-        point_count_ok = (
-            actual_result_count == expected_point_count
-            and actual_point_count == expected_point_count
-        )
+        point_count_ok = actual_result_count == expected_point_count and actual_point_count == expected_point_count
         checks.append(
             HardCheckResult(
                 name="Trend point count match",
@@ -884,8 +875,7 @@ def evaluate_response_text(
 
     # 8. Magnitude Hallucination
     has_mag = (
-        fixture.get("magnitude_classification_provided") is True
-        or fixture.get("magnitude_classification") is not None
+        fixture.get("magnitude_classification_provided") is True or fixture.get("magnitude_classification") is not None
     )
     if not has_mag and case_dict.get("category") in {
         "no_magnitude_hallucination",
@@ -1000,7 +990,7 @@ def evaluate_response_text(
 def run_response_quality_suite(
     suite_path: Path, client: TestClient, target_case_id: str | None = None
 ) -> SuiteEvaluationResult:
-    with open(suite_path, "r", encoding="utf-8") as f:
+    with open(suite_path, encoding="utf-8") as f:
         suite_data = json.load(f)
 
     suite_name = suite_data.get("suite", suite_path.stem)
@@ -1063,9 +1053,7 @@ def run_response_quality_suite(
 
         # 4. Controlled Retrieval Seam Construction
         analyte_for_chunks = (
-            fixture.get("selected_analyte")
-            or fixture.get("deterministic_payload", {}).get("analyte")
-            or "WBC"
+            fixture.get("selected_analyte") or fixture.get("deterministic_payload", {}).get("analyte") or "WBC"
         )
         controlled_chunks = _build_controlled_chunks(fixture, analyte=analyte_for_chunks)
         mock_retriever = MockControlledRetriever(controlled_chunks) if controlled_chunks else None
@@ -1127,15 +1115,13 @@ def run_response_quality_suite(
                     active_analyte = record.context.current_analyte if record else None
 
                     turn_exp = turn_data.get("expected", {})
-                    t_checks, t_tags = evaluate_response_text(
-                        msg, c, turn_expected=turn_exp, is_multi_turn=True
-                    )
+                    t_checks, t_tags = evaluate_response_text(msg, c, turn_expected=turn_exp, is_multi_turn=True)
 
                     # Check turn-specific status/intent expectations with union matching
                     if "intent" in turn_exp and intent != turn_exp["intent"]:
                         t_checks.append(
                             HardCheckResult(
-                                name=f"Turn {idx+1} Intent match",
+                                name=f"Turn {idx + 1} Intent match",
                                 passed=False,
                                 failure_tag="INTENT_MISMATCH",
                                 reason=f"Expected {turn_exp['intent']}, got {intent}",
@@ -1148,7 +1134,7 @@ def run_response_quality_suite(
                         if not _matches_expected_status(status, exp_st, reason):
                             t_checks.append(
                                 HardCheckResult(
-                                    name=f"Turn {idx+1} Status match",
+                                    name=f"Turn {idx + 1} Status match",
                                     passed=False,
                                     failure_tag="STATUS_MISMATCH",
                                     reason=f"Expected {exp_st}, got {status} (reason: {reason})",
@@ -1161,7 +1147,7 @@ def run_response_quality_suite(
                         if active_analyte != exp_analyte and exp_analyte.lower() not in msg.lower():
                             t_checks.append(
                                 HardCheckResult(
-                                    name=f"Turn {idx+1} Active analyte match",
+                                    name=f"Turn {idx + 1} Active analyte match",
                                     passed=False,
                                     failure_tag="STALE_CONTEXT",
                                     reason=f"Expected active entity '{exp_analyte}', got '{active_analyte}'",
@@ -1189,7 +1175,7 @@ def run_response_quality_suite(
                         case_failure_tags.append(tg)
                     for chk in t_checks:
                         if not chk.passed and chk.reason:
-                            case_failure_reasons.append(f"Turn {idx+1}: {chk.reason}")
+                            case_failure_reasons.append(f"Turn {idx + 1}: {chk.reason}")
 
                 if turns_results and _requires_successful_trend_execution(suite_name, c):
                     contract_checks, contract_tags = _evaluate_trend_execution_contract(
@@ -1202,9 +1188,7 @@ def run_response_quality_suite(
                     case_failure_tags.extend(contract_tags)
                     for chk in contract_checks:
                         if not chk.passed and chk.reason:
-                            case_failure_reasons.append(
-                                f"Turn {turns_results[-1].turn_index}: {chk.reason}"
-                            )
+                            case_failure_reasons.append(f"Turn {turns_results[-1].turn_index}: {chk.reason}")
 
             else:
                 # Single-turn case
@@ -1232,10 +1216,7 @@ def run_response_quality_suite(
 
                 t_checks, t_tags = evaluate_response_text(msg, c, is_multi_turn=False)
 
-                if (
-                    "response_status" in expected
-                    and not _requires_successful_trend_execution(suite_name, c)
-                ):
+                if "response_status" in expected and not _requires_successful_trend_execution(suite_name, c):
                     exp_st = expected["response_status"]
                     if not _matches_expected_status(status, exp_st, reason):
                         t_checks.append(
@@ -1373,8 +1354,6 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
 
     hard_pass_all = sum(sr.hard_pass_count for sr in suite_results)
     hard_fail_all = sum(sr.hard_fail_count for sr in suite_results)
-    soft_pass_all = sum(sr.soft_pass_count for sr in suite_results)
-    soft_fail_all = sum(sr.soft_fail_count for sr in suite_results)
     soft_ne_all = sum(sr.soft_not_evaluated_count for sr in suite_results)
 
     all_class_counts: dict[str, int] = {}
@@ -1395,7 +1374,9 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
         f.write(f"- **Total Test Cases Evaluated**: {total_all}\n")
         f.write(f"- **Overall Passed**: {passed_all}/{total_all} ({overall_rate:.1f}%)\n")
         f.write(f"- **Overall Failed**: {failed_all}/{total_all} ({(100.0 - overall_rate):.1f}%)\n")
-        f.write(f"- **Hard Safety / Grounding Passed**: {hard_pass_all}/{total_all} ({(hard_pass_all/total_all*100):.1f}%)\n")
+        f.write(
+            f"- **Hard Safety / Grounding Passed**: {hard_pass_all}/{total_all} ({(hard_pass_all / total_all * 100):.1f}%)\n"
+        )
         f.write(f"- **Hard Safety / Grounding Failed**: {hard_fail_all}/{total_all}\n")
         f.write(f"- **Soft Evaluation Status**: {soft_ne_all} SOFT_NOT_EVALUATED (LLM Judge not executed)\n")
         f.write(f"- **Evaluation Suites**: {len(suite_results)}\n\n")
@@ -1434,7 +1415,9 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
 
         f.write("## 6. Detailed Case Results by Suite\n\n")
         for sr in suite_results:
-            f.write(f"### Suite: `{sr.suite_name}` ({sr.passed_cases}/{sr.total_cases} Passed - {sr.pass_rate:.1f}%)\n\n")
+            f.write(
+                f"### Suite: `{sr.suite_name}` ({sr.passed_cases}/{sr.total_cases} Passed - {sr.pass_rate:.1f}%)\n\n"
+            )
             f.write(
                 "| Case ID | Category | Classification | User Scenario | Hard Result | Soft Result | Verdict | Failure Details |\n"
             )
@@ -1526,7 +1509,9 @@ def main():
     failed_all = total_all - passed_all
     print("\n" + "=" * 70)
     print("RESPONSE QUALITY BASELINE EVALUATION COMPLETE")
-    print(f"Overall Result: {passed_all}/{total_all} passed ({(passed_all/total_all*100):.1f}%) | {failed_all} Failed")
+    print(
+        f"Overall Result: {passed_all}/{total_all} passed ({(passed_all / total_all * 100):.1f}%) | {failed_all} Failed"
+    )
     print("=" * 70)
 
     return 0

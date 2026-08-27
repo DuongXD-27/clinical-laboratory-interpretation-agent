@@ -18,7 +18,7 @@ hand-written explanations.json.
 
 Run: python -m eval.rag.adversarial_threshold_test
 
-See docs/version-handoff/retrieval-min-score-evidence.md for the resulting
+See docs/audit/evidence/retrieval-min-score-evidence.md for the resulting
 determination and how to re-derive it.
 """
 
@@ -91,8 +91,7 @@ CASES = [
                 "thương mại, giảm giá đến 50% cho các mặt hàng thời trang."
             ),
             "wrong_indicator": (
-                "WBC giảm thấp có thể gặp khi nhiễm virus hoặc do tác dụng "
-                "phụ của hóa trị liệu làm suy giảm tủy xương."
+                "WBC giảm thấp có thể gặp khi nhiễm virus hoặc do tác dụng phụ của hóa trị liệu làm suy giảm tủy xương."
             ),
             "vague_filler": (
                 "Kết quả xét nghiệm có thể thay đổi tùy theo nhiều yếu tố như "
@@ -198,7 +197,8 @@ def main() -> None:
         verdict = (
             "clean separation"
             if genuine_kept == len(all_genuine) and junk_excluded == len(catchable)
-            else "kills genuine content" if genuine_kept < len(all_genuine)
+            else "kills genuine content"
+            if genuine_kept < len(all_genuine)
             else "some catchable junk survives"
         )
         print(

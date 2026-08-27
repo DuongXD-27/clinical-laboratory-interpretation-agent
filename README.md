@@ -353,15 +353,28 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Head
 
 ### Chạy kiểm thử tự động
 
+**Full local verification (non-mutating):**
+```powershell
+make verify
+```
+
+This runs repository-wide Ruff checks, the backend suite with a repository-local
+pytest temp base, and the existing frontend lint/test/build scripts. It does not
+install dependencies, rewrite source, or update lockfiles.
+
 **Backend Unit & Integration Tests:**
 ```powershell
-pytest -q
+make test
 ```
 
 **Kiểm tra Linting & Định dạng code:**
 ```powershell
-ruff check .
+make lint
 ```
+
+`make format-check` observes the repository-wide historical formatting debt; it
+never formats files. Python type checking is not part of verification because no
+supported type checker is declared in `requirements.txt`.
 
 **Frontend Unit Tests:**
 ```powershell

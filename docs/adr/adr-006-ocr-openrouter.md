@@ -56,7 +56,7 @@ Thông số kỹ thuật:
 - **Lịch sử model:** ban đầu chọn `nvidia/nemotron-nano-12b-v2-vl:free`;
   ngày 2026-08-04 chuyển sang `google/gemma-4-26b-a4b-it:free` sau khi đo
   baseline cho thấy gemma ổn định hơn (ít rate-limit, ít trả rỗng) dù tốc
-  độ tương đương. Xem `docs/vision/ocr-baseline.md` để so sánh số liệu.
+  độ tương đương. Xem `docs/audit/ocr-baseline.md` để so sánh số liệu.
 - Vision LLM **không trả lời y khoa**: system prompt giới hạn việc trích
   xuất JSON, không giải thích/chẩn đoán (guardrail, ADR-004).
 
@@ -122,7 +122,7 @@ liệu từ ảnh không được ghi thẳng vào `AgentState`, luôn đi qua U
 - Cần `OPENROUTER_API_KEY` hợp lệ để chạy baseline (`src/scripts/eval_ocr.py`).
 - Frontend thêm chế độ "Tải ảnh phiếu" với màn hình UI_Review.
 - Sai số OCR được đo trên bộ ảnh mẫu (normal/blur/skew/lowlight), báo cáo
-  ở `docs/vision/ocr-baseline.md`.
+  ở `docs/audit/ocr-baseline.md`.
 - Đơn vị đo vẫn giữ chuẩn mmol/L theo ADR-002 — chỉ số đọc từ ảnh phải
   được người dùng xác nhận đúng đơn vị ở UI_Review; không làm unit-conversion
   tự động ở V2.

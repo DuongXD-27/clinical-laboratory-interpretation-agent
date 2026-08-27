@@ -261,7 +261,7 @@ async def test_cp_05_end_to_end_new_chat_asks_which_indicator(db_session, monkey
         response = await handle_message(
             OrchestratorRequest(message="Giải thích kỹ hơn chỉ số này"),
             current_user=user,
-            db=object(),
+            db=db_session,
             runtime=runtime,
         )
 

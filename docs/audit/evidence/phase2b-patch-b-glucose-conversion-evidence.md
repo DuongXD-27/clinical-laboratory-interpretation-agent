@@ -34,7 +34,7 @@ Patch B files:
   tests.
 - `tests/test_agents/test_critical_detector_node.py` — future-record detector,
   safety, and regression tests.
-- `docs/version-handoff/phase2b-patch-b-glucose-conversion-evidence.md` — this
+- `docs/audit/evidence/phase2b-patch-b-glucose-conversion-evidence.md` — this
   evidence record.
 
 `tests/test_data/test_critical_data_quality.py` retains the accepted Patch A

@@ -9,6 +9,10 @@ ignore = ["E501"]
 # Scripts chạy trực tiếp phải bootstrap sys.path trước khi import package
 # `src.*`, nên import muộn ở đầu file là chủ đích chứ không phải sơ suất.
 "src/scripts/**" = ["E402"]
+# Directly executed evaluation entry points bootstrap the repository root before
+# importing project modules. Those imports must remain below the sys.path setup.
+"eval/g2_live_rag.py" = ["E402"]
+"eval/rag/rebuild_canonical_index.py" = ["E402"]
 
 [format]
 quote-style = "double"

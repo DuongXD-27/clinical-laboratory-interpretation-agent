@@ -11,10 +11,9 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -25,13 +24,12 @@ from src.services.analyte_catalog import get_analyte_catalog
 from src.services.embedding_provider import get_embedding_provider
 from src.services.vector_store import VectorStore
 
-
 SOURCE = ROOT / "data" / "reference" / "explanations.json"
 OUT_DIR = ROOT / "eval" / "rag"
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -53,11 +51,7 @@ def collection_snapshot(collection, *, include_documents: bool = False) -> dict[
     raw = collection.get(include=include)
     one = collection.get(limit=1, include=["embeddings"])
     embeddings = one.get("embeddings")
-    inspected_dimension = (
-        len(embeddings[0])
-        if embeddings is not None and len(embeddings)
-        else None
-    )
+    inspected_dimension = len(embeddings[0]) if embeddings is not None and len(embeddings) else None
     result: dict[str, Any] = {
         "collection": collection.name,
         "document_count": collection.count(),
@@ -74,7 +68,9 @@ def collection_snapshot(collection, *, include_documents: bool = False) -> dict[
 def build_payload() -> tuple[list[str], list[dict[str, Any]], list[str]]:
     data = json.loads(SOURCE.read_text(encoding="utf-8"))
     if not isinstance(data, list) or len(data) != 9:
-        raise RuntimeError(f"expected 9 explanation records, found {len(data) if isinstance(data, list) else 'non-list'}")
+        raise RuntimeError(
+            f"expected 9 explanation records, found {len(data) if isinstance(data, list) else 'non-list'}"
+        )
 
     catalog = get_analyte_catalog()
     texts: list[str] = []
@@ -103,9 +99,7 @@ def build_payload() -> tuple[list[str], list[dict[str, Any]], list[str]]:
             text_parts.append(f"Ý nghĩa khi giảm thấp: {low_notes[0]}")
 
         sources = [
-            str(source["url"])
-            for source in item.get("sources", [])
-            if isinstance(source, dict) and source.get("url")
+            str(source["url"]) for source in item.get("sources", []) if isinstance(source, dict) and source.get("url")
         ]
         metadata: dict[str, Any] = {
             "indicator": indicator,
@@ -221,7 +215,7 @@ def main() -> None:
         "state": after_state,
     }
     write_json(OUT_DIR / "canonical_reconciliation_after.json", after)
-    print(f"FIX_METHOD=REBUILD_INDEX")
+    print("FIX_METHOD=REBUILD_INDEX")
     print(f"EMBEDDING_API_ITEMS_GENERATED={len(texts)}")
     print("EMBEDDING_FAILURES=0")
     print(f"CHROMA_DOCUMENT_COUNT_BEFORE={before['state']['document_count']}")

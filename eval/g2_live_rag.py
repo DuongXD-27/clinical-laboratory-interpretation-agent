@@ -9,15 +9,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import httpx
+from g2_execute import BASE_URL, ROOT, call_analyze, guest_headers, utc_now, write_json
+
 from src.config import get_settings
 from src.services.medical_knowledge_retriever import (
     get_medical_knowledge_retriever,
     get_rag_readiness,
 )
-
-from g2_execute import BASE_URL, ROOT, call_analyze, guest_headers, utc_now, write_json
-
-import httpx
 
 
 def main() -> None:
@@ -51,12 +50,8 @@ def main() -> None:
                 "query": query,
                 "chunk_count": len(chunks),
                 "stored_document_ids": stored.get("ids") or [],
-                "stored_analyte_ids": [
-                    metadata.get("analyte_id") for metadata in stored_metadatas
-                ],
-                "stored_indicators": [
-                    metadata.get("indicator") for metadata in stored_metadatas
-                ],
+                "stored_analyte_ids": [metadata.get("analyte_id") for metadata in stored_metadatas],
+                "stored_indicators": [metadata.get("indicator") for metadata in stored_metadatas],
                 "chunks": [
                     {
                         "text_excerpt": str(chunk.get("text", ""))[:600],
@@ -80,9 +75,7 @@ def main() -> None:
             {
                 "analyte_id": analyte_id,
                 "chunk_count": len(chunks),
-                "returned_analyte_ids": [
-                    chunk.get("analyte_id") for chunk in chunks if chunk.get("analyte_id")
-                ],
+                "returned_analyte_ids": [chunk.get("analyte_id") for chunk in chunks if chunk.get("analyte_id")],
             }
         )
 

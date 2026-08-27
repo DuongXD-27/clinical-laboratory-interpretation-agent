@@ -27,7 +27,7 @@ Design decisions after the RAG architecture review:
   *above* the genuine floor, so no threshold value can catch them without
   also rejecting real content). 0.8 sits in the proven clean-separation
   window (0.794, 0.807): zero genuine-content loss, maximum catchable-junk
-  rejection. See docs/version-handoff/retrieval-min-score-evidence.md for the
+  rejection. See docs/audit/evidence/retrieval-min-score-evidence.md for the
   full write-up, including why the uncatchable band is not a tuning gap —
   it's why GENERATION_SAFETY_CONTRACT + MedicalSafetyValidator downstream
   exist: a relevance-similarity gate can never substitute for a factuality/
@@ -318,11 +318,7 @@ class ChromaMedicalKnowledgeRetriever:
                 by_text[text] = chunk
 
         # Relevance gate: drop weak hits regardless of prong.
-        passed = [
-            chunk
-            for chunk in by_text.values()
-            if float(chunk.get("score", 0.0)) >= min_score
-        ]
+        passed = [chunk for chunk in by_text.values() if float(chunk.get("score", 0.0)) >= min_score]
         if not passed:
             return []
 
@@ -332,9 +328,9 @@ class ChromaMedicalKnowledgeRetriever:
         base_note = primary_note.replace("critical_", "") if primary_note.startswith("critical_") else None
         passed.sort(
             key=lambda chunk: (
-                0 if str(chunk.get("note_type", "")) == primary_note else (
-                    1 if base_note and str(chunk.get("note_type", "")) == base_note else 2
-                ),
+                0
+                if str(chunk.get("note_type", "")) == primary_note
+                else (1 if base_note and str(chunk.get("note_type", "")) == base_note else 2),
                 -float(chunk.get("score", 0.0)),
                 -len(_normalized_text(str(chunk.get("text", "")))),
             )
@@ -381,7 +377,13 @@ class ChromaMedicalKnowledgeRetriever:
         allowed_note_types: list[str] = []
         primary_note = "description"
         if norm_crit == "critical_high":
-            allowed_note_types = ["critical_high_note", "high_note", "description", "limitation_note", "preanalytic_note"]
+            allowed_note_types = [
+                "critical_high_note",
+                "high_note",
+                "description",
+                "limitation_note",
+                "preanalytic_note",
+            ]
             primary_note = "critical_high_note"
         elif norm_crit == "critical_low":
             allowed_note_types = ["critical_low_note", "low_note", "description", "limitation_note", "preanalytic_note"]

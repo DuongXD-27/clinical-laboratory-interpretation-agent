@@ -10,15 +10,13 @@ import argparse
 import json
 import math
 import os
-import re
 import statistics
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import httpx
-
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "http://127.0.0.1:8000"
@@ -32,7 +30,7 @@ TIMING_PREFIX = "request_timing "
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def write_json(path: Path, data: Any) -> None:
@@ -85,10 +83,7 @@ def event_evidence(timing: dict[str, Any], indicator_count: int) -> dict[str, An
     attempted = bool(llm_events)
     succeeded = attempted and all(event.get("outcome") == "success" for event in llm_events)
     successful_count = sum(event.get("outcome") == "success" for event in llm_events)
-    fallback = (
-        any(event.get("outcome") != "success" for event in llm_events)
-        or successful_count < indicator_count
-    )
+    fallback = any(event.get("outcome") != "success" for event in llm_events) or successful_count < indicator_count
     return {
         "provider": "OpenAI-compatible/ChatOpenAI",
         "model": "gpt-4o-mini",
@@ -208,16 +203,18 @@ def manual(output_dir: str = "manual") -> None:
             status_ok = actual_status == expected.get("response_status", expected["ri_status"])
             critical_ok = bool(response.get("has_critical_values")) == expected["critical"]
             if expected.get("reference_bounds") is None and test_id == "TC-G2-05":
-                bounds_ok = actual_indicator.get("reference_low") is None and actual_indicator.get("reference_high") is None
+                bounds_ok = (
+                    actual_indicator.get("reference_low") is None and actual_indicator.get("reference_high") is None
+                )
             else:
                 bounds_ok = True
             llm_ok = raw["llm_evidence"]["call_success"] and not raw["llm_evidence"]["fallback_used"]
-            llm_requirement_ok = (
-                not raw["llm_evidence"]["call_attempted"]
-                if test_id == "TC-G2-05"
-                else llm_ok
+            llm_requirement_ok = not raw["llm_evidence"]["call_attempted"] if test_id == "TC-G2-05" else llm_ok
+            verdict = (
+                "PASS"
+                if raw["status_code"] == 200 and status_ok and critical_ok and bounds_ok and llm_requirement_ok
+                else "FAIL"
             )
-            verdict = "PASS" if raw["status_code"] == 200 and status_ok and critical_ok and bounds_ok and llm_requirement_ok else "FAIL"
             artifact = {
                 "test_id": test_id,
                 "purpose": purpose,

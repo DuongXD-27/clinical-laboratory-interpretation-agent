@@ -218,5 +218,5 @@ The following from the Business Description are **not** implemented by this ADR 
 |---|---|
 | `docs/adr/adr-009-vmec-v1-critical-threshold-authority.md` | Declared operational authority for critical thresholds |
 | `docs/adr/adr-001-langgraph.md` | Pipeline architecture (unchanged) |
-| `docs/version-handoff/retrieval-min-score-evidence.md` | Evidence-format precedent for the adversarial test suite |
+| `docs/audit/evidence/retrieval-min-score-evidence.md` | Evidence-format precedent for the adversarial test suite |
 | `nhan-xet-phan-tich-xh.docx` | Business Description with team leader review |
