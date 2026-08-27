@@ -465,20 +465,14 @@ async def test_tip006_p1_action_schema_and_privileged_execution_benchmark():
 
 @pytest.mark.asyncio
 async def test_tip006_p0_medical_boundary_and_failure_handling(monkeypatch):
-    class FakeStructuredLlm:
-        async def ainvoke(self, messages):
-            return ComposedMessage(message="Kết quả này bình thường.")
-
-    class FakeLlm:
-        def with_structured_output(self, schema):
-            return FakeStructuredLlm()
-
-    monkeypatch.setattr(response_composer, "get_llm", lambda: FakeLlm())
-    contradiction = await build_final_response(
+    contradiction_resp = OrchestratorResponse(
         intent=IntentEnum.ANALYZE_REPORT,
         status=ResponseStatus.SUCCESS,
+        message="Kết quả này bình thường.",
+        data_type=DataType.ANALYSIS,
         data=_analysis_payload("high"),
     )
+    contradiction = response_composer.enforce_final_response(contradiction_resp)
     assert contradiction.status == ResponseStatus.BLOCKED
     assert contradiction.reason_code == ReasonCode.GUARDRAIL_BLOCKED
 

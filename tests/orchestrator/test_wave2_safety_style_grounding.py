@@ -225,8 +225,16 @@ def test_grounding_validator_permits_safe_educational_and_fact_statements(safe_s
 @pytest.mark.parametrize("style", ["concise", "simple", "detailed"])
 @pytest.mark.asyncio
 async def test_adversarial_llm_output_is_blocked_and_falls_back_across_all_styles(style: str):
+    # WAVE2-FIX invariant: AnalysisDataPayload whole-report summaries now
+    # bypass LLM composition entirely (deterministic early-return in
+    # compose_message). This is architecturally stronger than the previous
+    # behaviour of calling the LLM and then catching unsafe output in
+    # enforce_final_response. The LLM mock is irrelevant — it is never
+    # invoked — and the response is always SUCCESS with the safe deterministic
+    # summary. The core safety property ("unsafe text never reaches the
+    # patient") is preserved and strengthened.
     unsafe_mock_message = "Kết quả RBC bình thường nên cơ thể bạn được cung cấp oxy ổn định. Bạn có thể đang khó thở và bạn bị thiếu máu."
-    
+
     payload = AnalysisDataPayload(
         indicators=[],
         critical_alerts=[],
@@ -245,12 +253,16 @@ async def test_adversarial_llm_output_is_blocked_and_falls_back_across_all_style
             user_message="Tóm tắt phiếu xét nghiệm",
         )
 
-        # The unsafe statement MUST NOT survive in the final patient-visible output
+        # LLM is never invoked for AnalysisDataPayload — deterministic path.
+        mock_get_llm.return_value.with_structured_output.assert_not_called()
+
+        # The unsafe statement MUST NOT survive in the final patient-visible output.
         assert "cơ thể bạn được cung cấp oxy ổn định" not in resp.message
         assert "bạn bị thiếu máu" not in resp.message
         assert "bạn có thể đang khó thở" not in resp.message
-        assert resp.status == ResponseStatus.BLOCKED
-        assert resp.reason_code == ReasonCode.GUARDRAIL_BLOCKED
+
+        # Deterministic path: response is SUCCESS with safe structured message.
+        assert resp.status == ResponseStatus.SUCCESS
 
 
 # ============================================================================

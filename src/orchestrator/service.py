@@ -247,6 +247,7 @@ def _log_turn(
     workflow_selected: str,
     failure_code: ReasonCode | None,
     started_at: float,
+    guardrail_triggered: bool = False,
 ) -> None:
     logger.info(
         "orchestrator_turn",
@@ -259,7 +260,7 @@ def _log_turn(
             "workflow_selected": workflow_selected,
             "workflow_outcome": "blocked" if failure_code else "completed",
             "failure_code": failure_code.value if failure_code is not None else None,
-            "guardrail_triggered": False,
+            "guardrail_triggered": guardrail_triggered,
             "authorization_outcome":"denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
@@ -782,6 +783,9 @@ async def _handle_message_core(
         workflow_selected=result.workflow_selected,
         failure_code=result.reason_code,
         started_at=started_at,
+        guardrail_triggered=(
+            final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
+        ),
     )
     return final_response
 

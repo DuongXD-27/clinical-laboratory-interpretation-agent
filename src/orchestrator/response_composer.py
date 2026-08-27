@@ -137,8 +137,13 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
         lines = ["Tổng hợp kết quả xét nghiệm:"]
         if data.critical_alerts or critical_indicators:
             lines.append("⚠️ NGUY KỊCH:")
-            for alert in data.critical_alerts:
-                lines.append(f"- {alert.indicator_name}: {alert.value} {alert.unit} ({alert.message})")
+            if data.critical_alerts:
+                for alert in data.critical_alerts:
+                    lines.append(f"- {alert.indicator_name}: {alert.value} {alert.unit} ({alert.message})")
+            else:
+                for ind in critical_indicators:
+                    name = ind.analyte_canonical or ind.name
+                    lines.append(f"- {name}: {ind.value} {ind.unit} [NGUY KỊCH]")
         if abnormal_indicators:
             lines.append("Bất thường:")
             for ind in abnormal_indicators:
@@ -638,6 +643,15 @@ async def compose_message(
     if isinstance(data, DoctorQuestionsPayload):
         return fallback_message
     if isinstance(data, ExplanationDataPayload) and data.facts is not None:
+        return fallback_message
+    # WAVE2-FIX: Whole-report AnalysisDataPayload summaries are 100%
+    # deterministic (_format_whole_report_deterministic_summary). Routing them
+    # through the LLM allows the model to generate unsafe patient-specific
+    # inferences (e.g. physiological state assertions) that then fail
+    # enforce_final_response, producing a false GUARDRAIL_BLOCKED result for
+    # a valid structured report read. The deterministic fallback is both safe
+    # and complete — no LLM rewrite is needed or appropriate here.
+    if isinstance(data, AnalysisDataPayload):
         return fallback_message
     prompt = _composer_prompt(
         intent=intent,

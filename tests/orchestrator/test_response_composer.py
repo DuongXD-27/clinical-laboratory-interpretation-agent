@@ -106,19 +106,19 @@ async def test_r2_llm_message_cannot_mutate_server_fields_sources_or_actions(mon
 
 
 @pytest.mark.asyncio
-async def test_r3_canonical_status_contradiction_fails_closed(monkeypatch):
-    fake = FakeLLM(response_composer.ComposedMessage(message="Kết quả này bình thường."))
-    monkeypatch.setattr(response_composer, "get_llm", lambda: fake)
-
-    response = await build_final_response(
+async def test_r3_canonical_status_contradiction_fails_closed():
+    response = OrchestratorResponse(
         intent=IntentEnum.ANALYZE_REPORT,
         status=ResponseStatus.SUCCESS,
+        message="Kết quả này bình thường.",
+        data_type=DataType.ANALYSIS,
         data=_high_analysis_payload(),
     )
+    safe = response_composer.enforce_final_response(response)
 
-    assert response.status == ResponseStatus.BLOCKED
-    assert response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
-    assert response.data_type == DataType.BLOCKED
+    assert safe.status == ResponseStatus.BLOCKED
+    assert safe.reason_code == ReasonCode.GUARDRAIL_BLOCKED
+    assert safe.data_type == DataType.BLOCKED
 
 
 @pytest.mark.asyncio
