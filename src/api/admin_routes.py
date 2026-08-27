@@ -21,12 +21,23 @@ from src.api.deps import CurrentUser, require_roles
 from src.config import get_settings
 from src.models.db import ROLE_ADMIN, get_db
 from src.models.schemas import (
+    LatencyGroupSchema,
+    LatencyGroupsResponse,
     RequestTraceListResponse,
     RequestTraceSchema,
+    SpanAggregateSchema,
+    SpanRowSchema,
+    SpanTreeResponse,
     TraceSummarySchema,
     TracingStatusSchema,
 )
-from src.services import langfuse_tracing, trace_repository
+from src.services import (
+    langfuse_tracing,
+    llm_cost,
+    span_tree,
+    trace_metrics,
+    trace_repository,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -70,6 +81,39 @@ async def traces_summary(
     return TraceSummarySchema(**data, window_hours=window_hours)
 
 
+@router.get("/traces/latency", response_model=LatencyGroupsResponse)
+async def traces_latency(
+    window_hours: int = Query(default=24, ge=1, le=24 * 30),
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> LatencyGroupsResponse:
+    """Phan vi do tre, tach nhom AI va API thuong.
+
+    Endpoint RIENG chu khong nhoi vao `/traces/summary`: `summary` dang duoc
+    giao dien hien tai dung, va doi hop dong cua no la lam hong man hinh dang
+    chay. Them mot endpoint thi ban frontend cu tiep tuc song, ban moi doc cai
+    nay — cung nguyen tac tuong thich nguoc da ap cho `conversation_id`.
+
+    Dat TRUOC `/traces/{request_id}` trong file nay, neu khong FastAPI se khop
+    "latency" thanh mot request_id. Cung cai bay da gap voi `/traces/summary`.
+    """
+
+    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
+    data = trace_repository.summarise_latency_groups(
+        db,
+        since=since,
+        window_minutes=window_hours * 60,
+    )
+    groups = data["groups"]
+    return LatencyGroupsResponse(
+        ai=LatencyGroupSchema(**groups[trace_metrics.GROUP_AI]),
+        api=LatencyGroupSchema(**groups[trace_metrics.GROUP_API]),
+        window_hours=window_hours,
+        window_minutes=data["window_minutes"],
+        pricing_updated=llm_cost.PRICING_UPDATED,
+    )
+
+
 @router.get("/traces", response_model=RequestTraceListResponse)
 async def list_traces(
     limit: int = Query(default=50, ge=1, le=200),
@@ -109,6 +153,39 @@ async def list_traces(
     return RequestTraceListResponse(
         total=total,
         items=[RequestTraceSchema.model_validate(row) for row in rows],
+    )
+
+
+@router.get("/traces/{request_id}/spans", response_model=SpanTreeResponse)
+async def get_trace_spans(
+    request_id: str,
+    current_user: CurrentUser = Depends(_admin_only),
+    db: Session = Depends(get_db),
+) -> SpanTreeResponse:
+    """Cay span cua mot request: request -> graph -> tung node -> LLM.
+
+    Endpoint RIENG chu khong them truong `spans` vao `RequestTraceSchema`: schema
+    do dung chung cho ca danh sach, va nhoi cay span vao day se lam moi trang
+    danh sach nang len vi mot thu chi man chi tiet can.
+
+    Bang quan he cha-con chi ton tai o `span_tree.py` chu khong nhan doi sang
+    TypeScript. Nhan doi mot bang phan cap sang hai ngon ngu la dung loai troi
+    da xay ra voi `question_templates.json` khi doi ten analyte id.
+    """
+
+    trace = trace_repository.get_trace(db, request_id)
+    if trace is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy trace với request_id này.",
+        )
+
+    tree = span_tree.build_span_tree(trace.server_timing)
+    return SpanTreeResponse(
+        request_id=request_id,
+        rows=[SpanRowSchema(**row) for row in tree["rows"]],
+        aggregates=[SpanAggregateSchema(**agg) for agg in tree["aggregates"]],
+        total_ms=tree["total_ms"],
     )
 
 

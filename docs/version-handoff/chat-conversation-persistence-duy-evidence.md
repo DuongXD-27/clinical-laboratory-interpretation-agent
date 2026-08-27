@@ -593,6 +593,38 @@ case **đăng ký một bệnh nhân mới** (`rq_a_<uuid>`), nên `get_or_creat
 tạo một hội thoại mới với context rỗng cho từng case — không có nguy cơ context
 của case trước rớt sang case sau.
 
+## Đính chính về "3 error đỏ sẵn" — số liệu trong tài liệu này đã sai
+
+Ở các mục trên tôi báo ba test này là **đỏ sẵn trên main**:
+
+```
+tests/orchestrator/test_orchestrator_core.py::test_ac12_orchestrator_logs_exclude_raw_message_values_and_tokens
+tests/test_api/test_request_tracing.py::test_orchestrator_log_shares_the_request_id_with_the_http_log
+tests/test_vision/test_ocr.py::test_trace_contains_operational_fields_but_no_private_payload
+```
+
+**Sai.** Ba test đó xanh. Chúng chỉ ERROR vì tôi chạy pytest với cờ
+`-p no:logging`, mà cờ đó tắt luôn plugin cung cấp fixture `caplog` — cả ba
+test đều dùng `caplog`. Lỗi thật là `fixture 'caplog' not found`, tức lỗi của
+cách tôi gọi pytest, không phải của repo.
+
+Bỏ cờ ra rồi chạy lại:
+
+```
+pytest <3 test đó> -q            ->  3 passed
+pytest tests/ -q                 ->  1930 passed, 0 failed, 0 error
+```
+
+Tôi giữ lại đoạn sai ở trên thay vì xoá, vì tài liệu này là bằng chứng nghiệm
+thu và việc sửa lặng lẽ một con số đã nộp thì tệ hơn là ghi rõ mình đã nhầm ở
+đâu. Con số đúng để đối chiếu là **1930 passed, 0 failed**, và bất kỳ lần chạy
+nào trong tài liệu này có "3 errors" đều phải đọc kèm đính chính này.
+
+Bài học: **đừng thêm cờ pytest để làm output gọn hơn.** `-p no:logging` làm
+log đỡ rác nhưng đồng thời vô hiệu hoá một fixture, và tôi đã suốt phiên báo
+kết quả của một bộ test bị chính mình làm hỏng như thể đó là nợ kỹ thuật của
+người khác.
+
 ## F. Regression gate
 
 | Hạng mục | Kết quả |

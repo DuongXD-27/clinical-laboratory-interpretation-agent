@@ -955,6 +955,85 @@ class RequestTraceListResponse(BaseModel):
     items: list[RequestTraceSchema] = Field(default_factory=list)
 
 
+class SpanRowSchema(BaseModel):
+    """Mot dong trong cay span, da phang hoa theo `depth`.
+
+    Tra danh sach phang chu khong tra cau truc long: giao dien chi can thut le
+    theo `depth`, va mot danh sach phang thi khong de quy sai duoc.
+    """
+
+    name: str
+    duration_ms: float
+    depth: int
+    # Phan thoi gian cua nut nay khong nam trong bat ky con nao. `None` o la —
+    # khac han 0.0, von nghia la "co con va chung giai thich het thoi gian".
+    unaccounted_ms: float | None = None
+    share_pct: float | None = None
+
+
+class SpanAggregateSchema(BaseModel):
+    """So do bang CONG DON qua ca request, khong phai mot khoang lien mach."""
+
+    name: str
+    duration_ms: float
+
+
+class SpanTreeResponse(BaseModel):
+    """Cay span cua mot request — tra loi "4.99 giay cham vi dau"."""
+
+    request_id: str
+    rows: list[SpanRowSchema] = Field(default_factory=list)
+    aggregates: list[SpanAggregateSchema] = Field(default_factory=list)
+    total_ms: float | None = None
+
+
+class LatencyGroupSchema(BaseModel):
+    """So lieu do tre cua MOT nhom endpoint.
+
+    Khong co truong `avg`, va do la mot quyet dinh chu khong phai bo sot: de
+    trung binh o day la moi nguoi doc quay lai dung con so da che mat long tail.
+    `None` nghia la chua co mau — phan biet ro voi 0.0, vi tren mot man hinh van
+    hanh thi "0ms" doc nhu nhanh tuyet doi.
+    """
+
+    group: str
+    count: int
+    p50_ms: float | None = None
+    p95_ms: float | None = None
+    p99_ms: float | None = None
+    max_ms: float | None = None
+    error_count: int
+    error_rate_pct: float | None = None
+    requests_per_min: float | None = None
+    llm_call_count: int
+    llm_error_count: int
+    input_tokens: int = 0
+    output_tokens: int = 0
+    # `None` = chua tinh duoc gia cho model nao trong nhom nay. Khong phai 0.0:
+    # 0 doc nhu mien phi chu khong nhu khong biet.
+    cost_usd: float | None = None
+    # Khac 0 nghia la con so chi phi dang bao THAP hon thuc te.
+    unpriced_call_count: int = 0
+    cost_per_call_usd: float | None = None
+
+
+class LatencyGroupsResponse(BaseModel):
+    """Phan vi tach theo nhom AI va API thuong.
+
+    Tach hai nhom la diem chinh. Tron `/analyze` (4-7 giay) voi `/auth/login`
+    (~50ms) thi moi phan vi deu vo nghia, ke ca P99.
+    """
+
+    ai: LatencyGroupSchema
+    api: LatencyGroupSchema
+    window_hours: int
+    window_minutes: float | None = None
+    # Ngay cap nhat bang gia. Chi phi la so CAU HINH chu khong phai so DO DUOC —
+    # nha cung cap doi gia ma khong hoi ai — nen man hinh phai noi con so nay cu
+    # bao nhieu thay vi trinh bay no nhu su that do luong.
+    pricing_updated: str | None = None
+
+
 class TraceSummarySchema(BaseModel):
     """Vài con số tổng hợp cho đầu màn admin.
 

@@ -4,13 +4,19 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import { ForbiddenError, UnauthorizedError, clearSession, fetchTrace } from "@/lib/api";
+import {
+  ForbiddenError,
+  UnauthorizedError,
+  clearSession,
+  fetchTrace,
+  fetchTraceSpans,
+} from "@/lib/api";
 import { splitTimings, timingLabel } from "@/lib/serverTiming.mjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { RequestTrace } from "@/types/admin";
+import type { RequestTrace, SpanTree } from "@/types/admin";
 
 function formatMs(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(2)}s`;
@@ -50,6 +56,7 @@ export default function AdminTraceDetailPage() {
   const requestId = params.requestId;
 
   const [trace, setTrace] = useState<RequestTrace | null>(null);
+  const [spans, setSpans] = useState<SpanTree | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +64,14 @@ export default function AdminTraceDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      setTrace(await fetchTrace(requestId));
+      const [traceData, spanData] = await Promise.all([
+        fetchTrace(requestId),
+        // Cây span tải song song. Lỗi ở đây KHÔNG được làm trắng cả trang: nó
+        // là phần bổ sung, còn trace thì luôn hiện được.
+        fetchTraceSpans(requestId).catch(() => null),
+      ]);
+      setTrace(traceData);
+      setSpans(spanData);
     } catch (err) {
       if (err instanceof UnauthorizedError || err instanceof ForbiddenError) {
         clearSession();
@@ -164,24 +178,88 @@ export default function AdminTraceDetailPage() {
                 ) : null}
               </div>
 
-              {stages.length === 0 ? (
+              {spans && spans.rows.length > 0 ? (
+                /* Cây span, thụt lề theo `depth`. Cấu trúc do backend dựng nên
+                   giao diện không tự đoán quan hệ cha–con — thêm một span mới
+                   chỉ cần khai ở `span_tree.py`, không phải sửa hai nơi. */
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                  {spans.rows.map((row) => {
+                    const share = row.share_pct ?? 0;
+                    // Chặng chiếm quá nửa tổng thời gian là thủ phạm rõ ràng.
+                    const dominant = share >= 50;
+                    return (
+                      <li key={`${row.depth}-${row.name}`} className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="w-56 shrink-0 truncate text-sm"
+                            style={{ paddingLeft: `${row.depth * 14}px` }}
+                            title={row.name}
+                          >
+                            {row.depth > 0 ? (
+                              <span className="mr-1.5 text-muted-foreground" aria-hidden="true">
+                                └
+                              </span>
+                            ) : null}
+                            {timingLabel(row.name)}
+                          </span>
+                          <span className="relative h-6 flex-1 overflow-hidden rounded bg-[var(--surface-subtle)]">
+                            <span
+                              className={cn(
+                                "absolute inset-y-0 left-0 rounded",
+                                dominant ? "bg-[var(--status-abnormal-bg)]" : "bg-[var(--brand-soft)]",
+                              )}
+                              style={{ width: `${Math.max(2, Math.round(share))}%` }}
+                              aria-hidden="true"
+                            />
+                          </span>
+                          <span
+                            className={cn(
+                              "w-20 shrink-0 text-right text-sm tabular-nums",
+                              dominant
+                                ? "font-semibold text-[var(--status-abnormal-fg)]"
+                                : "text-foreground",
+                            )}
+                          >
+                            {formatMs(row.duration_ms)}
+                          </span>
+                          <span className="w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                            {row.share_pct === null ? "—" : `${row.share_pct}%`}
+                          </span>
+                        </div>
+                        {/* Dòng đáng giá nhất của cả cây: phần thời gian không
+                            nằm trong bất kỳ span con nào. Không hiện nó thì
+                            người đọc kết luận "LLM chiếm 93%, hết chuyện" và
+                            bỏ qua phần không ai đo được. Chỉ hiện khi đáng kể,
+                            để nó không thành nhiễu ở mọi dòng. */}
+                        {row.unaccounted_ms !== null && row.unaccounted_ms >= 1 ? (
+                          <div
+                            className="flex items-center gap-3 text-xs text-muted-foreground"
+                            style={{ paddingLeft: `${(row.depth + 1) * 14 + 14}px` }}
+                          >
+                            <span className="italic">chưa đo được</span>
+                            <span className="tabular-nums">{formatMs(row.unaccounted_ms)}</span>
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : stages.length === 0 ? (
                 <p className="m-0 py-6 text-center text-sm text-muted-foreground">
                   Request này không ghi chặng nào. Các đường như <code className="font-mono">/auth/*</code> chỉ
                   có một bước nên không có gì để phân rã.
                 </p>
               ) : (
+                /* Không lấy được cây (endpoint lỗi, hoặc trace từ bản cũ) thì
+                   vẫn hiện danh sách phẳng — mất phân cấp còn hơn mất số liệu. */
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {stages.map((stage) => {
                     const share = slowest > 0 ? Math.max(2, Math.round((stage.durationMs / slowest) * 100)) : 0;
-                    // Chặng chiếm quá nửa tổng thời gian là thủ phạm rõ ràng.
                     const dominant = httpTotal ? stage.durationMs / httpTotal.durationMs >= 0.5 : false;
                     return (
                       <li key={stage.name} className="flex items-center gap-3">
                         <span className="w-52 shrink-0 truncate text-sm" title={stage.name}>
                           {timingLabel(stage.name)}
-                          {stage.isAccumulated ? (
-                            <span className="ml-1 text-[11px] text-muted-foreground">(cộng dồn)</span>
-                          ) : null}
                         </span>
                         <span className="relative h-6 flex-1 overflow-hidden rounded bg-[var(--surface-subtle)]">
                           <span

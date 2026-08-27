@@ -216,17 +216,42 @@ def test_broken_sdk_does_not_stop_the_llm_from_being_built(monkeypatch):
 
 
 def test_get_llm_works_with_langfuse_switched_off(monkeypatch):
+    """Tắt Langfuse thì không gắn handler Langfuse, nhưng `get_llm` vẫn chạy.
+
+    Test này trước đây khẳng định `not model.callbacks` — tức `callbacks` rỗng
+    hoàn toàn. Khẳng định đó **không còn đúng và cố ý không còn đúng**:
+    `LlmUsageCallback` giờ LUÔN được gắn, không phụ thuộc Langfuse, vì nó là
+    nguồn duy nhất cho `llm_call_count`, token và chi phí. Trước đó `llm_call_count`
+    suy từ event mà chỉ `analyzer_node` phát ra, nên nó đếm thiếu năm trong sáu
+    chỗ gọi LLM.
+
+    Nên test được viết lại để khẳng định đúng thứ nó vốn muốn nói — "tắt Langfuse
+    không làm hỏng `get_llm`, và không có handler Langfuse nào bị gắn" — thay vì
+    một chi tiết phụ về độ dài danh sách. Đây là đổi hợp đồng có chủ ý, không
+    phải nới lỏng test cho nó xanh: phần khẳng định về Langfuse còn chặt hơn
+    trước, và thêm hẳn một khẳng định mới về callback đếm.
+    """
+
     monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-khong-dung-that")
     get_settings.cache_clear()
 
     from src.services.llm import get_llm
+    from src.services.llm_usage import LlmUsageCallback
 
     model = get_llm()
 
     assert model is not None
-    assert not model.callbacks
+
+    callbacks = list(model.callbacks or [])
+    # Không handler Langfuse nào — đây là điều test này tồn tại để kiểm.
+    assert not any(
+        type(cb).__module__.startswith("langfuse") for cb in callbacks
+    ), f"Langfuse đã tắt mà vẫn gắn handler: {callbacks}"
+
+    # Và callback đếm thì luôn có, đúng một cái.
+    assert sum(isinstance(cb, LlmUsageCallback) for cb in callbacks) == 1
 
 
 def test_flush_is_safe_when_langfuse_is_off(monkeypatch):

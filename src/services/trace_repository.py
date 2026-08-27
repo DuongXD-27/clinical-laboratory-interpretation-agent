@@ -22,6 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.db import RequestTrace
+from src.services import trace_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,17 @@ def record_trace(
             llm_call_count=int(_num("llm_call_count")),
             llm_ms=_num("llm_ms"),
             llm_error_count=int(_num("llm_error_count")),
+            llm_input_tokens=int(_num("llm_input_tokens")),
+            llm_output_tokens=int(_num("llm_output_tokens")),
+            # KHONG dung `_num` cho chi phi: `_num` doi None thanh 0.0, ma o day
+            # `None` mang thong tin — "chua tinh duoc gia". Ep ve 0.0 la bien
+            # "khong biet" thanh "mien phi".
+            llm_cost_usd=(
+                float(fields["llm_cost_usd"])
+                if fields.get("llm_cost_usd") is not None
+                else None
+            ),
+            llm_unpriced_call_count=int(_num("llm_unpriced_call_count")),
             user_role=user_role,
             server_timing=server_timing,
         )
@@ -191,6 +203,50 @@ def summarise(db: Session, *, since: datetime | None = None) -> dict[str, Any]:
         "llm_call_count": int(llm_calls or 0),
         "llm_error_count": int(llm_errors or 0),
         "server_error_count": server_errors,
+    }
+
+
+def summarise_latency_groups(
+    db: Session,
+    *,
+    since: datetime | None = None,
+    window_minutes: float | None = None,
+) -> dict[str, Any]:
+    """Phan vi va ti le loi, TACH RIENG nhom AI va nhom API thuong.
+
+    Thay the `summarise()` cho phan do tre. `summarise()` tra trung binh toan
+    he thong, va tren du lieu that no ra 85ms trong khi request AI mat 4-7 giay:
+    ~1200 request API thuong de con so do xuong. Trung binh o day khong sai ve
+    toan hoc, no chi tra loi mot cau khong ai can hoi.
+
+    Chi tai `duration_ms`, `status_code`, `path`, `method` va hai cot LLM — KHONG
+    tai `server_timing` (mot chuoi dai) va khong tai gi khac. Voi vai nghin dong
+    moi ngay thi day la mot query nhe, va phan vi duoc tinh trong Python nen
+    SQLite va Postgres cho ra CUNG mot con so (`percentile_cont` chi co o
+    Postgres — mot duong code chi ton tai o mot dialect la duong bo test khong
+    bat duoc).
+    """
+
+    query = select(
+        RequestTrace.path,
+        RequestTrace.method,
+        RequestTrace.duration_ms,
+        RequestTrace.status_code,
+        RequestTrace.llm_call_count,
+        RequestTrace.llm_error_count,
+        RequestTrace.llm_input_tokens,
+        RequestTrace.llm_output_tokens,
+        RequestTrace.llm_cost_usd,
+        RequestTrace.llm_unpriced_call_count,
+    )
+    if since is not None:
+        query = query.where(RequestTrace.created_at >= since)
+
+    rows = db.execute(query).all()
+    groups = trace_metrics.summarise_by_group(rows, window_minutes=window_minutes)
+    return {
+        "groups": groups,
+        "window_minutes": window_minutes,
     }
 
 
