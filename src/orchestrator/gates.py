@@ -235,6 +235,83 @@ def _is_ambiguous_treatment_followup(normalized: str) -> bool:
     return continuation_signal
 
 
+_DIET_SUPPLEMENT_VERBS = (
+    "an", "uong", "kieng", "bo sung", "dung", "nap", "uong thuoc", "dung thuoc",
+    "uong vitamin", "uong la", "uong tra", "an gi", "uong gi", "kieng gi", "kieng an",
+)
+_DIET_FOOD_ITEMS = (
+    "thit bo", "thit", "rau", "hoa qua", "tra", "sua", "duong", "muoi", "trung",
+    "hai san", "ca", "yen", "sam", "sat", "canxi", "vitamin", "thuoc nam", "thuoc bac",
+    "thao duoc", "thuc pham chuc nang", "tpcn", "nuoc dua", "la cay",
+)
+_HEALTH_TARGET_GOALS = (
+    "tang mau", "bo mau", "tang hgb", "ha men gan", "ha duong huyet",
+    "ha duong", "giam duong", "giam cholesterol", "giam mo mau", "tang tieu cau",
+    "tang bach cau", "giam axit uric", "giam acid uric",
+    "tang suc de khang", "tot cho mau", "tot cho gan", "tot cho than",
+)
+
+
+def _matches_personal_medical_advice_form(normalized: str, original_lower: str) -> bool:
+    """Detect personal diet, nutrition, supplement, and herbal advice requests.
+
+    Does not intercept pharmaceutical treatment requests (e.g. 'uống thuốc gì').
+    """
+    if any(marker in normalized for marker in _DOCTOR_QUESTION_FRAME_MARKERS):
+        return False
+
+    for suf in _EDUCATIONAL_DEFINITIONAL_SUFFIXES:
+        if normalized.endswith(f" {suf}") or normalized == suf:
+            return False
+
+    # Pharmaceutical prescription / medication questions belong to TREATMENT_REQUEST
+    if any(p in normalized for p in ("thuoc gi", "uong thuoc gi", "dung thuoc gi", "ke don", "mua thuoc gi", "uong thuoc tay", "dung thuoc tay")):
+        return False
+    if "uong thuoc" in normalized or "dung thuoc" in normalized:
+        if "thuoc nam" not in normalized and "thuoc bac" not in normalized:
+            return False
+
+    # Indicator reduction / treatment actions belong to TREATMENT_REQUEST
+    if any(p in normalized for p in (
+        "ha chi so", "giam chi so", "cai thien chi so", "cai thien ket qua",
+        "uong gi de giam", "uong gi de ha", "lam gi de giam", "lam gi de ha",
+        "uong gi giam", "uong gi ha",
+    )):
+        return False
+
+    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
+    has_advice_indicator = (
+        has_pronoun
+        or any(token in normalized for token in ("nen", "co nen", "phai", "duoc khong", "co duoc khong", "co the"))
+        or any(frame in normalized for frame in ("an gi de", "uong gi de", "lam sao de", "lam gi de", "an gi bo", "uong gi bo", "kieng an gi", "an gi ha", "uong gi ha", "kieng gi"))
+    )
+    if not has_advice_indicator:
+        return False
+
+    has_diet_verb = any(_contains_phrase_norm(normalized, v) for v in _DIET_SUPPLEMENT_VERBS)
+    has_food_item = any(_contains_phrase_norm(normalized, item) for item in _DIET_FOOD_ITEMS)
+    has_health_goal = any(_contains_phrase_norm(normalized, goal) for goal in _HEALTH_TARGET_GOALS)
+
+    from src.orchestrator.medical_context import extract_explicit_analyte
+    has_explicit_analyte = extract_explicit_analyte(original_lower) is not None
+
+    if (has_diet_verb or has_food_item) and (has_health_goal or has_explicit_analyte):
+        return True
+
+    if has_food_item and (has_advice_indicator or has_diet_verb):
+        return True
+
+    if any(q in normalized for q in (
+        "an gi de", "uong gi de", "an gi bo mau", "an gi tang mau", "kieng an gi",
+        "nen kieng an gi", "nen kieng gi", "nen an gi", "nen uong gi",
+        "bo sung sat", "bo sung vitamin", "uong thuoc nam", "dung thuoc nam",
+        "uong thuoc bac", "dung thuoc bac"
+    )):
+        return True
+
+    return False
+
+
 def treatment_followup_gate(message: str, session: object) -> ReasonCode | None:
     """CHAT-V1.5-R1-G4 layer 2: elevate ambiguous action follow-ups to
     TREATMENT_REQUEST only when an authenticated active report/analyte
@@ -313,7 +390,11 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
     if any(_contains_phrase_norm(normalized, phrase) for phrase in ("nguyen nhan la gi", "nguyen nhan do dau")):
         return ReasonCode.MEDICAL_CAUSE_REQUEST
 
-    # 3. Treatment requests & rapid indicator reduction advice
+    # 3. Personal diet, supplement, medication & medical advice requests
+    if _matches_personal_medical_advice_form(normalized, original_lower):
+        return ReasonCode.PERSONAL_MEDICAL_ADVICE
+
+    # 4. Treatment requests & rapid indicator reduction advice
     treatment_raw = (
         "uống thuốc gì", "uống gì", "kê đơn", "điều trị thế nào",
         "làm gì để hạ", "làm gì để giảm", "hạ chỉ số nhanh",
@@ -332,7 +413,7 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
     if any(_contains_phrase_norm(normalized, phrase) for phrase in treatment_norm):
         return ReasonCode.TREATMENT_REQUEST
 
-    # 3b. CHAT-V1.5-R1-G4 layer 1: form-based detection. Context-free
+    # 4b. CHAT-V1.5-R1-G4 layer 1: form-based detection. Context-free
     # classification requires the message to carry its own medical anchor;
     # broad action forms without one are left unclassified here and may only
     # be elevated to safety by treatment_followup_gate with session context.
@@ -522,4 +603,249 @@ def is_provenance_request(message: str) -> bool:
     if re.search(r"(?<!phan )giai thich", normalized):
         return False
     return any(frame in normalized for frame in _PROVENANCE_FRAMES)
+
+
+# --- VMEC-05 TIP-P0-SAFETY-002: Emergency / Urgent Symptom Gate ---------------
+#
+# Detects acute emergency symptoms, distress pleas, and urgent symptom action
+# requests deterministically BEFORE ordinary intent routing or context
+# resolution.
+#
+# Criteria:
+# 1. Distinguish personal symptom reporting / acute distress from educational,
+#    definitional, or lab-analyte correlation questions.
+# 2. Never allow active lab context (e.g. HGB/RBC) to hijack or continue
+#    an urgent symptom turn.
+# 3. Short-circuit directly with ReasonCode.EMERGENCY_INPUT_SAFETY.
+
+_EMERGENCY_DISTRESS_PLEAS = (
+    "cap cuu",
+    "cuu toi voi",
+    "cuu em voi",
+    "cuu voi",
+    "cuu toi",
+    "cuu em",
+    "cuu nguoi",
+    "goi cap cuu",
+    "can cap cuu gap",
+    "cap cuu khan cap",
+    "cap cuu gap",
+    "nguy kich qua",
+    "khan cap",
+)
+
+_URGENT_RESPIRATORY_SYMPTOMS = (
+    "kho tho",
+    "ngat tho",
+    "ngop tho",
+    "nghet tho",
+    "tho gap",
+    "tho doc",
+    "khong tho duoc",
+    "khong tho noi",
+    "ngung tho",
+    "dung tho",
+    "hut hoi",
+)
+
+_URGENT_CARDIAC_CHEST_SYMPTOMS = (
+    "dau nguc",
+    "dau tim",
+    "tuc nguc",
+    "nang nguc",
+    "that nguc",
+    "dau that nguc",
+    "dau nhoi nguc",
+    "dau tuc nguc",
+    "nhoi tim",
+)
+
+_URGENT_NEURO_CONSCIOUSNESS_SYMPTOMS = (
+    "ngat xiu",
+    "bat tinh",
+    "hon me",
+    "co giat",
+    "dot quy",
+    "tai bien",
+    "liet nua nguoi",
+    "meo mieng",
+    "mat y thuc",
+)
+
+_URGENT_BLEEDING_HEMORRHAGE_SYMPTOMS = (
+    "non ra mau",
+    "oi ra mau",
+    "ho ra mau",
+    "chay mau o at",
+    "chay mau khong cam",
+    "chay mau xoi xa",
+    "mat mau nhieu",
+    "soc phan ve",
+)
+
+_URGENT_POISONING_SYMPTOMS = (
+    "ngo doc cap",
+    "uong nham thuoc",
+    "uong nham hoa chat",
+    "ngo doc thuoc",
+)
+
+_ALL_URGENT_SYMPTOMS = (
+    _URGENT_RESPIRATORY_SYMPTOMS
+    + _URGENT_CARDIAC_CHEST_SYMPTOMS
+    + _URGENT_NEURO_CONSCIOUSNESS_SYMPTOMS
+    + _URGENT_BLEEDING_HEMORRHAGE_SYMPTOMS
+    + _URGENT_POISONING_SYMPTOMS
+)
+
+_CATASTROPHIC_ACUTE_CONDITIONS = (
+    "ngat xiu",
+    "bat tinh",
+    "hon me",
+    "co giat",
+    "dot quy",
+    "tai bien",
+    "liet nua nguoi",
+    "meo mieng",
+    "non ra mau",
+    "oi ra mau",
+    "ho ra mau",
+    "chay mau khong cam",
+    "chay mau o at",
+    "uong nham thuoc",
+    "uong nham hoa chat",
+    "soc phan ve",
+)
+
+_EMERGENCY_PRONOUN_RE = re.compile(
+    r"\b(?:toi|em|minh|chung toi|bac|ong|ba|me|bo|cha|con|chau|nguoi nha|ban toi|chong|vo)\b"
+)
+_EMERGENCY_STATE_VERBS = (
+    "bi", "dang", "dang bi", "thay", "cam thay", "len con", "bi len con",
+    "khoi phat", "co bieu hien", "co trieu chung", "vua bi", "nha toi bi", "tu dung bi",
+)
+_EMERGENCY_ACTION_FRAMES = (
+    "nen lam gi", "phai lam gi", "can lam gi", "phai lam sao", "nen lam sao",
+    "lam gi bay gio", "lam the nao", "lam sao de", "lam gi de", "phai xu ly sao",
+    "xu ly the nao", "cach xu ly", "cap cuu the nao", "co sao khong",
+)
+_EMERGENCY_SEVERITY_MODIFIERS = (
+    "du doi", "du lam", "qua", "rat nhieu", "o at", "khong tho duoc",
+    "khong tho noi", "khong cam duoc", "khong ngung", "nguy kich", "cap",
+    "don dap", "quan quai", "nhoi", "that lai", "kho chiu qua", "nang qua",
+)
+
+_EDUCATIONAL_DEFINITIONAL_SUFFIXES = (
+    "la gi", "nghia la gi", "la sao", "la nhu the nao",
+)
+_EDUCATIONAL_REFERENCE_MARKERS = (
+    "tai lieu noi", "sach y hoc", "sach bao", "bai viet noi", "tim hieu ve",
+    "nguyen nhan gay", "nguyen nhan cua", "co che gay", "co che cua",
+    "giai thich ve trieu chung", "dinh nghia", "the nao la",
+    "co phai dau hieu", "dau hieu cua", "trieu chung cua", "bieu hien cua",
+    "co phai bieu hien", "dau hieu benh", "bieu hien benh", "bieu hien cho thay",
+    "co phai la trieu chung", "la dau hieu cua",
+)
+_EDUCATIONAL_CORRELATION_MARKERS = (
+    "co lien quan", "lien quan toi", "lien quan den", "co gay", "co lam",
+    "co dan den", "tai sao lai gay", "tai sao gay", "vi sao gay", "tai sao lam",
+)
+
+
+def _is_educational_or_non_personal(normalized: str, raw_message: str) -> bool:
+    """Detect purely educational, definitional, or theoretical queries."""
+    # 1. Definitional questions: "khó thở nghĩa là gì?", "đột quỵ là gì?"
+    tokens = normalized.split()
+    if not tokens:
+        return False
+    for suffix in _EDUCATIONAL_DEFINITIONAL_SUFFIXES:
+        if normalized.endswith(f" {suffix}") or normalized == suffix:
+            return True
+        if f" {suffix} " in normalized:
+            return True
+
+    # 2. Reference / literature / educational causation: "tài liệu nói khó thở là sao?"
+    if any(marker in normalized for marker in _EDUCATIONAL_REFERENCE_MARKERS):
+        return True
+
+    # 3. Lab analyte theoretical correlation: "HGB thấp có liên quan tới khó thở không?"
+    from src.orchestrator.medical_context import extract_explicit_analyte
+    has_analyte = (
+        extract_explicit_analyte(raw_message) is not None
+        or any(term in normalized for term in ("hgb", "rbc", "wbc", "glucose", "hba1c", "creatinine", "plt", "thieu mau", "tieu duong"))
+    )
+    if has_analyte:
+        has_correlation = any(corr in normalized for corr in _EDUCATIONAL_CORRELATION_MARKERS)
+        has_personal_active = (
+            "dang bi" in normalized
+            or "toi dang" in normalized
+            or "em dang" in normalized
+            or "du doi" in normalized
+            or "o at" in normalized
+            or "nen lam gi" in normalized
+            or "phai lam sao" in normalized
+            or any(plea in normalized for plea in _EMERGENCY_DISTRESS_PLEAS)
+        )
+        if has_correlation and not has_personal_active:
+            return True
+
+    return False
+
+
+def emergency_safety_gate(message: str) -> ReasonCode | None:
+    """VMEC-05 TIP-P0-SAFETY-002: Deterministic emergency & urgent symptom gate.
+    
+    Detects personal acute symptom reports and emergency distress pleas BEFORE
+    ordinary intent routing and session context resolution.
+    """
+    normalized = _normalize(message)
+    if not normalized:
+        return None
+
+    # Check educational / non-personal exclusions first
+    if _is_educational_or_non_personal(normalized, message):
+        return None
+
+    # 1. Distress pleas & emergency exclamation (e.g. "cấp cứu", "cứu tôi với")
+    if any(_contains_phrase_norm(normalized, plea) for plea in _EMERGENCY_DISTRESS_PLEAS):
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    # 2. Check for presence of any urgent symptom
+    matched_symptoms = [
+        symptom for symptom in _ALL_URGENT_SYMPTOMS
+        if _contains_phrase_norm(normalized, symptom)
+    ]
+    if not matched_symptoms:
+        return None
+
+    has_pronoun = _EMERGENCY_PRONOUN_RE.search(normalized) is not None
+    has_state_verb = any(_contains_phrase_norm(normalized, verb) for verb in _EMERGENCY_STATE_VERBS)
+    has_action_frame = any(frame in normalized for frame in _EMERGENCY_ACTION_FRAMES)
+    has_severity_modifier = any(_contains_phrase_norm(normalized, sev) for sev in _EMERGENCY_SEVERITY_MODIFIERS)
+
+    # Frame 1: Personal reporting (e.g. "tôi bị khó thở", "tôi đang khó thở", "tôi đau ngực dữ dội")
+    if has_pronoun and (has_state_verb or has_severity_modifier or has_action_frame):
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    # Frame 2: Action frame + symptom (e.g. "tôi bị khó thở nên làm gì", "khó thở nên làm gì", "đau ngực phải làm sao")
+    if has_action_frame:
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    # Frame 3: Severity modifier + symptom (e.g. "khó thở quá", "đau ngực dữ dội", "chảy máu không cầm")
+    if has_severity_modifier:
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    # Frame 4: Direct catastrophic conditions (e.g. "bị ngất xỉu", "đang co giật", "nghi đột quỵ", "nôn ra máu")
+    matched_catastrophic = [
+        sym for sym in _CATASTROPHIC_ACUTE_CONDITIONS
+        if _contains_phrase_norm(normalized, sym)
+    ]
+    if matched_catastrophic:
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    # Frame 5: Simple pronoun + symptom without extra verb if unambiguous (e.g. "tôi khó thở", "em đau tim")
+    if has_pronoun:
+        return ReasonCode.EMERGENCY_INPUT_SAFETY
+
+    return None
 
