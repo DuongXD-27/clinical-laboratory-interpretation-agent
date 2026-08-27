@@ -250,6 +250,21 @@ async def detect_critical_values_node(state: AgentState) -> dict:
 
         thresholds = CRITICAL_THRESHOLDS[canonical_key]
         threshold_unit = thresholds.get("unit", "")
+        source_url = str(thresholds.get("source_url") or "").strip()
+        if source_url:
+            new_ind["critical_threshold_source"] = {
+                "source_id": str(thresholds.get("source_id") or ""),
+                "title": str(thresholds.get("source_title") or ""),
+                "organization": str(thresholds.get("source_organization") or ""),
+                "url": source_url,
+                "section_or_context": (
+                    f"Page {thresholds['source_page']}: {thresholds['source_literal']}"
+                    if thresholds.get("source_page") and thresholds.get("source_literal")
+                    else str(thresholds.get("source_literal") or "").strip() or None
+                ),
+                "analyte": canonical_analyte,
+                "note_type": "critical_threshold",
+            }
 
         # Blocker 03: compare directly only in the same normalized unit. The
         # sole cross-unit path is the human-approved, explicitly configured

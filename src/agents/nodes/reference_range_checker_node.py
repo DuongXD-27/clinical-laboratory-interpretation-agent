@@ -206,6 +206,17 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         assessment["rule_type"] = ref_type
         assessment["band_id"] = result.rule.get("band_id")
         assessment["upper_operator"] = upper_op
+        source_url = str(result.rule.get("source_url") or "").strip()
+        if source_url:
+            assessment["reference_range_source"] = {
+                "source_id": str(result.rule.get("rule_id") or ""),
+                "title": str(result.rule.get("source_title") or ""),
+                "organization": str(result.rule.get("source_organization") or ""),
+                "url": source_url,
+                "section_or_context": str(result.rule.get("source_section") or "").strip() or None,
+                "analyte": str(result.canonical_analyte or name),
+                "note_type": "reference_range",
+            }
 
         indicators.append(assessment)
 

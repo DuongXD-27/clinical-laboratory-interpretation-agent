@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 from src.services.analyte_resolver import (
     ANALYTE_RULE_TYPES,
@@ -54,6 +55,8 @@ class CorpusValidator:
 
         seen_analyte_ids: set[str] = set()
         seen_canonical_names: set[str] = set()
+        seen_source_ids: dict[str, str] = {}
+        seen_source_urls: dict[str, str] = {}
 
         # 1. Analyte-level validation
         for idx, entry in enumerate(entries):
@@ -87,6 +90,48 @@ class CorpusValidator:
                 errors.append(f"Duplicate analyte entry detected for '{analyte_id}'")
             seen_analyte_ids.add(analyte_id)
             seen_canonical_names.add(canonical_name)
+
+            raw_sources = entry.get("sources", [])
+            if not isinstance(raw_sources, list):
+                errors.append(f"Analyte '{canonical_name}' sources must be a list")
+                continue
+            for source_index, source in enumerate(raw_sources):
+                if not isinstance(source, dict):
+                    errors.append(f"Analyte '{canonical_name}' source #{source_index} must be an object")
+                    continue
+                source_id = str(source.get("source_id") or "").strip()
+                title = str(source.get("source_title") or "").strip()
+                organization = str(source.get("organization") or "").strip()
+                url = str(source.get("url") or "").strip()
+                label = source_id or f"{canonical_name} source #{source_index}"
+                if not source_id:
+                    errors.append(f"Source '{label}' missing source_id")
+                elif source_id in seen_source_ids:
+                    errors.append(
+                        f"Duplicate source_id '{source_id}' on '{canonical_name}' and '{seen_source_ids[source_id]}'"
+                    )
+                else:
+                    seen_source_ids[source_id] = canonical_name
+                if not title:
+                    errors.append(f"Source '{label}' missing source_title")
+                if not organization:
+                    errors.append(f"Source '{label}' missing organization")
+                if not url:
+                    errors.append(f"Source '{label}' missing URL")
+                else:
+                    parsed = urlparse(url)
+                    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                        errors.append(f"Source '{label}' has invalid URL schema: '{url}'")
+                    if url in seen_source_urls:
+                        warnings.append(
+                            f"Duplicate exact URL '{url}' on '{canonical_name}' and '{seen_source_urls[url]}'"
+                        )
+                    else:
+                        seen_source_urls[url] = canonical_name
+                has_note = any(str(source.get(field) or "").strip() for field in VALID_NOTE_TYPES if field != "band_note")
+                has_band_note = isinstance(source.get("band_notes"), dict) and bool(source["band_notes"])
+                if not has_note and not has_band_note:
+                    errors.append(f"Source '{label}' has no analyte note type")
 
         # Build chunks
         try:
