@@ -245,11 +245,13 @@ second route for OCR-derived medical input.
 
 1. **Assistant entry:** Frontend `AssistantWidget` gửi `OrchestratorRequest` tới `/api/v1/orchestrator/message`.
 2. **Admission gates:** Backend chặn token không hợp lệ, doctor conversational access, onboarding chưa xác nhận, lab values nhập qua chat, yêu cầu unsafe và OCR skip attempt.
-3. **Context resolution:** Resolver dùng session context, transient UI context và tên analyte được phê duyệt trong message để xác định report/analyte hiện tại. Client không được gửi identity fields.
+3. **Context resolution:** `src/orchestrator/medical_context.py::resolve_medical_context` là resolver duy nhất của runtime. Nó kết hợp session context, transient UI hints, explicit report/analyte mentions và authorized patient history lookup để xác định report/analyte hiện tại. Client không được gửi identity fields.
 4. **Intent routing:** Router chọn một trong đúng 6 intent. Unsafe diagnosis/cause/treatment requests được route về blocked response.
 5. **Workflow dispatch:** Dispatcher gọi wrappers như `get_my_history`, `get_my_report`, `get_my_indicator_trend` và `get_report_questions`. Wrappers resolve identity từ JWT/current user.
 6. **Response composition:** Composer có thể gọi LLM để viết `message`, sau đó chạy medical safety validation, schema validation và SuggestedAction policy validation.
 7. **Frontend action execution:** Frontend sanitizer chỉ cho phép 7 SuggestedAction variants và không route từ prose, arbitrary URL hoặc `javascript:`.
+
+`AGENT_CHAT_V2` là một nhánh rollout opt-in dành cho patient, mặc định tắt. Các admission/safety gates vẫn chạy trước nhánh này; khi V2 tắt hoặc không khả dụng, `service.py` tiếp tục qua intent router → canonical medical-context resolver → dispatcher. `agent_v2.py` vì vậy là kiến trúc rollout đang được bảo vệ bằng feature flag, không phải resolver song song hay dead code.
 
 ## OCR Lifecycle
 

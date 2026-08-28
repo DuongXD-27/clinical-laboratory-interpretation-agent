@@ -32,9 +32,9 @@ from src.models.orchestrator_schemas import (
 )
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 from src.orchestrator import dispatcher, response_composer, wrappers
-from src.orchestrator.context_resolver import ResolvedContext, resolve_context
 from src.orchestrator.dispatcher import DispatchContext, dispatch_workflow
 from src.orchestrator.intent_router import route_intent
+from src.orchestrator.medical_context import ResolvedMedicalContext, resolve_medical_context
 from src.orchestrator.response_composer import build_final_response
 from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
@@ -103,6 +103,28 @@ def _session(
         current_report_ref=report_ref,
         current_analyte=analyte,
         last_intent=last_intent,
+    )
+
+
+def _resolve_current_context(
+    message: str,
+    session: OrchestratorSessionContext,
+    ui_context: UIContext | None,
+) -> ResolvedMedicalContext:
+    """Exercise the resolver used by the live orchestrator service."""
+    normalized = message.casefold()
+    intent = (
+        IntentEnum.ANALYZE_TREND
+        if any(cue in normalized for cue in ("trend", "xu hướng", "lần trước", "lan truoc"))
+        else IntentEnum.EXPLAIN_CURRENT_RESULT
+    )
+    return resolve_medical_context(
+        message=message,
+        session=session,
+        ui_context=ui_context,
+        current_user=_patient(),
+        db=None,
+        intent=intent,
     )
 
 
@@ -281,15 +303,15 @@ async def test_tip006_p1_intent_routing_benchmark(monkeypatch):
 def test_tip006_p2_context_resolution_benchmark():
     base = _session(report_ref="10", analyte="WBC", last_intent=IntentEnum.EXPLAIN_CURRENT_RESULT)
     blank = _session()
-    cases: list[tuple[str, ResolvedContext, dict[str, object]]] = [
+    cases: list[tuple[str, ResolvedMedicalContext, dict[str, object]]] = [
         (
             "CR-001",
-            resolve_context("giải thích chỉ số này", base, None),
+            _resolve_current_context("giải thích chỉ số này", base, None),
             {"current_report_ref": "10", "current_analyte": "WBC", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-002",
-            resolve_context("so với lần trước thì sao", base, None),
+            _resolve_current_context("so với lần trước thì sao", base, None),
             {
                 "current_report_ref": "10",
                 "current_analyte": "WBC",
@@ -299,44 +321,44 @@ def test_tip006_p2_context_resolution_benchmark():
         ),
         (
             "CR-003",
-            resolve_context("so với lần trước thì sao", blank, None),
+            _resolve_current_context("so với lần trước thì sao", blank, None),
             {
                 "current_report_ref": None,
                 "current_analyte": None,
-                "reason_code": ReasonCode.AMBIGUOUS_CONTEXT,
-                "forced_intent": None,
+                "reason_code": None,
+                "forced_intent": IntentEnum.ANALYZE_TREND,
             },
         ),
         (
             "CR-004",
-            resolve_context("xem xu hướng WBC", blank, None),
+            _resolve_current_context("xem xu hướng WBC", blank, None),
             {"current_report_ref": None, "current_analyte": "WBC", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-005",
-            resolve_context("trend LDL-C", blank, None),
+            _resolve_current_context("trend LDL-C", blank, None),
             {"current_report_ref": None, "current_analyte": "LDL-C", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-006",
-            resolve_context(
+            _resolve_current_context(
                 "giải thích chỉ số này", blank, UIContext(candidate_report_ref="42", candidate_analyte="HbA1c")
             ),
             {"current_report_ref": "42", "current_analyte": "HbA1c", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-007",
-            resolve_context("nói thêm", blank, None),
+            _resolve_current_context("nói thêm", blank, None),
             {"current_report_ref": None, "current_analyte": None, "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-008",
-            resolve_context("xem xu hướng Uric acid", blank, None),
+            _resolve_current_context("xem xu hướng Uric acid", blank, None),
             {"current_report_ref": None, "current_analyte": "Uric acid", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-009",
-            resolve_context("so voi lan truoc", _session(analyte="LDL-C"), None),
+            _resolve_current_context("so voi lan truoc", _session(analyte="LDL-C"), None),
             {
                 "current_report_ref": None,
                 "current_analyte": "LDL-C",
@@ -346,7 +368,7 @@ def test_tip006_p2_context_resolution_benchmark():
         ),
         (
             "CR-010",
-            resolve_context("xem xu hướng", blank, None),
+            _resolve_current_context("xem xu hướng", blank, None),
             {"current_report_ref": None, "current_analyte": None, "reason_code": None, "forced_intent": None},
         ),
     ]

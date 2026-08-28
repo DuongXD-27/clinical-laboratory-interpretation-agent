@@ -15,6 +15,7 @@ all six frozen response quality golden suites:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -1344,7 +1345,12 @@ def run_response_quality_suite(
     )
 
 
-def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult], output_path: Path):
+def generate_baseline_markdown_report(
+    suite_results: list[SuiteEvaluationResult],
+    output_path: Path,
+    *,
+    source_metadata: dict[str, object] | None = None,
+):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     total_all = sum(sr.total_cases for sr in suite_results)
@@ -1370,6 +1376,10 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("# VMEC-05 Response Quality Baseline Evaluation Report (Repaired & Seam-Injected)\n\n")
+        if source_metadata:
+            f.write(f"- **Source JSON**: `{source_metadata['source_name']}`\n")
+            f.write(f"- **Evaluation Timestamp**: `{source_metadata['timestamp']}`\n")
+            f.write(f"- **Source SHA-256**: `{source_metadata['sha256']}`\n\n")
         f.write("## 1. Executive Summary\n\n")
         f.write(f"- **Total Test Cases Evaluated**: {total_all}\n")
         f.write(f"- **Overall Passed**: {passed_all}/{total_all} ({overall_rate:.1f}%)\n")
@@ -1386,7 +1396,7 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
         f.write("|---|---:|---|\n")
         for cl, cnt in sorted(all_class_counts.items(), key=lambda x: x[1], reverse=True):
             f.write(f"| `{cl}` | **{cnt}** | Truthful evaluation category |\n")
-        f.write(f"| **TOTAL** | **{total_all}** | Reconciled across 125 cases |\n\n")
+        f.write(f"| **TOTAL** | **{total_all}** | Reconciled across {total_all} cases |\n\n")
 
         f.write("## 3. Execution Layer Breakdown\n\n")
         f.write("| Execution Layer | Count | Description |\n")
@@ -1433,6 +1443,70 @@ def generate_baseline_markdown_report(suite_results: list[SuiteEvaluationResult]
             f.write("\n")
 
     print(f"\nBaseline markdown report successfully written to: {output_path}")
+
+
+def _suite_results_from_report(report: dict[str, object]) -> list[SuiteEvaluationResult]:
+    suites: list[SuiteEvaluationResult] = []
+    for raw_suite in report.get("suites", []):
+        raw_cases = raw_suite.get("cases", [])
+        cases: list[CaseEvaluationResult] = []
+        for raw_case in raw_cases:
+            turns = []
+            for raw_turn in raw_case.get("turns", []):
+                turns.append(
+                    TurnResult(
+                        **{
+                            **raw_turn,
+                            "hard_checks": [HardCheckResult(**item) for item in raw_turn.get("hard_checks", [])],
+                            "soft_checks": [SoftCheckResult(**item) for item in raw_turn.get("soft_checks", [])],
+                        }
+                    )
+                )
+            cases.append(CaseEvaluationResult(**{**raw_case, "turns": turns}))
+
+        tag_counts: dict[str, int] = {}
+        classification_counts: dict[str, int] = {}
+        layer_counts: dict[str, int] = {}
+        for case in cases:
+            classification_counts[case.classification] = classification_counts.get(case.classification, 0) + 1
+            layer_counts[case.execution_layer] = layer_counts.get(case.execution_layer, 0) + 1
+            for tag in case.failure_tags:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+        suites.append(
+            SuiteEvaluationResult(
+                suite_name=str(raw_suite["suite_name"]),
+                total_cases=int(raw_suite["total_cases"]),
+                passed_cases=int(raw_suite["passed_cases"]),
+                failed_cases=int(raw_suite["failed_cases"]),
+                hard_pass_count=sum(case.hard_result == "HARD_PASS" for case in cases),
+                hard_fail_count=sum(case.hard_result == "HARD_FAIL" for case in cases),
+                soft_pass_count=sum(case.soft_result == "SOFT_PASS" for case in cases),
+                soft_fail_count=sum(case.soft_result == "SOFT_FAIL" for case in cases),
+                soft_not_evaluated_count=sum(case.soft_result == "SOFT_NOT_EVALUATED" for case in cases),
+                pass_rate=float(raw_suite["pass_rate"]),
+                cases=cases,
+                tag_counts=tag_counts,
+                classification_counts=classification_counts,
+                layer_counts=layer_counts,
+            )
+        )
+    return suites
+
+
+def generate_markdown_report_from_json(json_path: Path, output_path: Path) -> None:
+    """Render an auditable Markdown snapshot from an existing evaluation JSON."""
+    source_bytes = json_path.read_bytes()
+    report = json.loads(source_bytes.decode("utf-8-sig"))
+    generate_baseline_markdown_report(
+        _suite_results_from_report(report),
+        output_path,
+        source_metadata={
+            "source_name": json_path.name,
+            "timestamp": report.get("timestamp", "unknown"),
+            "sha256": hashlib.sha256(source_bytes).hexdigest(),
+        },
+    )
 
 
 def generate_baseline_json_report(suite_results: list[SuiteEvaluationResult], output_path: Path):
@@ -1498,11 +1572,11 @@ def main():
         res = run_response_quality_suite(sf, client, target_case_id=args.case)
         all_results.append(res)
 
-    md_report_path = Path(__file__).resolve().parents[1] / args.report_out
-    generate_baseline_markdown_report(all_results, md_report_path)
-
     json_report_path = Path(__file__).resolve().parents[1] / args.json_out
     generate_baseline_json_report(all_results, json_report_path)
+
+    md_report_path = Path(__file__).resolve().parents[1] / args.report_out
+    generate_markdown_report_from_json(json_report_path, md_report_path)
 
     total_all = sum(sr.total_cases for sr in all_results)
     passed_all = sum(sr.passed_cases for sr in all_results)

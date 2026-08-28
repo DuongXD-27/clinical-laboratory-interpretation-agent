@@ -84,7 +84,7 @@ Orchestrator API (/api/v1/orchestrator/message)
 Role / Onboarding / OCR / Policy Gates
        │
        ▼
-Context Resolver -> Intent Router -> Workflow Dispatcher
+Intent Router -> Medical Context (`medical_context.py`) -> Workflow Dispatcher
        │
        ▼
 Approved wrappers/services

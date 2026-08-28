@@ -19,14 +19,14 @@ snapshots and distinct safety states remain separate even when filenames match.
 | `eval/manual/post_safety_fix_attempt2_preconsent/TC-G2-03.json` | `eval/manual/post_safety_fix/TC-G2-03.json` | `1abc0f04134c3640c3087230f77599d6f57e1adb1f12112ddfcfa2b60494b629` | Named attempt remains traceable here; content equals the retained post-safety case. |
 | `eval/manual/post_safety_fix_attempt2_preconsent/TC-G2-04.json` | `eval/manual/post_safety_fix/TC-G2-04.json` | `6203d3dea7320c591df9b992160502a2bf5f80d61fe8c9ad26f9756e155605fc` | Named attempt remains traceable here; content equals the retained post-safety case. |
 | `eval/manual/post_safety_fix_attempt2_preconsent/TC-G2-05.json` | `eval/manual/post_safety_fix/TC-G2-05.json` | `38fd9d8c7640f7f52f51ac42e8009094ffb3d832c4c629e32ff71ad645349336` | Named attempt remains traceable here; content equals the retained post-safety case. |
-| `eval/manual/response_quality_post_a2_report.md` | `eval/manual/response_quality_baseline_report.md` | `7a5581af9dce9e8293221ed74e32d641267cd24446533ff617a57acb8e4d3b3b` | Run label preserved here; the Markdown report was byte-identical. Distinct `response_quality_post_a2.json` is retained. |
-| `eval/manual/response_quality_post_v1_4b_report.md` | `eval/manual/response_quality_baseline_report.md` | `7a5581af9dce9e8293221ed74e32d641267cd24446533ff617a57acb8e4d3b3b` | Run label preserved here; the Markdown report was byte-identical. Distinct `response_quality_post_v1_4b.json` is retained. |
-
-## Report generation anomaly
+## Resolved report generation anomaly
 
 `response_quality_baseline_report.md`, `response_quality_post_a2_report.md`, and
 `response_quality_post_v1_4b_report.md` were byte-identical even though their
-paired JSON snapshots differ. This is a `REPORT_GENERATION_ANOMALY`, not evidence
-that the runs were identical. The baseline Markdown is retained as the canonical
-content, both later run labels are mapped above, and all three distinct JSON
-snapshots are retained for forensic comparison.
+paired JSON snapshots differ in 56–72 case records. The former renderer projected
+only aggregate verdict fields and omitted source identity, evaluation timestamp,
+JSON fingerprint, and turn-level differences. CLEAN-003 fixed that lossy static
+projection and deterministically regenerated all three Markdown reports from the
+retained JSON snapshots. No evaluation or external model was run. Each report now
+records its source JSON and SHA-256, so the three historical runs remain distinct
+and auditable.
