@@ -9,69 +9,39 @@ class TestOneSidedLimitBoundaries:
     """Boundary tests for ONE_SIDED_LIMIT reference rules (AST, ALT, GGT, Total bilirubin)."""
 
     @pytest.mark.parametrize(
-        ("value", "upper", "expected"),
+        ("analyte", "value", "upper", "expected"),
         [
-            (Decimal("39.9999"), Decimal("40"), "normal"),
-            (Decimal("40.0000"), Decimal("40"), "high"),
-            (Decimal("40.0001"), Decimal("40"), "high"),
-            (Decimal("20.0000"), Decimal("40"), "normal"),
-            (Decimal("0.0000"),  Decimal("40"), "normal"),
+            pytest.param("AST", Decimal("39.9999"), Decimal("40"), "normal", id="ast-below"),
+            pytest.param("AST", Decimal("40.0000"), Decimal("40"), "high", id="ast-exact"),
+            pytest.param("AST", Decimal("40.0001"), Decimal("40"), "high", id="ast-above"),
+            pytest.param("AST", Decimal("20.0000"), Decimal("40"), "normal", id="ast-mid"),
+            pytest.param("AST", Decimal("0.0000"), Decimal("40"), "normal", id="ast-zero"),
+            pytest.param("ALT", Decimal("40.9999"), Decimal("41"), "normal", id="alt-below"),
+            pytest.param("ALT", Decimal("41.0000"), Decimal("41"), "high", id="alt-exact"),
+            pytest.param("ALT", Decimal("41.0001"), Decimal("41"), "high", id="alt-above"),
+            pytest.param("ALT", Decimal("20.0000"), Decimal("41"), "normal", id="alt-mid"),
+            pytest.param("ALT", Decimal("0.0000"), Decimal("41"), "normal", id="alt-zero"),
+            pytest.param("GGT male", Decimal("60.9999"), Decimal("61"), "normal", id="ggt-male-below"),
+            pytest.param("GGT male", Decimal("61.0000"), Decimal("61"), "high", id="ggt-male-exact"),
+            pytest.param("GGT male", Decimal("61.0001"), Decimal("61"), "high", id="ggt-male-above"),
+            pytest.param("GGT male", Decimal("20.0000"), Decimal("61"), "normal", id="ggt-male-mid"),
+            pytest.param("GGT male", Decimal("0.0000"), Decimal("61"), "normal", id="ggt-male-zero"),
+            pytest.param("GGT female", Decimal("35.9999"), Decimal("36"), "normal", id="ggt-female-below"),
+            pytest.param("GGT female", Decimal("36.0000"), Decimal("36"), "high", id="ggt-female-exact"),
+            pytest.param("GGT female", Decimal("36.0001"), Decimal("36"), "high", id="ggt-female-above"),
+            pytest.param("GGT female", Decimal("20.0000"), Decimal("36"), "normal", id="ggt-female-mid"),
+            pytest.param("GGT female", Decimal("0.0000"), Decimal("36"), "normal", id="ggt-female-zero"),
+            pytest.param("Total bilirubin", Decimal("20.9999"), Decimal("21"), "normal", id="bilirubin-below"),
+            pytest.param("Total bilirubin", Decimal("21.0000"), Decimal("21"), "high", id="bilirubin-exact"),
+            pytest.param("Total bilirubin", Decimal("21.0001"), Decimal("21"), "high", id="bilirubin-above"),
+            pytest.param("Total bilirubin", Decimal("10.0000"), Decimal("21"), "normal", id="bilirubin-mid"),
+            pytest.param("Total bilirubin", Decimal("0.0000"), Decimal("21"), "normal", id="bilirubin-zero"),
         ],
     )
-    def test_ast_boundary_probes(self, value, upper, expected):
-        assert _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == expected
+    def test_one_sided_boundary_probes(self, analyte, value, upper, expected):
+        actual = _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<")
 
-    @pytest.mark.parametrize(
-        ("value", "upper", "expected"),
-        [
-            (Decimal("40.9999"), Decimal("41"), "normal"),
-            (Decimal("41.0000"), Decimal("41"), "high"),
-            (Decimal("41.0001"), Decimal("41"), "high"),
-            (Decimal("20.0000"), Decimal("41"), "normal"),
-            (Decimal("0.0000"),  Decimal("41"), "normal"),
-        ],
-    )
-    def test_alt_boundary_probes(self, value, upper, expected):
-        assert _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == expected
-
-    @pytest.mark.parametrize(
-        ("value", "upper", "expected"),
-        [
-            (Decimal("60.9999"), Decimal("61"), "normal"),
-            (Decimal("61.0000"), Decimal("61"), "high"),
-            (Decimal("61.0001"), Decimal("61"), "high"),
-            (Decimal("20.0000"), Decimal("61"), "normal"),
-            (Decimal("0.0000"),  Decimal("61"), "normal"),
-        ],
-    )
-    def test_ggt_male_boundary_probes(self, value, upper, expected):
-        assert _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == expected
-
-    @pytest.mark.parametrize(
-        ("value", "upper", "expected"),
-        [
-            (Decimal("35.9999"), Decimal("36"), "normal"),
-            (Decimal("36.0000"), Decimal("36"), "high"),
-            (Decimal("36.0001"), Decimal("36"), "high"),
-            (Decimal("20.0000"), Decimal("36"), "normal"),
-            (Decimal("0.0000"),  Decimal("36"), "normal"),
-        ],
-    )
-    def test_ggt_female_boundary_probes(self, value, upper, expected):
-        assert _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == expected
-
-    @pytest.mark.parametrize(
-        ("value", "upper", "expected"),
-        [
-            (Decimal("20.9999"), Decimal("21"), "normal"),
-            (Decimal("21.0000"), Decimal("21"), "high"),
-            (Decimal("21.0001"), Decimal("21"), "high"),
-            (Decimal("10.0000"), Decimal("21"), "normal"),
-            (Decimal("0.0000"),  Decimal("21"), "normal"),
-        ],
-    )
-    def test_total_bilirubin_boundary_probes(self, value, upper, expected):
-        assert _classify(value, None, upper, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == expected
+        assert actual == expected, analyte
 
     @pytest.mark.parametrize(
         "invalid_val",
@@ -86,9 +56,18 @@ class TestOneSidedLimitBoundaries:
         [None, "", "INVALID", "abc", "==", "!=", "123"],
     )
     def test_missing_or_invalid_operator_fails_closed(self, bad_op):
-        assert _classify(Decimal("20"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op) == "unknown"
-        assert _classify(Decimal("40"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op) == "unknown"
-        assert _classify(Decimal("50"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op) == "unknown"
+        assert (
+            _classify(Decimal("20"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op)
+            == "unknown"
+        )
+        assert (
+            _classify(Decimal("40"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op)
+            == "unknown"
+        )
+        assert (
+            _classify(Decimal("50"), None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=bad_op)
+            == "unknown"
+        )
 
     def test_missing_upper_bound_fails_closed(self):
         assert _classify(Decimal("20"), None, None, rule_type="ONE_SIDED_LIMIT", upper_operator="<") == "unknown"
@@ -115,4 +94,3 @@ class TestOneSidedLimitBoundaries:
     )
     def test_generic_gt_operator_evaluation(self, value, expected):
         assert _classify(value, None, Decimal("40"), rule_type="ONE_SIDED_LIMIT", upper_operator=">") == expected
-

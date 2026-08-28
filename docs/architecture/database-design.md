@@ -8,7 +8,7 @@
 patient, tự động lưu report sau `/analyze`, endpoint xem lịch sử, sinh
 câu hỏi cho bác sĩ, ghi chú của bác sĩ) thuộc phạm vi riêng của Duy
 (Nhiệm vụ 1 & 3, TechDebt V3) và của node `generate_questions` (chưa ai
-làm — xem `docs/version-kickoff/version-3-kickoff.md`), cố tình không
+làm — xem `docs/archive/project-history/kickoff/version-3-kickoff.md`), cố tình không
 làm ở đây để không lấn phân công.
 **Nguồn implement thật:** [`src/models/db.py`](../../src/models/db.py) —
 tài liệu này mô tả lại đúng những gì đã code, không phải bản thiết kế

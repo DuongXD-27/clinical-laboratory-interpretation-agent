@@ -15,15 +15,20 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from fastapi.testclient import TestClient
+
 from src.main import app
 
 
 def run_conversational_eval():
     client = TestClient(app)
-    cases_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../eval/conversational/conversational_cases.json"))
-    report_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "../eval/manual/conversational_independence_eval_report.md"))
+    cases_file = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../eval/conversational/conversational_cases.json")
+    )
+    report_file = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../eval/manual/conversational_independence_eval_report.md")
+    )
 
-    with open(cases_file, "r", encoding="utf-8") as f:
+    with open(cases_file, encoding="utf-8") as f:
         cases = json.load(f)
 
     print(f"Running multi-turn conversational evaluation ({len(cases)} dialog scenarios)...")
@@ -63,7 +68,6 @@ def run_conversational_eval():
             user_msg = turn_data["message"]
             expected_intent = turn_data["expected_intent"]
             expected_status = turn_data["expected_status"]
-            expected_reason = turn_data["expected_reason_code"]
 
             payload = {
                 "message": user_msg,
@@ -75,16 +79,18 @@ def run_conversational_eval():
 
             if resp.status_code != 200:
                 print(f"  Turn {turn_num}: HTTP {resp.status_code} Error")
-                scenario_results.append({
-                    "turn": turn_num,
-                    "message": user_msg,
-                    "expected_intent": expected_intent,
-                    "actual_intent": "ERROR",
-                    "expected_status": expected_status,
-                    "actual_status": "ERROR",
-                    "pass": False,
-                    "notes": f"HTTP {resp.status_code}: {resp.text}",
-                })
+                scenario_results.append(
+                    {
+                        "turn": turn_num,
+                        "message": user_msg,
+                        "expected_intent": expected_intent,
+                        "actual_intent": "ERROR",
+                        "expected_status": expected_status,
+                        "actual_status": "ERROR",
+                        "pass": False,
+                        "notes": f"HTTP {resp.status_code}: {resp.text}",
+                    }
+                )
                 continue
 
             resp_json = resp.json()
@@ -95,12 +101,6 @@ def run_conversational_eval():
             intent_ok = actual_intent == expected_intent
             status_ok = actual_status == expected_status
 
-            # For reason code: match if expected is specific
-            if expected_reason is not None:
-                reason_ok = actual_reason == expected_reason
-            else:
-                reason_ok = True
-
             turn_pass = intent_ok and (status_ok or actual_status in ("success", "needs_input", "blocked"))
             if turn_pass:
                 passed_turns += 1
@@ -110,23 +110,27 @@ def run_conversational_eval():
             print(f"    Status: {actual_status} (Expected: {expected_status})")
             print(f"    Verdict: {'PASS' if turn_pass else 'FAIL'}")
 
-            scenario_results.append({
-                "turn": turn_num,
-                "message": user_msg,
-                "expected_intent": expected_intent,
-                "actual_intent": actual_intent,
-                "expected_status": expected_status,
-                "actual_status": actual_status,
-                "actual_reason": actual_reason,
-                "pass": turn_pass,
-                "assistant_message": resp_json.get("message", ""),
-            })
+            scenario_results.append(
+                {
+                    "turn": turn_num,
+                    "message": user_msg,
+                    "expected_intent": expected_intent,
+                    "actual_intent": actual_intent,
+                    "expected_status": expected_status,
+                    "actual_status": actual_status,
+                    "actual_reason": actual_reason,
+                    "pass": turn_pass,
+                    "assistant_message": resp_json.get("message", ""),
+                }
+            )
 
-        results.append({
-            "id": scenario_id,
-            "description": description,
-            "turns": scenario_results,
-        })
+        results.append(
+            {
+                "id": scenario_id,
+                "description": description,
+                "turns": scenario_results,
+            }
+        )
 
     # Generate Markdown Report
     os.makedirs(os.path.dirname(report_file), exist_ok=True)
@@ -145,7 +149,9 @@ def run_conversational_eval():
             f.write("|---|---|---|---|---|---|\n")
             for t in sc["turns"]:
                 verdict = "PASS" if t["pass"] else "FAIL"
-                f.write(f"| {t['turn']} | {t['message']} | `{t['expected_intent']}` | `{t.get('actual_intent')}` | `{t.get('actual_status')}` | **{verdict}** |\n")
+                f.write(
+                    f"| {t['turn']} | {t['message']} | `{t['expected_intent']}` | `{t.get('actual_intent')}` | `{t.get('actual_status')}` | **{verdict}** |\n"
+                )
             f.write("\n")
 
     print("\n" + "=" * 60)

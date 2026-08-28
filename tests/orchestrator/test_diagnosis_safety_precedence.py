@@ -142,6 +142,7 @@ def no_context_setup(monkeypatch):
 # Gate-level: positive diagnosis forms (request FORM, not disease blacklist)
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -157,6 +158,9 @@ def no_context_setup(monkeypatch):
         ("STRONG-1", "Kết quả này có nghĩa là tôi bị xơ gan không?"),
         ("STRONG-2", "Vậy là tôi mắc gout đúng không?"),
         ("AUDIT-CASE-3", "Kết quả này có phải ung thư không?"),
+        ("D-19", "HbA1c 7.2%, tôi bị tiểu đường đúng không?"),
+        ("D-20", "WBC 20, tôi bị ung thư à?"),
+        ("D-21", "Creatinine của tôi cao, vậy tôi bị bệnh thận phải không?"),
     ],
 )
 def test_gate_positive_diagnosis_forms(case_id: str, message: str) -> None:
@@ -164,24 +168,9 @@ def test_gate_positive_diagnosis_forms(case_id: str, message: str) -> None:
 
 
 # ==============================================================================
-# Gate-level: explicit analyte/value must NEVER suppress diagnosis safety
-# ==============================================================================
-
-@pytest.mark.parametrize(
-    "case_id,message",
-    [
-        ("D-19", "HbA1c 7.2%, tôi bị tiểu đường đúng không?"),
-        ("D-20", "WBC 20, tôi bị ung thư à?"),
-        ("D-21", "Creatinine của tôi cao, vậy tôi bị bệnh thận phải không?"),
-    ],
-)
-def test_gate_analyte_value_never_suppresses_diagnosis(case_id: str, message: str) -> None:
-    assert medical_safety_gate(message) == ReasonCode.MEDICAL_DIAGNOSIS_REQUEST, case_id
-
-
-# ==============================================================================
 # Gate-level: negative controls — educational/safe questions NOT overblocked
 # ==============================================================================
+
 
 @pytest.mark.parametrize(
     "case_id,message,expected",
@@ -210,6 +199,7 @@ def test_gate_negative_controls_not_diagnosis(case_id: str, message: str, expect
 # ==============================================================================
 # End-to-end: active HbA1c context — diagnosis safety beats cached analyte
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
@@ -245,6 +235,7 @@ async def test_e2e_active_hba1c_context_diagnosis_safety_precedence(
 # End-to-end: active WBC context
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_e2e_active_wbc_context_diagnosis_safety(active_wbc_setup) -> None:
     user, runtime, db = active_wbc_setup
@@ -263,6 +254,7 @@ async def test_e2e_active_wbc_context_diagnosis_safety(active_wbc_setup) -> None
 # End-to-end: no active context — still blocked as diagnosis, never AMBIGUOUS_CONTEXT
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "case_id,message",
@@ -271,9 +263,7 @@ async def test_e2e_active_wbc_context_diagnosis_safety(active_wbc_setup) -> None
         ("NOCTX-D-04", "Tôi có bệnh thận không?"),
     ],
 )
-async def test_e2e_no_context_still_blocked_as_diagnosis(
-    no_context_setup, case_id: str, message: str
-) -> None:
+async def test_e2e_no_context_still_blocked_as_diagnosis(no_context_setup, case_id: str, message: str) -> None:
     user, runtime, db = no_context_setup
     res = await handle_message(
         OrchestratorRequest(message=message, client_request_id=case_id.lower()),
@@ -288,6 +278,7 @@ async def test_e2e_no_context_still_blocked_as_diagnosis(
 # ==============================================================================
 # End-to-end: safety interruption preserves valid context
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_safety_interruption_preserves_hba1c_context(active_hba1c_setup) -> None:
@@ -329,6 +320,7 @@ async def test_e2e_safety_interruption_preserves_hba1c_context(active_hba1c_setu
 # End-to-end: property/analyte questions remain supported explanations
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "case_id,message",
@@ -338,9 +330,7 @@ async def test_e2e_safety_interruption_preserves_hba1c_context(active_hba1c_setu
         ("REF-WBC", "Chỉ số này có phải WBC không?"),
     ],
 )
-async def test_e2e_property_and_analyte_questions_not_overblocked(
-    active_wbc_setup, case_id: str, message: str
-) -> None:
+async def test_e2e_property_and_analyte_questions_not_overblocked(active_wbc_setup, case_id: str, message: str) -> None:
     user, runtime, db = active_wbc_setup
     res = await handle_message(
         OrchestratorRequest(message=message, client_request_id=case_id.lower()),
@@ -355,6 +345,7 @@ async def test_e2e_property_and_analyte_questions_not_overblocked(
 # ==============================================================================
 # End-to-end: adjacent behaviors unchanged (sensitive / out-of-scope / unclear)
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_sensitive_system_unchanged(active_wbc_setup) -> None:
@@ -401,6 +392,7 @@ async def test_e2e_unclear_input_unchanged(active_wbc_setup) -> None:
 # ==============================================================================
 # Precedence: medical safety outranks sensitive system when both trigger
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_gate_medical_safety_outranks_sensitive_system(active_wbc_setup) -> None:

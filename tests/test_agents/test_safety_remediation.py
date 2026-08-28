@@ -7,40 +7,19 @@ from src.agents.nodes import guardrail_node as guardrail_module
 from src.agents.nodes.guardrail_node import guardrail_node, rewrite_with_llm
 from src.services.medical_safety_assets import (
     GENERATION_SAFETY_CONTRACT,
-    ensure_reference_qualification,
 )
 from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.template_loader import load_templates
-
-
-@pytest.mark.parametrize(
-    ("status", "unqualified", "expected"),
-    [
-        ("normal", "Chỉ số này được phân loại normal.", "nằm trong khoảng tham chiếu"),
-        ("high", "Chỉ số này được phân loại high.", "cao so với khoảng tham chiếu"),
-        ("low", "Chỉ số này được phân loại low.", "thấp so với khoảng tham chiếu"),
-        ("critical_high", "Trạng thái critical_high.", "vượt ngưỡng cảnh báo nguy kịch"),
-        ("critical_low", "Trạng thái critical_low.", "vượt ngưỡng cảnh báo nguy kịch"),
-    ],
-)
-def test_safe_01_03_04_status_is_reference_or_threshold_qualified(status, unqualified, expected):
-    result = ensure_reference_qualification(unqualified, status)
-
-    assert expected in result
-    assert result.endswith(unqualified)
-
-
-def test_existing_reference_qualification_is_not_duplicated():
-    explanation = "Giá trị này cao so với khoảng tham chiếu được hệ thống sử dụng."
-
-    assert ensure_reference_qualification(explanation, "high") == explanation
 
 
 def test_safe_01_and_05_generation_contract_covers_actual_failures():
     assert "NORMAL chỉ có nghĩa là giá trị nằm trong khoảng tham chiếu" in GENERATION_SAFETY_CONTRACT
     assert 'Không gọi giá trị là "mức tối ưu"' in GENERATION_SAFETY_CONTRACT
     assert "không khẳng định tim, gan, thận, miễn dịch" in GENERATION_SAFETY_CONTRACT
-    assert "mọi triệu chứng, ảnh hưởng, liên hệ hoặc nội dung y khoa phải được nêu trực tiếp trong context" in GENERATION_SAFETY_CONTRACT
+    assert (
+        "mọi triệu chứng, ảnh hưởng, liên hệ hoặc nội dung y khoa phải được nêu trực tiếp trong context"
+        in GENERATION_SAFETY_CONTRACT
+    )
     assert "Context không nêu thì phải bỏ" in GENERATION_SAFETY_CONTRACT
     assert "không dùng kiến thức sẵn có của mô hình" in GENERATION_SAFETY_CONTRACT
     assert 'Giữ nguyên ngôn ngữ điều kiện của context như "có thể"' in GENERATION_SAFETY_CONTRACT

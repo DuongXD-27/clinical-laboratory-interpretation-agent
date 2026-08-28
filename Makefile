@@ -1,21 +1,29 @@
-.PHONY: run test lint format typecheck check clean
+.PHONY: run test lint format-check frontend-lint frontend-test frontend-build check verify clean
 
 run:
 	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 test:
-	pytest tests/ -v
+	pytest tests/ -v --basetemp scratch/pytest-make
 
 lint:
-	ruff check src/ tests/
+	ruff check .
 
-format:
-	ruff format src/ tests/
+format-check:
+	ruff format --check .
 
-typecheck:
-	mypy src/
+frontend-lint:
+	cd frontend && npm run lint
 
-check: lint format test
+frontend-test:
+	cd frontend && npm test
+
+frontend-build:
+	cd frontend && npm run build
+
+check: lint test
+
+verify: lint test frontend-lint frontend-test frontend-build
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +

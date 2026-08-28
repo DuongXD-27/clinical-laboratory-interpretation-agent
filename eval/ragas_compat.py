@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import importlib
-import importlib.metadata
 import importlib.machinery
+import importlib.metadata
 import importlib.util
 import sys
 import types
 from dataclasses import dataclass
 from typing import Any
-
 
 LEGACY_CHAT_VERTEXAI_MODULE = "langchain_community.chat_models.vertexai"
 LEGACY_LLMS_MODULE = "langchain_community.llms"

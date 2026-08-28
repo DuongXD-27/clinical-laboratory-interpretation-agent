@@ -159,7 +159,7 @@ async def test_full_graph_produces_no_questions_when_everything_is_normal(monkey
     """Nhãn phải ghi rõ lúc đói mới resolve được.
 
     `Glucose` trần cố tình KHÔNG resolve theo chính sách fail-closed đã phê duyệt
-    (`FIX2_POLICY_A`, xem `docs/version-handoff/fix2-generic-glucose-fasting-alias-evidence.md`):
+    (`FIX2_POLICY_A`, xem `docs/audit/evidence/fix2-generic-glucose-fasting-alias-evidence.md`):
     một mẫu glucose không rõ đói/không đói thì không được nhận khoảng tham chiếu
     của mẫu đói. Dùng nhãn trần ở đây sẽ ra `status="unknown"` và sinh câu hỏi,
     tức là test sai chứ không phải app sai.

@@ -2,7 +2,7 @@
 
 Status: Human-approved design decisions incorporated; ready for final document approval; no implementation authorized  
 Date: 2026-08-14  
-Inputs reviewed: current repository code/data and `VMEC05_DATA_AUDIT_V1.md`  
+Inputs reviewed: current repository code/data and `docs/audit/data-audit-v1.md`
 Scope: Reference Interval (RI) and Clinical Decision Limit/Band (CDL) for the frozen Core 25  
 Explicitly out of scope: critical/panic thresholds, medical threshold changes, source replacement, approval-list changes, RAG content
 

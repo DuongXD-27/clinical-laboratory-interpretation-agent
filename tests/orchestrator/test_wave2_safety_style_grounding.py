@@ -16,14 +16,10 @@ from src.models.db import (
 )
 from src.models.orchestrator_schemas import (
     AnalysisDataPayload,
-    DataType,
     ExplanationDataPayload,
     ExplanationIndicatorFacts,
     IntentEnum,
     OrchestratorRequest,
-    OrchestratorResponse,
-    OrchestratorRole,
-    OrchestratorSessionContext,
     ReasonCode,
     ResponseStatus,
     ResponseStyle,
@@ -35,13 +31,10 @@ from src.orchestrator.gates import (
     medical_safety_gate,
 )
 from src.orchestrator.response_composer import (
-    STYLE_PROFILES,
     _compose_explanation_message,
-    _format_whole_report_deterministic_summary,
     _validate_patient_grounding,
     build_final_response,
     deterministic_message_for,
-    enforce_final_response,
 )
 from src.orchestrator.service import (
     OrchestratorRuntime,
@@ -50,16 +43,22 @@ from src.orchestrator.service import (
 )
 from src.orchestrator.session_store import InMemorySessionStore
 
-
 # ============================================================================
 # 1. Emergency Precedence vs Theoretical / Educational Distinctions
 # ============================================================================
 
+
 def test_active_personal_urgent_symptoms_take_precedence_over_diagnosis_question():
     # Personal reporting of urgent symptoms MUST trigger EMERGENCY_INPUT_SAFETY
     # even when phrasing contains diagnosis question forms.
-    assert emergency_safety_gate("Tôi đang đau ngực và khó thở, có phải bị tim không?") == ReasonCode.EMERGENCY_INPUT_SAFETY
-    assert emergency_safety_gate("Tôi bị đau ngực và khó thở, có phải tôi bị bệnh tim không?") == ReasonCode.EMERGENCY_INPUT_SAFETY
+    assert (
+        emergency_safety_gate("Tôi đang đau ngực và khó thở, có phải bị tim không?")
+        == ReasonCode.EMERGENCY_INPUT_SAFETY
+    )
+    assert (
+        emergency_safety_gate("Tôi bị đau ngực và khó thở, có phải tôi bị bệnh tim không?")
+        == ReasonCode.EMERGENCY_INPUT_SAFETY
+    )
     assert emergency_safety_gate("tôi bị khó thở nên làm gì") == ReasonCode.EMERGENCY_INPUT_SAFETY
     assert emergency_safety_gate("em đang đau ngực dữ dội cứu em với") == ReasonCode.EMERGENCY_INPUT_SAFETY
 
@@ -75,6 +74,7 @@ def test_theoretical_educational_symptom_queries_do_not_trigger_emergency():
 # ============================================================================
 # 2. Personal Medical / Diet / Supplement Advice Gate
 # ============================================================================
+
 
 @pytest.mark.parametrize(
     "query",
@@ -109,7 +109,9 @@ def test_educational_queries_pass_medical_safety_gate(query: str):
 
 
 def test_personal_medical_advice_refusal_copy():
-    msg = deterministic_message_for(ResponseStatus.BLOCKED, ReasonCode.PERSONAL_MEDICAL_ADVICE, IntentEnum.UNSUPPORTED_OR_UNSAFE)
+    msg = deterministic_message_for(
+        ResponseStatus.BLOCKED, ReasonCode.PERSONAL_MEDICAL_ADVICE, IntentEnum.UNSUPPORTED_OR_UNSAFE
+    )
     assert "chế độ ăn uống" in msg or "dinh dưỡng" in msg
     assert "bác sĩ" in msg
 
@@ -118,13 +120,32 @@ def test_personal_medical_advice_refusal_copy():
 # 3. Real Deterministic Critical Fact Invariance Across All Styles
 # ============================================================================
 
+
 @pytest.mark.parametrize(
     ("analyte_name", "value", "unit", "status", "ref_low", "ref_high", "critical_status", "critical_msg"),
     [
         # Real critical high: Potassium 6.8 mmol/L (> 6.1 mmol/L threshold in critical_thresholds.json)
-        ("Potassium", "6.8", "mmol/L", "high", "3.5", "5.0", "critical_high", "Potassium tăng tới ngưỡng nguy kịch. Cần can thiệp y tế khẩn cấp."),
+        (
+            "Potassium",
+            "6.8",
+            "mmol/L",
+            "high",
+            "3.5",
+            "5.0",
+            "critical_high",
+            "Potassium tăng tới ngưỡng nguy kịch. Cần can thiệp y tế khẩn cấp.",
+        ),
         # Real critical low: Sodium 115.0 mmol/L (< 120 mmol/L threshold in critical_thresholds.json)
-        ("Sodium", "115.0", "mmol/L", "low", "135.0", "145.0", "critical_low", "Sodium giảm tới ngưỡng nguy kịch. Cần can thiệp y tế khẩn cấp."),
+        (
+            "Sodium",
+            "115.0",
+            "mmol/L",
+            "low",
+            "135.0",
+            "145.0",
+            "critical_low",
+            "Sodium giảm tới ngưỡng nguy kịch. Cần can thiệp y tế khẩn cấp.",
+        ),
         # Non-critical high: Fasting plasma glucose 15.2 mmol/L (273.8 mg/dL < 450 mg/dL critical threshold -> status HIGH, NOT CRITICAL)
         ("Fasting plasma glucose", "15.2", "mmol/L", "high", "3.9", "6.4", None, None),
         # Normal indicator: RBC 4.5 10^12/L (within 4.0 - 5.5 reference range -> status NORMAL)
@@ -189,6 +210,7 @@ def test_real_deterministic_fact_invariance_across_all_styles(
 # 4. Expanded Deterministic Patient Grounding & Adversarial LLM Tests
 # ============================================================================
 
+
 @pytest.mark.parametrize(
     ("unsafe_statement", "description"),
     [
@@ -233,7 +255,9 @@ async def test_adversarial_llm_output_is_blocked_and_falls_back_across_all_style
     # invoked — and the response is always SUCCESS with the safe deterministic
     # summary. The core safety property ("unsafe text never reaches the
     # patient") is preserved and strengthened.
-    unsafe_mock_message = "Kết quả RBC bình thường nên cơ thể bạn được cung cấp oxy ổn định. Bạn có thể đang khó thở và bạn bị thiếu máu."
+    unsafe_mock_message = (
+        "Kết quả RBC bình thường nên cơ thể bạn được cung cấp oxy ổn định. Bạn có thể đang khó thở và bạn bị thiếu máu."
+    )
 
     payload = AnalysisDataPayload(
         indicators=[],
@@ -269,6 +293,7 @@ async def test_adversarial_llm_output_is_blocked_and_falls_back_across_all_style
 # 5. Pure Educational Definition Dispatch (e.g. "RBC là gì?")
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_rbc_educational_definition_dispatch_without_unrelated_facts():
     user = User(id=1, username="test_patient", role=ROLE_PATIENT, response_style="simple")
@@ -291,6 +316,7 @@ async def test_rbc_educational_definition_dispatch_without_unrelated_facts():
 # ============================================================================
 # 6. SQLite Migration & Backfill on Existing Populated Database
 # ============================================================================
+
 
 def test_sqlite_migration_on_populated_database(tmp_path):
     db_file = tmp_path / "legacy.db"
@@ -329,7 +355,9 @@ def test_sqlite_migration_on_populated_database(tmp_path):
 
         # Verify populated user row now has response_style == 'simple'
         with engine.connect() as check_conn:
-            row = check_conn.execute(text("SELECT username, response_style FROM users WHERE username = 'patient_legacy'")).fetchone()
+            row = check_conn.execute(
+                text("SELECT username, response_style FROM users WHERE username = 'patient_legacy'")
+            ).fetchone()
             assert row is not None
             assert row[0] == "patient_legacy"
             assert row[1] == "simple"
@@ -343,7 +371,9 @@ def test_profile_endpoint_handles_null_and_invalid_styles_safely():
     assert profile_null.response_style == "simple"
 
     # Invalid style string in patient object
-    user_invalid = User(id=2, username="u2", role="patient", response_style="pirate_mode", created_at=now, updated_at=now)
+    user_invalid = User(
+        id=2, username="u2", role="patient", response_style="pirate_mode", created_at=now, updated_at=now
+    )
     profile_invalid = _profile_response(user_invalid)
     assert profile_invalid.response_style == "simple"
 
@@ -358,6 +388,7 @@ def test_profile_endpoint_handles_null_and_invalid_styles_safely():
 # ============================================================================
 # 7. Per-Message Override Non-Persistence Invariant
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_per_message_override_does_not_mutate_persisted_user_preference():
@@ -401,6 +432,7 @@ async def test_per_message_override_does_not_mutate_persisted_user_preference():
         has_two_sided_reference_range=True,
     )
     from src.orchestrator.dispatcher import WorkflowResult
+
     wf_result = WorkflowResult(
         status=ResponseStatus.SUCCESS,
         data=ExplanationDataPayload(

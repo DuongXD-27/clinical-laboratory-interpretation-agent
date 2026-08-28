@@ -1,5 +1,9 @@
 # VMEC-05 Response Quality Baseline Evaluation Report (Repaired & Seam-Injected)
 
+- **Source JSON**: `response_quality_post_a2.json`
+- **Evaluation Timestamp**: `1787388474.9067304`
+- **Source SHA-256**: `75c2031196fcf617374307d863ee6e493d96cd6cd268812916c45fe44cfcf5aa`
+
 ## 1. Executive Summary
 
 - **Total Test Cases Evaluated**: 125

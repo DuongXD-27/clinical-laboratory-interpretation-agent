@@ -19,15 +19,11 @@ Outputs:
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-import os
-import re
 import sys
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import date
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -38,28 +34,16 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from fastapi.testclient import TestClient
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
-from src.config import get_settings
-from src.main import app
-from src.models.db import SessionLocal
-from src.models.schemas import (
-    AnalyzeRequest,
-    AnalyzeResponse,
-    CriticalAlertSchema,
-    IndicatorResultSchema,
-)
-from src.services import history_repository
-from src.services.context_budget import build_bounded_context
 from scripts.run_response_quality_eval import (
-    seed_fixture_to_db,
     MockControlledRetriever,
     _build_controlled_chunks,
-    _build_indicator_schema,
-    _build_critical_alert_schema,
-    _parse_date,
+    seed_fixture_to_db,
 )
+from src.config import get_settings
+from src.main import app
 
 JUDGE_PROVIDER = "openai"
 JUDGE_MODEL = "gpt-4o-mini"
@@ -140,6 +124,7 @@ You must output STRICT JSON matching this schema:
 """
 
 _llm_judge = None
+
 
 def get_judge_llm() -> ChatOpenAI:
     global _llm_judge
@@ -256,16 +241,8 @@ def _authoritative_runtime_facts(
 
 
 def _golden_semantic_expectations(expected: dict[str, Any]) -> dict[str, Any]:
-    must_convey = list(
-        expected.get("must_convey")
-        or expected.get("must_include_analytes")
-        or []
-    )
-    must_not_convey = list(
-        expected.get("must_not_convey")
-        or expected.get("must_not_introduce_sources")
-        or []
-    )
+    must_convey = list(expected.get("must_convey") or expected.get("must_include_analytes") or [])
+    must_not_convey = list(expected.get("must_not_convey") or expected.get("must_not_introduce_sources") or [])
 
     patient_friendliness = expected.get("patient_friendliness")
     if isinstance(patient_friendliness, dict):
@@ -317,10 +294,12 @@ Output strict JSON only.
     retries = 3
     for attempt in range(retries):
         try:
-            res = llm.invoke([
-                SystemMessage(content=JUDGE_SYSTEM_PROMPT),
-                HumanMessage(content=prompt),
-            ])
+            res = llm.invoke(
+                [
+                    SystemMessage(content=JUDGE_SYSTEM_PROMPT),
+                    HumanMessage(content=prompt),
+                ]
+            )
             content = res.content.strip()
             if content.startswith("```json"):
                 content = content[7:]
@@ -350,10 +329,8 @@ Output strict JSON only.
     return {}
 
 
-def run_soft_suite(
-    suite_path: Path, client: TestClient, target_case_id: str | None = None
-) -> SuiteSoftResult:
-    with open(suite_path, "r", encoding="utf-8") as f:
+def run_soft_suite(suite_path: Path, client: TestClient, target_case_id: str | None = None) -> SuiteSoftResult:
+    with open(suite_path, encoding="utf-8") as f:
         suite_data = json.load(f)
 
     suite_name = suite_data.get("suite", suite_path.stem)
@@ -361,9 +338,9 @@ def run_soft_suite(
     if target_case_id:
         cases = [c for c in cases if c.get("id") == target_case_id]
 
-    print(f"\n======================================================================")
+    print("\n======================================================================")
     print(f"Executing Soft Evaluation for Suite: [{suite_name}] ({len(cases)} cases)")
-    print(f"======================================================================")
+    print("======================================================================")
 
     evaluated_cases: list[SoftEvaluationResult] = []
     tag_counts: dict[str, int] = {}
@@ -414,9 +391,7 @@ def run_soft_suite(
 
         # 4. Controlled Retrieval Seam Construction
         analyte_for_chunks = (
-            fixture.get("selected_analyte")
-            or fixture.get("deterministic_payload", {}).get("analyte")
-            or "WBC"
+            fixture.get("selected_analyte") or fixture.get("deterministic_payload", {}).get("analyte") or "WBC"
         )
         controlled_chunks = _build_controlled_chunks(fixture, analyte=analyte_for_chunks)
         mock_retriever = MockControlledRetriever(controlled_chunks) if controlled_chunks else None
@@ -458,11 +433,15 @@ def run_soft_suite(
                     last_reason = resp_data.get("reason_code")
                     dialog_transcript.append(f"Assistant: {last_msg}")
 
-                user_display = " -> ".join([t.get("user") or t.get("message", "") for t in conv if "user" in t or t.get("role") == "user"])
+                user_display = " -> ".join(
+                    [t.get("user") or t.get("message", "") for t in conv if "user" in t or t.get("role") == "user"]
+                )
                 eval_query = "\n".join(dialog_transcript)
                 eval_response = last_msg
             else:
-                u_msg = c.get("user_message") or (c.get("conversation", [{}])[0].get("user") if "conversation" in c else "")
+                u_msg = c.get("user_message") or (
+                    c.get("conversation", [{}])[0].get("user") if "conversation" in c else ""
+                )
                 user_display = u_msg
                 eval_query = f"User: {u_msg}"
                 res = client.post(
@@ -539,18 +518,19 @@ def run_soft_suite(
         )
 
         scores_list = [
-            dim_ar.score, dim_mc.score, dim_pu.score, dim_cl.score,
-            dim_co.score, dim_cn.score, dim_fq.score, dim_nr.score
+            dim_ar.score,
+            dim_mc.score,
+            dim_pu.score,
+            dim_cl.score,
+            dim_co.score,
+            dim_cn.score,
+            dim_fq.score,
+            dim_nr.score,
         ]
         avg_score = round(sum(scores_list) / len(scores_list), 2)
 
         # Critical thresholds:
-        critical_dims_pass = (
-            dim_ar.score >= 3 and
-            dim_mc.score >= 3 and
-            dim_pu.score >= 3 and
-            dim_cl.score >= 3
-        )
+        critical_dims_pass = dim_ar.score >= 3 and dim_mc.score >= 3 and dim_pu.score >= 3 and dim_cl.score >= 3
         if is_multi_turn:
             critical_dims_pass = critical_dims_pass and (dim_cn.score >= 3)
 
@@ -608,7 +588,9 @@ def run_soft_suite(
         evaluated_cases.append(eval_res)
 
         status_sym = "PASS" if overall_pass else "FAIL"
-        print(f"[{case_id}] ({classification}) {user_display[:35]:<35} -> {status_sym} (Avg: {avg_score:.2f}, AR:{dim_ar.score} MC:{dim_mc.score} PU:{dim_pu.score})")
+        print(
+            f"[{case_id}] ({classification}) {user_display[:35]:<35} -> {status_sym} (Avg: {avg_score:.2f}, AR:{dim_ar.score} MC:{dim_mc.score} PU:{dim_pu.score})"
+        )
         if not overall_pass and tags:
             print(f"   Tags: {tags}")
 
@@ -620,7 +602,9 @@ def run_soft_suite(
 
     dim_averages = {k: round(v / n_total, 2) if n_total > 0 else 0.0 for k, v in dim_totals.items()}
 
-    print(f"\nSuite Summary [{suite_name}]: {n_pass + n_gap}/{n_total} passed ({pass_rate}%) | {n_fail} soft fails | {n_gap} capability gaps")
+    print(
+        f"\nSuite Summary [{suite_name}]: {n_pass + n_gap}/{n_total} passed ({pass_rate}%) | {n_fail} soft fails | {n_gap} capability gaps"
+    )
 
     return SuiteSoftResult(
         suite_name=suite_name,
@@ -655,8 +639,14 @@ def generate_soft_baseline_reports(
     # Calculate global dimension averages
     global_dim_averages: dict[str, float] = {}
     dim_keys = [
-        "answer_relevance", "must_convey_coverage", "patient_usefulness", "clarity",
-        "conciseness", "conversational_naturalness", "follow_up_quality", "non_repetition"
+        "answer_relevance",
+        "must_convey_coverage",
+        "patient_usefulness",
+        "clarity",
+        "conciseness",
+        "conversational_naturalness",
+        "follow_up_quality",
+        "non_repetition",
     ]
     for dk in dim_keys:
         vals = [getattr(c, dk).score for c in all_cases]
@@ -682,9 +672,15 @@ def generate_soft_baseline_reports(
 
     for c in all_cases:
         if c.classification == "SOFT_FAIL":
-            if any(t in c.failure_tags for t in ["SAFETY_BOILERPLATE_OVERUSE", "OFF_TOPIC_RESPONSE"]) and c.answer_relevance.score <= 2:
+            if (
+                any(t in c.failure_tags for t in ["SAFETY_BOILERPLATE_OVERUSE", "OFF_TOPIC_RESPONSE"])
+                and c.answer_relevance.score <= 2
+            ):
                 p0_failures.append(c)
-            elif any(t in c.failure_tags for t in ["NON_INFORMATIVE_RESPONSE", "LOW_PATIENT_USEFULNESS", "MUST_CONVEY_MISSING"]):
+            elif any(
+                t in c.failure_tags
+                for t in ["NON_INFORMATIVE_RESPONSE", "LOW_PATIENT_USEFULNESS", "MUST_CONVEY_MISSING"]
+            ):
                 p1_failures.append(c)
             else:
                 p2_failures.append(c)
@@ -753,7 +749,7 @@ def generate_soft_baseline_reports(
         "",
         "## 1. Executive Summary",
         "",
-        f"- **HARD_BASELINE**: 125/125 PASS (100.0%)",
+        "- **HARD_BASELINE**: 125/125 PASS (100.0%)",
         f"- **SOFT_BASELINE**: {total_pass + total_gap}/{total_cases} ({overall_pass_rate}%) | {total_pass} PASS, {total_fail} FAIL, {total_gap} CAPABILITY GAPS",
         f"- **TOTAL_CASES**: {total_cases}",
         f"- **SOFT_EVALUATED**: {total_cases}",
@@ -769,7 +765,7 @@ def generate_soft_baseline_reports(
         f"- **Model**: `{JUDGE_MODEL}`",
         f"- **Temperature**: `{JUDGE_TEMPERATURE}`",
         f"- **Max Tokens**: `{JUDGE_MAX_TOKENS}`",
-        f"- **Same-Model Risk**: `YES` (Documented: Production response model and Judge model are both `gpt-4o-mini`)",
+        "- **Same-Model Risk**: `YES` (Documented: Production response model and Judge model are both `gpt-4o-mini`)",
         "",
         "---",
         "",
@@ -787,11 +783,11 @@ def generate_soft_baseline_reports(
         f"| **Non-Repetition** | **{global_dim_averages['non_repetition']}** | Avoids mechanical echoing of whole summaries |",
         "",
         "### Score Distribution",
-        f"- **Score 1 (Unacceptable)**: {score_dist[1]} ({round(score_dist[1]/(total_cases*8)*100, 1)}%)",
-        f"- **Score 2 (Poor)**: {score_dist[2]} ({round(score_dist[2]/(total_cases*8)*100, 1)}%)",
-        f"- **Score 3 (Acceptable)**: {score_dist[3]} ({round(score_dist[3]/(total_cases*8)*100, 1)}%)",
-        f"- **Score 4 (Good)**: {score_dist[4]} ({round(score_dist[4]/(total_cases*8)*100, 1)}%)",
-        f"- **Score 5 (Excellent)**: {score_dist[5]} ({round(score_dist[5]/(total_cases*8)*100, 1)}%)",
+        f"- **Score 1 (Unacceptable)**: {score_dist[1]} ({round(score_dist[1] / (total_cases * 8) * 100, 1)}%)",
+        f"- **Score 2 (Poor)**: {score_dist[2]} ({round(score_dist[2] / (total_cases * 8) * 100, 1)}%)",
+        f"- **Score 3 (Acceptable)**: {score_dist[3]} ({round(score_dist[3] / (total_cases * 8) * 100, 1)}%)",
+        f"- **Score 4 (Good)**: {score_dist[4]} ({round(score_dist[4] / (total_cases * 8) * 100, 1)}%)",
+        f"- **Score 5 (Excellent)**: {score_dist[5]} ({round(score_dist[5] / (total_cases * 8) * 100, 1)}%)",
         "",
         "---",
         "",
@@ -802,55 +798,66 @@ def generate_soft_baseline_reports(
     ]
 
     for sr in suite_results:
-        top_tags = ", ".join([f"`{k}` ({v})" for k, v in sorted(sr.tag_counts.items(), key=lambda x: x[1], reverse=True)[:2]]) or "None"
+        top_tags = (
+            ", ".join([f"`{k}` ({v})" for k, v in sorted(sr.tag_counts.items(), key=lambda x: x[1], reverse=True)[:2]])
+            or "None"
+        )
         suite_avg = round(sum(sr.dim_averages.values()) / len(sr.dim_averages), 2)
         md_lines.append(
             f"| `{sr.suite_name}` | {sr.total_cases} | {sr.passed_cases} | {sr.failed_cases} | {sr.capability_gap_cases} | **{sr.pass_rate}%** | {suite_avg} | {top_tags} |"
         )
 
-    md_lines.extend([
-        "",
-        "---",
-        "",
-        "## 5. Semantic Failure Taxonomy Breakdown",
-        "",
-        "| Failure Tag | Occurrences | Primary Driver |",
-        "|---|---|---|",
-    ])
+    md_lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## 5. Semantic Failure Taxonomy Breakdown",
+            "",
+            "| Failure Tag | Occurrences | Primary Driver |",
+            "|---|---|---|",
+        ]
+    )
     for tg, cnt in sorted(global_tag_counts.items(), key=lambda x: x[1], reverse=True):
         md_lines.append(f"| `{tg}` | {cnt} | Semantic gap in current response composer / template |")
 
-    md_lines.extend([
-        "",
-        "---",
-        "",
-        "## 6. Key Semantic Failure Cases & Analysis",
-        "",
-    ])
+    md_lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## 6. Key Semantic Failure Cases & Analysis",
+            "",
+        ]
+    )
 
     if p1_failures:
         md_lines.append("### P1: Materially Unusable or Non-Informative Responses")
         for idx, pf in enumerate(p1_failures[:6]):
-            md_lines.extend([
-                f"#### [{pf.case_id}] {pf.user_query}",
-                f"- **Suite**: `{pf.suite_name}` | **Category**: `{pf.category}`",
-                f"- **Actual Assistant Response**:",
-                f"> {pf.assistant_response}",
-                f"- **Scores**: Relevance: {pf.answer_relevance.score}/5, Coverage: {pf.must_convey_coverage.score}/5, Usefulness: {pf.patient_usefulness.score}/5, Clarity: {pf.clarity.score}/5",
-                f"- **Failure Tags**: {', '.join([f'`{t}`' for t in pf.failure_tags])}",
-                f"- **Judge Reason**: {pf.answer_relevance.reason} {pf.patient_usefulness.reason}",
-                "",
-            ])
+            md_lines.extend(
+                [
+                    f"#### [{pf.case_id}] {pf.user_query}",
+                    f"- **Suite**: `{pf.suite_name}` | **Category**: `{pf.category}`",
+                    "- **Actual Assistant Response**:",
+                    f"> {pf.assistant_response}",
+                    f"- **Scores**: Relevance: {pf.answer_relevance.score}/5, Coverage: {pf.must_convey_coverage.score}/5, Usefulness: {pf.patient_usefulness.score}/5, Clarity: {pf.clarity.score}/5",
+                    f"- **Failure Tags**: {', '.join([f'`{t}`' for t in pf.failure_tags])}",
+                    f"- **Judge Reason**: {pf.answer_relevance.reason} {pf.patient_usefulness.reason}",
+                    "",
+                ]
+            )
 
-    md_lines.extend([
-        "---",
-        "",
-        "## 7. Expected Capability Gaps",
-        "",
-        "- **`CRQ-015` (TEMPORAL_HISTORY_CAPABILITY_GAP)**: User asks for previous vs current comparison ('lần trước'). Correctly routed and handled under capability boundary.",
-        "- **`CRQ-016` (GENERAL_EDUCATIONAL_CAPABILITY_GAP)**: User asks general educational question ('WBC cao thường do nguyên nhân gì?'). Handled under general capability guidance without hallucinating personal diagnosis.",
-        "",
-    ])
+    md_lines.extend(
+        [
+            "---",
+            "",
+            "## 7. Expected Capability Gaps",
+            "",
+            "- **`CRQ-015` (TEMPORAL_HISTORY_CAPABILITY_GAP)**: User asks for previous vs current comparison ('lần trước'). Correctly routed and handled under capability boundary.",
+            "- **`CRQ-016` (GENERAL_EDUCATIONAL_CAPABILITY_GAP)**: User asks general educational question ('WBC cao thường do nguyên nhân gì?'). Handled under general capability guidance without hallucinating personal diagnosis.",
+            "",
+        ]
+    )
 
     with open(md_output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
@@ -905,15 +912,9 @@ def main():
 
     md_report_path = Path(__file__).resolve().parents[1] / args.report_out
     json_report_path = Path(__file__).resolve().parents[1] / args.json_out
-    failures_report_path = (
-        Path(__file__).resolve().parents[1] / args.failures_out
-        if args.failures_out
-        else None
-    )
+    failures_report_path = Path(__file__).resolve().parents[1] / args.failures_out if args.failures_out else None
 
-    generate_soft_baseline_reports(
-        all_results, md_report_path, json_report_path, failures_report_path
-    )
+    generate_soft_baseline_reports(all_results, md_report_path, json_report_path, failures_report_path)
 
     total_all = sum(sr.total_cases for sr in all_results)
     passed_all = sum(sr.passed_cases for sr in all_results)
@@ -923,7 +924,9 @@ def main():
 
     print("\n" + "=" * 70)
     print("SOFT RESPONSE QUALITY BASELINE EVALUATION COMPLETE")
-    print(f"Overall Result: {passed_all + gap_all}/{total_all} soft passed ({pass_rate}%) | {failed_all} Soft Failures | {gap_all} Capability Gaps")
+    print(
+        f"Overall Result: {passed_all + gap_all}/{total_all} soft passed ({pass_rate}%) | {failed_all} Soft Failures | {gap_all} Capability Gaps"
+    )
     print("=" * 70)
 
     return 0

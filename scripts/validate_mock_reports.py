@@ -4,7 +4,6 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED = ROOT / "data" / "mock" / "generated"
 TEMPLATES = ROOT / "data" / "mock" / "templates"
@@ -59,10 +58,7 @@ def fail(message):
 
 def load_units():
     with UNITS_FILE.open(newline="", encoding="utf-8-sig") as file:
-        return {
-            (row["test_name"], row["standardized_unit"])
-            for row in csv.DictReader(file)
-        }
+        return {(row["test_name"], row["standardized_unit"]) for row in csv.DictReader(file)}
 
 
 def indicator_names(report):
@@ -75,10 +71,7 @@ def load_template_indicator_names():
         with path.open(encoding="utf-8") as file:
             template = json.load(file)
         if template.get("report_type") != report_type:
-            fail(
-                f"{path.relative_to(ROOT)}: expected report_type "
-                f"{report_type!r}, got {template.get('report_type')!r}"
-            )
+            fail(f"{path.relative_to(ROOT)}: expected report_type {report_type!r}, got {template.get('report_type')!r}")
         template_names[report_type] = indicator_names(template)
     return template_names
 
@@ -131,10 +124,7 @@ def validate_general_health_check_indicator_names(report, context, template_name
     if incomplete_groups:
         fail(f"{context}: incomplete general_health_check groups: {incomplete_groups}")
     if not complete_groups:
-        fail(
-            f"{context}: general_health_check final report must include at least "
-            "one complete test group"
-        )
+        fail(f"{context}: general_health_check final report must include at least one complete test group")
 
 
 def validate_date(value, context):

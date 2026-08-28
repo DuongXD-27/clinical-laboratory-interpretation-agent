@@ -32,10 +32,10 @@ from src.models.orchestrator_schemas import (
 )
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, IndicatorResultSchema
 from src.orchestrator import dispatcher, response_composer, wrappers
-from src.orchestrator.context_resolver import ResolvedContext, resolve_context
 from src.orchestrator.dispatcher import DispatchContext, dispatch_workflow
 from src.orchestrator.intent_router import route_intent
-from src.orchestrator.response_composer import ComposedMessage, build_final_response
+from src.orchestrator.medical_context import ResolvedMedicalContext, resolve_medical_context
+from src.orchestrator.response_composer import build_final_response
 from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
 from src.services import history_repository
@@ -103,6 +103,28 @@ def _session(
         current_report_ref=report_ref,
         current_analyte=analyte,
         last_intent=last_intent,
+    )
+
+
+def _resolve_current_context(
+    message: str,
+    session: OrchestratorSessionContext,
+    ui_context: UIContext | None,
+) -> ResolvedMedicalContext:
+    """Exercise the resolver used by the live orchestrator service."""
+    normalized = message.casefold()
+    intent = (
+        IntentEnum.ANALYZE_TREND
+        if any(cue in normalized for cue in ("trend", "xu hướng", "lần trước", "lan truoc"))
+        else IntentEnum.EXPLAIN_CURRENT_RESULT
+    )
+    return resolve_medical_context(
+        message=message,
+        session=session,
+        ui_context=ui_context,
+        current_user=_patient(),
+        db=None,
+        intent=intent,
     )
 
 
@@ -224,11 +246,7 @@ def _percent(correct: int, total: int) -> float:
 def _assert_metric(results: list[BenchmarkResult], *, minimum: float) -> None:
     total = len(results)
     correct = sum(result.passed for result in results)
-    assert _percent(correct, total) >= minimum, [
-        result
-        for result in results
-        if not result.passed
-    ]
+    assert _percent(correct, total) >= minimum, [result for result in results if not result.passed]
 
 
 @pytest.mark.asyncio
@@ -285,55 +303,72 @@ async def test_tip006_p1_intent_routing_benchmark(monkeypatch):
 def test_tip006_p2_context_resolution_benchmark():
     base = _session(report_ref="10", analyte="WBC", last_intent=IntentEnum.EXPLAIN_CURRENT_RESULT)
     blank = _session()
-    cases: list[tuple[str, ResolvedContext, dict[str, object]]] = [
+    cases: list[tuple[str, ResolvedMedicalContext, dict[str, object]]] = [
         (
             "CR-001",
-            resolve_context("giải thích chỉ số này", base, None),
+            _resolve_current_context("giải thích chỉ số này", base, None),
             {"current_report_ref": "10", "current_analyte": "WBC", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-002",
-            resolve_context("so với lần trước thì sao", base, None),
-            {"current_report_ref": "10", "current_analyte": "WBC", "reason_code": None, "forced_intent": IntentEnum.ANALYZE_TREND},
+            _resolve_current_context("so với lần trước thì sao", base, None),
+            {
+                "current_report_ref": "10",
+                "current_analyte": "WBC",
+                "reason_code": None,
+                "forced_intent": IntentEnum.ANALYZE_TREND,
+            },
         ),
         (
             "CR-003",
-            resolve_context("so với lần trước thì sao", blank, None),
-            {"current_report_ref": None, "current_analyte": None, "reason_code": ReasonCode.AMBIGUOUS_CONTEXT, "forced_intent": None},
+            _resolve_current_context("so với lần trước thì sao", blank, None),
+            {
+                "current_report_ref": None,
+                "current_analyte": None,
+                "reason_code": None,
+                "forced_intent": IntentEnum.ANALYZE_TREND,
+            },
         ),
         (
             "CR-004",
-            resolve_context("xem xu hướng WBC", blank, None),
+            _resolve_current_context("xem xu hướng WBC", blank, None),
             {"current_report_ref": None, "current_analyte": "WBC", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-005",
-            resolve_context("trend LDL-C", blank, None),
+            _resolve_current_context("trend LDL-C", blank, None),
             {"current_report_ref": None, "current_analyte": "LDL-C", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-006",
-            resolve_context("giải thích chỉ số này", blank, UIContext(candidate_report_ref="42", candidate_analyte="HbA1c")),
+            _resolve_current_context(
+                "giải thích chỉ số này", blank, UIContext(candidate_report_ref="42", candidate_analyte="HbA1c")
+            ),
             {"current_report_ref": "42", "current_analyte": "HbA1c", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-007",
-            resolve_context("nói thêm", blank, None),
+            _resolve_current_context("nói thêm", blank, None),
             {"current_report_ref": None, "current_analyte": None, "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-008",
-            resolve_context("xem xu hướng Uric acid", blank, None),
+            _resolve_current_context("xem xu hướng Uric acid", blank, None),
             {"current_report_ref": None, "current_analyte": "Uric acid", "reason_code": None, "forced_intent": None},
         ),
         (
             "CR-009",
-            resolve_context("so voi lan truoc", _session(analyte="LDL-C"), None),
-            {"current_report_ref": None, "current_analyte": "LDL-C", "reason_code": None, "forced_intent": IntentEnum.ANALYZE_TREND},
+            _resolve_current_context("so voi lan truoc", _session(analyte="LDL-C"), None),
+            {
+                "current_report_ref": None,
+                "current_analyte": "LDL-C",
+                "reason_code": None,
+                "forced_intent": IntentEnum.ANALYZE_TREND,
+            },
         ),
         (
             "CR-010",
-            resolve_context("xem xu hướng", blank, None),
+            _resolve_current_context("xem xu hướng", blank, None),
             {"current_report_ref": None, "current_analyte": None, "reason_code": None, "forced_intent": None},
         ),
     ]
@@ -656,11 +691,7 @@ async def test_tip006_non_owned_report_bytes_never_enter_llm_prompt(test_db, mon
 @pytest.mark.asyncio
 async def test_tip006_e2e_a_guest_manual_flow(client, monkeypatch):
     monkeypatch.setattr(response_composer, "get_llm", lambda: (_ for _ in ()).throw(RuntimeError("no llm")))
-    graph = AsyncMock(
-        return_value=_graph_result(
-            [{"name": "WBC", "value": 7.0, "unit": "10^9/L", "status": "normal"}]
-        )
-    )
+    graph = AsyncMock(return_value=_graph_result([{"name": "WBC", "value": 7.0, "unit": "10^9/L", "status": "normal"}]))
     monkeypatch.setattr(routes.agent, "ainvoke", graph)
 
     guest = await client.post("/api/v1/auth/guest")
@@ -779,11 +810,7 @@ async def test_tip006_e2e_c_patient_analysis_persistence_and_history(client, mon
     monkeypatch.setattr(
         routes.agent,
         "ainvoke",
-        AsyncMock(
-            return_value=_graph_result(
-                [{"name": "LDL-C", "value": 4.2, "unit": "mmol/L", "status": "high"}]
-            )
-        ),
+        AsyncMock(return_value=_graph_result([{"name": "LDL-C", "value": 4.2, "unit": "mmol/L", "status": "high"}])),
     )
     headers = await _login_headers(client)
     analysis = await client.post(

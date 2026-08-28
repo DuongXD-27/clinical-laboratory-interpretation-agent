@@ -22,6 +22,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from fastapi.testclient import TestClient
+
 from src.main import app
 
 INTERNAL_TERMINOLOGY = [
@@ -84,7 +85,7 @@ def check_ux_rules(
         elif forbidden == "ask_user_to_choose_page":
             for pat in FORBIDDEN_PAGE_DEPENDENCY_PATTERNS:
                 if re.search(pat, lower_msg):
-                    violations.append(f"Prompted user to navigate/choose a page.")
+                    violations.append("Prompted user to navigate/choose a page.")
 
     # Rule 3: No page dependency
     for pat in FORBIDDEN_PAGE_DEPENDENCY_PATTERNS:
@@ -129,7 +130,7 @@ def run_patient_ux_eval():
             print(f"Warning: File not found: {json_path}")
             continue
 
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             data = json.load(f)
 
         cases = data.get("cases", [])
@@ -280,7 +281,9 @@ def run_patient_ux_eval():
         f.write("|---|---|---|---|---|---|\n")
         for r in all_results:
             verdict = "**PASS**" if r.passed else "❌ **FAIL**"
-            f.write(f"| {r.case_id} | {r.category} | {r.description} | `{r.actual_intent}` | `{r.actual_status}` | {verdict} |\n")
+            f.write(
+                f"| {r.case_id} | {r.category} | {r.description} | `{r.actual_intent}` | `{r.actual_status}` | {verdict} |\n"
+            )
         f.write("\n---\n\n")
 
         f.write("## Failed Cases\n\n")
@@ -293,13 +296,15 @@ def run_patient_ux_eval():
                 f.write(f"- **Category**: {r.category}\n")
                 f.write(f"- **User Messages**: {' -> '.join(r.user_messages)}\n")
                 f.write(f"- **Assistant Final Response**: \n> {r.last_response_message}\n\n")
-                f.write(f"- **Failure Details**:\n")
+                f.write("- **Failure Details**:\n")
                 for err in r.failures:
                     f.write(f"  - {err}\n")
                 f.write(f"- **Root Cause**: {r.root_cause}\n\n")
 
     print("\n" + "=" * 70)
-    print(f"Patient UX Evaluation Completed: {total_passed}/{total_cases} passed ({(total_passed / total_cases * 100) if total_cases > 0 else 0:.1f}%)")
+    print(
+        f"Patient UX Evaluation Completed: {total_passed}/{total_cases} passed ({(total_passed / total_cases * 100) if total_cases > 0 else 0:.1f}%)"
+    )
     print(f"Report written to: {report_file}")
     print("=" * 70)
 
