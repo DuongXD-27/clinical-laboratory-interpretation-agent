@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
             "log_level": _log_level,
             # Chỉ ghi loại DB, tuyệt đối không ghi DATABASE_URL vì nó chứa mật khẩu.
             "db_dialect": settings.database_url.split("://", 1)[0],
+            "agent_chat_v2_enabled": settings.agent_chat_v2,
         },
     )
     init_db()

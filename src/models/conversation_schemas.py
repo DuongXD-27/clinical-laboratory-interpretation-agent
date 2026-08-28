@@ -27,6 +27,7 @@ class ConversationSummarySchema(BaseModel):
 
     id: int
     title: str | None = None
+    onboarding_acknowledged: bool = False
     created_at: datetime
     updated_at: datetime
 

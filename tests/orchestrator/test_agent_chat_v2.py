@@ -622,3 +622,94 @@ def test_exact_live_emergency_reassurance_is_removed():
 
     assert "không có tình trạng khẩn cấp" not in sanitized
     assert "Giá trị này nằm trong khoảng tham chiếu" in sanitized
+
+
+@pytest.mark.asyncio
+async def test_observability_turn_log_records_canonical_disabled(monkeypatch):
+    """Khi AGENT_CHAT_V2=false, log phải ghi chat_engine=canonical và fallback_reason=v2_disabled."""
+    from src.orchestrator import service as orchestrator_service
+
+    logged_extras = []
+
+    def fake_log_turn(**kwargs):
+        logged_extras.append(kwargs)
+
+    monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
+    monkeypatch.setenv("AGENT_CHAT_V2", "false")
+    get_settings.cache_clear()
+
+    actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
+    default_session_store.acknowledge_onboarding(actor)
+
+    await handle_message(OrchestratorRequest(message="xin chào"), current_user=actor, db=object())
+
+    assert len(logged_extras) == 1
+    assert logged_extras[0]["chat_engine"] == "canonical"
+    assert logged_extras[0]["fallback_reason"] == "v2_disabled"
+
+
+@pytest.mark.asyncio
+async def test_observability_turn_log_records_agent_v2_success(monkeypatch):
+    """Khi AGENT_CHAT_V2=true và V2 chạy thành công, log phải ghi chat_engine=agent_v2 và fallback_reason=None."""
+    from src.orchestrator import service as orchestrator_service
+
+    logged_extras = []
+
+    def fake_log_turn(**kwargs):
+        logged_extras.append(kwargs)
+
+    monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
+    monkeypatch.setenv("AGENT_CHAT_V2", "true")
+    get_settings.cache_clear()
+
+    response = OrchestratorResponse(
+        intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
+        status=ResponseStatus.SUCCESS,
+        message="Phản hồi V2.",
+        data_type=DataType.EXPLANATION,
+        data=ExplanationDataPayload(explanation="Phản hồi V2."),
+    )
+
+    async def fake_agent(**_kwargs):
+        return AgentV2Result(response, "10", "WBC", "get_indicator")
+
+    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", fake_agent)
+
+    actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
+    default_session_store.acknowledge_onboarding(actor)
+
+    await handle_message(OrchestratorRequest(message="WBC thế nào?"), current_user=actor, db=object())
+
+    assert len(logged_extras) == 1
+    assert logged_extras[0]["chat_engine"] == "agent_v2"
+    assert logged_extras[0]["fallback_reason"] is None
+
+
+@pytest.mark.asyncio
+async def test_observability_turn_log_records_canonical_failure_fallback(monkeypatch):
+    """Khi AGENT_CHAT_V2=true nhưng V2 gặp lỗi runtime, log phải ghi chat_engine=canonical và fallback_reason=v2_failure."""
+    from src.orchestrator import service as orchestrator_service
+
+    logged_extras = []
+
+    def fake_log_turn(**kwargs):
+        logged_extras.append(kwargs)
+
+    monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
+    monkeypatch.setenv("AGENT_CHAT_V2", "true")
+    get_settings.cache_clear()
+
+    async def broken_agent(**_kwargs):
+        raise RuntimeError("OpenAI provider network timeout")
+
+    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", broken_agent)
+
+    actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
+    default_session_store.acknowledge_onboarding(actor)
+
+    result = await handle_message(OrchestratorRequest(message="xin chào"), current_user=actor, db=object())
+
+    assert result.status == ResponseStatus.SUCCESS
+    assert len(logged_extras) == 1
+    assert logged_extras[0]["chat_engine"] == "canonical"
+    assert logged_extras[0]["fallback_reason"] == "v2_failure"

@@ -69,6 +69,7 @@ type Options = {
   persistence: boolean;
   onUnauthorized: () => void;
   onOnboardingRequired: () => void;
+  onOnboardingAccepted?: () => void;
 };
 
 const STORAGE_KEY = "vmec05_conversation_id";
@@ -103,6 +104,7 @@ export function useOrchestratorChat({
   persistence,
   onUnauthorized,
   onOnboardingRequired,
+  onOnboardingAccepted,
 }: Options) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
@@ -133,6 +135,9 @@ export function useOrchestratorChat({
     setLoadingTranscript(true);
     try {
       const detail = await getConversation(target);
+      if (detail.conversation.onboarding_acknowledged) {
+        onOnboardingAccepted?.();
+      }
       setTurns(messagesToTurns(detail.messages) as ChatTurn[]);
     } catch (caught: unknown) {
       if (caught instanceof UnauthorizedError) {
@@ -151,19 +156,22 @@ export function useOrchestratorChat({
     } finally {
       setLoadingTranscript(false);
     }
-  }, [onUnauthorized, selectConversation]);
+  }, [onOnboardingAccepted, onUnauthorized, selectConversation]);
 
   const refreshConversations = useCallback(async () => {
     if (!persistence) return [];
     try {
       const items = await listConversations();
       setConversations(items);
+      if (items.some((item) => item.onboarding_acknowledged)) {
+        onOnboardingAccepted?.();
+      }
       return items;
     } catch (caught: unknown) {
       if (caught instanceof UnauthorizedError) onUnauthorized();
       return [];
     }
-  }, [onUnauthorized, persistence]);
+  }, [onOnboardingAccepted, onUnauthorized, persistence]);
 
   // Nạp lại lịch sử khi vào trang. Đây là thứ làm cho F5 không mất gì.
   useEffect(() => {
@@ -187,6 +195,9 @@ export function useOrchestratorChat({
     }
     try {
       const created = await createConversation();
+      if (created.onboarding_acknowledged) {
+        onOnboardingAccepted?.();
+      }
       setConversations((current) => [created, ...current]);
       selectConversation(created.id);
       // Transcript trống vì hàng vừa tạo chưa có tin nhắn nào — và context
@@ -196,7 +207,7 @@ export function useOrchestratorChat({
     } catch (caught: unknown) {
       if (caught instanceof UnauthorizedError) onUnauthorized();
     }
-  }, [onUnauthorized, persistence, selectConversation]);
+  }, [onOnboardingAccepted, onUnauthorized, persistence, selectConversation]);
 
   const updateTurn = useCallback((turnId: string, patch: Partial<ChatTurn>) => {
     setTurns((current) => current.map((turn) => (turn.id === turnId ? { ...turn, ...patch } : turn)));

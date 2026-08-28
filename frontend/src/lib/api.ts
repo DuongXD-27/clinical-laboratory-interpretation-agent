@@ -666,6 +666,7 @@ export async function loginWithGoogle(credential: string) {
 export type ConversationSummary = {
   id: number;
   title: string | null;
+  onboarding_acknowledged?: boolean;
   created_at: string;
   updated_at: string;
 };

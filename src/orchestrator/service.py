@@ -249,6 +249,8 @@ def _log_turn(
     failure_code: ReasonCode | None,
     started_at: float,
     guardrail_triggered: bool = False,
+    chat_engine: str = "canonical",
+    fallback_reason: str | None = None,
 ) -> None:
     logger.info(
         "orchestrator_turn",
@@ -263,6 +265,8 @@ def _log_turn(
             "failure_code": failure_code.value if failure_code is not None else None,
             "guardrail_triggered": guardrail_triggered,
             "authorization_outcome": "denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
+            "chat_engine": chat_engine,
+            "fallback_reason": fallback_reason,
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
     )
@@ -431,6 +435,36 @@ async def _handle_message_core(
             IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ."
         )
 
+    v2_failure = False
+
+    def _log_turn_canonical(
+        *,
+        route: RouteDecision | None,
+        workflow_selected: str = "",
+        failure_code: ReasonCode | None = None,
+        guardrail_triggered: bool = False,
+    ) -> None:
+        from src.config import get_settings
+        from src.models.db import ROLE_PATIENT
+
+        fallback_reason = (
+            "v2_failure"
+            if v2_failure
+            else ("v2_disabled" if not get_settings().agent_chat_v2 and role == ROLE_PATIENT else None)
+        )
+        _log_turn(
+            request_id=request_id,
+            session_id=session.session_id,
+            role=role,
+            route=route,
+            workflow_selected=workflow_selected,
+            failure_code=failure_code,
+            started_at=started_at,
+            guardrail_triggered=guardrail_triggered,
+            chat_engine="canonical",
+            fallback_reason=fallback_reason,
+        )
+
     route: RouteDecision | None = None
 
     # 0. Emergency / Urgent symptom safety gate (deterministic short-circuit)
@@ -446,14 +480,10 @@ async def _handle_message_core(
             route.reason_code,
             _safety_refusal_message(route.reason_code),
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -462,14 +492,10 @@ async def _handle_message_core(
         response = _blocked_response(
             IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vui lòng xác nhận hướng dẫn sử dụng trước."
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=reason,
-            started_at=started_at,
         )
         return response
 
@@ -478,14 +504,10 @@ async def _handle_message_core(
     if safety_reason is not None:
         route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=safety_reason, route_confidence=1.0)
         response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -498,14 +520,10 @@ async def _handle_message_core(
             intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=sensitive_reason, route_confidence=1.0
         )
         response = _blocked_response(route.intent, route.reason_code, SENSITIVE_SYSTEM_MESSAGE)
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -522,14 +540,10 @@ async def _handle_message_core(
             route.reason_code,
             UNCLEAR_INPUT_MESSAGE,
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -546,14 +560,10 @@ async def _handle_message_core(
             route.reason_code,
             OUT_OF_SCOPE_MESSAGE,
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -572,14 +582,10 @@ async def _handle_message_core(
             intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0
         )
         response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=followup_reason,
-            started_at=started_at,
         )
         return response
 
@@ -593,14 +599,10 @@ async def _handle_message_core(
             route.reason_code,
             "Bạn cần xác nhận OCR trước khi phân tích phiếu từ ảnh.",
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
@@ -611,6 +613,7 @@ async def _handle_message_core(
     from src.config import get_settings
     from src.models.db import ROLE_PATIENT
 
+    v2_failure = False
     if get_settings().agent_chat_v2 and role == ROLE_PATIENT:
         await emit_progress(progress_callback, ProgressStage.ROUTING)
         try:
@@ -624,6 +627,7 @@ async def _handle_message_core(
                 current_analyte=session.current_analyte,
             )
         except Exception:
+            v2_failure = True
             logger.warning("Agent Chat V2 unavailable; falling back to canonical orchestrator", exc_info=True)
         else:
             from src.models.orchestrator_schemas import ConversationState
@@ -646,6 +650,8 @@ async def _handle_message_core(
                 failure_code=agent_result.response.reason_code,
                 started_at=started_at,
                 guardrail_triggered=(agent_result.response.reason_code == ReasonCode.GUARDRAIL_BLOCKED),
+                chat_engine="agent_v2",
+                fallback_reason=None,
             )
             return agent_result.response
 
@@ -673,14 +679,10 @@ async def _handle_message_core(
             ReasonCode.UNKNOWN_INTENT,
             UNCLEAR_INPUT_MESSAGE,
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=ReasonCode.UNKNOWN_INTENT,
-            started_at=started_at,
         )
         return response
     if route.reason_code == ReasonCode.OUT_OF_SCOPE:
@@ -689,14 +691,10 @@ async def _handle_message_core(
             ReasonCode.OUT_OF_SCOPE,
             OUT_OF_SCOPE_MESSAGE,
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=ReasonCode.OUT_OF_SCOPE,
-            started_at=started_at,
         )
         return response
     if route.reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
@@ -705,14 +703,10 @@ async def _handle_message_core(
             ReasonCode.SENSITIVE_SYSTEM_REQUEST,
             SENSITIVE_SYSTEM_MESSAGE,
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=ReasonCode.SENSITIVE_SYSTEM_REQUEST,
-            started_at=started_at,
         )
         return response
 
@@ -747,14 +741,10 @@ async def _handle_message_core(
                 pending_question_timestamp=time.time(),
             ),
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=ReasonCode.AMBIGUOUS_CONTEXT,
-            started_at=started_at,
         )
         return response
     if resolved.forced_intent:
@@ -766,28 +756,20 @@ async def _handle_message_core(
         ReasonCode.TREATMENT_REQUEST,
     }:
         response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=route.reason_code,
-            started_at=started_at,
         )
         return response
 
     reason = policy_gate(role, route.intent)
     if reason is not None:
         response = _blocked_response(route.intent, reason, "Chức năng này chưa được hỗ trợ cho phiên hiện tại.")
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
+        _log_turn_canonical(
             route=route,
             workflow_selected="",
             failure_code=reason,
-            started_at=started_at,
         )
         return response
 
@@ -864,14 +846,10 @@ async def _handle_message_core(
         conversation_state=new_state,
         clear_analyte=clear_analyte,
     )
-    _log_turn(
-        request_id=request_id,
-        session_id=session.session_id,
-        role=role,
+    _log_turn_canonical(
         route=route,
         workflow_selected=result.workflow_selected,
         failure_code=result.reason_code,
-        started_at=started_at,
         guardrail_triggered=(final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED),
     )
     return final_response

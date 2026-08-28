@@ -213,7 +213,14 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `OCR_UPLOAD_MODE` | DEFAULTED | Chế độ nhận ảnh OCR (`demo_only`, `open_with_consent`, `internal_only`) | `demo_only` |
 | `OCR_SAMPLES_DIR` | DEFAULTED | Thư mục chứa ảnh mẫu hợp lệ cho chế độ demo | `./data/ocr_samples` |
 | `LANGCHAIN_API_KEY` | OPTIONAL | Khóa API LangSmith ghi nhận AI Trace | `lsv2_pt_...` |
+| `AGENT_CHAT_V2` | DEFAULTED | Bật LangGraph Agentic RAG chat cho bệnh nhân (opt-in) | `false` |
 | `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://localhost:8000` |
+
+> [!IMPORTANT]
+> **Cơ chế Rollout Agent V2**:
+> - Khi `AGENT_CHAT_V2=false` (mặc định): Trợ lý sử dụng Canonical Orchestrator tất định.
+> - Khi `AGENT_CHAT_V2=true`: Bệnh nhân đăng nhập sử dụng LangGraph Agent V2 runtime với khả năng gọi tool tự động; khách và các tình huống lỗi runtime tự động fallback an toàn về Canonical Orchestrator.
+> - Để bật trên môi trường phát triển: thêm `AGENT_CHAT_V2=true` vào `.env` (hoặc PowerShell `$env:AGENT_CHAT_V2="true"`) và **khởi động lại backend**. Log khởi động sẽ hiển thị `"agent_chat_v2_enabled": true`.
 
 > [!IMPORTANT]
 > **Cơ chế RAG Fallback**:
