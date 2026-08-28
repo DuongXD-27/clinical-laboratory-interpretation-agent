@@ -22,7 +22,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.db import RequestTrace
-from src.services import trace_metrics
+from src.services import error_taxonomy, trace_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +87,18 @@ def record_trace(
                 else None
             ),
             llm_unpriced_call_count=int(_num("llm_unpriced_call_count")),
+            guardrail_fallback_count=int(_num("guardrail_fallback_count")),
+            guardrail_rewrite_count=int(_num("guardrail_rewrite_count")),
+            # Khong bat duoc ten ngoai le (loi xay ra ngoai handler, hoac 5xx do
+            # framework tra) thi suy tu ma HTTP. `None` khi request khong loi.
+            error_type=(
+                str(fields["error_type"])[:48]
+                if fields.get("error_type")
+                else error_taxonomy.classify_status(int(_num("status_code")))
+            ),
+            error_raw_type=(
+                str(fields["error_raw_type"])[:64] if fields.get("error_raw_type") else None
+            ),
             user_role=user_role,
             server_timing=server_timing,
         )
@@ -248,6 +260,34 @@ def summarise_latency_groups(
         "groups": groups,
         "window_minutes": window_minutes,
     }
+
+
+def load_traces_for_analysis(db: Session, *, since: datetime | None = None) -> list[Any]:
+    """Cac cot can cho bieu do, SLO va phan bo loi — KHONG tai `server_timing`.
+
+    `server_timing` la mot chuoi dai va khong ai can no de ve bieu do; tai no la
+    keo them vai tram KB qua day cho moi lan mo man hinh.
+    """
+
+    query = select(
+        RequestTrace.created_at,
+        RequestTrace.path,
+        RequestTrace.method,
+        RequestTrace.duration_ms,
+        RequestTrace.status_code,
+        RequestTrace.error_type,
+        RequestTrace.error_raw_type,
+        RequestTrace.llm_call_count,
+        RequestTrace.llm_error_count,
+        RequestTrace.llm_input_tokens,
+        RequestTrace.llm_output_tokens,
+        RequestTrace.llm_cost_usd,
+        RequestTrace.guardrail_fallback_count,
+        RequestTrace.guardrail_rewrite_count,
+    )
+    if since is not None:
+        query = query.where(RequestTrace.created_at >= since)
+    return list(db.execute(query).all())
 
 
 def prune_older_than(db: Session, *, days: int) -> int:

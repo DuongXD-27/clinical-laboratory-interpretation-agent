@@ -13,7 +13,11 @@ from src.services.medical_safety_assets import (
     ensure_reference_qualification,
 )
 from src.services.medical_safety_validator import MedicalSafetyValidator
-from src.services.request_timing import add_timing_event
+from src.services.request_timing import (
+    GUARDRAIL_FALLBACK_EVENT,
+    GUARDRAIL_REWRITE_EVENT,
+    add_timing_event,
+)
 from src.services.safe_grounding import build_safe_grounding_view
 from src.services.template_loader import load_templates
 
@@ -42,6 +46,11 @@ def _visible_text_content(content: object) -> str:
 
 async def rewrite_with_llm(llm, original_text: str, grounding_context: str = "") -> str:
     """One bounded self-correction attempt before deterministic fallback."""
+
+    # Dem rieng voi fallback: viet lai THANH CONG nghia la guardrail da bat duoc
+    # van de nhung noi dung van la cua LLM. Gop hai con so lai thi khong phan
+    # biet duoc "sua duoc" voi "phai thay bang van ban dung san".
+    add_timing_event(GUARDRAIL_REWRITE_EVENT, 0.0)
     if not llm or not original_text.strip():
         return original_text
 
@@ -183,6 +192,16 @@ async def guardrail_node(state: AgentState) -> dict:
         critical_status: str | None,
         is_critical: bool,
     ) -> str:
+        # Do lai moi lan guardrail phai thay van ban cua LLM. Day la tin hieu
+        # CHAT LUONG do duoc that: khac 0 nghia la benh nhan nhan noi dung xuong
+        # cap, ma response van 200 va khong co ma loi nao — dung cai bay
+        # CLAUDE.md ghi lai ("Phat hien noi dung co the chua yeu to suy doan..."
+        # nghia la guardrail da tu choi output cua LLM).
+        #
+        # KHONG ghi ten chi so hay noi dung vao event: bang trace da hua chi mang
+        # metadata, khong mang du lieu benh nhan.
+        add_timing_event(GUARDRAIL_FALLBACK_EVENT, 0.0)
+
         normalized_name = indicator_name.strip().casefold()
         matched_indicator = next(
             (

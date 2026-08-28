@@ -997,6 +997,21 @@ class RequestTrace(Base):
     # dang bao THAP hon thuc te, va man hinh phai noi ra.
     llm_unpriced_call_count = Column(Integer, nullable=False, default=0)
 
+    # Nhom loi, suy tu ten lop ngoai le o exception handler hoac tu ma HTTP.
+    # `None` = request khong loi. Khac han "INTERNAL_EXCEPTION" von nghia la co
+    # loi ma chua phan loai duoc — card "5xx = 3" khong noi duoc ba loi do la gi.
+    error_type = Column(String(48), nullable=True)
+    # Ten lop ngoai le nguyen ban. Giu lai vi mot loi CHUA KHAI moi dung la loai
+    # can tra, va gop no vao nhom "khac" roi mat ten la lam no thanh khong tra
+    # duoc.
+    error_raw_type = Column(String(64), nullable=True)
+
+    # Guardrail da phai thay van ban cua LLM bang van ban an toan dung san bao
+    # nhieu lan trong request nay. Day la tin hieu CHAT LUONG do duoc that: khac
+    # 0 nghia la benh nhan nhan noi dung xuong cap, con response van 200.
+    guardrail_fallback_count = Column(Integer, nullable=False, default=0)
+    guardrail_rewrite_count = Column(Integer, nullable=False, default=0)
+
     user_role = Column(String(20), nullable=True)
 
     # Chuỗi Server-Timing, giữ nguyên để màn chi tiết dựng lại được cây span mà

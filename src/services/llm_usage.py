@@ -3,20 +3,25 @@
 ## Vì sao phải là callback, không phải đếm ở từng node
 
 `llm_call_count` trước đây suy từ event `llm-explanation-call` mà **chỉ
-`analyzer_node` phát ra**. Trong khi có sáu chỗ gọi `get_llm()`:
+`analyzer_node` phát ra**. Trong khi có BẢY chỗ gọi `get_llm()`:
 
-    analyzer_node.py:361                     <- duy nhất chỗ được đếm
-    guardrail_node.py:225
-    orchestrator/intent_router.py:371
-    orchestrator/response_composer.py:515
-    trend_explanation_service.py:445
-    section_trend_explanation_service.py:243
+    analyzer_node.py                         <- duy nhất chỗ được đếm
+    guardrail_node.py
+    orchestrator/intent_router.py
+    orchestrator/response_composer.py
+    orchestrator/agent_v2.py                 <- người khác thêm ở PR #92
+    trend_explanation_service.py
+    section_trend_explanation_service.py
+
+Chỗ thứ bảy là bằng chứng cho chính lý do chọn cách này: `agent_v2.py` do người
+khác thêm sau, dùng `get_llm().bind_tools(tools)`, và nó được đếm **mà không ai
+phải sửa gì**. Đếm theo node thì hôm nay đã lại thiếu một chỗ.
 
 Nên con số "27 lượt gọi LLM" trên màn admin **đếm thiếu**, và `llm_error_count`
 — field mà cả lớp quan sát tồn tại vì nó — sai theo đúng cách đó. Với mỗi lượt
 chatbot thì `intent_router` và `response_composer` gần như luôn chạy.
 
-Đặt việc đếm vào callback gắn ở `get_llm()` thì theo cấu trúc nó phủ cả sáu chỗ
+Đặt việc đếm vào callback gắn ở `get_llm()` thì theo cấu trúc nó phủ cả bảy chỗ
 **và mọi chỗ thêm sau này**. Cùng lý do Langfuse callback được gắn đúng ở đó:
 rải theo node là bảo đảm lần sau ai thêm một chỗ gọi mới thì số liệu thiếu mà
 không ai biết.

@@ -987,6 +987,68 @@ class SpanTreeResponse(BaseModel):
     total_ms: float | None = None
 
 
+class TimeseriesPointSchema(BaseModel):
+    """Mot moc thoi gian. `None` = khong do duoc, KHONG phai 0."""
+
+    start: str
+    count: int
+    p50_ms: float | None = None
+    p95_ms: float | None = None
+    p99_ms: float | None = None
+    error_count: int = 0
+    error_rate_pct: float | None = None
+    errors_by_type: dict[str, int] = Field(default_factory=dict)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float | None = None
+    llm_call_count: int = 0
+    llm_error_count: int = 0
+    guardrail_fallback_count: int = 0
+    guardrail_rewrite_count: int = 0
+    guardrail_fallback_rate_pct: float | None = None
+
+
+class TimeseriesResponse(BaseModel):
+    """Chuoi thoi gian cho bieu do. Chi mot nhom endpoint, khong tron."""
+
+    group: str
+    bucket_minutes: int
+    since: str
+    until: str
+    points: list[TimeseriesPointSchema] = Field(default_factory=list)
+    error_types: list[str] = Field(default_factory=list)
+
+
+class SloSchema(BaseModel):
+    name: str
+    target_pct: float
+    actual_pct: float | None = None
+    status: str
+    sample_count: int
+    budget_used_pct: float | None = None
+    budget_remaining: float | None = None
+    detail: str
+
+
+class ErrorBreakdownSchema(BaseModel):
+    error_type: str
+    count: int
+    # Ten lop ngoai le nguyen ban. Nhom loi noi "sua o dau", ten lop noi "sua gi".
+    example_exception: str | None = None
+
+
+class SloResponse(BaseModel):
+    """SLO, error budget, va phan bo nhom loi."""
+
+    overall_status: str
+    slos: list[SloSchema] = Field(default_factory=list)
+    errors: list[ErrorBreakdownSchema] = Field(default_factory=list)
+    window_hours: int
+    # Nguong hien tai la DE XUAT, chon tu so do that. Nhom phai chot lai — nen
+    # man hinh phai noi ra thay vi trinh bay chung nhu da thong nhat.
+    thresholds_provisional: bool = True
+
+
 class LatencyGroupSchema(BaseModel):
     """So lieu do tre cua MOT nhom endpoint.
 
