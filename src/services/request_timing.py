@@ -164,6 +164,8 @@ class RequestTiming:
                 "llm_output_tokens": 0,
                 "llm_cost_usd": None,
                 "llm_unpriced_call_count": 0,
+                "llm_missing_usage_count": 0,
+                "llm_ttft_ms": None,
             }
 
         input_tokens = 0
@@ -171,6 +173,8 @@ class RequestTiming:
         cost_total = 0.0
         priced_any = False
         unpriced = 0
+        missing_usage = 0
+        ttfts: list[float] = []
 
         for call in calls:
             call_in = int(call.attributes.get("input_tokens", 0) or 0)
@@ -178,10 +182,24 @@ class RequestTiming:
             input_tokens += call_in
             output_tokens += call_out
 
+            ttft = call.attributes.get("ttft_ms")
+            if isinstance(ttft, (int, float)):
+                ttfts.append(float(ttft))
+
             if call.attributes.get("outcome") == "error":
                 # Loi thi khong co token va khong co tien — nha cung cap khong
                 # tinh phi mot lan goi that bai truoc khi sinh.
                 continue
+
+            # Mot loi goi THANH CONG ma bao 0 token dau vao gan nhu chac chan la
+            # LOI DO LUONG, khong phai su that: moi prompt that deu co token.
+            #
+            # Truong hop da biet: bat `streaming` ma thieu `stream_usage` thi
+            # OpenAI khong tra usage, va token cung chi phi AM THAM ve 0. Dem no
+            # ra thay vi de im lang — ca lop quan sat nay ton tai de mot con so
+            # sai khong tu trinh bay minh nhu mot con so dung.
+            if call_in == 0:
+                missing_usage += 1
 
             model = str(call.attributes.get("model", "") or "")
             call_cost = llm_cost.cost_usd(model, call_in, call_out)
@@ -202,6 +220,12 @@ class RequestTiming:
             "llm_output_tokens": output_tokens,
             "llm_cost_usd": round(cost_total, 6) if priced_any else None,
             "llm_unpriced_call_count": unpriced,
+            "llm_missing_usage_count": missing_usage,
+            # TTFT cua loi goi DAU TIEN do duoc trong request. `None` khi khong
+            # stream — khong phai 0ms. Lay loi goi dau chu khong lay trung binh:
+            # cau hoi la "nha cung cap mat bao lau moi bat dau sinh", va trung
+            # binh nhieu loi goi se tron thoi gian cho voi thoi gian sinh.
+            "llm_ttft_ms": ttfts[0] if ttfts else None,
         }
 
     def _quality_summary(self, events: list[TimingEvent]) -> dict[str, object]:

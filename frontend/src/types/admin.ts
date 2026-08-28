@@ -84,6 +84,13 @@ export type LatencyGroup = {
   /** Khác 0 nghĩa là con số chi phí đang báo THẤP hơn thực tế. */
   unpriced_call_count: number;
   cost_per_call_usd: number | null;
+  /** TTFT — độ trễ PHÍA NHÀ CUNG CẤP, không phải TTFT người dùng cảm nhận:
+   * hệ thống không stream ra client vì guardrail phải là lớp cuối (ADR-004).
+   * `null` khi chưa bật streaming. */
+  ttft_p50_ms: number | null;
+  ttft_p95_ms: number | null;
+  /** Khác 0 = có lượt gọi báo 0 token, gần như chắc chắn lỗi đo lường. */
+  missing_usage_count: number;
 };
 
 export type LatencyGroups = {
@@ -91,6 +98,8 @@ export type LatencyGroups = {
   api: LatencyGroup;
   window_hours: number;
   window_minutes: number | null;
+  /** Streaming nội bộ có đang bật không — TTFT rỗng khi tắt là ĐÚNG. */
+  streaming_enabled: boolean;
   /** Ngày cập nhật bảng giá — chi phí là số cấu hình, không phải số đo được. */
   pricing_updated: string | null;
 };

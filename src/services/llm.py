@@ -38,6 +38,17 @@ def get_llm() -> BaseChatModel:
             max_retries=1,
             callbacks=callbacks,
         )
+    # `streaming` CHI bat cho OpenAI, va chi khi cau hinh cho phep.
+    #
+    # Vi sao khong bat cho Gemini: `ChatGoogleGenerativeAI` KHONG co tham so
+    # `stream_usage`, nen khong bao dam duoc token usage con nguyen o che do
+    # stream. Mat token la mat luon chi phi — doi mot con so do luong lay mot
+    # con so do luong khac la trao doi lo.
+    #
+    # `stream_usage=True` la bat buoc di kem: OpenAI chi tra usage o che do
+    # stream khi duoc yeu cau ro (`stream_options.include_usage`). Thieu no thi
+    # bat streaming se AM THAM lam token va chi phi ve 0.
+    streaming = settings.llm_streaming_enabled
     return ChatOpenAI(
         model=settings.model_name,
         api_key=settings.openai_api_key,
@@ -46,4 +57,6 @@ def get_llm() -> BaseChatModel:
         max_retries=1,
         max_tokens=settings.openai_max_tokens,
         callbacks=callbacks,
+        streaming=streaming,
+        stream_usage=True if streaming else None,
     )

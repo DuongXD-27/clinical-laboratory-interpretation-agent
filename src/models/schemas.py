@@ -1077,6 +1077,14 @@ class LatencyGroupSchema(BaseModel):
     # Khac 0 nghia la con so chi phi dang bao THAP hon thuc te.
     unpriced_call_count: int = 0
     cost_per_call_usd: float | None = None
+    # TTFT — do tre PHIA NHA CUNG CAP, khong phai TTFT nguoi dung cam nhan.
+    # He thong khong stream ra client vi guardrail phai la lop cuoi (ADR-004),
+    # nen benh nhan van cho ca cau tra loi. `None` khi chua bat streaming.
+    ttft_p50_ms: float | None = None
+    ttft_p95_ms: float | None = None
+    # Khac 0 nghia la co luot goi bao 0 token — gan nhu chac chan loi do luong,
+    # truong hop da biet la bat streaming ma thieu `stream_usage`.
+    missing_usage_count: int = 0
 
 
 class LatencyGroupsResponse(BaseModel):
@@ -1090,6 +1098,9 @@ class LatencyGroupsResponse(BaseModel):
     api: LatencyGroupSchema
     window_hours: int
     window_minutes: float | None = None
+    # Streaming noi bo co dang bat khong. Man hinh phai noi ra: TTFT rong khi tat
+    # la dung, con doc no nhu "khong co du lieu" thi sai.
+    streaming_enabled: bool = False
     # Ngay cap nhat bang gia. Chi phi la so CAU HINH chu khong phai so DO DUOC —
     # nha cung cap doi gia ma khong hoi ai — nen man hinh phai noi con so nay cu
     # bao nhieu thay vi trinh bay no nhu su that do luong.

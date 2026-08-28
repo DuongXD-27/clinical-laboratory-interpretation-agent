@@ -114,6 +114,13 @@ class GroupMetrics:
     cost_usd: float | None = None
     unpriced_call_count: int = 0
     cost_per_call_usd: float | None = None
+    # TTFT — do tre phia nha cung cap, KHONG phai TTFT nguoi dung cam nhan:
+    # he thong khong stream ra client vi guardrail phai la lop cuoi (ADR-004).
+    # `None` khi chua bat streaming.
+    ttft_p50_ms: float | None = None
+    ttft_p95_ms: float | None = None
+    # Khac 0 nghia la co luot goi bao 0 token — gan nhu chac chan loi do luong.
+    missing_usage_count: int = 0
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -133,6 +140,9 @@ class GroupMetrics:
             "cost_usd": self.cost_usd,
             "unpriced_call_count": self.unpriced_call_count,
             "cost_per_call_usd": self.cost_per_call_usd,
+            "ttft_p50_ms": self.ttft_p50_ms,
+            "ttft_p95_ms": self.ttft_p95_ms,
+            "missing_usage_count": self.missing_usage_count,
         }
 
 
@@ -147,6 +157,8 @@ class _Accumulator:
     cost_usd: float = 0.0
     priced_any: bool = False
     unpriced_call_count: int = 0
+    ttfts: list[float] = field(default_factory=list)
+    missing_usage_count: int = 0
 
 
 def summarise_by_group(
@@ -191,6 +203,11 @@ def summarise_by_group(
         acc.output_tokens += int(getattr(row, "llm_output_tokens", 0) or 0)
         acc.unpriced_call_count += int(getattr(row, "llm_unpriced_call_count", 0) or 0)
 
+        acc.missing_usage_count += int(getattr(row, "llm_missing_usage_count", 0) or 0)
+        row_ttft = getattr(row, "llm_ttft_ms", None)
+        if row_ttft is not None:
+            acc.ttfts.append(float(row_ttft))
+
         row_cost = getattr(row, "llm_cost_usd", None)
         if row_cost is not None:
             acc.cost_usd += float(row_cost)
@@ -221,6 +238,9 @@ def summarise_by_group(
             cost_per_call_usd=(
                 round(acc.cost_usd / acc.llm_call_count, 6) if acc.priced_any and acc.llm_call_count else None
             ),
+            ttft_p50_ms=percentile(acc.ttfts, 50),
+            ttft_p95_ms=percentile(acc.ttfts, 95),
+            missing_usage_count=acc.missing_usage_count,
         )
         result[group] = metrics.as_dict()
 

@@ -83,6 +83,10 @@ def record_trace(
             # "khong biet" thanh "mien phi".
             llm_cost_usd=(float(fields["llm_cost_usd"]) if fields.get("llm_cost_usd") is not None else None),
             llm_unpriced_call_count=int(_num("llm_unpriced_call_count")),
+            llm_missing_usage_count=int(_num("llm_missing_usage_count")),
+            # Khong dung `_num`: no doi None thanh 0.0, ma o day None mang thong
+            # tin — "khong stream nen khong do duoc".
+            llm_ttft_ms=(float(fields["llm_ttft_ms"]) if fields.get("llm_ttft_ms") is not None else None),
             guardrail_fallback_count=int(_num("guardrail_fallback_count")),
             guardrail_rewrite_count=int(_num("guardrail_rewrite_count")),
             # Khong bat duoc ten ngoai le (loi xay ra ngoai handler, hoac 5xx do
@@ -237,6 +241,8 @@ def summarise_latency_groups(
         RequestTrace.llm_output_tokens,
         RequestTrace.llm_cost_usd,
         RequestTrace.llm_unpriced_call_count,
+        RequestTrace.llm_missing_usage_count,
+        RequestTrace.llm_ttft_ms,
     )
     if since is not None:
         query = query.where(RequestTrace.created_at >= since)
@@ -271,6 +277,8 @@ def load_traces_for_analysis(db: Session, *, since: datetime | None = None) -> l
         RequestTrace.llm_cost_usd,
         RequestTrace.guardrail_fallback_count,
         RequestTrace.guardrail_rewrite_count,
+        RequestTrace.llm_ttft_ms,
+        RequestTrace.llm_missing_usage_count,
     )
     if since is not None:
         query = query.where(RequestTrace.created_at >= since)

@@ -168,6 +168,7 @@ async def traces_latency(
         window_hours=window_hours,
         window_minutes=data["window_minutes"],
         pricing_updated=llm_cost.PRICING_UPDATED,
+        streaming_enabled=get_settings().llm_streaming_enabled,
     )
 
 

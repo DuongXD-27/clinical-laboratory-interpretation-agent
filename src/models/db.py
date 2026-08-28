@@ -996,6 +996,17 @@ class RequestTrace(Base):
     # Bao nhieu luot bi bo ngoai phep tinh tien. Khac 0 nghia la con so chi phi
     # dang bao THAP hon thuc te, va man hinh phai noi ra.
     llm_unpriced_call_count = Column(Integer, nullable=False, default=0)
+    # Luot goi THANH CONG ma bao 0 token — gan nhu chac chan la loi do luong,
+    # khong phai su that. Truong hop da biet: bat `streaming` ma thieu
+    # `stream_usage`. Khac 0 la tin hieu de tat co streaming lai.
+    llm_missing_usage_count = Column(Integer, nullable=False, default=0)
+    # TTFT: thoi gian tu luc goi LLM den token DAU TIEN, ms.
+    #
+    # `nullable=True` va `None` khi khong stream — KHONG phai 0.0. Day khong phai
+    # TTFT ma NGUOI DUNG cam nhan: he thong khong stream ra client (guardrail
+    # phai la lop cuoi, ADR-004), nen benh nhan van cho ca cau tra loi. No la do
+    # tre PHIA NHA CUNG CAP: bao lau moi bat dau sinh.
+    llm_ttft_ms = Column(Float, nullable=True)
 
     # Nhom loi, suy tu ten lop ngoai le o exception handler hoac tu ma HTTP.
     # `None` = request khong loi. Khac han "INTERNAL_EXCEPTION" von nghia la co

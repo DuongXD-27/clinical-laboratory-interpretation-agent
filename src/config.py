@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
     model_name: str = "gpt-4o-mini"
+    # Bat streaming NOI BO tu nha cung cap de do TTFT (thoi gian toi token dau
+    # tien). KHONG stream ra client: guardrail la lop cuoi cho moi noi dung benh
+    # nhan thay (ADR-004), va no xet mot cau tra loi hoan chinh chu khong xet
+    # duoc mot luong token. Stream token tho ra client la gui van ban y khoa
+    # chua qua kiem duyet.
+    #
+    # Mac dinh TAT, va do la co y: bat no doi cach MOI loi goi LLM duoc thuc
+    # hien, con may dev khong co OPENAI_API_KEY nen khong kiem cuc bo duoc.
+    # Bat tren production bang bien moi truong, tat lai duoc ngay neu co van de.
+    llm_streaming_enabled: bool = False
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     openai_max_tokens: int = Field(default=2048, ge=1, le=8192)
     llm_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
