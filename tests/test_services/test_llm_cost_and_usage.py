@@ -325,3 +325,138 @@ def test_callback_survives_bind_tools_so_agent_calls_are_counted():
     assert inner is not None, "bind_tools phải giữ model bên trong"
     inner_callbacks = list(getattr(inner, "callbacks", None) or [])
     assert any(cb is callback for cb in inner_callbacks), f"callback đếm bị mất sau bind_tools: {inner_callbacks}"
+
+
+# --- TTFT --------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_ttft_is_none_when_nothing_streams():
+    """Không stream thì `ttft_ms` là `None`, KHÔNG phải 0.
+
+    `on_llm_new_token` chỉ được gọi khi streaming bật. Trả 0.0 sẽ làm biểu đồ
+    TTFT hiện một đường phẳng ở đáy — đọc như "nhanh tuyệt đối" thay vì "chưa
+    bật streaming", và đó là hai kết luận trái ngược nhau.
+    """
+
+    timing = RequestTiming()
+    token = set_current_timing(timing)
+    try:
+        llm = GenericFakeChatModel(
+            messages=iter(
+                [
+                    AIMessage(
+                        content="xanh",
+                        usage_metadata={"input_tokens": 100, "output_tokens": 5, "total_tokens": 105},
+                        response_metadata={"model_name": "gpt-4o-mini"},
+                    )
+                ]
+            ),
+            callbacks=[LlmUsageCallback()],
+        )
+        await llm.ainvoke("màu gì")
+    finally:
+        timing.finish()
+        fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
+        reset_current_timing(token)
+
+    assert fields["llm_ttft_ms"] is None
+    # Và token vẫn nguyên — không stream thì không mất gì.
+    assert fields["llm_input_tokens"] == 100
+    assert fields["llm_missing_usage_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_ttft_is_measured_when_the_model_streams():
+    timing = RequestTiming()
+    token = set_current_timing(timing)
+    try:
+        llm = GenericFakeChatModel(
+            messages=iter([AIMessage(content="một hai ba bốn năm")]),
+            callbacks=[LlmUsageCallback()],
+        )
+        async for _ in llm.astream("gì đó"):
+            pass
+    finally:
+        timing.finish()
+        fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
+        reset_current_timing(token)
+
+    assert fields["llm_ttft_ms"] is not None
+    assert fields["llm_ttft_ms"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_streaming_that_loses_usage_is_counted_not_silent():
+    """Bật streaming mà mất token thì phải ĐẾM RA, không được im lặng.
+
+    Đây là rủi ro thật của việc bật streaming: OpenAI chỉ trả usage ở chế độ
+    stream khi được yêu cầu rõ (`stream_options.include_usage`). Thiếu nó thì
+    token và chi phí âm thầm về 0 — và "$0.00" đọc như miễn phí.
+
+    Một lượt gọi THÀNH CÔNG mà báo 0 token đầu vào gần như chắc chắn là lỗi đo
+    lường: mọi prompt thật đều có token. Đếm nó ra biến một lỗi vô hình thành
+    một con số ai cũng thấy trên màn hình.
+    """
+
+    timing = RequestTiming()
+    token = set_current_timing(timing)
+    try:
+        llm = GenericFakeChatModel(
+            messages=iter([AIMessage(content="một hai ba")]),
+            callbacks=[LlmUsageCallback()],
+        )
+        async for _ in llm.astream("gì đó"):
+            pass
+    finally:
+        timing.finish()
+        fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
+        reset_current_timing(token)
+
+    assert fields["llm_input_tokens"] == 0
+    assert fields["llm_cost_usd"] is None
+    # Đây là dòng quan trọng: mất usage không được đi qua trong im lặng.
+    assert fields["llm_missing_usage_count"] == 1
+
+
+def test_ttft_takes_the_first_call_not_an_average():
+    """TTFT lấy lượt gọi ĐẦU, không lấy trung bình nhiều lượt.
+
+    Câu hỏi là "nhà cung cấp mất bao lâu mới bắt đầu sinh". Trung bình nhiều
+    lượt sẽ trộn thời gian chờ với thời gian sinh của các lượt sau.
+    """
+
+    timing = RequestTiming()
+    timing.add_event(
+        "llm-call", 100.0, outcome="ok", input_tokens=10, output_tokens=5, model="gpt-4o-mini", ttft_ms=250.0
+    )
+    timing.add_event(
+        "llm-call", 100.0, outcome="ok", input_tokens=10, output_tokens=5, model="gpt-4o-mini", ttft_ms=900.0
+    )
+    timing.finish()
+    fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
+    assert fields["llm_ttft_ms"] == 250.0
+
+
+def test_errored_call_does_not_count_as_missing_usage():
+    """Lời gọi lỗi báo 0 token là đúng, không phải lỗi đo lường."""
+
+    timing = RequestTiming()
+    timing.add_event("llm-call", 10.0, outcome="error", input_tokens=0, output_tokens=0, model="")
+    timing.finish()
+    fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
+    assert fields["llm_error_count"] == 1
+    assert fields["llm_missing_usage_count"] == 0
+
+
+def test_streaming_is_off_by_default():
+    """Mặc định TẮT, và đó là quyết định.
+
+    Bật streaming đổi cách MỌI lời gọi LLM được thực hiện, còn máy dev không có
+    `OPENAI_API_KEY` nên không kiểm cục bộ được. Mặc định bật là thả một thay
+    đổi chưa kiểm vào cả sản phẩm.
+    """
+
+    from src.config import Settings
+
+    assert Settings.model_fields["llm_streaming_enabled"].default is False

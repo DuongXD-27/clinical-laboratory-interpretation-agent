@@ -101,6 +101,10 @@ class LlmUsageCallback(BaseCallbackHandler):
         # trong cùng một request (analyzer gọi cho từng chỉ số), nên một biến
         # `started_at` duy nhất sẽ trộn thời gian của chúng vào nhau.
         self._started: dict[str, float] = {}
+        # Thời điểm token ĐẦU TIÊN của từng lời gọi. Chỉ có khi streaming bật —
+        # `on_llm_new_token` không bao giờ được gọi ở chế độ không stream, nên
+        # `ttft_ms` sẽ là `None`. `None` nghĩa là KHÔNG ĐO ĐƯỢC, không phải 0ms.
+        self._first_token: dict[str, float] = {}
 
     # --- hook ---------------------------------------------------------------
 
@@ -110,24 +114,50 @@ class LlmUsageCallback(BaseCallbackHandler):
     def on_chat_model_start(self, serialized: Any, messages: Any, *, run_id: UUID | None = None, **kwargs: Any) -> None:
         self._mark_start(run_id)
 
+    def on_llm_new_token(self, token: str, *, run_id: UUID | None = None, **kwargs: Any) -> None:
+        """Token đầu tiên của một lời gọi — đây là chỗ TTFT được đo.
+
+        Chỉ ghi lần ĐẦU cho mỗi `run_id`. LangChain gọi hook này cho mọi token,
+        và ghi đè mỗi lần sẽ biến TTFT thành "thời gian tới token cuối", tức là
+        đo lại đúng cái tổng thời gian đã có.
+
+        KHÔNG ghi nội dung `token` vào đâu cả: nó là văn bản y khoa chưa qua
+        guardrail. Chỉ lấy thời điểm.
+        """
+
+        try:
+            key = str(run_id)
+            if key not in self._first_token:
+                self._first_token[key] = time.perf_counter()
+        except Exception:
+            logger.warning("llm_usage_callback_failed", exc_info=True)
+
     def on_llm_end(self, response: Any, *, run_id: UUID | None = None, **kwargs: Any) -> None:
         try:
+            ttft_ms = self._take_ttft(run_id)
             duration_ms = self._take_duration(run_id)
             input_tokens, output_tokens, model = _extract_token_usage(response)
-            add_timing_event(
-                LLM_CALL_EVENT,
-                duration_ms,
-                outcome="ok",
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                model=model or "",
-            )
+            attributes: dict[str, str | int | float | bool] = {
+                "outcome": "ok",
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "model": model or "",
+            }
+            # Chỉ gắn `ttft_ms` khi thật sự đo được. Gắn 0.0 khi không stream sẽ
+            # làm biểu đồ TTFT hiện một đường phẳng ở 0 — đọc như "nhanh tuyệt
+            # đối" thay vì "chưa bật streaming".
+            if ttft_ms is not None:
+                attributes["ttft_ms"] = ttft_ms
+            add_timing_event(LLM_CALL_EVENT, duration_ms, **attributes)
         except Exception:
             # Nuốt: một lớp đếm không được phép làm chết câu trả lời của bệnh nhân.
             logger.warning("llm_usage_callback_failed", exc_info=True)
 
     def on_llm_error(self, error: BaseException, *, run_id: UUID | None = None, **kwargs: Any) -> None:
         try:
+            # Dọn cả `_first_token`: một lời gọi lỗi sau khi đã sinh vài token
+            # vẫn để lại mốc thời gian, và không dọn thì dict chỉ lớn lên.
+            self._take_ttft(run_id)
             duration_ms = self._take_duration(run_id)
             # KHÔNG ghi nội dung `error` vào event: thông báo lỗi của nhà cung
             # cấp đã từng mang theo một phần API key. Chỉ ghi loại ngoại lệ.
@@ -150,6 +180,20 @@ class LlmUsageCallback(BaseCallbackHandler):
             self._started[str(run_id)] = time.perf_counter()
         except Exception:
             logger.warning("llm_usage_callback_failed", exc_info=True)
+
+    def _take_ttft(self, run_id: UUID | None) -> float | None:
+        """TTFT của một lời gọi, tính từ lúc lời gọi bắt đầu tới token đầu tiên.
+
+        `None` khi không stream — `on_llm_new_token` không được gọi, nên không
+        có gì để đo. Đó là câu trả lời đúng, khác hẳn 0.0.
+        """
+
+        key = str(run_id)
+        first = self._first_token.pop(key, None)
+        started = self._started.get(key)
+        if first is None or started is None:
+            return None
+        return round((first - started) * 1000, 3)
 
     def _take_duration(self, run_id: UUID | None) -> float:
         started = self._started.pop(str(run_id), None)

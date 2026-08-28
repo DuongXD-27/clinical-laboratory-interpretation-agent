@@ -279,7 +279,7 @@ function CostPanel({ latency }: { latency: LatencyGroups }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-5">
           <div>
             <span className="block text-xs text-muted-foreground">Token vào</span>
             <strong className="block text-lg font-semibold tabular-nums">
@@ -312,7 +312,40 @@ function CostPanel({ latency }: { latency: LatencyGroups }) {
               )}
             </strong>
           </div>
+          <div>
+            <span className="block text-xs text-muted-foreground">TTFT (P95)</span>
+            <strong className="block text-lg font-semibold tabular-nums">
+              {ai.ttft_p95_ms === null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : ai.ttft_p95_ms >= 1000 ? (
+                `${(ai.ttft_p95_ms / 1000).toFixed(2)}s`
+              ) : (
+                `${Math.round(ai.ttft_p95_ms)}ms`
+              )}
+            </strong>
+          </div>
         </div>
+
+        {/* TTFT rỗng khi chưa bật streaming là ĐÚNG, không phải thiếu dữ liệu.
+            Nói ra để không ai đi tìm một lỗi không tồn tại. */}
+        {!latency.streaming_enabled ? (
+          <p className="m-0 mt-3 text-xs leading-relaxed text-muted-foreground">
+            TTFT trống vì <code className="font-mono">LLM_STREAMING_ENABLED</code> đang tắt. Đây là
+            độ trễ phía nhà cung cấp (bao lâu mới bắt đầu sinh), <strong>không phải</strong> thời gian
+            bệnh nhân chờ — hệ thống không stream ra client vì guardrail phải là lớp cuối cho mọi nội
+            dung hiển thị.
+          </p>
+        ) : null}
+
+        {/* Rủi ro thật của việc bật streaming: OpenAI chỉ trả usage khi được yêu
+            cầu rõ. Thiếu nó thì token và chi phí âm thầm về 0. Nói ra ngay. */}
+        {ai.missing_usage_count > 0 ? (
+          <p className="m-0 mt-3 rounded border border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] px-3 py-2 text-xs leading-relaxed text-[var(--status-critical-fg)]">
+            {ai.missing_usage_count} lượt gọi thành công nhưng báo 0 token — gần như chắc chắn là lỗi
+            đo lường, không phải sự thật. Nguyên nhân đã biết: bật streaming mà nhà cung cấp không trả
+            usage. Con số chi phí ở trên <strong>không tin được</strong> cho tới khi hết cảnh báo này.
+          </p>
+        ) : null}
 
         {ai.cost_usd === null && totalTokens > 0 ? (
           <p className="m-0 mt-3 text-xs leading-relaxed text-muted-foreground">
