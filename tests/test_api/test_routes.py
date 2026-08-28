@@ -3,6 +3,14 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.api import routes
+from src.main import app
+
+
+def test_real_application_mounts_critical_orchestrator_routes():
+    paths = app.openapi()["paths"]
+    assert "post" in paths["/api/v1/orchestrator/message"]
+    assert "post" in paths["/api/v1/orchestrator/onboarding/acknowledge"]
+    assert "get" in paths["/api/v1/conversations"]
 
 
 def graph_result(**overrides):
@@ -51,9 +59,7 @@ async def post_analyze_with_graph_result(client, monkeypatch, final_state):
 
 
 async def _auth_headers(client, username="benhnhan", password="benhnhan123"):
-    response = await client.post(
-        "/api/v1/auth/login", json={"username": username, "password": password}
-    )
+    response = await client.post("/api/v1/auth/login", json={"username": username, "password": password})
     assert response.status_code == 200, response.text
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -71,9 +77,7 @@ async def test_health(client):
 
 @pytest.mark.asyncio
 async def test_login_valid_demo_account(client):
-    response = await client.post(
-        "/api/v1/auth/login", json={"username": "bacsi", "password": "bacsi123"}
-    )
+    response = await client.post("/api/v1/auth/login", json={"username": "bacsi", "password": "bacsi123"})
     assert response.status_code == 200
     data = response.json()
     assert data["role"] == "doctor"
@@ -82,9 +86,7 @@ async def test_login_valid_demo_account(client):
 
 @pytest.mark.asyncio
 async def test_login_wrong_password(client):
-    response = await client.post(
-        "/api/v1/auth/login", json={"username": "benhnhan", "password": "sai-mat-khau"}
-    )
+    response = await client.post("/api/v1/auth/login", json={"username": "benhnhan", "password": "sai-mat-khau"})
     assert response.status_code == 401
 
 

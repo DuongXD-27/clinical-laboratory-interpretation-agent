@@ -131,14 +131,17 @@ def _settings_stub(
     return settings
 
 
-
-
-
 def test_metadata_prong_returns_status_matching_chunks(monkeypatch):
     _settings_stub(monkeypatch)
     docs = [
-        _doc("WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch", note_type="description"),
-        _doc("Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính", note_type="high_note"),
+        _doc(
+            "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch",
+            note_type="description",
+        ),
+        _doc(
+            "Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính",
+            note_type="high_note",
+        ),
         _doc("Khi WBC giảm thấp, tình trạng này có thể gặp khi nhiễm virus hoặc suy tủy xương", note_type="low_note"),
     ]
     retriever, store = _retriever(docs)
@@ -159,8 +162,14 @@ def test_metadata_prong_returns_status_matching_chunks(monkeypatch):
 def test_low_status_prefers_low_note(monkeypatch):
     _settings_stub(monkeypatch)
     docs = [
-        _doc("WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch", note_type="description"),
-        _doc("Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính", note_type="high_note"),
+        _doc(
+            "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch",
+            note_type="description",
+        ),
+        _doc(
+            "Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính",
+            note_type="high_note",
+        ),
         _doc("Khi WBC giảm thấp, tình trạng này có thể gặp khi nhiễm virus hoặc suy tủy xương", note_type="low_note"),
     ]
     retriever, _ = _retriever(docs)
@@ -179,7 +188,11 @@ def test_short_metadata_chunks_are_dropped(monkeypatch):
     _settings_stub(monkeypatch, min_chunk_length=30)
     docs = [
         _doc("WBC tăng", note_type="high_note", source="https://a.test"),
-        _doc("Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính", note_type="high_note", source="https://b.test"),
+        _doc(
+            "Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính",
+            note_type="high_note",
+            source="https://b.test",
+        ),
     ]
     retriever, _ = _retriever(docs)
 
@@ -308,7 +321,11 @@ def test_relevance_gate_drops_weak_dense_chunks(monkeypatch):
     long_text = "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch"
     docs = [_doc(long_text, note_type="description")]
     retriever, store = _retriever(docs)
-    store.get_by_metadata = lambda filter=None, include_embeddings=False: {"documents": [[]], "metadatas": [[]], "ids": [[]]}
+    store.get_by_metadata = lambda filter=None, include_embeddings=False: {
+        "documents": [[]],
+        "metadatas": [[]],
+        "ids": [[]],
+    }
     store.search = lambda query, *, k, filter=None, query_embedding=None: {
         "documents": [[long_text]],
         "metadatas": [[docs[0]["metadata"]]],
@@ -332,7 +349,11 @@ def test_relevance_gate_passes_sufficient_score(monkeypatch):
     long_text = "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch"
     docs = [_doc(long_text, note_type="description")]
     retriever, store = _retriever(docs)
-    store.get_by_metadata = lambda filter=None, include_embeddings=False: {"documents": [[]], "metadatas": [[]], "ids": [[]]}
+    store.get_by_metadata = lambda filter=None, include_embeddings=False: {
+        "documents": [[]],
+        "metadatas": [[]],
+        "ids": [[]],
+    }
     store.search = lambda query, *, k, filter=None, query_embedding=None: {
         "documents": [[long_text]],
         "metadatas": [[docs[0]["metadata"]]],
@@ -354,8 +375,14 @@ def test_relevance_gate_passes_sufficient_score(monkeypatch):
 def test_normal_status_only_description(monkeypatch):
     _settings_stub(monkeypatch)
     docs = [
-        _doc("WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch", note_type="description"),
-        _doc("Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính", note_type="high_note"),
+        _doc(
+            "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch",
+            note_type="description",
+        ),
+        _doc(
+            "Khi WBC tăng cao hơn mức bình thường, điều này có thể phản ánh bệnh lý viêm nhiễm hoặc bệnh máu ác tính",
+            note_type="high_note",
+        ),
     ]
     retriever, _ = _retriever(docs)
 
@@ -372,9 +399,21 @@ def test_normal_status_only_description(monkeypatch):
 def test_source_diversity_limits_one_chunk_per_source(monkeypatch):
     _settings_stub(monkeypatch)
     docs = [
-        _doc("Tăng bạch cầu nhẹ thường gặp trong phản ứng viêm nhiễm cấp tính do nhiễm trùng khu trú", note_type="high_note", source="https://a.test"),
-        _doc("Bạch cầu tăng cao kéo dài có thể liên quan rối loạn tăng sinh tủy xương cần theo dõi", note_type="high_note", source="https://b.test"),
-        _doc("Chỉ số WBC tăng vọt cần được bác sĩ đánh giá thêm trong bối cảnh lâm sàng cụ thể", note_type="high_note", source="https://c.test"),
+        _doc(
+            "Tăng bạch cầu nhẹ thường gặp trong phản ứng viêm nhiễm cấp tính do nhiễm trùng khu trú",
+            note_type="high_note",
+            source="https://a.test",
+        ),
+        _doc(
+            "Bạch cầu tăng cao kéo dài có thể liên quan rối loạn tăng sinh tủy xương cần theo dõi",
+            note_type="high_note",
+            source="https://b.test",
+        ),
+        _doc(
+            "Chỉ số WBC tăng vọt cần được bác sĩ đánh giá thêm trong bối cảnh lâm sàng cụ thể",
+            note_type="high_note",
+            source="https://c.test",
+        ),
     ]
     retriever, _ = _retriever(docs)
 

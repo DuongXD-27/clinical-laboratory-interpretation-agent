@@ -42,9 +42,7 @@ async def input_integrity_node(state: AgentState) -> dict:
         logger.error("Input-integrity configuration unavailable: %s", exc)
         blocked_results = []
         for index, indicator in enumerate(state.get("raw_indicators", [])):
-            canonical_analyte = reference_repository.resolve_analyte(
-                str(indicator.get("name", "")).strip()
-            )
+            canonical_analyte = reference_repository.resolve_analyte(str(indicator.get("name", "")).strip())
             if canonical_analyte is None:
                 continue
             blocked_results.append(
@@ -57,9 +55,7 @@ async def input_integrity_node(state: AgentState) -> dict:
                     "source_id": None,
                     "observed_value": indicator.get("value"),
                     "canonical_analyte": canonical_analyte,
-                    "canonical_unit": reference_repository.normalize_unit(
-                        str(indicator.get("unit", ""))
-                    ),
+                    "canonical_unit": reference_repository.normalize_unit(str(indicator.get("unit", ""))),
                 }
             )
         return {"input_integrity_results": blocked_results}

@@ -15,18 +15,17 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 - **LLM Analyzer**: Diễn giải ý nghĩa chỉ số bằng ngôn ngữ phổ thông, gần gũi với người bệnh.
 - **Medical Guardrail**: Chặn triệt để mọi hành vi chẩn đoán bệnh, suy đoán nguyên nhân cá nhân hóa hoặc chỉ định điều trị.
 - **Doctor Questions Generator**: Gợi ý các câu hỏi trọng tâm để bệnh nhân chủ động trao đổi với bác sĩ trong lần khám tiếp theo.
-- **Patient/Guest Hybrid Assistant (Orchestrator V1)**: Trợ lý nổi trong giao diện bệnh nhân/khách để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa.
+- **Patient/Guest Conversational Assistant**: Trợ lý nổi trong giao diện bệnh nhân/khách dùng một canonical LangGraph Agent để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa.
 
-### Orchestrator V1 scope
+### Canonical orchestrator scope
 
 - **Roles hỗ trợ trên Assistant**: `guest`, `patient`.
-- **Doctor conversational support**: deferred to V2; doctor-facing routes hiện có vẫn hoạt động riêng.
+- **Doctor conversational support**: chưa nằm trong Assistant; doctor-facing routes hiện có vẫn hoạt động riêng.
 - **Six intents**: `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
 - **Seven SuggestedActions**: `OPEN_REPORT`, `VIEW_ABNORMAL`, `VIEW_HISTORY`, `VIEW_TREND`, `VIEW_DOCTOR_QUESTIONS`, `CONFIRM_OCR`, `RETRY`.
 - **Onboarding bắt buộc**: Assistant chặn trước router/workflow cho tới khi người dùng xác nhận phạm vi sử dụng.
 - **OCR HITL**: dữ liệu OCR chỉ đi vào phân tích qua `/api/v1/ocr/confirm`; Assistant chỉ đọc trạng thái pending và không sao chép OCR draft thành input y khoa.
 - **History/Trend authorization**: patient chỉ truy cập dữ liệu của chính mình; guest bị chặn với `UNSUPPORTED_CAPABILITY`.
-- **Tài liệu verify cuối**: [Orchestrator V1 Final Verify Evidence](docs/orchestrator-v1-final-verify.md).
 
 ---
 
@@ -84,13 +83,13 @@ Orchestrator API (/api/v1/orchestrator/message)
 Role / Onboarding / OCR / Policy Gates
        │
        ▼
-Intent Router -> Medical Context (`medical_context.py`) -> Workflow Dispatcher
+Canonical Agent -> approved patient-scoped tools
        │
        ▼
 Approved wrappers/services
        │
        ▼
-Response Composer -> Medical Safety Validation -> Schema Validation
+Medical Response Guardrail -> Schema Validation
        │
        ▼
 SuggestedAction Validation -> Frontend Assistant
@@ -139,16 +138,20 @@ python -m venv .venv
 # Kích hoạt venv
 .\.venv\Scripts\Activate.ps1
 
-# Cài đặt thư viện phụ thuộc
-pip install -r requirements.txt
+# Cài đặt runtime + lint/test tooling
+pip install -r requirements-dev.txt
 ```
 
 **Trên Linux / macOS (Bash):**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
+
+Dependency ownership is explicit: `requirements.txt` is the production/Docker
+runtime authority, `requirements-dev.txt` adds lint and test tools, and
+`requirements-eval.txt` adds optional evaluation tooling.
 
 ### Bước 2: Cấu hình biến môi trường
 ```powershell
@@ -159,9 +162,9 @@ Mở file `.env` và điền API key cần thiết (xem chi tiết tại mục [
 
 ### Bước 3: Khởi chạy Backend API
 ```powershell
-uvicorn src.main:app --reload --port 8000
+python scripts/dev_backend.py
 ```
-API sẽ hoạt động tại: `http://localhost:8000` (Swagger UI: `http://localhost:8000/docs`).
+API sẽ hoạt động duy nhất tại `http://127.0.0.1:8000` (Swagger UI: `http://127.0.0.1:8000/docs`). Script sẽ dừng với thông báo rõ ràng nếu cổng 8000 đang do Docker/WSL hoặc tiến trình khác chiếm giữ.
 
 ---
 
@@ -177,7 +180,7 @@ npm install
 ```powershell
 npm run dev
 ```
-Giao diện người dùng sẽ chạy tại: `http://localhost:3000`.
+Giao diện người dùng sẽ chạy tại: `http://127.0.0.1:3000`.
 
 ---
 
@@ -192,8 +195,8 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `JWT_SECRET` | REQUIRED (Production) | Khóa ký phiên đăng nhập JWT | `dev-only-insecure-secret-change-me` |
 | `APP_ENV` | DEFAULTED | Môi trường ứng dụng (`development`, `production`, `test`) | `development` |
 | `APP_PORT` | DEFAULTED | Cổng mạng backend lắng nghe | `8000` |
-| `APP_HOST` | DEFAULTED | Địa chỉ host backend bind | `0.0.0.0` |
-| `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://localhost:3000,http://localhost:5173` |
+| `APP_HOST` | DEFAULTED | Địa chỉ host backend bind | `127.0.0.1` |
+| `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://127.0.0.1:3000` |
 | `DATABASE_URL` | DEFAULTED | Chuỗi kết nối CSDL SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
 | `RAG_ENABLED` | DEFAULTED | Bật/tắt tra cứu vector động qua ChromaDB | `false` |
 | `RAG_COLLECTION_NAME` | DEFAULTED | Tên collection ChromaDB | `medical_kb_v4` |
@@ -209,7 +212,7 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `OCR_UPLOAD_MODE` | DEFAULTED | Chế độ nhận ảnh OCR (`demo_only`, `open_with_consent`, `internal_only`) | `demo_only` |
 | `OCR_SAMPLES_DIR` | DEFAULTED | Thư mục chứa ảnh mẫu hợp lệ cho chế độ demo | `./data/ocr_samples` |
 | `LANGCHAIN_API_KEY` | OPTIONAL | Khóa API LangSmith ghi nhận AI Trace | `lsv2_pt_...` |
-| `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://localhost:8000` |
+| `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://127.0.0.1:8000` |
 
 > [!IMPORTANT]
 > **Cơ chế RAG Fallback**:
@@ -241,11 +244,11 @@ Quy trình xử lý:
 
 | Dịch vụ | URL | Ghi chú |
 |---|---|---|
-| **Frontend Web** | `http://localhost:3000` | Giao diện Next.js cho người dùng |
-| **Backend API** | `http://localhost:8000` | FastAPI service |
-| **Swagger UI Docs** | `http://localhost:8000/docs` | Tài liệu API tương tác |
-| **Readiness Check** | `http://localhost:8000/ready` | Báo cáo chi tiết trạng thái API và RAG |
-| **Health Check** | `http://localhost:8000/health` | Kiểm tra kết nối cơ bản |
+| **Frontend Web** | `http://127.0.0.1:3000` | Giao diện Next.js cho người dùng |
+| **Backend API** | `http://127.0.0.1:8000` | FastAPI service |
+| **Swagger UI Docs** | `http://127.0.0.1:8000/docs` | Tài liệu API tương tác |
+| **Readiness Check** | `http://127.0.0.1:8000/ready` | Báo cáo chi tiết trạng thái API và RAG |
+| **Health Check** | `http://127.0.0.1:8000/health` | Kiểm tra kết nối cơ bản |
 
 **Tài khoản đăng nhập có sẵn (Demo seed tự động):**
 - **Bệnh nhân**: Tên đăng nhập `benhnhan` / Mật khẩu `benhnhan123`
@@ -321,7 +324,7 @@ Dưới đây là các truy vấn mẫu gửi đến endpoint `POST /api/v1/anal
 ### Ví dụ gọi API qua PowerShell
 ```powershell
 # 1. Lấy token phiên khách
-$guest = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/auth/guest" -Method Post
+$guest = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/auth/guest" -Method Post
 $token = $guest.access_token
 
 # 2. Gửi request phân tích
@@ -344,7 +347,7 @@ $headers = @{
     "Content-Type" = "application/json"
 }
 
-Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Headers $headers -Body $body
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/analyze" -Method Post -Headers $headers -Body $body
 ```
 
 ---
@@ -358,9 +361,22 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Head
 make verify
 ```
 
-This runs repository-wide Ruff checks, the backend suite with a repository-local
-pytest temp base, and the existing frontend lint/test/build scripts. It does not
-install dependencies, rewrite source, or update lockfiles.
+This runs repository-wide Ruff lint and format checks, the backend suite with a
+repository-local pytest temp base, the frontend lint/test/build scripts, and the
+generated-artifact guard. It does not install dependencies, rewrite source, or
+update lockfiles.
+
+Equivalent direct commands (including Windows environments without GNU Make):
+```powershell
+ruff check .
+ruff format --check .
+python -m pytest -v --basetemp scratch/pytest-local
+python scripts/check_tracked_generated_artifacts.py
+cd frontend
+npm run lint
+npm test
+npm run build
+```
 
 **Backend Unit & Integration Tests:**
 ```powershell
@@ -372,9 +388,9 @@ make test
 make lint
 ```
 
-`make format-check` observes the repository-wide historical formatting debt; it
-never formats files. Python type checking is not part of verification because no
-supported type checker is declared in `requirements.txt`.
+`make format-check` is non-mutating and must pass. `make format` is the explicit
+mutating formatter command. Python type checking is not part of verification
+because no supported Python type checker is declared.
 
 **Frontend Unit Tests:**
 ```powershell
@@ -409,6 +425,10 @@ Kết quả cuối cùng được ghi trong [Orchestrator V1 Final Verify Eviden
 
 ## 13. Evaluation
 
+Install optional evaluation dependencies with `pip install -r requirements-eval.txt`.
+Evaluation datasets and retained run evidence live under
+`eval/`; they are not installed into the production container.
+
 Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 
 - [Manual E2E Evaluation Evidence](eval/manual_e2e_evidence.md) — Kiểm chứng thực nghiệm 5 ca E2E chính + 1 ca an toàn bổ sung trên runtime thực tế.
@@ -432,7 +452,7 @@ Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 - **Ý nghĩa của HIGH / LOW**: Tăng/giảm ngoài khoảng tham chiếu không tự động đồng nghĩa với tình trạng nguy kịch.
 - **Tính tất định của Giá trị Nguy kịch (Critical Values)**: Được kiểm soát bởi Deterministic Rule Engine với ngưỡng cố định, hoàn toàn không phụ thuộc vào suy luận xác suất của LLM.
 - **Unsupported analyte fail-closed**: `status="unknown"` không gọi general RAG và không gọi LLM giải thích; chỉ cho phép nội dung curated đã phê duyệt nếu có.
-- **Không có long-term chat memory**: Assistant chỉ giữ session context tối thiểu; không lưu lịch sử chat dài hạn.
+- **Conversation persistence có kiểm soát**: Patient conversations are persisted with ownership enforced by the server-side conversation repository; guest context remains short-lived and cannot access patient history.
 - **Doctor Assistant deferred**: Bác sĩ dùng các route/app doctor hiện có; chatbot doctor không thuộc V1.
 - **RAG live quality**: TIP-007 không đo live RAGAS quality score mới.
 - **Phạm vi kiểm thử**: Các kết quả kiểm nghiệm hiện tại phản ánh tập dữ liệu xét nghiệm và các chỉ số được hỗ trợ trong phạm vi MVP, không đảm bảo tính đúng đắn cho mọi tình huống bệnh lý hay mọi định dạng phiếu xét nghiệm nằm ngoài danh mục.

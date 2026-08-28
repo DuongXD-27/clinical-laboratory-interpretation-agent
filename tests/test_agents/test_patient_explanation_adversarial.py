@@ -82,9 +82,7 @@ async def test_analysis_path_removes_unsupported_patient_inferences(
         "explanation": "",
     }
 
-    result = await analyzer_node(
-        {"indicators": [indicator], "patient_gender": "female", "patient_age": 35}
-    )
+    result = await analyzer_node({"indicators": [indicator], "patient_gender": "female", "patient_age": 35})
     visible = result["indicators"][0]["explanation"]
 
     assert forbidden.casefold() not in visible.casefold()

@@ -89,9 +89,7 @@ def test_cascade_delete_removes_report_and_children_but_orphans_doctor_note(isol
         doctor = session.query(db_module.User).filter_by(username="bacsi").one()
 
         report = db_module.LabReport(patient_id=patient.id, test_date=datetime.date(2026, 1, 1))
-        indicator = db_module.ReportIndicator(
-            name="Kali", value=7.0, unit="mmol/L", status="critical_high"
-        )
+        indicator = db_module.ReportIndicator(name="Kali", value=7.0, unit="mmol/L", status="critical_high")
         report.indicators.append(indicator)
         session.add(report)
         session.flush()  # cần indicator.id trước khi tạo question
@@ -172,9 +170,7 @@ def test_lab_report_detail_schema_validates_from_orm_row(isolated_db):
             db_module.ReportIndicator(name="Kali", value=7.0, unit="mmol/L", status="critical_high")
         )
         report.critical_alerts.append(
-            db_module.ReportCriticalAlert(
-                indicator_name="Kali", value=7.0, unit="mmol/L", message="Nguy kịch"
-            )
+            db_module.ReportCriticalAlert(indicator_name="Kali", value=7.0, unit="mmol/L", message="Nguy kịch")
         )
         session.add(report)
         session.commit()

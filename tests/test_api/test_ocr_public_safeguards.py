@@ -166,9 +166,7 @@ async def test_uploaded_image_is_never_written_to_disk(client, set_mode, monkeyp
             from src.models.ocr_schemas import OCRIndicatorDraft
 
             return [
-                OCRIndicatorDraft(
-                    name="Glucose", value=5.2, unit="mmol/L", confidence=0.95, raw_text="Glucose 5.2"
-                )
+                OCRIndicatorDraft(name="Glucose", value=5.2, unit="mmol/L", confidence=0.95, raw_text="Glucose 5.2")
             ]
 
     from src.services.image_processor import ImageProcessor

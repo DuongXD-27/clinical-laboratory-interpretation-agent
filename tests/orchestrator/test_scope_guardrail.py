@@ -122,6 +122,7 @@ def active_wbc_setup(monkeypatch):
 
     from src.models.schemas import TrendPointResponse, TrendResponse
     from src.services import trend_service
+
     dummy_trend = TrendResponse(
         analyte_canonical="HbA1c",
         display_name="HbA1c",
@@ -144,6 +145,7 @@ def active_wbc_setup(monkeypatch):
 # ==============================================================================
 # S-01 to S-04: Sensitive System / Security Requests
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_s01_api_key_request_refusal(active_wbc_setup):
@@ -213,6 +215,7 @@ async def test_s04_jwt_token_refusal(active_wbc_setup):
 # S-05 to S-07, S-18: Out-of-Scope Requests
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_s05_python_fibonacci_out_of_scope(active_wbc_setup):
     """S-05: 'viết code Python tính Fibonacci' -> OUT_OF_SCOPE."""
@@ -281,6 +284,7 @@ async def test_s18_out_of_scope_guidance_python(active_wbc_setup):
 # S-08, S-09: Active Context Isolation (No Data Leakage)
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_s08_active_wbc_with_python_no_leakage(active_wbc_setup):
     """S-08: Active WBC context + 'viết Python cho tôi' -> OUT_OF_SCOPE with NO WBC data."""
@@ -320,6 +324,7 @@ async def test_s09_active_wbc_with_api_key_no_leakage(active_wbc_setup):
 # ==============================================================================
 # S-10 to S-12: Preserving 001 and Supported Workflows
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_s10_asdfgh_neutral_clarification_unchanged(active_wbc_setup):
@@ -368,6 +373,7 @@ async def test_s12_trend_hba1c_supported(active_wbc_setup):
 # ==============================================================================
 # S-13, S-14: Medical Safety Gate
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_s13_cancer_diagnosis_safety_observation():
@@ -425,6 +431,7 @@ async def test_ah09_out_of_scope_python_unchanged_by_app_help(active_wbc_setup):
 # ==============================================================================
 # S-15 to S-17, S-20, S-21: Supported Capability & App Help Routing
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_s15_what_can_you_do_capability(active_wbc_setup):
@@ -503,6 +510,7 @@ async def test_s21_what_is_ocr_feature_not_out_of_scope(active_wbc_setup):
 # ==============================================================================
 # S-19, S-22: Negative Controls
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_s19_api_key_definition_not_sensitive_extraction():

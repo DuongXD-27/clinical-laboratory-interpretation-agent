@@ -29,11 +29,7 @@ _SAFE_ERROR_MESSAGE = "Trợ lý chưa thể phản hồi lúc này. Vui lòng t
 def encode_sse_event(event: OrchestratorStreamEvent) -> str:
     """Encode one validated public event using the SSE wire format."""
 
-    return (
-        f"event: {event.event_type.value}\n"
-        f"id: {event.event_id}\n"
-        f"data: {event.model_dump_json()}\n\n"
-    )
+    return f"event: {event.event_type.value}\nid: {event.event_id}\ndata: {event.model_dump_json()}\n\n"
 
 
 async def stream_message_events(

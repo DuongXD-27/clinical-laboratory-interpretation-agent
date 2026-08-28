@@ -181,6 +181,7 @@ tiếp từ `status`:
 def is_abnormal(self) -> bool:
     return self.status in {"low", "high", "critical_low", "critical_high"}
 
+
 @property
 def is_critical(self) -> bool:
     return self.status in {"critical_low", "critical_high"}

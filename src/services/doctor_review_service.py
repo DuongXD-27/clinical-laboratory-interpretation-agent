@@ -161,9 +161,7 @@ def _question_to_schema(question: ReportQuestion):
 def _sync_report_progress(report: LabReport) -> None:
     report.findings_total = len(report.indicators)
     report.findings_reviewed = sum(
-        1
-        for indicator in report.indicators
-        if (indicator.review_outcome or OUTCOME_PENDING) in REVIEWED_OUTCOMES
+        1 for indicator in report.indicators if (indicator.review_outcome or OUTCOME_PENDING) in REVIEWED_OUTCOMES
     )
 
 
@@ -199,20 +197,14 @@ def _apply_review_flags_no_commit(db: Session, report: LabReport) -> None:
                 )
             )
 
-        if (
-            indicator.ocr_confidence is not None
-            and indicator.ocr_confidence < LOW_OCR_CONFIDENCE_THRESHOLD
-        ):
+        if indicator.ocr_confidence is not None and indicator.ocr_confidence < LOW_OCR_CONFIDENCE_THRESHOLD:
             flags.append(
                 ReviewFlag(
                     report_id=report.id,
                     finding_id=indicator.id,
                     code=FLAG_LOW_OCR,
                     severity="medium",
-                    detail=(
-                        f"Dòng OCR '{indicator.name}' có độ tin cậy "
-                        f"{indicator.ocr_confidence:.2f}"
-                    ),
+                    detail=(f"Dòng OCR '{indicator.name}' có độ tin cậy {indicator.ocr_confidence:.2f}"),
                 )
             )
 
@@ -271,10 +263,7 @@ def _is_review_state_consistent(report: LabReport) -> bool:
         if indicator.is_critical:
             expected_codes.add(FLAG_CRITICAL)
             expected_pairs.add((FLAG_CRITICAL, indicator.id))
-        if (
-            indicator.ocr_confidence is not None
-            and indicator.ocr_confidence < LOW_OCR_CONFIDENCE_THRESHOLD
-        ):
+        if indicator.ocr_confidence is not None and indicator.ocr_confidence < LOW_OCR_CONFIDENCE_THRESHOLD:
             expected_codes.add(FLAG_LOW_OCR)
             expected_pairs.add((FLAG_LOW_OCR, indicator.id))
 
@@ -286,9 +275,7 @@ def _is_review_state_consistent(report: LabReport) -> bool:
     expected_priority = _base_priority(expected_codes)
 
     # --- Compare flags (set equality, not just presence check) ---
-    current_pairs: set[tuple[str, int | None]] = {
-        (flag.code, flag.finding_id) for flag in report.review_flags
-    }
+    current_pairs: set[tuple[str, int | None]] = {(flag.code, flag.finding_id) for flag in report.review_flags}
     if current_pairs != expected_pairs:
         return False
 
@@ -312,9 +299,7 @@ def _is_review_state_consistent(report: LabReport) -> bool:
     # --- Compare findings_total / findings_reviewed ---
     expected_total = len(report.indicators)
     expected_reviewed = sum(
-        1
-        for ind in report.indicators
-        if (ind.review_outcome or OUTCOME_PENDING) in REVIEWED_OUTCOMES
+        1 for ind in report.indicators if (ind.review_outcome or OUTCOME_PENDING) in REVIEWED_OUTCOMES
     )
     if report.findings_total != expected_total or report.findings_reviewed != expected_reviewed:
         return False
@@ -408,20 +393,17 @@ def backfill_review_flags(db: Session) -> int:
 
 
 def get_report_for_doctor(db: Session, report_id: int) -> LabReport:
-    report = (
-        db.execute(
-            select(LabReport)
-            .where(LabReport.id == report_id)
-            .options(
-                selectinload(LabReport.patient),
-                selectinload(LabReport.verified_by),
-                selectinload(LabReport.indicators).selectinload(ReportIndicator.reviewed_by),
-                selectinload(LabReport.review_flags),
-                selectinload(LabReport.questions).selectinload(ReportQuestion.answered_by),
-            )
+    report = db.execute(
+        select(LabReport)
+        .where(LabReport.id == report_id)
+        .options(
+            selectinload(LabReport.patient),
+            selectinload(LabReport.verified_by),
+            selectinload(LabReport.indicators).selectinload(ReportIndicator.reviewed_by),
+            selectinload(LabReport.review_flags),
+            selectinload(LabReport.questions).selectinload(ReportQuestion.answered_by),
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
     if report is None:
         raise ReportNotFoundError("Không tìm thấy phiếu xét nghiệm.")
     return report
@@ -440,24 +422,14 @@ def _reports_for_counts(db: Session) -> list[LabReport]:
 
 
 def _counts(reports: list[LabReport]) -> DoctorQueueCountsSchema:
-    pending_reports = [
-        report for report in reports if report.verification_status == VERIFICATION_PENDING
-    ]
+    pending_reports = [report for report in reports if report.verification_status == VERIFICATION_PENDING]
     return DoctorQueueCountsSchema(
         critical=sum(
-            1
-            for report in pending_reports
-            if any(flag.code == FLAG_CRITICAL for flag in report.review_flags)
+            1 for report in pending_reports if any(flag.code == FLAG_CRITICAL for flag in report.review_flags)
         ),
-        ocr=sum(
-            1
-            for report in pending_reports
-            if any(flag.code == FLAG_LOW_OCR for flag in report.review_flags)
-        ),
+        ocr=sum(1 for report in pending_reports if any(flag.code == FLAG_LOW_OCR for flag in report.review_flags)),
         questions=sum(
-            1
-            for report in pending_reports
-            if any(flag.code == FLAG_PATIENT_QUESTIONS for flag in report.review_flags)
+            1 for report in pending_reports if any(flag.code == FLAG_PATIENT_QUESTIONS for flag in report.review_flags)
         ),
         pending=len(pending_reports),
         verified=sum(1 for report in reports if report.verification_status == VERIFICATION_VERIFIED),
@@ -488,30 +460,16 @@ def list_queue(
     counts = _counts(reports)
 
     if tab == "verified":
-        filtered = [
-            report
-            for report in reports
-            if report.verification_status == VERIFICATION_VERIFIED
-        ]
-        filtered.sort(key=lambda report: (report.verified_at or report.created_at), reverse=True)
+        filtered = [report for report in reports if report.verification_status == VERIFICATION_VERIFIED]
+        filtered.sort(key=lambda report: report.verified_at or report.created_at, reverse=True)
     else:
-        filtered = [
-            report
-            for report in reports
-            if report.verification_status == VERIFICATION_PENDING
-        ]
+        filtered = [report for report in reports if report.verification_status == VERIFICATION_PENDING]
         if tab == "critical":
             filtered = [
-                report
-                for report in filtered
-                if any(flag.code == FLAG_CRITICAL for flag in report.review_flags)
+                report for report in filtered if any(flag.code == FLAG_CRITICAL for flag in report.review_flags)
             ]
         elif tab == "ocr":
-            filtered = [
-                report
-                for report in filtered
-                if any(flag.code == FLAG_LOW_OCR for flag in report.review_flags)
-            ]
+            filtered = [report for report in filtered if any(flag.code == FLAG_LOW_OCR for flag in report.review_flags)]
         elif tab == "questions":
             filtered = [
                 report
@@ -577,9 +535,8 @@ def get_doctor_report_detail(db: Session, report_id: int) -> DoctorReportDetailR
         patient=DoctorPatientSchema(
             id=report.patient_id,
             name=_patient_name(report),
-            age=report.patient_age_at_test or _age_from_birthdate(
-                report.patient.date_of_birth if report.patient is not None else None
-            ),
+            age=report.patient_age_at_test
+            or _age_from_birthdate(report.patient.date_of_birth if report.patient is not None else None),
             gender=report.patient_gender_at_test or (report.patient.sex if report.patient else None),
         ),
         flags=[_flag_to_schema(flag) for flag in report.review_flags],
@@ -596,17 +553,14 @@ def review_finding(
     outcome: str,
     doctor_note: str | None = None,
 ) -> FindingReviewResponse:
-    finding = (
-        db.execute(
-            select(ReportIndicator)
-            .where(ReportIndicator.id == finding_id)
-            .options(
-                selectinload(ReportIndicator.report).selectinload(LabReport.indicators),
-                selectinload(ReportIndicator.reviewed_by),
-            )
+    finding = db.execute(
+        select(ReportIndicator)
+        .where(ReportIndicator.id == finding_id)
+        .options(
+            selectinload(ReportIndicator.report).selectinload(LabReport.indicators),
+            selectinload(ReportIndicator.reviewed_by),
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
     if finding is None:
         raise FindingNotFoundError("Không tìm thấy luận điểm.")
 
@@ -618,9 +572,7 @@ def review_finding(
         raise DoctorReviewError("Kết cục kiểm chứng không hợp lệ.")
 
     normalized_note = doctor_note.strip() if doctor_note else None
-    if outcome == OUTCOME_CORRECTED and (
-        normalized_note is None or len(normalized_note) < CORRECTION_MIN_LENGTH
-    ):
+    if outcome == OUTCOME_CORRECTED and (normalized_note is None or len(normalized_note) < CORRECTION_MIN_LENGTH):
         raise DoctorReviewError("Nội dung đính chính cần tối thiểu 10 ký tự.")
 
     finding.review_outcome = outcome
@@ -669,17 +621,14 @@ def answer_question(
     doctor_id: int,
     answer_text: str,
 ):
-    question = (
-        db.execute(
-            select(ReportQuestion)
-            .where(ReportQuestion.id == question_id)
-            .options(
-                selectinload(ReportQuestion.report),
-                selectinload(ReportQuestion.answered_by),
-            )
+    question = db.execute(
+        select(ReportQuestion)
+        .where(ReportQuestion.id == question_id)
+        .options(
+            selectinload(ReportQuestion.report),
+            selectinload(ReportQuestion.answered_by),
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
     if question is None:
         raise ReportNotFoundError("Không tìm thấy câu hỏi.")
     if question.report.verification_status == VERIFICATION_VERIFIED:

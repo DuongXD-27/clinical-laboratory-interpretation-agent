@@ -115,6 +115,4 @@ def get_embedding_provider() -> EmbeddingProvider:
             dimension=settings.embedding_dimension,
             timeout_seconds=settings.embedding_timeout_seconds,
         )
-    raise EmbeddingProviderError(
-        f"unsupported embedding provider: {settings.embedding_provider}"
-    )
+    raise EmbeddingProviderError(f"unsupported embedding provider: {settings.embedding_provider}")

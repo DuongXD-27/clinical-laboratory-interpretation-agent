@@ -55,8 +55,13 @@ def test_uvicorn_loggers_are_not_disabled():
 
 def format_record(**extra) -> dict:
     record = logging.LogRecord(
-        name="src.test", level=logging.INFO, pathname=__file__, lineno=1,
-        msg="something_happened", args=(), exc_info=None,
+        name="src.test",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="something_happened",
+        args=(),
+        exc_info=None,
     )
     for key, value in extra.items():
         setattr(record, key, value)

@@ -142,7 +142,7 @@ flowchart LR
 - **Purpose:** API Gateway xử lý yêu cầu, điều phối pipeline AI Agent (LangGraph), quản lý phiên làm việc JWT, xác thực phân quyền và lưu trữ dữ liệu lịch sử xét nghiệm.
 - **API Design:** RESTful API có cấu trúc rõ ràng:
   - `/api/v1/analyze`: Phân tích và diễn giải phiếu xét nghiệm (Manual/Reviewed OCR).
-  - `/api/v1/orchestrator/message`: Patient/Guest Hybrid Assistant V1.
+  - `/api/v1/orchestrator/message`: Canonical Patient/Guest Assistant.
   - `/api/v1/orchestrator/onboarding/acknowledge`: Ghi nhận onboarding Assistant cho phiên hiện tại.
   - `/api/v1/auth/*`: Đăng ký, đăng nhập, phiên khách (Guest session), thông tin người dùng (`/me`).
   - `/api/v1/ocr/*`: Tải ảnh trích xuất (`/ocr/upload`), xác nhận bản nháp (`/ocr/confirm`).
@@ -151,9 +151,9 @@ flowchart LR
   - `/health` & `/ready`: Kiểm tra tình trạng hoạt động và độ sẵn sàng của RAG.
 - **Authentication:** JSON Web Tokens (JWT - HS256) hỗ trợ 3 vai trò: `patient`, `doctor`, và `guest` (phiên khách tạm thời, không lưu row persistent vào bảng users).
 
-### 2A. Orchestrator V1 (Patient/Guest Hybrid Assistant)
+### 2A. Canonical Conversational Agent
 - **Purpose:** Cung cấp lớp hội thoại để điều hướng các khả năng đã được phê duyệt: giải thích kết quả hiện tại, xem lịch sử, xem xu hướng, chuẩn bị câu hỏi cho bác sĩ và chuyển người dùng tới luồng OCR review hiện có.
-- **Roles:** Assistant V1 chỉ nhận `guest` và `patient`. `doctor` bị chặn trước router/workflow/DB với `UNSUPPORTED_CAPABILITY`; doctor-facing app/routes không thay đổi.
+- **Roles:** Assistant chỉ nhận `guest` và `patient`. `doctor` bị chặn trước Agent/DB với `UNSUPPORTED_CAPABILITY`; doctor-facing app/routes không thay đổi.
 - **Intents cố định:** `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
 - **SuggestedAction cố định:** `OPEN_REPORT`, `VIEW_ABNORMAL`, `VIEW_HISTORY`, `VIEW_TREND`, `VIEW_DOCTOR_QUESTIONS`, `CONFIRM_OCR`, `RETRY`.
 - **Runtime flow:**
@@ -162,19 +162,16 @@ flowchart LR
 Patient/Guest UI
 -> Orchestrator API
 -> role/onboarding/OCR/policy gates
--> Context Resolver
--> Intent Router
--> Workflow Dispatcher
+-> Canonical LangGraph Agent
 -> safe wrappers/services
--> Response Composer
--> Medical Safety Validation
+-> Medical Response Guardrail
 -> Schema Validation
 -> SuggestedAction Validation
 -> Frontend Assistant
 ```
 
 - **Response authority:** LLM chỉ được sinh nội dung `message`. Server kiểm soát `intent`, `status`, `reason_code`, `data`, `data_type`, `sources`, `suggested_actions` và `safety_notice`.
-- **Context:** Session context chỉ giữ thông tin tối thiểu như report hiện tại, analyte hiện tại, intent gần nhất, onboarding và trạng thái OCR pending. Không có persistent long-term chat memory.
+- **Context:** `session_store.py` is the persisted conversation-state authority; `message_context.py` parses explicit message references. Patient ownership is enforced by Agent tools and wrappers; guest context remains short-lived.
 - **OCR boundary:** Orchestrator chỉ đọc trạng thái pending review. Nó không đọc `ocr_drafts` để tạo input phân tích; dữ liệu OCR vào medical pipeline qua đúng `/api/v1/ocr/confirm`.
 
 ### 3. AI Agent (LangGraph)
@@ -202,7 +199,7 @@ graph LR
     GUARD --> FINISH([End])
 ```
 
-The Orchestrator V1 is outside this LangGraph graph. It may call approved
+The conversational orchestrator is outside this report-analysis LangGraph graph. It may call approved
 workflows/wrappers, but it does not reorder the medical graph and does not add a
 second route for OCR-derived medical input.
 
@@ -218,7 +215,7 @@ second route for OCR-derived medical input.
   - `doctor_notes`: Ghi chú nhận xét chuyên môn của bác sĩ (HITL notes).
   - `report_doctor_views`: Lịch sử bác sĩ đã mở xem phiếu xét nghiệm.
   - `out_of_scope_log`: Nhật ký ghi nhận các chỉ số ngoài danh mục hỗ trợ.
-- **Migrations:** Khởi tạo qua `Base.metadata.create_all()` kết hợp cơ chế idempotent runtime migration tối thiểu cho SQLite (`_migrate_sqlite_schema()`).
+- **Schema/startup reconciliation:** `Base.metadata.create_all()` creates missing tables; `add_missing_columns()`, `backfill_added_column_defaults()`, and `add_missing_indexes()` perform minimal idempotent reconciliation. Package-aware manual migrations and backfill ownership are documented in `src/scripts/README.md`.
 
 ### 5. Vector Store
 - **Type:** ChromaDB cục bộ (`./data/chroma`).
@@ -245,13 +242,13 @@ second route for OCR-derived medical input.
 
 1. **Assistant entry:** Frontend `AssistantWidget` gửi `OrchestratorRequest` tới `/api/v1/orchestrator/message`.
 2. **Admission gates:** Backend chặn token không hợp lệ, doctor conversational access, onboarding chưa xác nhận, lab values nhập qua chat, yêu cầu unsafe và OCR skip attempt.
-3. **Context resolution:** `src/orchestrator/medical_context.py::resolve_medical_context` là resolver duy nhất của runtime. Nó kết hợp session context, transient UI hints, explicit report/analyte mentions và authorized patient history lookup để xác định report/analyte hiện tại. Client không được gửi identity fields.
-4. **Intent routing:** Router chọn một trong đúng 6 intent. Unsafe diagnosis/cause/treatment requests được route về blocked response.
-5. **Workflow dispatch:** Dispatcher gọi wrappers như `get_my_history`, `get_my_report`, `get_my_indicator_trend` và `get_report_questions`. Wrappers resolve identity từ JWT/current user.
-6. **Response composition:** Composer có thể gọi LLM để viết `message`, sau đó chạy medical safety validation, schema validation và SuggestedAction policy validation.
+3. **Conversation context:** `session_store.py` hydrates the active conversation from the database; client identity fields remain forbidden.
+4. **Agent planning:** `src/orchestrator/agent.py` selects only approved tools for report, analyte, history, trend, doctor-question, RAG and app-help capabilities.
+5. **Tool authority:** `agent_tools.py` calls patient-scoped wrappers and deterministic domain services. Wrappers resolve identity from JWT/current user and never accept a caller-supplied patient ID.
+6. **Response validation:** `response_guardrail.py` applies medical safety, canonical-fact contradiction and patient-grounding validation before the schema reaches the frontend.
 7. **Frontend action execution:** Frontend sanitizer chỉ cho phép 7 SuggestedAction variants và không route từ prose, arbitrary URL hoặc `javascript:`.
 
-`AGENT_CHAT_V2` là một nhánh rollout opt-in dành cho patient, mặc định tắt. Các admission/safety gates vẫn chạy trước nhánh này; khi V2 tắt hoặc không khả dụng, `service.py` tiếp tục qua intent router → canonical medical-context resolver → dispatcher. `agent_v2.py` vì vậy là kiến trúc rollout đang được bảo vệ bằng feature flag, không phải resolver song song hay dead code.
+There is one conversational runtime. If the provider fails, `service.py` returns a minimal deterministic `LLM_UNAVAILABLE` response with safe retry/navigation actions; it never invokes a second chatbot.
 
 ## OCR Lifecycle
 

@@ -259,9 +259,24 @@ def test_live_12_null_propagation():
 def test_live_13_aggregate_statistics_only_valid_scores():
     summary = build_summary(
         [
-            {"faithfulness": 1.0, "context_precision": 0.5, "custom_hallucination_proxy": 0.0, "metric_status": "success"},
-            {"faithfulness": None, "context_precision": None, "custom_hallucination_proxy": None, "metric_status": "failed"},
-            {"faithfulness": None, "context_precision": None, "custom_hallucination_proxy": None, "metric_status": "not_applicable"},
+            {
+                "faithfulness": 1.0,
+                "context_precision": 0.5,
+                "custom_hallucination_proxy": 0.0,
+                "metric_status": "success",
+            },
+            {
+                "faithfulness": None,
+                "context_precision": None,
+                "custom_hallucination_proxy": None,
+                "metric_status": "failed",
+            },
+            {
+                "faithfulness": None,
+                "context_precision": None,
+                "custom_hallucination_proxy": None,
+                "metric_status": "not_applicable",
+            },
         ],
         total_duration_seconds=1.0,
     )
@@ -336,7 +351,9 @@ async def test_live_17_csv_schema(monkeypatch, tmp_path: Path):
     await run_live(config(output, max_cases=1), client_factory=fake_client_factory, probe_func=fake_probe)
     header = output.with_suffix(".csv").read_text(encoding="utf-8").splitlines()[0]
 
-    assert header == "case_id,analyte,faithfulness,context_precision,custom_hallucination_proxy,metric_status,duration_ms"
+    assert (
+        header == "case_id,analyte,faithfulness,context_precision,custom_hallucination_proxy,metric_status,duration_ms"
+    )
 
 
 @pytest.mark.asyncio

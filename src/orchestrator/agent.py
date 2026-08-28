@@ -1,4 +1,4 @@
-"""Single-agent LangGraph chat runtime for the VMEC-05 vertical slice."""
+"""Canonical single-agent LangGraph chat runtime for LumiLab."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 from src.models.orchestrator_schemas import (
+    AnalysisDataPayload,
+    DoctorQuestionsPayload,
     ExplanationDataPayload,
     ExplanationIndicatorFacts,
     IntentEnum,
@@ -25,7 +27,7 @@ from src.models.orchestrator_schemas import (
     TrendDataPayload,
 )
 from src.orchestrator.agent_tools import AgentToolbox
-from src.orchestrator.response_composer import enforce_final_response
+from src.orchestrator.response_guardrail import enforce_final_response
 from src.orchestrator.session_store import current_binding
 from src.services import conversation_repository
 from src.services.llm import get_llm
@@ -39,7 +41,7 @@ _EVIDENCE_FAILURE_MESSAGE = (
 )
 
 
-class AgentV2Error(RuntimeError):
+class AgentError(RuntimeError):
     pass
 
 
@@ -50,7 +52,7 @@ class AgentState(TypedDict):
 
 
 @dataclass(frozen=True)
-class AgentV2Result:
+class AgentResult:
     response: OrchestratorResponse
     current_report_ref: str | None
     current_analyte: str | None
@@ -66,7 +68,7 @@ The LLM understands, plans, selects tools, and explains. TOOLS establish facts. 
 
 TOOL USAGE
 - Patient-specific facts always require the appropriate authoritative tool again.
-- Current value: get_indicator. Last time: get_indicator_history and use measurements[previous.index]. Trend/increase: get_indicator_trend. General medical meaning: retrieve_medical_evidence. Patient-specific interpretation: get_indicator plus retrieve_medical_evidence. Product usage: search_app_help.
+- Current value: get_indicator. Whole report: get_current_report. Last time: get_indicator_history and use measurements[previous.index]. Trend/increase: get_indicator_trend. Questions to discuss with a doctor: get_doctor_questions. General medical meaning: retrieve_medical_evidence. Patient-specific interpretation: get_indicator plus retrieve_medical_evidence. Product usage: search_app_help.
 - For "Tại sao lại tăng vậy?" or similar causal follow-ups, use authoritative trend/current facts as required plus medical evidence. Explain only general evidence-backed possibilities and explicitly state that the individual's cause cannot be determined from the lab result alone.
 - Do not call medical RAG for facts already available from patient tools.
 
@@ -105,8 +107,7 @@ _LIST_NUMBER_RE = re.compile(r"(?m)^\s*\d+[.)]\s+")
 _CITATION_INDEX_RE = re.compile(r"\[\s*\d+\s*]")
 _REASSURANCE_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 _GROUNDING_BOUNDARY_MESSAGE = (
-    "Chỉ từ kết quả này, hệ thống không thể kết luận tình trạng sức khỏe tổng thể "
-    "hoặc mức độ khẩn cấp lâm sàng."
+    "Chỉ từ kết quả này, hệ thống không thể kết luận tình trạng sức khỏe tổng thể hoặc mức độ khẩn cấp lâm sàng."
 )
 
 
@@ -140,16 +141,11 @@ def _unsupported_reassurance_rule_ids(sentence: str) -> list[str]:
         matched.append("emergency_reassurance")
 
     patient_directed = any(
-        marker in normalized
-        for marker in ("cua ban", "co the ban", "suc khoe cua ban", "he mien dich cua ban")
+        marker in normalized for marker in ("cua ban", "co the ban", "suc khoe cua ban", "he mien dich cua ban")
     )
     physiology_claim = (
-        (
-            "he mien dich" in normalized
-            and any(claim in normalized for claim in ("hoat dong binh thuong", "khoe manh"))
-        )
-        or ("co the ban" in normalized and "hoat dong binh thuong" in normalized)
-    )
+        "he mien dich" in normalized and any(claim in normalized for claim in ("hoat dong binh thuong", "khoe manh"))
+    ) or ("co the ban" in normalized and "hoat dong binh thuong" in normalized)
     if patient_directed and physiology_claim:
         matched.append("patient_physiology_reassurance")
     return matched
@@ -179,16 +175,12 @@ def validate_or_sanitize_patient_reassurance(
     binding = current_binding()
     conversation_id = getattr(binding[1], "id", None) if binding is not None else None
     logger.warning(
-        "agent_v2_unsupported_reassurance_sanitized",
+        "agent_unsupported_reassurance_sanitized",
         extra={
             "conversation_id": conversation_id,
             "matched_rule_ids": list(dict.fromkeys(matched_rule_ids)),
             "tool_names": list(
-                dict.fromkeys(
-                    str(item.get("tool", ""))
-                    for item in authoritative_tool_results
-                    if item.get("tool")
-                )
+                dict.fromkeys(str(item.get("tool", "")) for item in authoritative_tool_results if item.get("tool"))
             ),
         },
     )
@@ -242,7 +234,7 @@ def _numeric_grounding_audit(
     binding = current_binding()
     conversation_id = getattr(binding[1], "id", None) if binding is not None else None
     logger.warning(
-        "agent_v2_numeric_grounding_warning",
+        "agent_numeric_grounding_warning",
         extra={
             "unexpected_numbers": [str(value) for value in unexpected],
             "conversation_id": conversation_id,
@@ -252,7 +244,7 @@ def _numeric_grounding_audit(
 
 
 def _requires_medical_evidence(message: str, current_analyte: str | None) -> bool:
-    from src.orchestrator.medical_context import extract_explicit_analyte
+    from src.orchestrator.message_context import extract_explicit_analyte
 
     normalized = _normalize(message)
     has_analyte = bool(current_analyte or extract_explicit_analyte(message))
@@ -273,7 +265,93 @@ def _requires_medical_evidence(message: str, current_analyte: str | None) -> boo
 
 def _requires_indicator_history(message: str) -> bool:
     normalized = _normalize(message)
-    return "lan truoc" in normalized or "so voi" in normalized
+    return any(
+        cue in normalized
+        for cue in (
+            "lan truoc",
+            "so voi",
+            "thay doi ra sao",
+            "thay doi the nao",
+            "tang hay giam",
+            "xu huong",
+            "trend",
+        )
+    )
+
+
+def _intent_hint(message: str) -> IntentEnum | None:
+    """Preserve the public response contract without selecting Agent tools."""
+
+    normalized = _normalize(message)
+    app_help_explicit = (
+        "huong dan su dung",
+        "huong dan dung",
+        "huong dan toi dung",
+        "huong dan toi tai phieu",
+    )
+    app_help_navigation = (
+        "o dau",
+        "lam sao",
+        "lam gi",
+        "huong dan",
+        "cach ",
+        "tai sao",
+        "vi sao",
+        "khong duoc",
+    )
+    app_help_features = (
+        "tai phieu",
+        "tai anh",
+        "upload",
+        "ocr",
+        "lich su",
+        "xu huong",
+        "trend",
+        "ho so",
+        "canh bao",
+        "phieu xet nghiem",
+    )
+    if any(cue in normalized for cue in app_help_explicit) or (
+        any(cue in normalized for cue in app_help_navigation) and any(cue in normalized for cue in app_help_features)
+    ):
+        return IntentEnum.APP_HELP
+
+    if any(
+        cue in normalized
+        for cue in (
+            "thay doi ra sao",
+            "thay doi the nao",
+            "tang hay giam",
+            "xu huong",
+            "trend",
+        )
+    ):
+        return IntentEnum.ANALYZE_TREND
+    if any(cue in normalized for cue in ("lich su", "history", "lan truoc", "thang truoc", "xem lai")):
+        return IntentEnum.VIEW_HISTORY
+    if (
+        any(
+            cue in normalized
+            for cue in (
+                "chao ban",
+                "chao em",
+                "chao bac",
+                "chao anh",
+                "chao chi",
+                "xin chao",
+                "hello",
+                "cam on",
+                "lam duoc gi",
+                "ban giup duoc gi",
+                "ban co the lam gi",
+                "giup toi lam gi",
+                "ban co the giup",
+            )
+        )
+        or "hi" in normalized.split()
+    ):
+        return IntentEnum.SAFE_GENERAL
+    return None
 
 
 def _message_text(message: BaseMessage) -> str:
@@ -326,12 +404,10 @@ def _build_graph(
         response = await llm.ainvoke(state["messages"])
         calls_used = 1
         evidence_attempted = any(
-            item.get("tool") == "retrieve_medical_evidence" and item.get("ok")
-            for item in state.get("tool_results", [])
+            item.get("tool") == "retrieve_medical_evidence" and item.get("ok") for item in state.get("tool_results", [])
         )
         history_attempted = any(
-            item.get("tool") == "get_indicator_history" and item.get("ok")
-            for item in state.get("tool_results", [])
+            item.get("tool") == "get_indicator_history" and item.get("ok") for item in state.get("tool_results", [])
         )
         missing_required_tools: list[str] = []
         if require_evidence and not evidence_attempted:
@@ -379,17 +455,13 @@ def _build_graph(
                         "ok": False,
                         "error": reason or type(exc).__name__,
                     }
-                    logger.info("Agent V2 tool %s failed: %s", name, result["error"])
+                    logger.info("Agent tool %s failed: %s", name, result["error"])
             recorded.append(result)
             public_result = result
             if isinstance(result.get("data"), dict):
                 public_result = {
                     **result,
-                    "data": {
-                        key: value
-                        for key, value in result["data"].items()
-                        if not str(key).startswith("_")
-                    },
+                    "data": {key: value for key, value in result["data"].items() if not str(key).startswith("_")},
                 }
             serialized = json.dumps(public_result, ensure_ascii=False, default=str)
             if name == "retrieve_medical_evidence":
@@ -447,7 +519,8 @@ def _facts_from(item: dict[str, Any] | None) -> ExplanationIndicatorFacts | None
 
 
 def _response_payload(
-    message: str,
+    user_message: str,
+    final_message: str,
     results: list[dict[str, Any]],
 ) -> tuple[IntentEnum, Any, str | None, str | None, str]:
     sources = _evidence_sources(results)
@@ -456,23 +529,37 @@ def _response_payload(
     trends = _successful(results, "get_indicator_trend")
     reports = _successful(results, "get_current_report")
     help_results = _successful(results, "search_app_help")
+    doctor_questions = _successful(results, "get_doctor_questions")
 
-    history_cue = _requires_indicator_history(message)
+    intent_hint = _intent_hint(user_message)
+    history_cue = _requires_indicator_history(user_message)
     if trends and not (histories and history_cue):
         trend_result = trends[-1]
         if trend_result.get("_ui_trend_payload"):
             payload = TrendDataPayload.model_validate(trend_result["_ui_trend_payload"])
             return IntentEnum.ANALYZE_TREND, payload, None, trend_result.get("analyte"), "get_indicator_trend"
-        payload = ExplanationDataPayload(explanation=message, sources=sources)
+        payload = ExplanationDataPayload(explanation=final_message, sources=sources)
         return IntentEnum.ANALYZE_TREND, payload, None, trend_result.get("analyte"), "get_indicator_trend"
 
+    if doctor_questions:
+        question_result = doctor_questions[-1]
+        payload = DoctorQuestionsPayload.model_validate(question_result["_ui_doctor_questions_payload"])
+        return IntentEnum.GET_DOCTOR_QUESTIONS, payload, question_result.get("report_ref"), None, "get_doctor_questions"
+
+    if reports and not indicators and not histories:
+        report_result = reports[-1]
+        payload = AnalysisDataPayload.model_validate(report_result["_ui_analysis_payload"])
+        return IntentEnum.ANALYZE_REPORT, payload, report_result.get("report_ref"), None, "get_current_report"
+
     selected_fact: dict[str, Any] | None = indicators[-1] if indicators else None
-    workflow = "get_indicator" if indicators else "agent_chat_v2"
+    workflow = "get_indicator" if indicators else "agent_chat"
     intent = IntentEnum.EXPLAIN_CURRENT_RESULT
-    if histories:
+    if histories and history_cue:
         history = histories[-1]
-        normalized = _normalize(message)
-        pointer = history.get("previous") if "lan truoc" in normalized or "so voi" in normalized else history.get("current")
+        normalized = _normalize(user_message)
+        pointer = (
+            history.get("previous") if "lan truoc" in normalized or "so voi" in normalized else history.get("current")
+        )
         index = pointer.get("index") if isinstance(pointer, dict) else None
         measurements = history.get("measurements", [])
         selected_fact = measurements[index] if isinstance(index, int) and 0 <= index < len(measurements) else None
@@ -484,28 +571,38 @@ def _response_payload(
         workflow = "search_app_help"
         intent = IntentEnum.APP_HELP
 
+    if intent_hint is not None:
+        intent = intent_hint
+        if intent_hint == IntentEnum.APP_HELP:
+            workflow = "search_app_help"
+        elif intent_hint == IntentEnum.ANALYZE_TREND:
+            workflow = "get_indicator_trend"
+
     payload = ExplanationDataPayload(
-        explanation=message,
+        explanation=final_message,
         sources=sources,
         facts=_facts_from(selected_fact),
     )
     report_ref = (
         None
         if intent == IntentEnum.VIEW_HISTORY
-        else selected_fact.get("report_ref") if selected_fact else (reports[-1].get("report_ref") if reports else None)
+        else selected_fact.get("report_ref")
+        if selected_fact
+        else (reports[-1].get("report_ref") if reports else None)
     )
     analyte = selected_fact.get("analyte") if selected_fact else None
     return intent, payload, report_ref, analyte, workflow
 
 
-async def run_agent_v2(
+async def run_agent(
     *,
     message: str,
     current_user: object,
     db: object,
     current_report_ref: str | None,
     current_analyte: str | None,
-) -> AgentV2Result:
+    response_style: str = "simple",
+) -> AgentResult:
     toolbox = AgentToolbox(
         current_user=current_user,
         db=db,
@@ -521,7 +618,8 @@ async def run_agent_v2(
     )
     context_line = (
         f"Server context (hints only): current_report_ref={current_report_ref or 'none'}, "
-        f"current_analyte={current_analyte or 'none'}."
+        f"current_analyte={current_analyte or 'none'}, response_style={response_style}. "
+        "For concise use 1-2 short paragraphs; for simple use plain language; for detailed use structured educational detail without diagnosis."
     )
     recent_messages = _recent_messages(current_user, message)
     initial: AgentState = {
@@ -532,21 +630,28 @@ async def run_agent_v2(
     try:
         state = await graph.ainvoke(initial)
     except Exception as exc:
-        raise AgentV2Error("Agent V2 execution failed") from exc
+        raise AgentError("Agent execution failed") from exc
 
     results = list(state.get("tool_results", []))
     final_message = _message_text(state["messages"][-1])
     evidence_packs = _successful(results, "retrieve_medical_evidence")
     evidence_sufficient = any(pack.get("sufficient") for pack in evidence_packs)
     if evidence_required and not evidence_sufficient:
-        final_message = _EVIDENCE_FAILURE_MESSAGE
+        from src.orchestrator.message_context import extract_explicit_analyte
+
+        requested_analyte = current_analyte or extract_explicit_analyte(message)
+        final_message = (
+            f"Với {requested_analyte}, {_EVIDENCE_FAILURE_MESSAGE.casefold()}"
+            if requested_analyte
+            else _EVIDENCE_FAILURE_MESSAGE
+        )
     if not final_message:
-        raise AgentV2Error("Agent V2 produced no final message")
+        raise AgentError("Agent produced no final message")
 
     final_message = validate_or_sanitize_patient_reassurance(final_message, results)
     _numeric_grounding_audit(final_message, results, recent_messages)
 
-    intent, payload, report_ref, analyte, workflow = _response_payload(final_message, results)
+    intent, payload, report_ref, analyte, workflow = _response_payload(message, final_message, results)
     response = enforce_final_response(
         OrchestratorResponse(
             intent=intent,
@@ -558,7 +663,7 @@ async def run_agent_v2(
         ),
         user_message=message,
     )
-    return AgentV2Result(
+    return AgentResult(
         response=response,
         current_report_ref=report_ref or current_report_ref,
         current_analyte=analyte or current_analyte,
@@ -567,8 +672,8 @@ async def run_agent_v2(
 
 
 __all__ = [
-    "AgentV2Error",
-    "AgentV2Result",
-    "run_agent_v2",
+    "AgentError",
+    "AgentResult",
+    "run_agent",
     "validate_or_sanitize_patient_reassurance",
 ]

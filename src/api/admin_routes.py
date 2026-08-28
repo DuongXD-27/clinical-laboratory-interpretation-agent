@@ -132,10 +132,7 @@ async def traces_slo(
     return SloResponse(
         overall_status=str(slo_data["overall_status"]),
         slos=[SloSchema(**item) for item in slo_data["slos"]],
-        errors=[
-            ErrorBreakdownSchema(**item)
-            for item in trace_timeseries.total_error_breakdown(rows)
-        ],
+        errors=[ErrorBreakdownSchema(**item) for item in trace_timeseries.total_error_breakdown(rows)],
         window_hours=window_hours,
         thresholds_provisional=bool(slo_data["thresholds_provisional"]),
     )
@@ -194,11 +191,7 @@ async def list_traces(
     200, và chỉ bệnh nhân nhận ra chất lượng đi xuống.
     """
 
-    since = (
-        datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours)
-        if window_hours is not None
-        else None
-    )
+    since = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=window_hours) if window_hours is not None else None
 
     rows, total = trace_repository.list_traces(
         db,

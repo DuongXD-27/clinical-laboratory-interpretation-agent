@@ -39,9 +39,7 @@ class VectorStore:
                 settings=ChromaSettings(anonymized_telemetry=False),
             )
         except Exception as exc:
-            raise VectorStoreError(
-                f"cannot initialize ChromaDB at '{persist_dir}': {exc}"
-            ) from exc
+            raise VectorStoreError(f"cannot initialize ChromaDB at '{persist_dir}': {exc}") from exc
 
     @property
     def expected_metadata(self) -> dict[str, str | int]:
@@ -68,13 +66,9 @@ class VectorStore:
                     metadata=self.expected_metadata,
                 )
             except Exception as exc:
-                raise VectorStoreError(
-                    f"cannot create collection '{self.collection_name}': {exc}"
-                ) from exc
+                raise VectorStoreError(f"cannot create collection '{self.collection_name}': {exc}") from exc
         except Exception as exc:
-            raise VectorStoreError(
-                f"cannot get collection '{self.collection_name}': {exc}"
-            ) from exc
+            raise VectorStoreError(f"cannot get collection '{self.collection_name}': {exc}") from exc
         self._validate_collection_metadata(collection.metadata or {})
         return collection
 
@@ -86,8 +80,7 @@ class VectorStore:
         }
         if mismatches:
             details = ", ".join(
-                f"{key}={values['actual']!r} (expected {values['expected']!r})"
-                for key, values in mismatches.items()
+                f"{key}={values['actual']!r} (expected {values['expected']!r})" for key, values in mismatches.items()
             )
             raise VectorStoreError(
                 f"collection '{self.collection_name}' metadata mismatch: {details}. "
@@ -102,8 +95,7 @@ class VectorStore:
     ) -> None:
         if not (len(texts) == len(metadatas) == len(ids)):
             raise VectorStoreError(
-                "texts, metadatas and ids must have the same length: "
-                f"{len(texts)}, {len(metadatas)}, {len(ids)}"
+                f"texts, metadatas and ids must have the same length: {len(texts)}, {len(metadatas)}, {len(ids)}"
             )
         collection = self.get_collection()
         try:

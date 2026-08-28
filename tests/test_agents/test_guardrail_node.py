@@ -11,10 +11,8 @@ async def test_guardrail_passed():
     """Test trường hợp nội dung an toàn, không chứa từ khóa vi phạm."""
     mock_state: AgentState = {
         "summary": "Chỉ số đường huyết của bạn hơi cao. Bạn nên ăn uống điều độ.",
-        "explanations": [
-            {"explanation": "Glucose là lượng đường trong máu. Vui lòng tham khảo ý kiến bác sĩ."}
-        ],
-        "disclaimer": ""
+        "explanations": [{"explanation": "Glucose là lượng đường trong máu. Vui lòng tham khảo ý kiến bác sĩ."}],
+        "disclaimer": "",
     }
 
     result = await guardrail_node(mock_state)
@@ -23,15 +21,14 @@ async def test_guardrail_passed():
     assert len(result["guardrail_flags"]) == 0
     assert result["disclaimer"] == DEFAULT_DISCLAIMER
 
+
 @pytest.mark.asyncio
 async def test_guardrail_failed_with_diagnosis(monkeypatch):
     """Test trường hợp nội dung vi phạm từ khóa chẩn đoán."""
     mock_state: AgentState = {
         "summary": "Dựa trên kết quả này, tôi chẩn đoán bạn bị tiểu đường.",
-        "explanations": [
-            {"explanation": "Bạn mắc bệnh mỡ máu. Hãy dùng thuốc ngay."}
-        ],
-        "disclaimer": "Đã có disclaimer hợp lệ và đủ dài để không bị ghi đè."
+        "explanations": [{"explanation": "Bạn mắc bệnh mỡ máu. Hãy dùng thuốc ngay."}],
+        "disclaimer": "Đã có disclaimer hợp lệ và đủ dài để không bị ghi đè.",
     }
 
     monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: None)
@@ -91,9 +88,7 @@ async def test_blank_retry_uses_template_fallback(monkeypatch):
     templates = load_templates()
     monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: llm)
 
-    result = await guardrail_node(
-        {"summary": "Ban nen su dung thuoc nay.", "disclaimer": ""}
-    )
+    result = await guardrail_node({"summary": "Ban nen su dung thuoc nay.", "disclaimer": ""})
 
     assert llm.calls == 1
     assert result["summary"] == templates.fallback_summary
@@ -121,9 +116,7 @@ async def test_unsafe_disclaimer_is_validated_and_replaced(monkeypatch):
 @pytest.mark.asyncio
 async def test_local_intent_check_catches_unaccented_prescription(monkeypatch):
     monkeypatch.setattr("src.agents.nodes.guardrail_node.get_llm", lambda: None)
-    result = await guardrail_node(
-        {"summary": "Ban nen su dung thuoc nay moi ngay.", "disclaimer": ""}
-    )
+    result = await guardrail_node({"summary": "Ban nen su dung thuoc nay moi ngay.", "disclaimer": ""})
 
     assert result["guardrail_passed"] is False
     assert "Kiểm tra ý định tại chỗ" in " ".join(result["guardrail_flags"])

@@ -8,25 +8,17 @@ from src.services.medical_safety_assets import STATUS_QUALIFIERS
 from src.services.safe_grounding import filter_safe_grounding_text
 
 PLAIN_DEFINITIONS = {
-    "rbc": (
-        "RBC là số lượng hồng cầu trong máu. "
-        "Hồng cầu có vai trò chính là giúp đưa oxy đi khắp cơ thể."
-    ),
-    "hgb": (
-        "HGB là lượng hemoglobin trong máu. "
-        "Hemoglobin là chất trong hồng cầu giúp vận chuyển oxy."
-    ),
+    "rbc": ("RBC là số lượng hồng cầu trong máu. Hồng cầu có vai trò chính là giúp đưa oxy đi khắp cơ thể."),
+    "hgb": ("HGB là lượng hemoglobin trong máu. Hemoglobin là chất trong hồng cầu giúp vận chuyển oxy."),
     "chloride": (
-        "Chloride (clorua) là một chất điện giải trong máu. "
-        "Chất điện giải giúp cơ thể giữ cân bằng nước và axit–kiềm."
+        "Chloride (clorua) là một chất điện giải trong máu. Chất điện giải giúp cơ thể giữ cân bằng nước và axit–kiềm."
     ),
     "fasting_plasma_glucose": (
         "Đường huyết lúc đói là lượng glucose trong máu sau thời gian nhịn ăn. "
         "Glucose là một nguồn năng lượng của cơ thể."
     ),
     "potassium": (
-        "Potassium (kali) là một chất điện giải trong máu. "
-        "Kali tham gia vào hoạt động bình thường của cơ và thần kinh."
+        "Potassium (kali) là một chất điện giải trong máu. Kali tham gia vào hoạt động bình thường của cơ và thần kinh."
     ),
 }
 
@@ -43,9 +35,7 @@ _PATIENT_UNGROUNDED_PATTERNS = tuple(
     )
 )
 
-LIMITATION_SENTENCE = (
-    "Một kết quả riêng lẻ không tự xác định bệnh, nguyên nhân hoặc triệu chứng."
-)
+LIMITATION_SENTENCE = "Một kết quả riêng lẻ không tự xác định bệnh, nguyên nhân hoặc triệu chứng."
 
 
 def filter_patient_education_text(text: str) -> str:
@@ -53,9 +43,7 @@ def filter_patient_education_text(text: str) -> str:
     safe = filter_safe_grounding_text(text)
     segments = [segment.strip() for segment in re.split(r"(?<=[.!?])\s+|\n+", safe) if segment.strip()]
     return " ".join(
-        segment
-        for segment in segments
-        if not any(pattern.search(segment) for pattern in _PATIENT_UNGROUNDED_PATTERNS)
+        segment for segment in segments if not any(pattern.search(segment) for pattern in _PATIENT_UNGROUNDED_PATTERNS)
     )
 
 

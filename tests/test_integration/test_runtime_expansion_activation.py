@@ -232,7 +232,9 @@ async def test_uric_acid_reference_interval_classifies_by_sex(gender: str, value
         (90, "normal", None),
     ],
 )
-async def test_uric_acid_age_scope_is_age_19_and_older(age: int, expected_status: str, expected_reason: str | None) -> None:
+async def test_uric_acid_age_scope_is_age_19_and_older(
+    age: int, expected_status: str, expected_reason: str | None
+) -> None:
     from src.agents.nodes.reference_range_checker_node import reference_range_checker_node
 
     result = await reference_range_checker_node(

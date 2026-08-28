@@ -156,10 +156,7 @@ def seed_demo_patient_reports(db: Session) -> int:
             patient_gender="male",
             test_date=datetime.date.fromisoformat(report["test_date"]),
             language="vi",
-            indicators=[
-                {"name": row["name"], "value": row["value"], "unit": row["unit"]}
-                for row in rows
-            ],
+            indicators=[{"name": row["name"], "value": row["value"], "unit": row["unit"]} for row in rows],
         )
         result = save_analyzed_report(
             db,

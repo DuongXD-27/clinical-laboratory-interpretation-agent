@@ -23,7 +23,7 @@ Prior to Phase 2A/2B:
 - ADR-003 (2026-07-29) acknowledged that Potassium values were "temporary and not source-verified."
 - The LDL-C critical high value (4.91 mmol/L) was found to be an exact numeric duplicate of a CDL category boundary (`EXPV2-LDLC-005.range_lower = 4.91 mmol/L`), indicating probable CDL contamination.
 
-Phase 2A (audit document: [`docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md`](file:///d:/vin-ai/project/P-056/docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md)) audited the external medical provenance of all current registry values and found:
+Phase 2A (audit document: [`docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md`](../audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md)) audited the external medical provenance of all current registry values and found:
 
 - **Potassium, Glucose, WBC, HGB, Creatinine:** recognized acute critical analytes with institutional variation in exact thresholds.
 - **LDL-C, HbA1c, HDL-C:** absent from all reviewed hospital critical-value lists; no applicable critical-value rule was found in the sources reviewed during Phase 2A.
@@ -31,7 +31,7 @@ Phase 2A (audit document: [`docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md`
 
 Fix 1 (evidence: [`docs/audit/evidence/fix1-critical-detector-safety-evidence.md`](../audit/evidence/fix1-critical-detector-safety-evidence.md)) resolved detector software blockers: raw-name fallback removed, upstream `unknown` preserved, shared unit normalizer enforced. The software layer is now fail-closed.
 
-Phase 2B (planning document: [`docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md`](file:///d:/vin-ai/project/P-056/docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md)) compared the current VMEC registry against ARUP Rev.46, identified exact source literals, operator semantics, and applicability qualifiers, and presented the mapping to the Human owner for a governance decision.
+Phase 2B (planning document: [`docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md`](../audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md)) compared the current VMEC registry against ARUP Rev.46, identified exact source literals, operator semantics, and applicability qualifiers, and presented the mapping to the Human owner for a governance decision.
 
 ### Problem statement
 
@@ -287,9 +287,9 @@ Specifically:
 
 | Document | Role |
 |---|---|
-| [`docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md`](file:///d:/vin-ai/project/P-056/docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md) | Phase 2A — External provenance verification for all current 9 analytes |
-| [`docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md`](file:///d:/vin-ai/project/P-056/docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md) | Phase 2B — ARUP Rev.46 source-literal extraction, VMEC mapping, and per-analyte migration plan |
+| [`docs/audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md`](../audit/VMEC05_CRITICAL_REGISTRY_SOURCE_AUDIT.md) | Phase 2A — External provenance verification for all current 9 analytes |
+| [`docs/audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md`](../audit/VMEC05_ARUP_REV46_CRITICAL_MIGRATION_PLAN.md) | Phase 2B — ARUP Rev.46 source-literal extraction, VMEC mapping, and per-analyte migration plan |
 | [`docs/audit/evidence/fix1-critical-detector-safety-evidence.md`](../audit/evidence/fix1-critical-detector-safety-evidence.md) | Fix 1 — Critical Detector software safety evidence and blocker resolution |
 | [`docs/adr/adr-003-critical-value-detection.md`](adr-003-critical-value-detection.md) | ADR-003 — Rule-based critical detection architecture decision |
 | [`docs/adr/adr-005-basic-critical-value.md`](adr-005-basic-critical-value.md) | ADR-005 — Critical detection classified as basic (V1) requirement |
-| [`data/reference/critical_thresholds.json`](file:///d:/vin-ai/project/P-056/data/reference/critical_thresholds.json) | Current critical registry (pre-migration; to be replaced in Phase 2B implementation) |
+| [`data/reference/critical_thresholds.json`](../../data/reference/critical_thresholds.json) | Current critical registry |

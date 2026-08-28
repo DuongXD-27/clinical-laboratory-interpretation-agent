@@ -189,7 +189,9 @@ class OrchestratorSessionContext(BaseModel):
         resolved_style = (
             response_style
             if isinstance(response_style, ResponseStyle)
-            else ResponseStyle(response_style) if response_style in set(ResponseStyle) else ResponseStyle.SIMPLE
+            else ResponseStyle(response_style)
+            if response_style in set(ResponseStyle)
+            else ResponseStyle.SIMPLE
         )
         context = cls(
             session_id=session_id,
@@ -332,9 +334,9 @@ def canonical_critical_side(critical_status):
 class ExplanationIndicatorFacts(BaseModel):
     """Atomic deterministic fact block for ONE analyte.
 
-    Built exclusively by the dispatcher from the authoritative
+    Built exclusively from the authoritative
     ``IndicatorResultSchema`` of the stored report. The response composer
-    renders these facts verbatim; neither the composer LLM nor any other
+    renders these facts verbatim; neither the Agent nor any other
     component may rewrite value, unit, reference status, range or critical
     facts. ``critical_status`` is the canonical output of the approved
     critical detector.

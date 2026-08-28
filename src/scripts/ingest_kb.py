@@ -30,7 +30,6 @@ def load_corpus(json_path: Path | str = "data/reference/explanations.json") -> l
         return json.load(f)
 
 
-
 def corpus_sha256(path: Path | str) -> str:
     """SHA-256 của corpus, tính trên byte đã chuẩn hoá CRLF -> LF.
 
@@ -137,4 +136,3 @@ def ingest(
 
 if __name__ == "__main__":
     ingest()
-

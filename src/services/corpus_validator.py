@@ -128,7 +128,9 @@ class CorpusValidator:
                         )
                     else:
                         seen_source_urls[url] = canonical_name
-                has_note = any(str(source.get(field) or "").strip() for field in VALID_NOTE_TYPES if field != "band_note")
+                has_note = any(
+                    str(source.get(field) or "").strip() for field in VALID_NOTE_TYPES if field != "band_note"
+                )
                 has_band_note = isinstance(source.get("band_notes"), dict) and bool(source["band_notes"])
                 if not has_note and not has_band_note:
                     errors.append(f"Source '{label}' has no analyte note type")

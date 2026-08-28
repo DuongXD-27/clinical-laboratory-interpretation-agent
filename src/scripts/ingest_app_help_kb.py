@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 # the medical corpus (JSON, no natural-language false positives), this
 # corpus is Vietnamese prose mixing English UI terms.
 PROHIBITED_PLACEHOLDER_PATTERNS = tuple(
-    re.compile(rf"\b{re.escape(term)}\b")
-    for term in ("TODO", "TBD", "COMING SOON", "PLACEHOLDER", "LOREM IPSUM")
+    re.compile(rf"\b{re.escape(term)}\b") for term in ("TODO", "TBD", "COMING SOON", "PLACEHOLDER", "LOREM IPSUM")
 )
 
 

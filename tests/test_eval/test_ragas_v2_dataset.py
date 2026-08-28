@@ -44,9 +44,7 @@ def test_d01_exactly_expected_valid_cases():
 def test_d02_unique_sequential_case_ids():
     ids = [case["case_id"] for case in cases()]
 
-    assert ids == [
-        f"RAGAS-V2-{index:03d}" for index in range(1, EXPECTED_CASE_COUNT + 1)
-    ]
+    assert ids == [f"RAGAS-V2-{index:03d}" for index in range(1, EXPECTED_CASE_COUNT + 1)]
     assert len(ids) == len(set(ids))
 
 
@@ -68,9 +66,7 @@ def test_d05_missing_context_policy_enforced():
 def test_d06_case_008_and_009_have_reversed_context_ranking():
     by_id = {case["case_id"]: case for case in cases()}
 
-    assert by_id["RAGAS-V2-008"]["retrieved_contexts"] == list(
-        reversed(by_id["RAGAS-V2-009"]["retrieved_contexts"])
-    )
+    assert by_id["RAGAS-V2-008"]["retrieved_contexts"] == list(reversed(by_id["RAGAS-V2-009"]["retrieved_contexts"]))
 
 
 def test_d07_unsupported_claim_case_tagged():

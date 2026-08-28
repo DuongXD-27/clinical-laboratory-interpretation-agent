@@ -1,13 +1,16 @@
-.PHONY: run test lint format-check frontend-lint frontend-test frontend-build check verify clean
+.PHONY: run lint format format-check test frontend-lint frontend-test frontend-build verify
 
 run:
-	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	python scripts/dev_backend.py
 
 test:
-	pytest tests/ -v --basetemp scratch/pytest-make
+	python -m pytest -v --basetemp scratch/pytest-make
 
 lint:
 	ruff check .
+
+format:
+	ruff format .
 
 format-check:
 	ruff format --check .
@@ -21,11 +24,5 @@ frontend-test:
 frontend-build:
 	cd frontend && npm run build
 
-check: lint test
-
-verify: lint test frontend-lint frontend-test frontend-build
-
-clean:
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type d -name .pytest_cache -exec rm -rf {} +
-	find . -type d -name .ruff_cache -exec rm -rf {} +
+verify: lint format-check test frontend-lint frontend-test frontend-build
+	python scripts/check_tracked_generated_artifacts.py

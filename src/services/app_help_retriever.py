@@ -61,8 +61,7 @@ def _normalize(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", without_accents))
 
 
-# Deterministic feature hints for the intent_router's known explicit
-# app-help phrases (see app_help_explicit_patterns in intent_router.py).
+# Deterministic feature hints for common explicit app-help phrases.
 # Pure dense search alone measurably confuses closely-related sections
 # across features here — e.g. "tôi tải phiếu xét nghiệm ở đâu?" scored
 # history.md's generic "feature này dùng để làm gì?" section (0.7639)
@@ -123,10 +122,20 @@ _WHERE_HEADING = "Người dùng tìm ở đâu?"
 # STEP is checked first because a full walkthrough still answers a
 # location-only question, but not vice versa.
 _STEP_INTENT_CUES = (
-    "lam sao", "cac buoc", "huong dan", "cach su dung", "cach dung", "cach de",
-    "lam the nao", "the nao de", "nhu the nao", "lam nhu the nao",
-    "bang cach nao", "cach nao de",
-    "nhu nao", "lam nhu nao",
+    "lam sao",
+    "cac buoc",
+    "huong dan",
+    "cach su dung",
+    "cach dung",
+    "cach de",
+    "lam the nao",
+    "the nao de",
+    "nhu the nao",
+    "lam nhu the nao",
+    "bang cach nao",
+    "cach nao de",
+    "nhu nao",
+    "lam nhu nao",
 )
 _WHERE_INTENT_CUES = ("o dau",)
 _WHAT_HEADING = "Feature này dùng để làm gì?"
@@ -274,9 +283,7 @@ class AppHelpRetriever:
             score=score,
         )
 
-    def _promote_section_hint(
-        self, query: str, matches: list[AppHelpChunkMatch]
-    ) -> list[AppHelpChunkMatch]:
+    def _promote_section_hint(self, query: str, matches: list[AppHelpChunkMatch]) -> list[AppHelpChunkMatch]:
         """If the question has a clear how-to/where/what cue, promote the
         matching section for the already-resolved top feature to the
         front. No-op if there's no top match to anchor the feature to, or

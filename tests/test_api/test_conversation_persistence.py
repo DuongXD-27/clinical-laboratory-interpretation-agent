@@ -448,3 +448,41 @@ async def test_new_chat_does_not_ask_for_onboarding_again(client, test_db):
         # trên cũng xanh khi hàng mới sao chép nguyên cả context cũ.
         assert row.current_analyte is None
         assert row.current_report_ref is None
+
+
+@pytest.mark.asyncio
+async def test_conversation_endpoints_expose_onboarding_acknowledged(client):
+    """Schema của danh sách và chi tiết hội thoại phải trả về onboarding_acknowledged."""
+    headers = await _register(client, "schema_ack.duy")
+    created = await client.post("/api/v1/conversations", headers=headers, json={})
+    assert created.status_code == 201
+    conv_id = created.json()["id"]
+    assert created.json()["onboarding_acknowledged"] is False
+
+    # List before ack
+    listed_before = await client.get("/api/v1/conversations", headers=headers)
+    assert listed_before.status_code == 200
+    item_before = next(item for item in listed_before.json()["items"] if item["id"] == conv_id)
+    assert item_before["onboarding_acknowledged"] is False
+
+    # Acknowledge
+    ack = await client.post("/api/v1/orchestrator/onboarding/acknowledge", headers=headers)
+    assert ack.status_code == 200
+
+    # List after ack
+    listed_after = await client.get("/api/v1/conversations", headers=headers)
+    assert listed_after.status_code == 200
+    item_after = next(item for item in listed_after.json()["items"] if item["id"] == conv_id)
+    assert item_after["onboarding_acknowledged"] is True
+
+    # Detail after ack
+    detail = await client.get(f"/api/v1/conversations/{conv_id}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["conversation"]["onboarding_acknowledged"] is True
+
+
+@pytest.mark.asyncio
+async def test_unauthorized_onboarding_acknowledge_fails(client):
+    """Gửi xác nhận mà không có token phải trả 401."""
+    resp = await client.post("/api/v1/orchestrator/onboarding/acknowledge")
+    assert resp.status_code == 401

@@ -41,17 +41,13 @@ class IndicatorConfigurationService:
         self._catalog_contract = catalog_contract or get_analyte_catalog_contract()
         approved = set(repository.approved_analytes)
         if set(repository.trend_max_gap_days) != approved:
-            raise IndicatorConfigurationError(
-                "trend_max_gap_days must declare exactly the approved analytes"
-            )
+            raise IndicatorConfigurationError("trend_max_gap_days must declare exactly the approved analytes")
 
         self._entries: dict[str, IndicatorConfiguration] = {}
         for canonical in approved:
             catalog_entry = self._catalog_contract.resolve(canonical)
             if catalog_entry is None or catalog_entry.runtime_status != "APPROVED":
-                raise IndicatorConfigurationError(
-                    f"{canonical} must be APPROVED in the canonical analyte catalog"
-                )
+                raise IndicatorConfigurationError(f"{canonical} must be APPROVED in the canonical analyte catalog")
             unit = catalog_entry.canonical_unit
             section = analyte_section(canonical)
             if section is None:

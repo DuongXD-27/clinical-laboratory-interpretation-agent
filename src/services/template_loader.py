@@ -6,18 +6,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_FALLBACK_EXPLANATION = (
-    "Vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác."
-)
-DEFAULT_FALLBACK_SUMMARY = (
-    "Hệ thống phát hiện nội dung cần bác sĩ đánh giá. Vui lòng gặp bác sĩ để được tư vấn."
-)
-DEFAULT_DISCLAIMER = (
-    "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa."
-)
-DEFAULT_DOCTOR_QUESTIONS = (
-    "Chỉ số này của tôi có ý nghĩa gì đối với sức khỏe tổng thể?",
-)
+DEFAULT_FALLBACK_EXPLANATION = "Vui lòng tham vấn trực tiếp với bác sĩ chuyên môn để được giải thích chính xác."
+DEFAULT_FALLBACK_SUMMARY = "Hệ thống phát hiện nội dung cần bác sĩ đánh giá. Vui lòng gặp bác sĩ để được tư vấn."
+DEFAULT_DISCLAIMER = "Thông tin này chỉ mang tính giáo dục chung, KHÔNG phải chẩn đoán y khoa."
+DEFAULT_DOCTOR_QUESTIONS = ("Chỉ số này của tôi có ý nghĩa gì đối với sức khỏe tổng thể?",)
 
 
 @dataclass(frozen=True)
@@ -35,6 +27,7 @@ def _defaults() -> TemplateLibrary:
         disclaimer=DEFAULT_DISCLAIMER,
         doctor_questions_fallback=DEFAULT_DOCTOR_QUESTIONS,
     )
+
 
 @lru_cache
 def load_templates() -> TemplateLibrary:
@@ -58,8 +51,10 @@ def load_templates() -> TemplateLibrary:
         with open(template_path, encoding="utf-8") as file:
             payload = json.load(file)
         questions = payload.get("doctor_questions_fallback")
-        if not isinstance(questions, list) or not questions or not all(
-            isinstance(question, str) and question.strip() for question in questions
+        if (
+            not isinstance(questions, list)
+            or not questions
+            or not all(isinstance(question, str) and question.strip() for question in questions)
         ):
             raise ValueError("doctor_questions_fallback phải là danh sách chuỗi không rỗng")
         return TemplateLibrary(

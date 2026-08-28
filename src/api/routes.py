@@ -52,10 +52,7 @@ async def run_analysis(
         "patient_gender": request.patient_gender,
         "test_date": request.test_date.isoformat(),
         "language": request.language,
-        "raw_indicators": [
-            indicator.model_dump()
-            for indicator in request.indicators
-        ],
+        "raw_indicators": [indicator.model_dump() for indicator in request.indicators],
     }
 
     if ocr_drafts is not None:
@@ -91,10 +88,7 @@ async def run_analysis(
     # Chỉ map kết quả ở span này.
     # KHÔNG return tại đây vì patient persistence còn nằm phía dưới.
     with timing_span("analysis-response-map"):
-        indicators = [
-            IndicatorResultSchema(**indicator)
-            for indicator in final_state.get("indicators", [])
-        ]
+        indicators = [IndicatorResultSchema(**indicator) for indicator in final_state.get("indicators", [])]
 
         response = AnalyzeResponse(
             indicators=indicators,
@@ -143,11 +137,7 @@ async def run_analysis(
     #
     # Đây là gate ở application layer; DB phía dưới cũng bắt buộc
     # lab_reports.patient_id NOT NULL -> users.id.
-    if (
-        db is not None
-        and current_user.role == ROLE_PATIENT
-        and current_user.user_id is not None
-    ):
+    if db is not None and current_user.role == ROLE_PATIENT and current_user.user_id is not None:
         # Ghép danh sách câu hỏi SAU guardrail trở lại metadata lúc sinh, để lưu
         # được mức ưu tiên và nối câu hỏi về đúng dòng chỉ số. Guardrail có thể
         # đã viết lại từng câu hoặc thay cả bộ bằng câu dự phòng.

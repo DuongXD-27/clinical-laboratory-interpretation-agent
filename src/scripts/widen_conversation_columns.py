@@ -61,7 +61,7 @@ def main() -> int:
                 continue
 
             before = str(cols[column]["type"])
-            conn.execute(text(f'ALTER TABLE {table} ALTER COLUMN {column} TYPE {target}'))
+            conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {target}"))
             print(f"{table}.{column}: {before} -> {target}")
 
     print("xong")

@@ -120,6 +120,4 @@ def canonical_analyte_id(indicator: str) -> str:
 
 
 # Precomputed map for fast verification
-CANONICAL_ANALYTE_ID_MAP: dict[str, str] = {
-    analyte: canonical_analyte_id(analyte) for analyte in LOCKED_35_ANALYTES
-}
+CANONICAL_ANALYTE_ID_MAP: dict[str, str] = {analyte: canonical_analyte_id(analyte) for analyte in LOCKED_35_ANALYTES}

@@ -47,9 +47,7 @@ def test_normal_indicator_gets_no_question():
     Người đọc thấy câu hỏi về một chỉ số đang bình thường sẽ nghĩ chỉ số đó có
     vấn đề gì mà mình chưa nhận ra.
     """
-    questions = generate_questions(
-        [indicator("Glucose", status="normal", value=5.2, analyte_id="glucose")]
-    )
+    questions = generate_questions([indicator("Glucose", status="normal", value=5.2, analyte_id="glucose")])
 
     assert questions == []
 
@@ -73,9 +71,7 @@ def test_all_normal_report_returns_empty_not_fallback():
 
 @pytest.mark.parametrize("status", ["low", "high", "critical_low", "critical_high"])
 def test_abnormal_and_critical_statuses_get_a_question(status):
-    questions = generate_questions(
-        [indicator("Kali", status=status, value=7.1, analyte_id="kali")]
-    )
+    questions = generate_questions([indicator("Kali", status=status, value=7.1, analyte_id="kali")])
 
     assert len(questions) == 1
     assert questions[0].analyte_id == "kali"
@@ -231,10 +227,7 @@ def test_unknown_questions_do_not_crowd_out_real_abnormal_ones():
 
 
 def test_unknown_questions_are_capped_too():
-    unknowns = [
-        indicator(f"Chi so {index}", status="unknown", low=None, high=None)
-        for index in range(5)
-    ]
+    unknowns = [indicator(f"Chi so {index}", status="unknown", low=None, high=None) for index in range(5)]
 
     questions = generate_questions(unknowns)
 
@@ -295,18 +288,11 @@ def test_template_keys_match_the_real_analyte_catalog():
 
     from src.services.analyte_catalog import get_analyte_catalog
 
-    catalog_ids = {
-        definition.analyte_id
-        for definition in get_analyte_catalog()._by_id.values()
-    }
+    catalog_ids = {definition.analyte_id for definition in get_analyte_catalog()._by_id.values()}
     template_ids = set(load_question_templates().analytes)
 
-    assert template_ids <= catalog_ids, (
-        f"key không còn trong catalog: {sorted(template_ids - catalog_ids)}"
-    )
-    assert catalog_ids <= template_ids, (
-        f"chỉ số chưa có mẫu câu riêng: {sorted(catalog_ids - template_ids)}"
-    )
+    assert template_ids <= catalog_ids, f"key không còn trong catalog: {sorted(template_ids - catalog_ids)}"
+    assert catalog_ids <= template_ids, f"chỉ số chưa có mẫu câu riêng: {sorted(catalog_ids - template_ids)}"
 
 
 def test_every_analyte_has_a_dedicated_template_for_every_abnormal_status():
@@ -334,7 +320,9 @@ def test_unknown_analyte_falls_back_to_the_generic_template():
 def test_reconcile_keeps_metadata_when_guardrail_only_rewrote_text():
     generated = [
         GeneratedQuestion(text="cu 1", priority="critical", display_order=0, analyte_id="kali", indicator_name="Kali"),
-        GeneratedQuestion(text="cu 2", priority="abnormal", display_order=1, analyte_id="glucose", indicator_name="Glucose"),
+        GeneratedQuestion(
+            text="cu 2", priority="abnormal", display_order=1, analyte_id="glucose", indicator_name="Glucose"
+        ),
     ]
 
     result = reconcile_after_guardrail(["moi 1", "moi 2"], generated)

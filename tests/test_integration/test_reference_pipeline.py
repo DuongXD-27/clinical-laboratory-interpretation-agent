@@ -345,7 +345,9 @@ async def test_e2e_13_multiple_indicator_order():
         {"name": "Creatinine", "value": 80, "unit": "µmol/L"},
     ]
 
-    checker_result, critical_result = await run_reference_pipeline(raw_indicators, patient_age=30, patient_gender="male")
+    checker_result, critical_result = await run_reference_pipeline(
+        raw_indicators, patient_age=30, patient_gender="male"
+    )
 
     assert [indicator["name"] for indicator in checker_result["indicators"]] == [
         "WBC",
@@ -391,11 +393,11 @@ async def test_e2e_14_missing_value_safety():
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (3.4, "low"),    # below lower bound
-        (3.5, "normal"), # = lower bound (inclusive)
-        (4.2, "normal"), # mid range
-        (5.3, "normal"), # = upper bound (inclusive)
-        (5.4, "high"),   # above upper bound
+        (3.4, "low"),  # below lower bound
+        (3.5, "normal"),  # = lower bound (inclusive)
+        (4.2, "normal"),  # mid range
+        (5.3, "normal"),  # = upper bound (inclusive)
+        (5.4, "high"),  # above upper bound
     ],
 )
 async def test_e2e_15_potassium_ri_boundaries(value, expected_status):
@@ -416,10 +418,10 @@ async def test_e2e_15_potassium_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (2.0,  "normal"), # within CDL < 2.59
-        (2.59, "normal"), # = upper bound (inclusive)
-        (2.60, "high"),   # just above upper bound
-        (3.8,  "high"),   # clearly high
+        (2.0, "normal"),  # within CDL < 2.59
+        (2.59, "normal"),  # = upper bound (inclusive)
+        (2.60, "high"),  # just above upper bound
+        (3.8, "high"),  # clearly high
     ],
 )
 async def test_e2e_16_ldl_c_ri_boundaries(value, expected_status):
@@ -440,12 +442,12 @@ async def test_e2e_16_ldl_c_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (4.5,  "normal"), # within normal < 5.7
-        (5.5,  "normal"), # clearly within normal
-        (5.6,  "normal"),
-        (5.7,  "normal"), # = upper bound (inclusive)
-        (5.71, "high"),   # prediabetes threshold (>5.7)
-        (7.5,  "high"),   # clearly high
+        (4.5, "normal"),  # within normal < 5.7
+        (5.5, "normal"),  # clearly within normal
+        (5.6, "normal"),
+        (5.7, "normal"),  # = upper bound (inclusive)
+        (5.71, "high"),  # prediabetes threshold (>5.7)
+        (7.5, "high"),  # clearly high
     ],
 )
 async def test_e2e_17_hba1c_ri_boundaries(value, expected_status):
@@ -466,11 +468,11 @@ async def test_e2e_17_hba1c_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (127, "low"),    # below lower bound
-        (128, "normal"), # = lower bound (inclusive)
-        (155, "normal"), # mid range
-        (183, "normal"), # = upper bound (inclusive)
-        (184, "high"),   # above upper bound
+        (127, "low"),  # below lower bound
+        (128, "normal"),  # = lower bound (inclusive)
+        (155, "normal"),  # mid range
+        (183, "normal"),  # = upper bound (inclusive)
+        (184, "high"),  # above upper bound
     ],
 )
 async def test_e2e_18_hgb_male_ri_boundaries(value, expected_status):
@@ -491,11 +493,11 @@ async def test_e2e_18_hgb_male_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (109, "low"),    # below lower bound
-        (110, "normal"), # = lower bound (inclusive)
-        (130, "normal"), # mid range
-        (150, "normal"), # = upper bound (inclusive)
-        (151, "high"),   # above upper bound
+        (109, "low"),  # below lower bound
+        (110, "normal"),  # = lower bound (inclusive)
+        (130, "normal"),  # mid range
+        (150, "normal"),  # = upper bound (inclusive)
+        (151, "high"),  # above upper bound
     ],
 )
 async def test_e2e_19_hgb_female_ri_boundaries(value, expected_status):
@@ -516,12 +518,12 @@ async def test_e2e_19_hgb_female_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (1.03, "low"),    # below lower bound
-        (1.04, "normal"), # = lower bound (inclusive)
-        (1.28, "normal"), # mid range
-        (1.54, "normal"), # = upper bound (inclusive)
-        (1.55, "normal"), # = upper bound (inclusive)
-        (1.56, "high"),   # above upper bound
+        (1.03, "low"),  # below lower bound
+        (1.04, "normal"),  # = lower bound (inclusive)
+        (1.28, "normal"),  # mid range
+        (1.54, "normal"),  # = upper bound (inclusive)
+        (1.55, "normal"),  # = upper bound (inclusive)
+        (1.56, "high"),  # above upper bound
     ],
 )
 async def test_e2e_20_hdl_c_male_ri_boundaries(value, expected_status):
@@ -542,12 +544,12 @@ async def test_e2e_20_hdl_c_male_ri_boundaries(value, expected_status):
 @pytest.mark.parametrize(
     ("value", "expected_status"),
     [
-        (1.03, "low"),    # below lower bound
-        (1.04, "normal"), # = lower bound (inclusive)
-        (1.40, "normal"), # mid range
-        (1.54, "normal"), # = upper bound (inclusive)
-        (1.55, "normal"), # = upper bound (inclusive)
-        (1.56, "high"),   # above upper bound
+        (1.03, "low"),  # below lower bound
+        (1.04, "normal"),  # = lower bound (inclusive)
+        (1.40, "normal"),  # mid range
+        (1.54, "normal"),  # = upper bound (inclusive)
+        (1.55, "normal"),  # = upper bound (inclusive)
+        (1.56, "high"),  # above upper bound
     ],
 )
 async def test_e2e_21_hdl_c_female_ri_boundaries(value, expected_status):

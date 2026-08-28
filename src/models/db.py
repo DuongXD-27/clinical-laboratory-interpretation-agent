@@ -158,9 +158,9 @@ class User(Base):
     response_style = Column(String, nullable=False, default="simple")
 
     created_at = Column(
-    DateTime(timezone=True),
-    nullable=False,
-    default=_utcnow,
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
     )
 
     updated_at = Column(
@@ -898,9 +898,7 @@ class ConversationMessage(Base):
 
     __tablename__ = "conversation_messages"
 
-    __table_args__ = (
-        Index("ix_conversation_messages_conversation_id_id", "conversation_id", "id"),
-    )
+    __table_args__ = (Index("ix_conversation_messages_conversation_id_id", "conversation_id", "id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -926,10 +924,12 @@ class ConversationMessage(Base):
 
     conversation = relationship("Conversation", back_populates="messages")
 
+
 # Co tinh KHONG co tai khoan admin trong day. Mat khau demo la cong khai voi
 # ca cohort; mot admin seed san la mot cua hau ai cung dang nhap duoc. Admin
 # chi tao bang `python -m src.scripts.create_admin`, giong cach doctor duoc
 # cap phat.
+
 
 class RequestTrace(Base):
     """Một dòng vận hành cho mỗi request HTTP, phục vụ màn hình admin.
@@ -1017,7 +1017,6 @@ class RequestTrace(Base):
     # Chuỗi Server-Timing, giữ nguyên để màn chi tiết dựng lại được cây span mà
     # không cần thêm bảng con.
     server_timing = Column(Text, nullable=True)
-
 
 
 DEMO_USERS = [
@@ -1146,12 +1145,7 @@ def backfill_added_column_defaults() -> None:
                     "AND status IN ('critical_low', 'critical_high')"
                 )
             )
-            conn.execute(
-                text(
-                    "UPDATE report_indicators SET review_outcome = "
-                    "COALESCE(review_outcome, 'pending')"
-                )
-            )
+            conn.execute(text("UPDATE report_indicators SET review_outcome = COALESCE(review_outcome, 'pending')"))
 
 
 def seed_demo_users(db: Session) -> None:
@@ -1177,7 +1171,6 @@ def seed_demo_users(db: Session) -> None:
         # Hai process có thể cùng kiểm tra count()==0 rồi cùng seed.
         # Process đến sau rollback là đủ.
         db.rollback()
-
 
 
 def add_missing_indexes() -> list[str]:

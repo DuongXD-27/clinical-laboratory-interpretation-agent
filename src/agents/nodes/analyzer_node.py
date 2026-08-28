@@ -235,7 +235,9 @@ async def process_single_indicator(
     is_critical = bool(indicator.get("is_critical", False))
     critical_status = indicator.get("critical_status")
     if not critical_status and is_critical:
-        critical_status = "critical_high" if status == "high" else "critical_low" if status == "low" else "critical_high"
+        critical_status = (
+            "critical_high" if status == "high" else "critical_low" if status == "low" else "critical_high"
+        )
 
     raw_explanation = str(indicator.get("explanation", "")).strip()
     if definition is not None:
@@ -280,17 +282,20 @@ async def process_single_indicator(
         curated_description=(definition.curated_explanation if definition is not None else ""),
     )
     context = rag_context or safe_curated_explanation or safe_neutral_explanation
-    fallback_explanation = build_patient_explanation(
-        analyte_id=analyte_id,
-        name=name,
-        value=value,
-        unit=unit,
-        status=status,
-        critical_status=critical_status,
-        is_critical=is_critical,
-        curated_description=(definition.curated_explanation if definition is not None else raw_explanation),
-        supplemental_text=context,
-    ) or load_templates().fallback_explanation
+    fallback_explanation = (
+        build_patient_explanation(
+            analyte_id=analyte_id,
+            name=name,
+            value=value,
+            unit=unit,
+            status=status,
+            critical_status=critical_status,
+            is_critical=is_critical,
+            curated_description=(definition.curated_explanation if definition is not None else raw_explanation),
+            supplemental_text=context,
+        )
+        or load_templates().fallback_explanation
+    )
 
     prompt = textwrap.dedent(
         f"""\
@@ -408,14 +413,10 @@ async def analyzer_node(state: AgentState) -> dict:
         return {"retrieved_contexts": []}
 
     review_indicators = [
-        dict(indicator)
-        for indicator in indicators
-        if indicator.get("input_integrity_status") == "NEED_REVIEW"
+        dict(indicator) for indicator in indicators if indicator.get("input_integrity_status") == "NEED_REVIEW"
     ]
     analyzable_indicators = [
-        indicator
-        for indicator in indicators
-        if indicator.get("input_integrity_status") != "NEED_REVIEW"
+        indicator for indicator in indicators if indicator.get("input_integrity_status") != "NEED_REVIEW"
     ]
     if not analyzable_indicators:
         return {
@@ -478,10 +479,7 @@ async def analyzer_node(state: AgentState) -> dict:
     # those rows to retrieval or an LLM.
     analyzed = iter(updated_indicators)
     updated_indicators = [
-        dict(item)
-        if item.get("input_integrity_status") == "NEED_REVIEW"
-        else next(analyzed)
-        for item in indicators
+        dict(item) if item.get("input_integrity_status") == "NEED_REVIEW" else next(analyzed) for item in indicators
     ]
 
     return {

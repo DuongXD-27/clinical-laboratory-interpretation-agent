@@ -66,6 +66,7 @@ export default function AssistantWidget({ role }: Props) {
     router.replace("/login");
   }, [router]);
   const onOnboardingRequired = useCallback(() => setOnboardingAccepted(false), []);
+  const onOnboardingAccepted = useCallback(() => setOnboardingAccepted(true), []);
 
   // Chỉ bệnh nhân có hội thoại được lưu. Khách vẫn chat bình thường — hợp đồng
   // của chế độ khách là không lưu gì, và ở đây nó được tôn trọng bằng cách
@@ -88,6 +89,7 @@ export default function AssistantWidget({ role }: Props) {
     persistence,
     onUnauthorized,
     onOnboardingRequired,
+    onOnboardingAccepted,
   });
 
   const closePanel = useCallback(() => {
@@ -143,7 +145,11 @@ export default function AssistantWidget({ role }: Props) {
         onUnauthorized();
         return;
       }
-      setOnboardingError("Chưa thể ghi nhận xác nhận. Vui lòng thử lại.");
+      const message =
+        caught instanceof Error && caught.message
+          ? caught.message
+          : "Chưa thể ghi nhận xác nhận. Vui lòng thử lại.";
+      setOnboardingError(message);
     } finally {
       setOnboardingLoading(false);
     }

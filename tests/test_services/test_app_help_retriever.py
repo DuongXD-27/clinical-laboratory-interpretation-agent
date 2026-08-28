@@ -45,10 +45,7 @@ class _FakeVectorStore:
                 want_feature = clause["feature"]
             if "heading" in clause:
                 want_heading = clause["heading"]
-        matches = [
-            c for c in self._chunks
-            if c["feature"] == want_feature and c["metadata"]["heading"] == want_heading
-        ]
+        matches = [c for c in self._chunks if c["feature"] == want_feature and c["metadata"]["heading"] == want_heading]
         return {
             "documents": [c["text"] for c in matches],
             "metadatas": [c["metadata"] for c in matches],
@@ -62,7 +59,13 @@ def _chunk(feature, heading, distance, text=None):
         "feature": feature,
         "text": text or f"[{feature}/{heading}]",
         "distance": distance,
-        "metadata": {"feature": feature, "role": "patient", "route": "/x", "heading": heading, "source_file": f"{feature}.md"},
+        "metadata": {
+            "feature": feature,
+            "role": "patient",
+            "route": "/x",
+            "heading": heading,
+            "source_file": f"{feature}.md",
+        },
     }
 
 
@@ -76,11 +79,13 @@ def test_section_hint_detects_step_and_where_intents():
 def test_promotes_steps_section_when_dense_search_picks_the_wrong_one():
     # Dense search (deliberately) ranks "what is this for" above "steps",
     # mirroring the real bug found in manual testing.
-    store = _FakeVectorStore([
-        _chunk("upload-analysis", "Feature này dùng để làm gì?", distance=0.24),
-        _chunk("upload-analysis", "Các bước sử dụng?", distance=0.27),
-        _chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.28),
-    ])
+    store = _FakeVectorStore(
+        [
+            _chunk("upload-analysis", "Feature này dùng để làm gì?", distance=0.24),
+            _chunk("upload-analysis", "Các bước sử dụng?", distance=0.27),
+            _chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.28),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.5, top_k=3)
 
     result = retriever.retrieve("Làm sao tải phiếu xét nghiệm?")
@@ -89,10 +94,12 @@ def test_promotes_steps_section_when_dense_search_picks_the_wrong_one():
 
 
 def test_promotes_where_section_for_a_pure_location_question():
-    store = _FakeVectorStore([
-        _chunk("profile", "Các bước sử dụng?", distance=0.22),
-        _chunk("profile", "Người dùng tìm ở đâu?", distance=0.26),
-    ])
+    store = _FakeVectorStore(
+        [
+            _chunk("profile", "Các bước sử dụng?", distance=0.22),
+            _chunk("profile", "Người dùng tìm ở đâu?", distance=0.26),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.5, top_k=2)
 
     result = retriever.retrieve("Tôi sửa hồ sơ ở đâu?")
@@ -101,10 +108,12 @@ def test_promotes_where_section_for_a_pure_location_question():
 
 
 def test_no_promotion_when_dense_search_already_picked_the_right_section():
-    store = _FakeVectorStore([
-        _chunk("trends", "Các bước sử dụng?", distance=0.20),
-        _chunk("trends", "Người dùng tìm ở đâu?", distance=0.26),
-    ])
+    store = _FakeVectorStore(
+        [
+            _chunk("trends", "Các bước sử dụng?", distance=0.20),
+            _chunk("trends", "Người dùng tìm ở đâu?", distance=0.26),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.5, top_k=2)
 
     result = retriever.retrieve("Làm sao xem xu hướng WBC?")
@@ -113,10 +122,12 @@ def test_no_promotion_when_dense_search_already_picked_the_right_section():
 
 
 def test_no_promotion_when_question_has_no_step_or_where_cue():
-    store = _FakeVectorStore([
-        _chunk("ocr-review", "Không làm được gì?", distance=0.20),
-        _chunk("ocr-review", "Các bước sử dụng?", distance=0.26),
-    ])
+    store = _FakeVectorStore(
+        [
+            _chunk("ocr-review", "Không làm được gì?", distance=0.20),
+            _chunk("ocr-review", "Các bước sử dụng?", distance=0.26),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.5, top_k=2)
 
     result = retriever.retrieve("Tại sao phải xác nhận OCR?")
@@ -128,9 +139,11 @@ def test_promotion_no_op_when_target_section_missing_for_the_feature():
     # Corpus files always have all 5 headings in practice, but the
     # promotion must degrade gracefully (keep dense ranking) if a lookup
     # ever comes up empty, rather than erroring or dropping the match.
-    store = _FakeVectorStore([
-        _chunk("critical-alerts", "Feature này dùng để làm gì?", distance=0.24),
-    ])
+    store = _FakeVectorStore(
+        [
+            _chunk("critical-alerts", "Feature này dùng để làm gì?", distance=0.24),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.5, top_k=1)
 
     result = retriever.retrieve("Làm sao xem cảnh báo khẩn cấp?")
@@ -160,9 +173,11 @@ def test_deterministic_hint_bypasses_a_low_dense_score():
         def search(self, query, *, k=5, filter=None, query_embedding=None):
             return {"documents": [[]], "metadatas": [[]], "distances": [[]], "ids": [[]]}
 
-    store = _AlwaysLowScoreStore([
-        _chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.99),
-    ])
+    store = _AlwaysLowScoreStore(
+        [
+            _chunk("upload-analysis", "Người dùng tìm ở đâu?", distance=0.99),
+        ]
+    )
     retriever = AppHelpRetriever(vector_store=store, min_score=0.70, top_k=3)
 
     result = retriever.retrieve("Tải phiếu ở đâu?")

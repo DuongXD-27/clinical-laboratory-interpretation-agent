@@ -23,14 +23,8 @@ def filter_safe_grounding_text(
 ) -> str:
     """Remove unsafe complete prose segments without inventing replacements."""
     active_validator = validator or MedicalSafetyValidator()
-    segments = [
-        segment.strip()
-        for segment in _SEGMENT_BOUNDARY.split(str(text or "").strip())
-        if segment.strip()
-    ]
-    return " ".join(
-        segment for segment in segments if not active_validator.validate(segment)
-    )
+    segments = [segment.strip() for segment in _SEGMENT_BOUNDARY.split(str(text or "").strip()) if segment.strip()]
+    return " ".join(segment for segment in segments if not active_validator.validate(segment))
 
 
 def build_safe_grounding_view(

@@ -64,12 +64,16 @@ test("patient shell mounts the assistant launcher and component owns onboarding 
   const widget = readFileSync("src/components/patient/AssistantWidget.tsx", "utf8");
   const panel = readFileSync("src/components/patient/assistant/ChatPanel.tsx", "utf8");
   const controller = readFileSync("src/components/patient/assistant/useOrchestratorChat.ts", "utf8");
+  const api = readFileSync("src/lib/api.ts", "utf8");
   const css = readFileSync("src/app/globals.css", "utf8");
 
   assert.match(shell, /<AssistantWidget role=\{session\.role\} \/>/);
   assert.match(widget, /aria-label=\{open \? "Đóng trợ lý AI" : "Mở trợ lý AI"\}/);
   assert.match(widget, /acknowledgeOrchestratorOnboarding/);
+  assert.match(widget, /onOnboardingAccepted/);
   assert.match(controller, /ONBOARDING_REQUIRED/);
+  assert.match(controller, /onOnboardingAccepted/);
+  assert.match(api, /onboarding_acknowledged\?: boolean/);
   assert.match(panel, /Trước khi bắt đầu/);
   assert.match(css, /\.assistant-panel/);
   assert.match(css, /height: 100dvh/);

@@ -58,7 +58,7 @@ def _token_headers(
     username: str,
     role: str = "patient",
     user_id: int = 999999,
-    ):
+):
     token = create_access_token(
         username=username,
         role=role,
@@ -121,11 +121,7 @@ async def test_demo_seed_creates_reports_for_history_and_trend_demo(isolated_cli
         reports = session.query(db_module.LabReport).filter_by(patient_id=patient.id).all()
         assert len(reports) == 6
         assert any(len(report.indicators) == 9 for report in reports)
-        counts = Counter(
-            indicator.analyte_canonical
-            for report in reports
-            for indicator in report.indicators
-        )
+        counts = Counter(indicator.analyte_canonical for report in reports for indicator in report.indicators)
         assert counts["LDL-C"] >= 5
         assert counts["Fasting plasma glucose"] >= 3
         assert counts["Creatinine"] == 2
@@ -280,7 +276,14 @@ async def test_report_status_priority(isolated_client):
         "2026-08-12",
         [
             {"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high", "is_abnormal": True},
-            {"name": "Potassium", "value": 7, "unit": "mmol/L", "status": "critical_high", "is_abnormal": True, "is_critical": True},
+            {
+                "name": "Potassium",
+                "value": 7,
+                "unit": "mmol/L",
+                "status": "critical_high",
+                "is_abnormal": True,
+                "is_critical": True,
+            },
         ],
     )
     with session_local() as session:

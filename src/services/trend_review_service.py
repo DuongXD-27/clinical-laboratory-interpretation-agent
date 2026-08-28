@@ -316,17 +316,14 @@ def list_doctor_trend_reviews(
 
 
 def get_doctor_trend_review_detail(db: Session, request_id: int) -> DoctorTrendReviewDetailResponse:
-    row = (
-        db.execute(
-            select(TrendReviewRequest)
-            .where(TrendReviewRequest.id == request_id)
-            .options(
-                selectinload(TrendReviewRequest.patient),
-                selectinload(TrendReviewRequest.reviewed_by),
-            )
+    row = db.execute(
+        select(TrendReviewRequest)
+        .where(TrendReviewRequest.id == request_id)
+        .options(
+            selectinload(TrendReviewRequest.patient),
+            selectinload(TrendReviewRequest.reviewed_by),
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
     if row is None:
         raise TrendReviewNotFoundError("Không tìm thấy yêu cầu review xu hướng.")
     patient = row.patient
@@ -349,14 +346,11 @@ def submit_doctor_trend_review(
     doctor_assessment: TrendReviewAssessment,
     doctor_comment: str,
 ) -> TrendReviewSchema:
-    row = (
-        db.execute(
-            select(TrendReviewRequest)
-            .where(TrendReviewRequest.id == request_id)
-            .options(selectinload(TrendReviewRequest.reviewed_by))
-        )
-        .scalar_one_or_none()
-    )
+    row = db.execute(
+        select(TrendReviewRequest)
+        .where(TrendReviewRequest.id == request_id)
+        .options(selectinload(TrendReviewRequest.reviewed_by))
+    ).scalar_one_or_none()
     if row is None:
         raise TrendReviewNotFoundError("Không tìm thấy yêu cầu review xu hướng.")
     if row.status != TrendReviewRequest.STATUS_PENDING:
@@ -372,12 +366,9 @@ def submit_doctor_trend_review(
     except Exception:
         db.rollback()
         raise
-    refreshed = (
-        db.execute(
-            select(TrendReviewRequest)
-            .where(TrendReviewRequest.id == request_id)
-            .options(selectinload(TrendReviewRequest.reviewed_by))
-        )
-        .scalar_one()
-    )
+    refreshed = db.execute(
+        select(TrendReviewRequest)
+        .where(TrendReviewRequest.id == request_id)
+        .options(selectinload(TrendReviewRequest.reviewed_by))
+    ).scalar_one()
     return _schema(refreshed)

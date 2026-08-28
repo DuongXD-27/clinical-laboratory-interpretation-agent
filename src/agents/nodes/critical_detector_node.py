@@ -119,14 +119,8 @@ def _critical_alert_message(
 ) -> str:
     comparison = f"{comparison_value} {operator} {threshold} {comparison_unit}"
     if not _is_unit_compatible(original_unit, comparison_unit):
-        comparison = (
-            f"giá trị nhập {original_value} {original_unit}; "
-            f"giá trị quy đổi chỉ để so ngưỡng: {comparison}"
-        )
-    return (
-        f"CẢNH BÁO: {name} {direction} tới ngưỡng nguy kịch "
-        f"({comparison}). Yêu cầu can thiệp y tế."
-    )
+        comparison = f"giá trị nhập {original_value} {original_unit}; giá trị quy đổi chỉ để so ngưỡng: {comparison}"
+    return f"CẢNH BÁO: {name} {direction} tới ngưỡng nguy kịch ({comparison}). Yêu cầu can thiệp y tế."
 
 
 def _resolve_active_side(
@@ -362,21 +356,23 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             has_critical = True
             # Chống trùng lặp (nếu đồ thị chạy lại / retry)
             if not any(a.get("indicator_name") == name for a in critical_alerts):
-                critical_alerts.append({
-                    "indicator_name": name,
-                    "value": val,
-                    "unit": input_unit,
-                    "message": _critical_alert_message(
-                        name=name,
-                        direction="giảm",
-                        original_value=val,
-                        original_unit=input_unit,
-                        comparison_value=comparison_value,
-                        operator=low_operator,
-                        threshold=low_val,
-                        comparison_unit=comparison_unit,
-                    ),
-                })
+                critical_alerts.append(
+                    {
+                        "indicator_name": name,
+                        "value": val,
+                        "unit": input_unit,
+                        "message": _critical_alert_message(
+                            name=name,
+                            direction="giảm",
+                            original_value=val,
+                            original_unit=input_unit,
+                            comparison_value=comparison_value,
+                            operator=low_operator,
+                            threshold=low_val,
+                            comparison_unit=comparison_unit,
+                        ),
+                    }
+                )
         elif high_side is not None and _compare_critical(comparison_value, high_side[0], high_side[1]):
             high_val, high_operator = high_side
             new_ind["is_abnormal"] = True
@@ -385,21 +381,23 @@ async def detect_critical_values_node(state: AgentState) -> dict:
             has_critical = True
             # Chống trùng lặp
             if not any(a.get("indicator_name") == name for a in critical_alerts):
-                critical_alerts.append({
-                    "indicator_name": name,
-                    "value": val,
-                    "unit": input_unit,
-                    "message": _critical_alert_message(
-                        name=name,
-                        direction="tăng",
-                        original_value=val,
-                        original_unit=input_unit,
-                        comparison_value=comparison_value,
-                        operator=high_operator,
-                        threshold=high_val,
-                        comparison_unit=comparison_unit,
-                    ),
-                })
+                critical_alerts.append(
+                    {
+                        "indicator_name": name,
+                        "value": val,
+                        "unit": input_unit,
+                        "message": _critical_alert_message(
+                            name=name,
+                            direction="tăng",
+                            original_value=val,
+                            original_unit=input_unit,
+                            comparison_value=comparison_value,
+                            operator=high_operator,
+                            threshold=high_val,
+                            comparison_unit=comparison_unit,
+                        ),
+                    }
+                )
         else:
             new_ind["is_critical"] = False
             new_ind["critical_status"] = None

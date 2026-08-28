@@ -113,9 +113,7 @@ def test_added_column_is_nullable_even_when_the_model_says_not_null(temp_engine)
     old_shape.create_all(temp_engine)
 
     with temp_engine.begin() as conn:
-        conn.execute(
-            text("INSERT INTO lab_reports (patient_id, has_critical_values) VALUES (1, 0)")
-        )
+        conn.execute(text("INSERT INTO lab_reports (patient_id, has_critical_values) VALUES (1, 0)"))
 
     added = db_module.add_missing_columns()
 
@@ -155,14 +153,9 @@ def test_backfill_fills_status_left_null_by_the_added_column(temp_engine):
     old_shape.create_all(temp_engine)
 
     with temp_engine.begin() as conn:
+        conn.execute(text("INSERT INTO lab_reports (patient_id, has_critical_values) VALUES (1, 1)"))
         conn.execute(
-            text("INSERT INTO lab_reports (patient_id, has_critical_values) VALUES (1, 1)")
-        )
-        conn.execute(
-            text(
-                "INSERT INTO report_indicators (report_id, name, status) "
-                "VALUES (1, 'Kali', 'critical_high')"
-            )
+            text("INSERT INTO report_indicators (report_id, name, status) VALUES (1, 'Kali', 'critical_high')")
         )
 
     db_module.add_missing_columns()
@@ -170,10 +163,7 @@ def test_backfill_fills_status_left_null_by_the_added_column(temp_engine):
 
     with temp_engine.connect() as conn:
         assert conn.execute(text("SELECT status FROM lab_reports")).scalar() == "CRITICAL"
-        assert (
-            conn.execute(text("SELECT critical_status FROM report_indicators")).scalar()
-            == "critical_high"
-        )
+        assert conn.execute(text("SELECT critical_status FROM report_indicators")).scalar() == "critical_high"
 
 
 def test_model_and_a_fresh_database_agree(temp_engine):

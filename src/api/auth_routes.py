@@ -44,8 +44,6 @@ def normalise_email_quietly(value: str) -> str | None:
         return None
 
 
-
-
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, db: Session = Depends(get_db)) -> RegisterResponse:
     """Đăng ký tài khoản bệnh nhân mới (role luôn là `patient`).
@@ -101,7 +99,9 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)) -> LoginRe
 
     user = (
         db.query(User)
-        .filter(or_(User.username == identifier, User.email == email_form) if email_form else User.username == identifier)
+        .filter(
+            or_(User.username == identifier, User.email == email_form) if email_form else User.username == identifier
+        )
         .first()
     )
 
@@ -122,7 +122,6 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)) -> LoginRe
     # chỉ đọc lại role trong response để chọn giao diện.
     token = create_access_token(username=user.username, role=user.role, user_id=user.id)
     return LoginResponse(access_token=token, role=user.role, username=user.username)
-
 
 
 @router.get("/google/status", response_model=GoogleStatusResponse)

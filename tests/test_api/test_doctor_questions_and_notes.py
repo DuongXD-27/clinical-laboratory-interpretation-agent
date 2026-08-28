@@ -679,9 +679,7 @@ async def test_guest_cannot_reach_notes_or_review(client, stub_graph):
 async def test_notes_and_review_require_authentication(client):
     assert (await client.post("/api/v1/history/1/notes", json={"note_text": "x"})).status_code == 401
     assert (await client.post("/api/v1/history/1/review")).status_code == 401
-    assert (
-        await client.post("/api/v1/history/1/questions/selection", json={"question_ids": []})
-    ).status_code == 401
+    assert (await client.post("/api/v1/history/1/questions/selection", json={"question_ids": []})).status_code == 401
 
 
 @pytest.mark.asyncio

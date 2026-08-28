@@ -17,3 +17,10 @@ ignore = ["E501"]
 [format]
 quote-style = "double"
 indent-style = "space"
+# Historical/audit prose and retained evaluation reports are evidence, not
+# formatter-owned source. Python files under these trees remain in scope.
+exclude = [
+    "docs/archive/**",
+    "docs/audit/**",
+    "eval/**/*.md",
+]

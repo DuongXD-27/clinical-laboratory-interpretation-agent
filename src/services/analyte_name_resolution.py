@@ -58,10 +58,7 @@ def normalize_analyte_lookup_key(value: Any) -> str:
     text = "".join(character for character in text if not unicodedata.combining(character))
     text = text.replace("đ", "d").replace("%", " percent ")
     tokens = re.findall(r"[a-z0-9]+", text)
-    tokens = [
-        {"percentage": "percent", "absolute": "abs"}.get(token, token)
-        for token in tokens
-    ]
+    tokens = [{"percentage": "percent", "absolute": "abs"}.get(token, token) for token in tokens]
     if len(tokens) >= 2 and all(len(token) == 1 and token.isalpha() for token in tokens):
         return "".join(tokens)
     return " ".join(tokens)

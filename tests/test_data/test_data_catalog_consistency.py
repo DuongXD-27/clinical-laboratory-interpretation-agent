@@ -57,9 +57,7 @@ def _json(path: Path) -> Any:
 
 def _lookup_key(value: Any) -> str:
     decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
-    without_accents = "".join(
-        character for character in decomposed if not unicodedata.combining(character)
-    )
+    without_accents = "".join(character for character in decomposed if not unicodedata.combining(character))
     without_accents = without_accents.replace("đ", "d")
     return re.sub(r"[^a-z0-9]+", " ", without_accents).strip()
 
@@ -85,10 +83,7 @@ def _question_ids() -> set[str]:
 
 def _units() -> dict[str, str]:
     with UNITS_CSV.open("r", encoding="utf-8-sig", newline="") as file:
-        return {
-            row["test_name"]: row["standardized_unit"]
-            for row in csv.DictReader(file)
-        }
+        return {row["test_name"]: row["standardized_unit"] for row in csv.DictReader(file)}
 
 
 def _manual_entries() -> list[dict[str, str]]:
@@ -112,10 +107,7 @@ def _mock_names() -> set[str]:
 
 def _runtime_alias_lookup() -> dict[str, str]:
     config = _json(REFERENCE_CONFIG)
-    lookup = {
-        _lookup_key(alias): canonical
-        for alias, canonical in config["analyte_aliases"].items()
-    }
+    lookup = {_lookup_key(alias): canonical for alias, canonical in config["analyte_aliases"].items()}
     for canonical in LOCKED_35_ANALYTES:
         lookup.setdefault(_lookup_key(canonical), canonical)
     return lookup
@@ -127,11 +119,7 @@ def test_inv_001_canonical_names_are_unique_after_normalization() -> None:
         for name in names:
             by_key.setdefault(_lookup_key(name), set()).add(name)
 
-        duplicates = {
-            key: sorted(values)
-            for key, values in by_key.items()
-            if len(values) > 1
-        }
+        duplicates = {key: sorted(values) for key, values in by_key.items() if len(values) > 1}
         assert duplicates == {}, f"{source_name} has normalized duplicates: {duplicates}"
 
 
@@ -172,15 +160,9 @@ def test_inv_003_alias_keys_are_unambiguous_and_target_runtime_approved_catalog(
     for alias, canonical in config["analyte_aliases"].items():
         by_key.setdefault(_lookup_key(alias), set()).add(canonical)
 
-    ambiguous = {
-        key: sorted(values)
-        for key, values in by_key.items()
-        if len(values) > 1
-    }
+    ambiguous = {key: sorted(values) for key, values in by_key.items() if len(values) > 1}
     unknown_targets = {
-        alias: canonical
-        for alias, canonical in config["analyte_aliases"].items()
-        if canonical not in approved
+        alias: canonical for alias, canonical in config["analyte_aliases"].items() if canonical not in approved
     }
 
     assert ambiguous == {}
@@ -213,9 +195,7 @@ def test_inv_006_mock_names_are_supported_or_explicitly_acknowledged_drift() -> 
     mock_names = _mock_names()
 
     unclassified = sorted(
-        name
-        for name in mock_names
-        if _lookup_key(name) not in lookup and name not in ACKNOWLEDGED_MOCK_NAME_DRIFT
+        name for name in mock_names if _lookup_key(name) not in lookup and name not in ACKNOWLEDGED_MOCK_NAME_DRIFT
     )
     assert unclassified == []
 

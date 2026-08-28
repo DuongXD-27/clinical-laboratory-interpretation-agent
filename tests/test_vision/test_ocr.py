@@ -23,8 +23,7 @@ from src.services.request_timing import (
 )
 
 VALID_JSON = (
-    '{"indicators":[{"name":"Glucose","value":5.2,"unit":"mmol/L",'
-    '"confidence":0.95,"raw_text":"Glucose 5.2 mmol/L"}]}'
+    '{"indicators":[{"name":"Glucose","value":5.2,"unit":"mmol/L","confidence":0.95,"raw_text":"Glucose 5.2 mmol/L"}]}'
 )
 
 

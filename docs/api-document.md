@@ -35,7 +35,7 @@ Ký hiệu trạng thái endpoint trong tài liệu:
 
 | Môi trường | Base URL |
 |---|---|
-| Local | `http://localhost:8000` |
+| Local | `http://127.0.0.1:8000` |
 | Production hiện tại | `https://vmec-05-api-production.up.railway.app` |
 | Swagger UI | `{base_url}/docs` |
 | OpenAPI JSON | `{base_url}/openapi.json` |
@@ -527,7 +527,7 @@ Content type: `multipart/form-data`.
 Ví dụ cURL:
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/ocr/upload" \
+curl -X POST "http://127.0.0.1:8000/api/v1/ocr/upload" \
   -H "Authorization: Bearer $TOKEN" \
   -F "consent_acknowledged=true" \
   -F "file=@report.png;type=image/png"

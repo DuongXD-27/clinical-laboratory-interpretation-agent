@@ -3,7 +3,7 @@
 Validates:
 - Exact reported input: "tôi bị khó thở nên làm gì" triggers emergency short-circuit.
 - Personal symptom reporting & acute distress pleas trigger EMERGENCY_INPUT_SAFETY.
-- Mandatory Short-Circuit & LLM Bypass: 0 calls to intent router, LLM classifier, RAG, dispatcher.
+- Mandatory Short-Circuit & Agent Bypass: 0 calls to the Agent, provider, RAG, or tools.
 - Context Hijack Regression: Active HGB context is never explained when emergency input is received.
 - No Fake Doctor Escalation: Emergency response directs to real-world medical care, does NOT claim fake escalation.
 - Negative controls: Educational, definitional, and analyte-correlation queries are not blocked as emergency.
@@ -123,6 +123,7 @@ def _build_setup(monkeypatch, analyte: str | None = "HGB"):
 # 1. Gate-level positive tests for emergency / urgent symptom inputs
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -162,6 +163,7 @@ def test_gate_positive_emergency_symptoms(case_id: str, message: str) -> None:
 # 2. Gate-level negative controls: Educational / Non-personal queries NOT blocked
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -189,6 +191,7 @@ def test_gate_negative_controls_not_emergency(case_id: str, message: str) -> Non
 # ==============================================================================
 # 3. End-to-end: Active HGB context hijack regression test
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_active_hgb_context_emergency_safety_precedence(monkeypatch) -> None:
@@ -224,36 +227,23 @@ async def test_e2e_active_hgb_context_emergency_safety_precedence(monkeypatch) -
 
 
 # ==============================================================================
-# 4. LLM & Router Bypass Test
+# 4. Agent Bypass Test
 # ==============================================================================
 
+
 @pytest.mark.asyncio
-async def test_emergency_bypasses_router_llm_and_dispatcher(monkeypatch) -> None:
-    """Ensure zero calls to route_intent, dispatch_workflow, or response_composer."""
+async def test_emergency_bypasses_agent(monkeypatch) -> None:
+    """Ensure the deterministic emergency gate short-circuits the Agent."""
     user, runtime, db, _ = _build_setup(monkeypatch, analyte="HGB")
 
-    router_calls = 0
-    workflow_calls = 0
-    composer_calls = 0
+    agent_calls = 0
 
-    async def spy_route_intent(*args, **kwargs):
-        nonlocal router_calls
-        router_calls += 1
-        raise AssertionError("route_intent MUST NOT be called on emergency input")
+    async def spy_agent(*args, **kwargs):
+        nonlocal agent_calls
+        agent_calls += 1
+        raise AssertionError("Agent MUST NOT be called on emergency input")
 
-    async def spy_dispatch_workflow(*args, **kwargs):
-        nonlocal workflow_calls
-        workflow_calls += 1
-        raise AssertionError("dispatch_workflow MUST NOT be called on emergency input")
-
-    async def spy_build_final_response(*args, **kwargs):
-        nonlocal composer_calls
-        composer_calls += 1
-        raise AssertionError("build_final_response MUST NOT be called on emergency input")
-
-    monkeypatch.setattr("src.orchestrator.service.route_intent", spy_route_intent)
-    monkeypatch.setattr("src.orchestrator.service.dispatch_workflow", spy_dispatch_workflow)
-    monkeypatch.setattr("src.orchestrator.service.build_final_response", spy_build_final_response)
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", spy_agent)
 
     res = await handle_message(
         OrchestratorRequest(message="tôi bị khó thở nên làm gì", client_request_id="emg-spy"),
@@ -264,14 +254,13 @@ async def test_emergency_bypasses_router_llm_and_dispatcher(monkeypatch) -> None
 
     assert res.status == ResponseStatus.BLOCKED
     assert res.reason_code == ReasonCode.EMERGENCY_INPUT_SAFETY
-    assert router_calls == 0
-    assert workflow_calls == 0
-    assert composer_calls == 0
+    assert agent_calls == 0
 
 
 # ==============================================================================
 # 5. Non-emergency & Existing Safety Gates Regression
 # ==============================================================================
+
 
 def test_existing_safety_gates_unaffected() -> None:
     """Existing diagnosis, cause, and treatment safety gates remain functional."""

@@ -105,9 +105,7 @@ def test_a_fabricated_value_next_to_a_real_unit_is_still_blocked():
 def test_real_values_and_dates_stay_allowed():
     trend = make_trend("10^9/L")
 
-    assert validate_trend_explanation(
-        "Ngày 01/08/2026 đo 7.2, ngày 02/08/2026 đo 8.1.", trend
-    ) == []
+    assert validate_trend_explanation("Ngày 01/08/2026 đo 7.2, ngày 02/08/2026 đo 8.1.", trend) == []
 
 
 # --- Hàm bỏ đơn vị -----------------------------------------------------------
@@ -143,9 +141,7 @@ def test_content_guardrail_still_blocks_prediction():
 
     trend = make_trend("10^9/L")
 
-    violations = validate_trend_explanation(
-        "Chỉ số 7.2 và 8.1 10^9/L, dự đoán lần tới sẽ đạt mức cao hơn.", trend
-    )
+    violations = validate_trend_explanation("Chỉ số 7.2 và 8.1 10^9/L, dự đoán lần tới sẽ đạt mức cao hơn.", trend)
 
     reasons = {violation.reason for violation in violations}
 

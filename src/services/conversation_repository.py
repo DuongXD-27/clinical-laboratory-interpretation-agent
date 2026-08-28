@@ -97,9 +97,7 @@ def get_conversation(db: Session, *, conversation_id: int, patient_id: int) -> C
 
     return (
         db.execute(
-            select(Conversation)
-            .where(Conversation.id == conversation_id)
-            .where(Conversation.patient_id == patient_id)
+            select(Conversation).where(Conversation.id == conversation_id).where(Conversation.patient_id == patient_id)
         )
         .scalars()
         .first()
@@ -144,9 +142,7 @@ def get_or_create_latest(db: Session, *, patient_id: int) -> Conversation:
     return create_conversation(db, patient_id=patient_id)
 
 
-def list_messages(
-    db: Session, *, conversation_id: int, patient_id: int
-) -> Sequence[ConversationMessage] | None:
+def list_messages(db: Session, *, conversation_id: int, patient_id: int) -> Sequence[ConversationMessage] | None:
     """Transcript của một hội thoại. `None` nếu không phải của người này.
 
     Quyền sở hữu của tin nhắn SUY RA từ hội thoại: phải qua được

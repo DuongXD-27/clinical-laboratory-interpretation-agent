@@ -10,41 +10,27 @@ from dataclasses import dataclass, field
 from src.models.orchestrator_schemas import (
     BlockedPayload,
     ConfirmOcrAction,
+    ConversationState,
     DataType,
-    HistorySummaryPayload,
     IntentEnum,
     NeedsInputPayload,
+    OpenReportAction,
     OrchestratorRequest,
     OrchestratorResponse,
     ProgressStage,
     ReasonCode,
     ResponseStatus,
     RetryAction,
-    TrendDataPayload,
-)
-from src.orchestrator.dispatcher import (
-    DispatchContext,
-    WorkflowResult,
-    dispatch_provenance_followup,
-    dispatch_workflow,
 )
 from src.orchestrator.gates import (
+    contains_lab_value,
     emergency_safety_gate,
-    is_provenance_request,
     medical_safety_gate,
     onboarding_gate,
-    policy_gate,
     role_admission_gate,
     treatment_followup_gate,
 )
-from src.orchestrator.intent_router import RouteDecision, contains_lab_value, route_intent
 from src.orchestrator.progress import ProgressCallback, emit_progress
-from src.orchestrator.response_composer import (
-    _safety_refusal_message,
-    build_final_response,
-    build_provenance_response,
-    map_needs_input_prompt,
-)
 from src.orchestrator.session_store import (
     SessionStore,
     bind_conversation,
@@ -67,11 +53,7 @@ def _session_hash(session_id: str) -> str:
 
 
 def _blocked_response(intent: IntentEnum, reason_code: ReasonCode, message: str) -> OrchestratorResponse:
-    action = (
-        [ConfirmOcrAction(review_ref="ocr-review")]
-        if reason_code == ReasonCode.OCR_REVIEW_REQUIRED
-        else []
-    )
+    action = [ConfirmOcrAction(review_ref="ocr-review")] if reason_code == ReasonCode.OCR_REVIEW_REQUIRED else []
     return OrchestratorResponse(
         intent=intent,
         status=ResponseStatus.BLOCKED,
@@ -86,58 +68,6 @@ def _blocked_response(intent: IntentEnum, reason_code: ReasonCode, message: str)
         suggested_actions=action,
         safety_notice=message,
     )
-
-
-def _needs_input_response(intent: IntentEnum, reason_code: ReasonCode, message: str, missing: list[str]) -> OrchestratorResponse:
-    friendly_message = map_needs_input_prompt(missing, message)
-    return OrchestratorResponse(
-        intent=intent,
-        status=ResponseStatus.NEEDS_INPUT,
-        message=friendly_message,
-        data_type=DataType.NEEDS_INPUT,
-        data=NeedsInputPayload(prompt=friendly_message, missing_fields=missing),
-        reason_code=reason_code,
-        suggested_actions=[RetryAction(reason_code=reason_code)],
-    )
-
-
-async def _response_from_workflow(
-    intent: IntentEnum,
-    result: WorkflowResult,
-    *,
-    progress_callback: ProgressCallback | None = None,
-    response_style: str = "simple",
-    user_message: str | None = None,
-) -> OrchestratorResponse:
-    await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
-    return await build_final_response(
-        intent=intent,
-        status=result.status,
-        data=result.data,
-        reason_code=result.reason_code,
-        response_style=response_style,
-        user_message=user_message,
-    )
-
-
-def _context_after_workflow(
-    *,
-    result: WorkflowResult,
-    current_report_ref: str | None,
-    current_analyte: str | None,
-) -> tuple[str | None, str | None]:
-    data = result.data
-    next_report_ref = current_report_ref
-    next_analyte = current_analyte
-
-    if result.status == ResponseStatus.SUCCESS and isinstance(data, HistorySummaryPayload):
-        next_report_ref = data.report_ref
-    if result.status == ResponseStatus.SUCCESS and isinstance(data, TrendDataPayload):
-        next_analyte = data.trend.analyte_canonical
-    if result.status == ResponseStatus.SUCCESS and result.workflow_selected == "get_my_report_summary":
-        next_analyte = None
-
-    return next_report_ref, next_analyte
 
 
 def _is_ocr_bypass_request(message: str) -> bool:
@@ -172,9 +102,84 @@ SENSITIVE_SYSTEM_MESSAGE = (
     "Tôi có thể hỗ trợ bạn về kết quả xét nghiệm và các chức năng được phép trong ứng dụng."
 )
 
+_DEGRADED_MESSAGE = (
+    "Trợ lý đang tạm thời không thể xử lý câu hỏi này. "
+    "Bạn có thể thử lại sau ít phút hoặc quay lại phiếu xét nghiệm hiện tại."
+)
+
+
+def _safety_refusal_message(reason_code: ReasonCode | None) -> str:
+    if reason_code == ReasonCode.EMERGENCY_INPUT_SAFETY:
+        return (
+            "Nếu bạn đang gặp các triệu chứng cấp cứu hoặc khó chịu nghiêm trọng (như khó thở, đau tức ngực dữ dội), "
+            "bạn không nên chờ đợi phản hồi từ trợ lý ảo. "
+            "Vui lòng liên hệ ngay cơ sở y tế gần nhất hoặc dịch vụ cấp cứu y tế tại địa phương để được hỗ trợ và xử trí kịp thời."
+        )
+    if reason_code == ReasonCode.MEDICAL_DIAGNOSIS_REQUEST:
+        return (
+            "Mình không thể đưa ra chẩn đoán bệnh hoặc khẳng định tình trạng bệnh lý của bạn. "
+            "Bạn nên trao đổi trực tiếp với bác sĩ chuyên khoa để được thăm khám chính xác. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa các chỉ số xét nghiệm hoặc gợi ý câu hỏi để bạn trao đổi cùng bác sĩ."
+        )
+    if reason_code == ReasonCode.MEDICAL_CAUSE_REQUEST:
+        return (
+            "Mình không thể xác định nguyên nhân cá nhân dẫn đến kết quả này. "
+            "Để hiểu rõ nguyên nhân, bác sĩ cần thăm khám kết hợp với các triệu chứng lâm sàng và tiền sử bệnh của bạn. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa tổng quan của chỉ số hoặc gợi ý câu hỏi cho bác sĩ."
+        )
+    if reason_code == ReasonCode.TREATMENT_REQUEST:
+        return (
+            "Mình không thể hướng dẫn phương pháp điều trị hay tư vấn sử dụng thuốc. "
+            "Bạn nên tham khảo ý kiến bác sĩ để có kế hoạch chăm sóc và điều trị phù hợp và an toàn nhất."
+        )
+    if reason_code == ReasonCode.PERSONAL_MEDICAL_ADVICE:
+        return (
+            "Mình không thể đưa ra tư vấn về chế độ ăn uống, thực phẩm bổ sung, hoặc điều trị cá nhân hóa. "
+            "Bạn nên tham khảo ý kiến bác sĩ hoặc chuyên gia dinh dưỡng để có chế độ phù hợp với tình trạng sức khỏe của bạn. "
+            "Mình có thể hỗ trợ giải thích ý nghĩa các chỉ số xét nghiệm hoặc gợi ý câu hỏi để bạn trao đổi cùng bác sĩ."
+        )
+    return "Tôi không thể hỗ trợ yêu cầu này an toàn."
+
+
+def _degraded_response(current_report_ref: str | None, message: str) -> OrchestratorResponse:
+    from src.orchestrator.agent import _intent_hint
+
+    actions: list[RetryAction | OpenReportAction] = [RetryAction(reason_code=ReasonCode.LLM_UNAVAILABLE)]
+    if current_report_ref:
+        actions.append(OpenReportAction(report_ref=current_report_ref))
+    return OrchestratorResponse(
+        intent=_intent_hint(message) or IntentEnum.UNSUPPORTED_OR_UNSAFE,
+        status=ResponseStatus.ERROR,
+        message=_DEGRADED_MESSAGE,
+        data_type=DataType.BLOCKED,
+        data=BlockedPayload(
+            safety_notice=_DEGRADED_MESSAGE,
+            disclaimer="Thông tin này chỉ mang tính giáo dục và không thay thế tư vấn y khoa.",
+            reason_code=ReasonCode.LLM_UNAVAILABLE,
+        ),
+        reason_code=ReasonCode.LLM_UNAVAILABLE,
+        suggested_actions=actions,
+        sources=[],
+        safety_notice=_DEGRADED_MESSAGE,
+    )
+
+
+def _ambiguous_analyte_response() -> OrchestratorResponse:
+    message = "Bạn đang hỏi về chỉ số nào? Vui lòng cho biết tên chỉ số, ví dụ WBC hoặc HbA1c."
+    return OrchestratorResponse(
+        intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
+        status=ResponseStatus.NEEDS_INPUT,
+        message=message,
+        data_type=DataType.NEEDS_INPUT,
+        data=NeedsInputPayload(prompt=message, missing_fields=["analyte"]),
+        reason_code=ReasonCode.AMBIGUOUS_CONTEXT,
+        sources=[],
+        safety_notice=None,
+    )
+
 
 def _is_unclear_input(message: str) -> bool:
-    from src.orchestrator.medical_context import (
+    from src.orchestrator.message_context import (
         _is_referential_analyte,
         _normalize_no_accents,
         extract_explicit_analyte,
@@ -185,54 +190,37 @@ def _is_unclear_input(message: str) -> bool:
     raw = message.strip()
     if not raw:
         return True
-
-    # 1. Any medical safety trigger (emergency, diagnosis, cause, treatment) is coherent
     if emergency_safety_gate(message) is not None or medical_safety_gate(message) is not None:
         return False
-
-    # 2. Any explicit analyte or lab value or OCR bypass is coherent
     if extract_explicit_analyte(message) is not None or contains_lab_value(message) or _is_ocr_bypass_request(message):
         return False
-
-    # 3. Explicit report ref or report date is coherent
     if extract_explicit_report_ref(message) is not None or extract_explicit_report_date(message) is not None:
         return False
 
-    norm_no_acc = _normalize_no_accents(message)
-
-    # 4. Referential terms ("chỉ số này", "nó") are coherent
-    if _is_referential_analyte(norm_no_acc):
+    normalized = _normalize_no_accents(message)
+    if _is_referential_analyte(normalized):
         return False
-
-    # 5. Pure punctuation / non-alphanumeric
     tokens = re.findall(r"[A-Za-zÀ-ỹ0-9]+", message)
-    if not tokens:
+    if not tokens or (all(token.isdigit() for token in tokens) and len(tokens) >= 2):
         return True
 
-    # 6. Check for pure numbers without context (e.g. "123 456")
-    if all(t.isdigit() for t in tokens) and len(tokens) >= 2:
-        return True
-
-    # 7. Check for repetitive nonsense tokens (e.g. "test test test", "blah blah", "bla bla bla")
-    lower_tokens = [t.lower() for t in tokens]
+    lower_tokens = [token.lower() for token in tokens]
     if len(lower_tokens) >= 2 and len(set(lower_tokens)) == 1:
         return True
-
-    # 8. Check for random consonant clusters / keyboard mash (e.g. "asdfgh", "xqz", "qwerty", "zxcv", "asdf")
     vowels = set("aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ")
-    for t in lower_tokens:
-        if not t.isdigit() and len(t) >= 3 and not any(ch in vowels for ch in t):
+    for token in lower_tokens:
+        if not token.isdigit() and len(token) >= 3 and not any(character in vowels for character in token):
             return True
-        if t in {"asdf", "asdfg", "asdfgh", "qwerty", "zxcv", "zxcvb", "qwer", "hjkl"}:
+        if token in {"asdf", "asdfg", "asdfgh", "qwerty", "zxcv", "zxcvb", "qwer", "hjkl"}:
             return True
-
-    # 9. Short nonsense tokens combination (e.g. "abc xyz", "123 abc")
     if len(lower_tokens) <= 2:
-        if all(t in {"abc", "xyz", "qwe", "asd", "zxc", "123", "456", "789", "bla", "blah", "test"} for t in lower_tokens):
+        if all(
+            token in {"abc", "xyz", "qwe", "asd", "zxc", "123", "456", "789", "bla", "blah", "test"}
+            for token in lower_tokens
+        ):
             return True
-        if norm_no_acc in {"o kia", "noi gi do", "abc xyz", "123 abc", "blah blah", "test test"}:
+        if normalized in {"o kia", "noi gi do", "abc xyz", "123 abc", "blah blah", "test test"}:
             return True
-
     return False
 
 
@@ -244,7 +232,7 @@ def _log_turn(
     request_id: str,
     session_id: str,
     role: str,
-    route: RouteDecision | None,
+    intent: IntentEnum | None,
     workflow_selected: str,
     failure_code: ReasonCode | None,
     started_at: float,
@@ -256,13 +244,15 @@ def _log_turn(
             "request_id": request_id,
             "session_id_hash": _session_hash(session_id),
             "role": role,
-            "intent": route.intent.value if route is not None else None,
-            "route_confidence": route.route_confidence if route is not None else None,
+            "intent": intent.value if intent is not None else None,
+            "route_confidence": 1.0 if intent is not None else None,
             "workflow_selected": workflow_selected,
             "workflow_outcome": "blocked" if failure_code else "completed",
             "failure_code": failure_code.value if failure_code is not None else None,
             "guardrail_triggered": guardrail_triggered,
-            "authorization_outcome":"denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
+            "authorization_outcome": "denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
+            "chat_engine": "agent",
+            "fallback_reason": "provider_failure" if failure_code == ReasonCode.LLM_UNAVAILABLE else None,
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
     )
@@ -277,17 +267,6 @@ async def handle_message(
     progress_callback: ProgressCallback | None = None,
     conversation: object | None = None,
 ) -> OrchestratorResponse:
-    """Xu ly mot luot, va neu co hoi thoai thi luu lai luot do.
-
-    `conversation` do ROUTE giai ra, khong phai o day: giai ra tu
-    `request.conversation_id` co the that bai vi khong dung chu so huu, va do la
-    404 -- mot quyet dinh thuoc tang HTTP. Service khong nen nem HTTPException.
-
-    `conversation is None` nghia la khach, hoac bac si, hoac mot lenh goi
-    truc tiep trong test. Luc do khong gan, khong ghi, va toan bo hanh vi cu
-    giu nguyen tung dong -- day la ly do lop bao nay mong nhu vay.
-    """
-
     if conversation is None:
         return await _handle_message_core(
             request,
@@ -297,16 +276,7 @@ async def handle_message(
             progress_callback=progress_callback,
         )
 
-    # Ghi cau hoi TRUOC khi xu ly. Neu lat sang sau, mot luot loi giua duong se
-    # lam mat han cau hoi cua benh nhan khoi transcript, va ho tai lai trang thi
-    # thay minh chua tung hoi gi. Thay cau hoi khong co tra loi thi con doc duoc.
-    _persist_message(
-        db,
-        conversation=conversation,
-        role=conversation_repository.ROLE_USER,
-        content=request.message,
-    )
-
+    _persist_message(db, conversation=conversation, role=conversation_repository.ROLE_USER, content=request.message)
     with bind_conversation(db, conversation):
         response = await _handle_message_core(
             request,
@@ -315,10 +285,6 @@ async def handle_message(
             runtime=runtime,
             progress_callback=progress_callback,
         )
-
-    # `response.message` la van ban DA qua guardrail -- dung thu benh nhan thay
-    # tren man hinh. Khong luu ban tien kiem duyet: doc lai lich su phai thay
-    # dung thu da hien, khong thay thu he thong da co y chan.
     _persist_message(
         db,
         conversation=conversation,
@@ -328,7 +294,6 @@ async def handle_message(
         reason_code=response.reason_code.value if response.reason_code else None,
         data_type=response.data_type.value,
     )
-
     return response
 
 
@@ -342,14 +307,6 @@ def _persist_message(
     reason_code: str | None = None,
     data_type: str | None = None,
 ) -> None:
-    """Ghi mot luot, va khong bao gio lam do luot dang phuc vu.
-
-    Nuot loi o BIEN chu khong chi trong repository: neu ghi that bai truoc khi
-    vao duoc block try cua repository (session dut, ai do doi ky hieu ham) thi
-    exception se bay len va bien mot cau tra loi dung thanh 500. Mat lich su la
-    thiet hai nho hon mat cau tra loi. Log lai de con lan ra duoc.
-    """
-
     try:
         conversation_repository.append_message(
             db,
@@ -364,12 +321,7 @@ def _persist_message(
         logger.warning("conversation_message_persist_failed", exc_info=True)
 
 
-def _immediately_previous_reason_code(
-    db: object,
-    current_user: object,
-) -> ReasonCode | None:
-    """Read the assistant turn directly preceding the current persisted user turn."""
-
+def _immediately_previous_reason_code(db: object, current_user: object) -> ReasonCode | None:
     binding = current_binding()
     patient_id = getattr(current_user, "user_id", None)
     if binding is None or not isinstance(patient_id, int):
@@ -378,18 +330,11 @@ def _immediately_previous_reason_code(
     conversation_id = getattr(conversation, "id", None)
     if not isinstance(conversation_id, int):
         return None
-    rows = conversation_repository.list_messages(
-        db,
-        conversation_id=conversation_id,
-        patient_id=patient_id,
-    )
+    rows = conversation_repository.list_messages(db, conversation_id=conversation_id, patient_id=patient_id)
     if not rows or len(rows) < 2:
         return None
     previous, current = rows[-2], rows[-1]
-    if (
-        previous.role != conversation_repository.ROLE_ASSISTANT
-        or current.role != conversation_repository.ROLE_USER
-    ):
+    if previous.role != conversation_repository.ROLE_ASSISTANT or current.role != conversation_repository.ROLE_USER:
         return None
     try:
         return ReasonCode(previous.reason_code) if previous.reason_code else None
@@ -407,470 +352,142 @@ async def _handle_message_core(
 ) -> OrchestratorResponse:
     runtime = runtime or OrchestratorRuntime()
     started_at = time.perf_counter()
-    # Dung request_id CUA REQUEST dang phuc vu, khong sinh id moi.
-    #
-    # Mot luot goi HTTP sinh ra hai dong log: `request_timing` tu middleware va
-    # `orchestrator_turn` tu day. Sinh uuid rieng o day nghia la hai dong mang
-    # hai id khac nhau va khong cach nao noi lai — dung thu ma ca lop trace ton
-    # tai de lam. Cung id do con di ra header X-Request-ID va vao bang
-    # request_traces, nen admin dan mot id la thay ca chuoi.
-    #
-    # Fallback ve uuid moi cho truong hop goi ngoai vong doi request (test goi
-    # thang `handle_message`), luc do khong co timing nao trong context.
     timing = get_current_timing()
     request_id = timing.request_id if timing is not None else uuid.uuid4().hex
     role = str(getattr(current_user, "role", ""))
 
     reason = role_admission_gate(current_user)
     if reason is not None:
-        return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vai trò này chưa được hỗ trợ trong Orchestrator V1.")
-
+        return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vai trò này chưa được hỗ trợ trong trợ lý.")
     try:
         session = runtime.session_store.get_or_create(current_user)
     except ValueError:
-        return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ.")
-
-    route: RouteDecision | None = None
-
-    # 0. Emergency / Urgent symptom safety gate (deterministic short-circuit)
-    emergency_reason = emergency_safety_gate(request.message)
-    if emergency_reason is not None:
-        route = RouteDecision(
-            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=emergency_reason,
-            route_confidence=1.0,
+        return _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ."
         )
-        response = _blocked_response(
-            route.intent,
-            route.reason_code,
-            _safety_refusal_message(route.reason_code),
-        )
+
+    def finish(
+        response: OrchestratorResponse,
+        *,
+        workflow: str = "",
+        intent: IntentEnum | None = None,
+    ) -> OrchestratorResponse:
         _log_turn(
             request_id=request_id,
             session_id=session.session_id,
             role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
+            intent=intent or response.intent,
+            workflow_selected=workflow,
+            failure_code=response.reason_code,
             started_at=started_at,
+            guardrail_triggered=response.reason_code == ReasonCode.GUARDRAIL_BLOCKED,
         )
         return response
+
+    emergency_reason = emergency_safety_gate(request.message)
+    if emergency_reason is not None:
+        return finish(
+            _blocked_response(
+                IntentEnum.UNSUPPORTED_OR_UNSAFE, emergency_reason, _safety_refusal_message(emergency_reason)
+            )
+        )
 
     reason = onboarding_gate(session)
     if reason is not None:
-        response = _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vui lòng xác nhận hướng dẫn sử dụng trước.")
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=reason,
-            started_at=started_at,
+        return finish(
+            _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vui lòng xác nhận hướng dẫn sử dụng trước.")
         )
-        return response
 
-    # 1. Medical safety gate
     safety_reason = medical_safety_gate(request.message)
     if safety_reason is not None:
-        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=safety_reason, route_confidence=1.0)
-        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
+        return finish(
+            _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, safety_reason, _safety_refusal_message(safety_reason))
         )
-        return response
 
-    # 2. Sensitive system / security gate
     from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+
     sensitive_reason = sensitive_system_gate(request.message)
     if sensitive_reason is not None:
-        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=sensitive_reason, route_confidence=1.0)
-        response = _blocked_response(route.intent, route.reason_code, SENSITIVE_SYSTEM_MESSAGE)
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
-        )
-        return response
+        return finish(_blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, sensitive_reason, SENSITIVE_SYSTEM_MESSAGE))
 
-    # 3. Unclear / gibberish input gate
-    active_pending = session.conversation_state.get_active_pending_question()
-    if not active_pending and _is_unclear_input(request.message):
-        route = RouteDecision(
-            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=ReasonCode.UNKNOWN_INTENT,
-            route_confidence=1.0,
+    if not session.conversation_state.get_active_pending_question() and _is_unclear_input(request.message):
+        return finish(
+            _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.UNKNOWN_INTENT, UNCLEAR_INPUT_MESSAGE)
         )
-        response = _blocked_response(
-            route.intent,
-            route.reason_code,
-            UNCLEAR_INPUT_MESSAGE,
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
-        )
-        return response
 
-    # 4. Out of scope gate (deterministic high-confidence)
+    from src.orchestrator.message_context import (
+        _is_referential_analyte,
+        _normalize_no_accents,
+        extract_explicit_analyte,
+    )
+
+    explicit_analyte = extract_explicit_analyte(request.message)
+    if (
+        explicit_analyte is None
+        and session.current_analyte is None
+        and _is_referential_analyte(_normalize_no_accents(request.message))
+    ):
+        return finish(_ambiguous_analyte_response(), workflow="clarify_analyte")
+
     out_of_scope_reason = out_of_scope_gate(request.message)
     if out_of_scope_reason is not None:
-        route = RouteDecision(
-            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            reason_code=out_of_scope_reason,
-            route_confidence=1.0,
-        )
-        response = _blocked_response(
-            route.intent,
-            route.reason_code,
-            OUT_OF_SCOPE_MESSAGE,
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
-        )
-        return response
+        return finish(_blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, out_of_scope_reason, OUT_OF_SCOPE_MESSAGE))
 
-    # 4b. CHAT-V1.5-R1-G4 layer 2: context-aware treatment follow-up
-    # elevation. An ambiguous short action follow-up is elevated to
-    # TREATMENT_REQUEST only when an authenticated active report/analyte
-    # context exists; without context this gate never fires. Context may
-    # elevate safety but never downgrade it.
     followup_reason = treatment_followup_gate(
         request.message,
         session,
         prior_reason_code=_immediately_previous_reason_code(db, current_user),
     )
     if followup_reason is not None:
-        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0)
-        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=followup_reason,
-            started_at=started_at,
+        return finish(
+            _blocked_response(
+                IntentEnum.UNSUPPORTED_OR_UNSAFE, followup_reason, _safety_refusal_message(followup_reason)
+            )
         )
-        return response
 
-    # 5. OCR bypass check
     if _is_ocr_bypass_request(request.message):
-        route = RouteDecision(intent=IntentEnum.ANALYZE_REPORT, reason_code=ReasonCode.OCR_REVIEW_REQUIRED, route_confidence=1.0)
-        response = _blocked_response(
-            route.intent,
-            route.reason_code,
-            "Bạn cần xác nhận OCR trước khi phân tích phiếu từ ảnh.",
+        return finish(
+            _blocked_response(
+                IntentEnum.ANALYZE_REPORT,
+                ReasonCode.OCR_REVIEW_REQUIRED,
+                "Bạn cần xác nhận OCR trước khi phân tích phiếu từ ảnh.",
+            )
         )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
-        )
-        return response
 
-    # VMEC-05 fast slice: deterministic input gates above retain precedence.
-    # Only authenticated patients enter the tool-calling graph; guests keep
-    # the established capability policy. Any V2 runtime failure falls through
-    # to the complete legacy path below.
-    from src.config import get_settings
-    from src.models.db import ROLE_PATIENT
-
-    if get_settings().agent_chat_v2 and role == ROLE_PATIENT:
-        await emit_progress(progress_callback, ProgressStage.ROUTING)
-        try:
-            from src.orchestrator.agent_v2 import run_agent_v2
-
-            agent_result = await run_agent_v2(
-                message=request.message,
-                current_user=current_user,
-                db=db,
-                current_report_ref=session.current_report_ref,
-                current_analyte=session.current_analyte,
-            )
-        except Exception:
-            logger.warning("Agent Chat V2 unavailable; falling back to legacy orchestrator", exc_info=True)
-        else:
-            from src.models.orchestrator_schemas import ConversationState
-
-            runtime.session_store.update_after_turn(
-                current_user,
-                session,
-                last_intent=agent_result.response.intent,
-                current_report_ref=agent_result.current_report_ref,
-                current_analyte=agent_result.current_analyte,
-                transient_ui_context=request.ui_context,
-                conversation_state=ConversationState(),
-            )
-            _log_turn(
-                request_id=request_id,
-                session_id=session.session_id,
-                role=role,
-                route=RouteDecision(intent=agent_result.response.intent, route_confidence=1.0),
-                workflow_selected=agent_result.workflow_selected,
-                failure_code=agent_result.response.reason_code,
-                started_at=started_at,
-                guardrail_triggered=(
-                    agent_result.response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
-                ),
-            )
-            return agent_result.response
-
-    # 6. Intent router
-    # 6a. CHAT-V1.5-R1-G1: constrained provenance follow-up mode.
-    # A bare stored-provenance question ("Thông tin này dựa trên đâu?") is
-    # routed deterministically to the canonical approved-source path BEFORE
-    # the LLM router, so it can neither be re-explained nor fall to generic
-    # SAFE_GENERAL, and composer availability cannot change the answer.
-    # All earlier gates (unclear, out-of-scope, treatment elevation, OCR)
-    # keep their precedence; this detection never overrides a safety route.
-    provenance_turn = is_provenance_request(request.message)
-
-    has_medical_context = (
-        session.current_report_ref is not None
-        or session.current_analyte is not None
-        or (role == ROLE_PATIENT)
-    )
     await emit_progress(progress_callback, ProgressStage.ROUTING)
-    if provenance_turn:
-        route = RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=1.0)
-    else:
-        route = await route_intent(request.message, session, role, has_medical_context=has_medical_context)
-    if route.reason_code == ReasonCode.UNKNOWN_INTENT:
-        response = _blocked_response(
-            IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            ReasonCode.UNKNOWN_INTENT,
-            UNCLEAR_INPUT_MESSAGE,
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=ReasonCode.UNKNOWN_INTENT,
-            started_at=started_at,
-        )
-        return response
-    if route.reason_code == ReasonCode.OUT_OF_SCOPE:
-        response = _blocked_response(
-            IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            ReasonCode.OUT_OF_SCOPE,
-            OUT_OF_SCOPE_MESSAGE,
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=ReasonCode.OUT_OF_SCOPE,
-            started_at=started_at,
-        )
-        return response
-    if route.reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
-        response = _blocked_response(
-            IntentEnum.UNSUPPORTED_OR_UNSAFE,
-            ReasonCode.SENSITIVE_SYSTEM_REQUEST,
-            SENSITIVE_SYSTEM_MESSAGE,
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=ReasonCode.SENSITIVE_SYSTEM_REQUEST,
-            started_at=started_at,
-        )
-        return response
+    response_style = str(
+        getattr(request.ui_context, "response_style", None)
+        or getattr(current_user, "response_style", None)
+        or getattr(session, "response_style", "simple")
+    ).casefold()
+    if response_style not in {"concise", "simple", "detailed"}:
+        response_style = "simple"
+    try:
+        from src.orchestrator.agent import run_agent
 
-    # 7. Medical context resolver (Autonomous context retrieval)
-    from src.orchestrator.medical_context import resolve_medical_context
-    await emit_progress(progress_callback, ProgressStage.MEDICAL_CONTEXT)
-    resolved = resolve_medical_context(
-        message=request.message,
-        session=session,
-        ui_context=request.ui_context,
-        current_user=current_user,
-        db=db,
-        intent=route.intent,
-    )
-    if resolved.reason_code == ReasonCode.AMBIGUOUS_CONTEXT:
-        response = _needs_input_response(
-            route.intent,
-            ReasonCode.AMBIGUOUS_CONTEXT,
-            "Bạn muốn nói đến chỉ số nào?",
-            ["current_analyte"],
+        agent_result = await run_agent(
+            message=request.message,
+            current_user=current_user,
+            db=db,
+            current_report_ref=session.current_report_ref,
+            current_analyte=explicit_analyte or session.current_analyte,
+            response_style=response_style,
         )
-        from src.models.orchestrator_schemas import ConversationState
-        runtime.session_store.update_after_turn(
-            current_user,
-            session,
-            last_intent=route.intent,
-            current_report_ref=resolved.current_report_ref,
-            conversation_state=ConversationState(
-                pending_question=response.message,
-                pending_question_timestamp=time.time(),
-            ),
-        )
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=ReasonCode.AMBIGUOUS_CONTEXT,
-            started_at=started_at,
-        )
-        return response
-    if resolved.forced_intent:
-        route = RouteDecision(intent=resolved.forced_intent, route_confidence=1.0)
-
-    if route.reason_code in {
-        ReasonCode.MEDICAL_DIAGNOSIS_REQUEST,
-        ReasonCode.MEDICAL_CAUSE_REQUEST,
-        ReasonCode.TREATMENT_REQUEST,
-    }:
-        response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=route.reason_code,
-            started_at=started_at,
-        )
-        return response
-
-    reason = policy_gate(role, route.intent)
-    if reason is not None:
-        response = _blocked_response(route.intent, reason, "Chức năng này chưa được hỗ trợ cho phiên hiện tại.")
-        _log_turn(
-            request_id=request_id,
-            session_id=session.session_id,
-            role=role,
-            route=route,
-            workflow_selected="",
-            failure_code=reason,
-            started_at=started_at,
-        )
-        return response
-
-    dispatch_context = DispatchContext(
-        current_user=current_user,
-        db=db,
-        current_report_ref=resolved.current_report_ref,
-        current_analyte=resolved.current_analyte,
-        progress_callback=progress_callback,
-        # Carried for: (a) CHAT-V1.5-R1-G1 provenance follow-up named-source
-        # verification, and (b) APP_HELP retrieval, which embeds the raw
-        # question against the App Help corpus.
-        message=request.message,
-    )
-    if provenance_turn:
-        result = await dispatch_provenance_followup(dispatch_context)
-    else:
-        result = await dispatch_workflow(route.intent, dispatch_context)
-    next_report_ref, next_analyte = _context_after_workflow(
-        result=result,
-        current_report_ref=resolved.current_report_ref,
-        current_analyte=resolved.current_analyte,
-    )
-    if provenance_turn and result.status == ResponseStatus.SUCCESS:
-        # CHAT-V1.5-R1-G1: the provenance-specific deterministic builder only
-        # accepts a successful provenance payload. Any non-success dispatch
-        # outcome (ownership BLOCKED, DB unavailable, ...) flows through the
-        # existing generic composition path instead, so unauthorized or stale
-        # report references fail closed without a runtime error.
-        # HOTFIX-001.
-        await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
-        final_response = build_provenance_response(result.data)
-    else:
-        # Resolve effective response style: per-message override takes precedence over persisted user style
-        effective_style = "simple"
-        if request.ui_context and getattr(request.ui_context, "response_style", None):
-            style_val = str(request.ui_context.response_style).casefold()
-            if style_val in {"concise", "simple", "detailed"}:
-                effective_style = style_val
-        elif getattr(current_user, "response_style", None):
-            style_val = str(current_user.response_style).casefold()
-            if style_val in {"concise", "simple", "detailed"}:
-                effective_style = style_val
-        elif getattr(session, "response_style", None):
-            style_val = str(session.response_style).casefold()
-            if style_val in {"concise", "simple", "detailed"}:
-                effective_style = style_val
-
-        final_response = await _response_from_workflow(
-            route.intent,
-            result,
-            progress_callback=progress_callback,
-            response_style=effective_style,
-            user_message=request.message,
-        )
-
-    # Save conversation state with active timestamp
-    from src.models.orchestrator_schemas import ConversationState
-    new_state = ConversationState(
-        pending_question=final_response.message if final_response.status == ResponseStatus.NEEDS_INPUT else None,
-        pending_question_timestamp=time.time() if final_response.status == ResponseStatus.NEEDS_INPUT else None,
-    )
-
-    clear_analyte = (
-        result.status == ResponseStatus.SUCCESS
-        and result.workflow_selected == "get_my_report_summary"
-    )
+    except Exception:
+        logger.warning("Canonical Agent unavailable; returning deterministic degraded response", exc_info=True)
+        return finish(_degraded_response(session.current_report_ref, request.message), workflow="provider_degraded")
 
     runtime.session_store.update_after_turn(
         current_user,
         session,
-        last_intent=route.intent,
-        current_report_ref=next_report_ref,
-        current_analyte=next_analyte,
+        last_intent=agent_result.response.intent,
+        current_report_ref=agent_result.current_report_ref,
+        current_analyte=agent_result.current_analyte,
         transient_ui_context=request.ui_context,
-        conversation_state=new_state,
-        clear_analyte=clear_analyte,
+        conversation_state=ConversationState(),
     )
-    _log_turn(
-        request_id=request_id,
-        session_id=session.session_id,
-        role=role,
-        route=route,
-        workflow_selected=result.workflow_selected,
-        failure_code=result.reason_code,
-        started_at=started_at,
-        guardrail_triggered=(
-            final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
-        ),
-    )
-    return final_response
+    await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
+    return finish(agent_result.response, workflow=agent_result.workflow_selected)
 
 
 def acknowledge_onboarding(
@@ -880,16 +497,6 @@ def acknowledge_onboarding(
     db: object | None = None,
     conversation: object | None = None,
 ) -> OrchestratorResponse:
-    """Ghi nhan da doc huong dan.
-
-    `conversation` la BAT BUOC voi benh nhan, du chu ky cho phep None.
-
-    Ly do: context giờ gan theo hoi thoai. Khong gan o day thi xac nhan roi vao
-    ban ghi in-memory khoa theo `patient:{uid}`, con luot chat sau doc hang
-    `conv:{id}` -- va benh nhan ket o man onboarding vinh vien, dung mot buoc
-    sau khi vua bam "Toi da hieu". Bo test tip006 bat dung loi nay.
-    """
-
     runtime = runtime or OrchestratorRuntime()
     if conversation is None:
         runtime.session_store.acknowledge_onboarding(current_user)
@@ -906,3 +513,10 @@ def acknowledge_onboarding(
         sources=[],
         safety_notice=None,
     )
+
+
+__all__ = [
+    "OrchestratorRuntime",
+    "acknowledge_onboarding",
+    "handle_message",
+]
