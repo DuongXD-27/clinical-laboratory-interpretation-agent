@@ -258,13 +258,10 @@ async def test_e2e_contextual_followup_blocked_with_wbc_context(active_wbc_setup
 
 @pytest.mark.asyncio
 async def test_e2e_bare_followup_without_context_not_treatment(no_context_setup, monkeypatch) -> None:
-    from src.orchestrator import intent_router
+    async def unavailable_agent(**_kwargs):
+        raise RuntimeError("provider unavailable in deterministic gate test")
 
-    class _FakeLLM:
-        async def ainvoke(self, prompt):
-            return SimpleNamespace(content="SAFE_GENERAL")
-
-    monkeypatch.setattr(intent_router, "get_llm", lambda: _FakeLLM())
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", unavailable_agent)
     user, runtime, db, store = no_context_setup
     res = await handle_message(
         OrchestratorRequest(

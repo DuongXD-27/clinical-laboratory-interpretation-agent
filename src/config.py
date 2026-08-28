@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, ge=1, le=65535)
     app_host: str = "0.0.0.0"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://127.0.0.1:3000"
 
     # LLM
     llm_provider: Literal["openai", "gemini"] = "openai"
@@ -32,8 +32,6 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=20.0, ge=1.0, le=120.0)
     # VMEC-05: opt-in chat vertical slice. The canonical orchestrator remains
     # the fallback whenever this is disabled or the V2 runtime is unavailable.
-    agent_chat_v2: bool = Field(default=False, alias="AGENT_CHAT_V2")
-
     # Vision LLM Adapter (OCR — ADR-006)
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
     gemini_vision_model: str = "gemini-3.5-flash-lite"

@@ -1,4 +1,4 @@
-# VMEC-05 Orchestrator V1 — Final Verify Evidence
+# VMEC-05 Orchestrator V1 — Final Verify Evidence (Historical Archive)
 
 Date: 2026-08-20
 

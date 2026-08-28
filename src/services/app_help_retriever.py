@@ -61,8 +61,7 @@ def _normalize(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", without_accents))
 
 
-# Deterministic feature hints for the intent_router's known explicit
-# app-help phrases (see app_help_explicit_patterns in intent_router.py).
+# Deterministic feature hints for common explicit app-help phrases.
 # Pure dense search alone measurably confuses closely-related sections
 # across features here — e.g. "tôi tải phiếu xét nghiệm ở đâu?" scored
 # history.md's generic "feature này dùng để làm gì?" section (0.7639)

@@ -3,6 +3,14 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.api import routes
+from src.main import app
+
+
+def test_real_application_mounts_critical_orchestrator_routes():
+    paths = app.openapi()["paths"]
+    assert "post" in paths["/api/v1/orchestrator/message"]
+    assert "post" in paths["/api/v1/orchestrator/onboarding/acknowledge"]
+    assert "get" in paths["/api/v1/conversations"]
 
 
 def graph_result(**overrides):

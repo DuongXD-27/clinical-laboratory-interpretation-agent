@@ -15,18 +15,17 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 - **LLM Analyzer**: Diễn giải ý nghĩa chỉ số bằng ngôn ngữ phổ thông, gần gũi với người bệnh.
 - **Medical Guardrail**: Chặn triệt để mọi hành vi chẩn đoán bệnh, suy đoán nguyên nhân cá nhân hóa hoặc chỉ định điều trị.
 - **Doctor Questions Generator**: Gợi ý các câu hỏi trọng tâm để bệnh nhân chủ động trao đổi với bác sĩ trong lần khám tiếp theo.
-- **Patient/Guest Conversational Assistant**: Trợ lý nổi trong giao diện bệnh nhân/khách để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa; Agent V2 là nhánh rollout opt-in với canonical fallback.
+- **Patient/Guest Conversational Assistant**: Trợ lý nổi trong giao diện bệnh nhân/khách dùng một canonical LangGraph Agent để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa.
 
 ### Canonical orchestrator scope
 
 - **Roles hỗ trợ trên Assistant**: `guest`, `patient`.
-- **Doctor conversational support**: deferred to V2; doctor-facing routes hiện có vẫn hoạt động riêng.
+- **Doctor conversational support**: chưa nằm trong Assistant; doctor-facing routes hiện có vẫn hoạt động riêng.
 - **Six intents**: `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
 - **Seven SuggestedActions**: `OPEN_REPORT`, `VIEW_ABNORMAL`, `VIEW_HISTORY`, `VIEW_TREND`, `VIEW_DOCTOR_QUESTIONS`, `CONFIRM_OCR`, `RETRY`.
 - **Onboarding bắt buộc**: Assistant chặn trước router/workflow cho tới khi người dùng xác nhận phạm vi sử dụng.
 - **OCR HITL**: dữ liệu OCR chỉ đi vào phân tích qua `/api/v1/ocr/confirm`; Assistant chỉ đọc trạng thái pending và không sao chép OCR draft thành input y khoa.
 - **History/Trend authorization**: patient chỉ truy cập dữ liệu của chính mình; guest bị chặn với `UNSUPPORTED_CAPABILITY`.
-- **Tài liệu verify cuối**: [Orchestrator V1 Final Verify Evidence](docs/orchestrator-v1-final-verify.md).
 
 ---
 
@@ -84,13 +83,13 @@ Orchestrator API (/api/v1/orchestrator/message)
 Role / Onboarding / OCR / Policy Gates
        │
        ▼
-Intent Router -> Medical Context (`medical_context.py`) -> Workflow Dispatcher
+Canonical Agent -> approved patient-scoped tools
        │
        ▼
 Approved wrappers/services
        │
        ▼
-Response Composer -> Medical Safety Validation -> Schema Validation
+Medical Response Guardrail -> Schema Validation
        │
        ▼
 SuggestedAction Validation -> Frontend Assistant
@@ -163,9 +162,9 @@ Mở file `.env` và điền API key cần thiết (xem chi tiết tại mục [
 
 ### Bước 3: Khởi chạy Backend API
 ```powershell
-uvicorn src.main:app --reload --port 8000
+python scripts/dev_backend.py
 ```
-API sẽ hoạt động tại: `http://localhost:8000` (Swagger UI: `http://localhost:8000/docs`).
+API sẽ hoạt động duy nhất tại `http://127.0.0.1:8000` (Swagger UI: `http://127.0.0.1:8000/docs`). Script sẽ dừng với thông báo rõ ràng nếu cổng 8000 đang do Docker/WSL hoặc tiến trình khác chiếm giữ.
 
 ---
 
@@ -181,7 +180,7 @@ npm install
 ```powershell
 npm run dev
 ```
-Giao diện người dùng sẽ chạy tại: `http://localhost:3000`.
+Giao diện người dùng sẽ chạy tại: `http://127.0.0.1:3000`.
 
 ---
 
@@ -196,8 +195,8 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `JWT_SECRET` | REQUIRED (Production) | Khóa ký phiên đăng nhập JWT | `dev-only-insecure-secret-change-me` |
 | `APP_ENV` | DEFAULTED | Môi trường ứng dụng (`development`, `production`, `test`) | `development` |
 | `APP_PORT` | DEFAULTED | Cổng mạng backend lắng nghe | `8000` |
-| `APP_HOST` | DEFAULTED | Địa chỉ host backend bind | `0.0.0.0` |
-| `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://localhost:3000,http://localhost:5173` |
+| `APP_HOST` | DEFAULTED | Địa chỉ host backend bind | `127.0.0.1` |
+| `CORS_ORIGINS` | DEFAULTED | Danh sách domain được phép gọi API (phân cách bằng dấu phẩy) | `http://127.0.0.1:3000` |
 | `DATABASE_URL` | DEFAULTED | Chuỗi kết nối CSDL SQLite hoặc PostgreSQL | `sqlite:///./data/app.db` |
 | `RAG_ENABLED` | DEFAULTED | Bật/tắt tra cứu vector động qua ChromaDB | `false` |
 | `RAG_COLLECTION_NAME` | DEFAULTED | Tên collection ChromaDB | `medical_kb_v4` |
@@ -213,14 +212,7 @@ Bảng cấu hình các biến môi trường trong file `.env`:
 | `OCR_UPLOAD_MODE` | DEFAULTED | Chế độ nhận ảnh OCR (`demo_only`, `open_with_consent`, `internal_only`) | `demo_only` |
 | `OCR_SAMPLES_DIR` | DEFAULTED | Thư mục chứa ảnh mẫu hợp lệ cho chế độ demo | `./data/ocr_samples` |
 | `LANGCHAIN_API_KEY` | OPTIONAL | Khóa API LangSmith ghi nhận AI Trace | `lsv2_pt_...` |
-| `AGENT_CHAT_V2` | DEFAULTED | Bật LangGraph Agentic RAG chat cho bệnh nhân (opt-in) | `false` |
-| `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://localhost:8000` |
-
-> [!IMPORTANT]
-> **Cơ chế Rollout Agent V2**:
-> - Khi `AGENT_CHAT_V2=false` (mặc định): Trợ lý sử dụng Canonical Orchestrator tất định.
-> - Khi `AGENT_CHAT_V2=true`: Bệnh nhân đăng nhập sử dụng LangGraph Agent V2 runtime với khả năng gọi tool tự động; khách và các tình huống lỗi runtime tự động fallback an toàn về Canonical Orchestrator.
-> - Để bật trên môi trường phát triển: thêm `AGENT_CHAT_V2=true` vào `.env` (hoặc PowerShell `$env:AGENT_CHAT_V2="true"`) và **khởi động lại backend**. Log khởi động sẽ hiển thị `"agent_chat_v2_enabled": true`.
+| `NEXT_PUBLIC_API_URL` | FRONTEND | URL backend dùng trong `frontend/.env.local` | `http://127.0.0.1:8000` |
 
 > [!IMPORTANT]
 > **Cơ chế RAG Fallback**:
@@ -252,11 +244,11 @@ Quy trình xử lý:
 
 | Dịch vụ | URL | Ghi chú |
 |---|---|---|
-| **Frontend Web** | `http://localhost:3000` | Giao diện Next.js cho người dùng |
-| **Backend API** | `http://localhost:8000` | FastAPI service |
-| **Swagger UI Docs** | `http://localhost:8000/docs` | Tài liệu API tương tác |
-| **Readiness Check** | `http://localhost:8000/ready` | Báo cáo chi tiết trạng thái API và RAG |
-| **Health Check** | `http://localhost:8000/health` | Kiểm tra kết nối cơ bản |
+| **Frontend Web** | `http://127.0.0.1:3000` | Giao diện Next.js cho người dùng |
+| **Backend API** | `http://127.0.0.1:8000` | FastAPI service |
+| **Swagger UI Docs** | `http://127.0.0.1:8000/docs` | Tài liệu API tương tác |
+| **Readiness Check** | `http://127.0.0.1:8000/ready` | Báo cáo chi tiết trạng thái API và RAG |
+| **Health Check** | `http://127.0.0.1:8000/health` | Kiểm tra kết nối cơ bản |
 
 **Tài khoản đăng nhập có sẵn (Demo seed tự động):**
 - **Bệnh nhân**: Tên đăng nhập `benhnhan` / Mật khẩu `benhnhan123`
@@ -332,7 +324,7 @@ Dưới đây là các truy vấn mẫu gửi đến endpoint `POST /api/v1/anal
 ### Ví dụ gọi API qua PowerShell
 ```powershell
 # 1. Lấy token phiên khách
-$guest = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/auth/guest" -Method Post
+$guest = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/auth/guest" -Method Post
 $token = $guest.access_token
 
 # 2. Gửi request phân tích
@@ -355,7 +347,7 @@ $headers = @{
     "Content-Type" = "application/json"
 }
 
-Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Headers $headers -Body $body
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/analyze" -Method Post -Headers $headers -Body $body
 ```
 
 ---

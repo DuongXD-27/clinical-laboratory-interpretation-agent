@@ -171,7 +171,7 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
     monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
     monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
     headers = await _auth_headers(client)
-    headers["Origin"] = "http://localhost:3000"
+    headers["Origin"] = "http://127.0.0.1:3000"
     response = await client.post(
         "/api/v1/ocr/upload",
         headers=headers,
@@ -181,7 +181,7 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
 
     assert response.status_code == 503
     assert "GOOGLE_API_KEY" in response.json()["detail"]
-    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3000"
     assert response.headers["X-OCR-Error-Code"] == "PROVIDER_UNAVAILABLE"
     exposed = {value.strip().casefold() for value in response.headers["access-control-expose-headers"].split(",")}
     assert "x-ocr-error-code" in exposed

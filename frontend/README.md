@@ -5,8 +5,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 Tạo file `.env.local` trong thư mục `frontend/` (không commit, đã bị `.gitignore` chặn):
 
 ```bash
-# Local dev — có thể bỏ qua, code tự fallback về http://localhost:8000
-NEXT_PUBLIC_API_URL=http://localhost:8000
+# Local dev — optional because code defaults to this exact IPv4 URL
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
 # Production (Vercel) — trỏ về đúng URL backend đã deploy trên Render
 # NEXT_PUBLIC_API_URL=https://vmec-05-api.onrender.com
@@ -14,7 +14,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## Getting Started
 
-First, run the development server:
+First, run the development server (bound explicitly to `127.0.0.1`):
 
 ```bash
 npm run dev
@@ -26,7 +26,7 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

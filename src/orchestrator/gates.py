@@ -5,7 +5,9 @@ import unicodedata
 
 from src.models.db import ROLE_DOCTOR, ROLE_PATIENT
 from src.models.orchestrator_schemas import IntentEnum, OrchestratorSessionContext, ReasonCode
+from src.orchestrator.message_context import extract_explicit_analyte
 from src.services.auth import ROLE_GUEST
+from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
 
 def onboarding_gate(context: OrchestratorSessionContext) -> ReasonCode | None:
@@ -34,6 +36,20 @@ def _normalize(text: str) -> str:
     without_accents = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     without_accents = without_accents.replace("đ", "d")
     return " ".join(re.findall(r"[a-z0-9]+", without_accents))
+
+
+def contains_lab_value(message: str) -> bool:
+    """Detect an explicit analyte measurement without routing the conversation."""
+
+    normalized = _normalize(message)
+    has_number = re.search(r"(?<!\w)[+-]?\d+(?:[.,]\d+)?(?!\w)", message) is not None
+    analyte = extract_explicit_analyte(message) or extract_explicit_analyte(normalized)
+    try:
+        has_analyte = analyte in ReferenceRepository.from_default_files().approved_analytes
+    except ReferenceRepositoryError:
+        has_analyte = False
+    has_unit = any(term in normalized for term in ("mmol", "mg", "dl", "g l", "u l", "10 9"))
+    return has_number and (has_analyte or has_unit)
 
 
 def _contains_phrase_norm(normalized_text: str, phrase_norm: str) -> bool:
@@ -95,7 +111,7 @@ def _matches_personal_diagnosis_form(normalized: str) -> bool:
     match = _REFERENTIAL_DIAGNOSIS_LABEL.search(normalized)
     if match is None:
         return False
-    from src.orchestrator.medical_context import extract_explicit_analyte
+    from src.orchestrator.message_context import extract_explicit_analyte
 
     np_norm = match.group(1).strip()
     if not np_norm or extract_explicit_analyte(np_norm) is not None:
@@ -177,7 +193,7 @@ _BLOCKED_TREATMENT_FOLLOWUPS = (
 
 def _has_treatment_medical_anchor(normalized: str, original_lower: str) -> bool:
     """The message itself references an analyte/result/index or medication."""
-    from src.orchestrator.medical_context import extract_explicit_analyte
+    from src.orchestrator.message_context import extract_explicit_analyte
 
     if extract_explicit_analyte(original_lower) is not None:
         return True
@@ -384,7 +400,7 @@ def _matches_personal_medical_advice_form(normalized: str, original_lower: str) 
     has_food_item = any(_contains_phrase_norm(normalized, item) for item in _DIET_FOOD_ITEMS)
     has_health_goal = any(_contains_phrase_norm(normalized, goal) for goal in _HEALTH_TARGET_GOALS)
 
-    from src.orchestrator.medical_context import extract_explicit_analyte
+    from src.orchestrator.message_context import extract_explicit_analyte
 
     has_explicit_analyte = extract_explicit_analyte(original_lower) is not None
 
@@ -700,9 +716,6 @@ def sensitive_system_gate(message: str) -> ReasonCode | None:
 
 def out_of_scope_gate(message: str) -> ReasonCode | None:
     """Detect clear out-of-scope requests (coding, math, translation, trivia, general writing)."""
-    from src.orchestrator.intent_router import contains_lab_value
-    from src.orchestrator.medical_context import extract_explicit_analyte
-
     # Positive controls: explicit analyte or lab values are medical
     if extract_explicit_analyte(message) is not None or contains_lab_value(message):
         return None
@@ -1111,7 +1124,7 @@ def _is_educational_or_non_personal(normalized: str, raw_message: str) -> bool:
         return True
 
     # 3. Lab analyte theoretical correlation: "HGB thấp có liên quan tới khó thở không?"
-    from src.orchestrator.medical_context import extract_explicit_analyte
+    from src.orchestrator.message_context import extract_explicit_analyte
 
     has_analyte = extract_explicit_analyte(raw_message) is not None or any(
         term in normalized

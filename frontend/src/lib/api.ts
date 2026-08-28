@@ -36,7 +36,7 @@ import type {
 } from "@/types/orchestrator";
 import { consumeSseStream } from "@/lib/orchestratorChat.mjs";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // "admin" la role thu tu. Thieu no o day thi saveSession() ep kieu sai va
 // dieu huong sau dang nhap khong tim thay nhanh nao khop.

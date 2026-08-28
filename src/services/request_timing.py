@@ -131,7 +131,7 @@ class RequestTiming:
 
         Truoc day ham nay dem event `llm-explanation-call`, ma **chi
         `analyzer_node` phat ra**. Co BAY cho goi `get_llm()`: analyzer,
-        guardrail, intent_router, response_composer, agent_v2 (nguoi khac them o
+        guardrail, canonical Agent, and other LLM-backed services (nguoi khac them o
         PR #92) va hai service xu huong. Nen `llm_call_count` DEM THIEU sau
         trong bay cho, va `llm_error_count`
         — field ma ca lop quan sat ton tai vi no — sai theo dung cach do.

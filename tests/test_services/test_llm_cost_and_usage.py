@@ -295,7 +295,7 @@ def test_cost_per_call_divides_by_llm_calls_not_requests():
 def test_callback_survives_bind_tools_so_agent_calls_are_counted():
     """`bind_tools` không được làm mất callback đếm.
 
-    `orchestrator/agent_v2.py` do người khác thêm ở PR #92 dùng
+    Canonical `orchestrator/agent.py` dùng
     `get_llm().bind_tools(tools)` — chỗ gọi LLM thứ BẢY. Nó được đếm mà không ai
     phải sửa gì, và đó chính là lý do việc đếm nằm ở `get_llm()` chứ không rải
     theo node: đếm theo node thì hôm nay đã lại thiếu một chỗ.

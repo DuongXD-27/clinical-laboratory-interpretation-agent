@@ -1,7 +1,7 @@
 .PHONY: run lint format format-check test frontend-lint frontend-test frontend-build verify
 
 run:
-	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	python scripts/dev_backend.py
 
 test:
 	python -m pytest -v --basetemp scratch/pytest-make

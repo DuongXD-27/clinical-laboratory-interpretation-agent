@@ -284,7 +284,7 @@ def get_report_questions(
     analyte: str | None = None,
     current_analyte: str | None = None,
 ) -> DoctorQuestionsPayload:
-    # `analyte` là tên kwarg gốc (dispatcher vẫn gọi vậy); `current_analyte`
+    # `analyte` is the public wrapper argument; `current_analyte`
     # là tên mà conversation-persistence range chuẩn hoá theo DispatchContext.
     # Cả hai đều được nhận, current_analyte ưu tiên khi cùng lúc.
     requested_analyte = current_analyte if current_analyte is not None else analyte

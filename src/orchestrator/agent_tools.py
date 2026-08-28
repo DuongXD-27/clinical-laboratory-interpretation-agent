@@ -1,4 +1,4 @@
-"""Authoritative, patient-scoped tools exposed to Agent Chat V2.
+"""Authoritative, patient-scoped tools exposed to the canonical chat Agent.
 
 The model never receives a patient id and none of these tools accept one.
 Ownership, medical classification, reference ranges, critical status, unit
@@ -24,6 +24,7 @@ from src.orchestrator.wrappers import (
     get_my_history,
     get_my_indicator_trend,
     get_my_report,
+    get_report_questions,
 )
 from src.services import trend_service
 from src.services.analyte_resolver import canonical_analyte_id
@@ -129,6 +130,12 @@ class _HelpInput(BaseModel):
     query: str = Field(min_length=1, max_length=500)
 
 
+class _DoctorQuestionsInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    report_ref: str | None = None
+    analyte: str | None = None
+
+
 @dataclass
 class AgentToolbox:
     current_user: object
@@ -156,6 +163,23 @@ class AgentToolbox:
             "result_count": len(indicators),
             "has_abnormal": any(bool(getattr(item, "is_abnormal", False)) for item in indicators),
             "has_critical": bool(report.has_critical_values),
+            "indicators": [_jsonable(indicator) for indicator in indicators],
+            "_ui_analysis_payload": report.model_dump(mode="json"),
+        }
+
+    def get_doctor_questions(self, report_ref: str | None = None, analyte: str | None = None) -> dict[str, Any]:
+        selected_ref = self._report_ref(report_ref)
+        payload = get_report_questions(
+            self.current_user,
+            self.db,
+            report_ref=selected_ref,
+            current_analyte=analyte or self.current_analyte,
+        )
+        return {
+            "report_ref": selected_ref,
+            "question_count": len(payload.questions),
+            "questions": [question.model_dump(mode="json") for question in payload.questions],
+            "_ui_doctor_questions_payload": payload.model_dump(mode="json"),
         }
 
     def get_indicator(self, analyte: str, report_ref: str | None = None) -> dict[str, Any]:
@@ -245,7 +269,7 @@ class AgentToolbox:
             # primitives. This preserves its stored assessments, unit-quality
             # checks, gap policy and direction semantics; the LLM performs no
             # trend calculation. The public service currently exposes only
-            # latest5/three_months, so the V2-only windows are projected here.
+            # latest5/three_months, so the Agent windows are projected here.
             _, patient_id = _require_patient(self.current_user)
             rows = trend_service._query_candidate_rows(self.db, patient_id=patient_id)
             points = trend_service._build_points(rows, analyte_canonical=resolved)
@@ -323,7 +347,7 @@ class AgentToolbox:
         analyte: str | None = None,
         status: str | None = None,
     ) -> dict[str, Any]:
-        from src.orchestrator.medical_context import extract_explicit_analyte
+        from src.orchestrator.message_context import extract_explicit_analyte
 
         resolved = _resolved_analyte(analyte or self.current_analyte or extract_explicit_analyte(query))
         if not resolved:
@@ -408,6 +432,11 @@ class AgentToolbox:
             """Search approved VMEC product help content for navigation and usage questions."""
             return toolbox.search_app_help(query)
 
+        @tool(args_schema=_DoctorQuestionsInput)
+        def get_doctor_questions(report_ref: str | None = None, analyte: str | None = None) -> dict[str, Any]:
+            """Get approved questions for the authenticated patient to discuss with their doctor."""
+            return toolbox.get_doctor_questions(report_ref, analyte)
+
         return [
             get_current_report,
             get_indicator,
@@ -415,6 +444,7 @@ class AgentToolbox:
             get_indicator_trend,
             retrieve_medical_evidence,
             search_app_help,
+            get_doctor_questions,
         ]
 
 

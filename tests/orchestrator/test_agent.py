@@ -6,7 +6,6 @@ from types import SimpleNamespace
 import pytest
 from langchain_core.messages import AIMessage
 
-from src.config import get_settings
 from src.models.db import LabReport, ReportIndicator, User
 from src.models.orchestrator_schemas import (
     DataType,
@@ -17,12 +16,12 @@ from src.models.orchestrator_schemas import (
     ReasonCode,
     ResponseStatus,
 )
-from src.orchestrator.agent_tools import AgentToolbox
-from src.orchestrator.agent_v2 import (
-    AgentV2Result,
-    run_agent_v2,
+from src.orchestrator.agent import (
+    AgentResult,
+    run_agent,
     validate_or_sanitize_patient_reassurance,
 )
+from src.orchestrator.agent_tools import AgentToolbox
 from src.orchestrator.errors import OrchestratorWrapperError
 from src.orchestrator.gates import medical_safety_gate, treatment_followup_gate
 from src.orchestrator.service import OrchestratorRuntime, handle_message
@@ -35,13 +34,15 @@ class ScriptedToolCallingLlm:
         self.responses = list(responses)
         self.bound_tool_names = []
         self.tool_schemas = {}
+        self.received_messages = []
 
     def bind_tools(self, tools):
         self.bound_tool_names = [item.name for item in tools]
         self.tool_schemas = {item.name: item.args_schema.model_json_schema() for item in tools}
         return self
 
-    async def ainvoke(self, _messages):
+    async def ainvoke(self, messages):
+        self.received_messages.append(messages)
         return self.responses.pop(0)
 
 
@@ -109,6 +110,8 @@ def test_history_tool_returns_actual_previous_measurement(test_db):
             "result_count",
             "has_abnormal",
             "has_critical",
+            "indicators",
+            "_ui_analysis_payload",
         }
     finally:
         db.close()
@@ -198,9 +201,9 @@ async def test_agent_calls_indicator_and_medical_kb_for_explanation(monkeypatch)
             ),
         ]
     )
-    monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
 
-    result = await run_agent_v2(
+    result = await run_agent(
         message="Giải thích WBC của tôi",
         current_user=actor,
         db=object(),
@@ -246,9 +249,9 @@ async def test_agent_followup_uses_previous_wbc_value(monkeypatch):
             AIMessage(content="Lần trước, WBC được ghi nhận là 11.0 10^9/L vào ngày 01/07/2026."),
         ]
     )
-    monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
 
-    result = await run_agent_v2(
+    result = await run_agent(
         message="So với lần trước thì sao?",
         current_user=actor,
         db=object(),
@@ -283,9 +286,9 @@ async def test_agent_fails_closed_without_approved_evidence(monkeypatch):
             AIMessage(content="Nội dung không có căn cứ và không được phép hiển thị."),
         ]
     )
-    monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
 
-    result = await run_agent_v2(
+    result = await run_agent(
         message="WBC cao nói chung có ý nghĩa gì?",
         current_user=actor,
         db=object(),
@@ -298,41 +301,37 @@ async def test_agent_fails_closed_without_approved_evidence(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_feature_flag_delegates_existing_endpoint_service(monkeypatch):
+async def test_canonical_endpoint_service_delegates_to_agent(monkeypatch):
     actor = SimpleNamespace(role="patient", user_id=7, username="patient")
     default_session_store.acknowledge_onboarding(actor)
-    monkeypatch.setenv("AGENT_CHAT_V2", "true")
-    get_settings.cache_clear()
     response = OrchestratorResponse(
         intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
         status=ResponseStatus.SUCCESS,
-        message="Phản hồi từ Agent V2.",
+        message="Phản hồi từ Agent.",
         data_type=DataType.EXPLANATION,
-        data=ExplanationDataPayload(explanation="Phản hồi từ Agent V2."),
+        data=ExplanationDataPayload(explanation="Phản hồi từ Agent."),
     )
 
     async def fake_agent(**_kwargs):
-        return AgentV2Result(response, "21", "WBC", "get_indicator")
+        return AgentResult(response, "21", "WBC", "get_indicator")
 
-    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", fake_agent)
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", fake_agent)
 
     result = await handle_message(OrchestratorRequest(message="Giải thích WBC"), current_user=actor, db=object())
 
-    assert result.message == "Phản hồi từ Agent V2."
+    assert result.message == "Phản hồi từ Agent."
     assert default_session_store.get_or_create(actor).current_analyte == "WBC"
 
 
 @pytest.mark.asyncio
-async def test_treatment_safety_blocks_before_agent_v2(monkeypatch):
+async def test_treatment_safety_blocks_before_agent(monkeypatch):
     actor = SimpleNamespace(role="patient", user_id=7, username="patient")
     default_session_store.acknowledge_onboarding(actor)
-    monkeypatch.setenv("AGENT_CHAT_V2", "true")
-    get_settings.cache_clear()
 
     async def must_not_run(**_kwargs):
-        raise AssertionError("Agent V2 must not run before the treatment gate")
+        raise AssertionError("Agent must not run before the treatment gate")
 
-    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", must_not_run)
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", must_not_run)
     result = await handle_message(
         OrchestratorRequest(message="Tôi nên uống thuốc gì để hạ WBC?"), current_user=actor, db=object()
     )
@@ -437,12 +436,12 @@ async def test_causal_followup_uses_trend_and_rag_without_personal_cause(monkeyp
         ]
     )
     models = iter([first_turn_llm, second_turn_llm])
-    monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: next(models))
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: next(models))
 
-    first_turn = await run_agent_v2(
+    first_turn = await run_agent(
         message="Giải thích WBC của tôi", current_user=actor, db=object(), current_report_ref="3", current_analyte=None
     )
-    result = await run_agent_v2(
+    result = await run_agent(
         message="Tại sao lại tăng vậy?",
         current_user=actor,
         db=object(),
@@ -481,10 +480,10 @@ def test_agent_tool_cannot_read_another_patients_report(test_db):
 async def test_numeric_grounding_audit_warns_without_blocking(monkeypatch, caplog):
     actor = SimpleNamespace(role="patient", user_id=7, username="patient")
     llm = ScriptedToolCallingLlm([AIMessage(content="Giá trị được tạo ngoài công cụ là 999.")])
-    monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
 
-    with caplog.at_level("WARNING", logger="src.orchestrator.agent_v2"):
-        result = await run_agent_v2(
+    with caplog.at_level("WARNING", logger="src.orchestrator.agent"):
+        result = await run_agent(
             message="Cho tôi biết kết quả",
             current_user=actor,
             db=object(),
@@ -493,8 +492,8 @@ async def test_numeric_grounding_audit_warns_without_blocking(monkeypatch, caplo
         )
 
     assert result.response.status == ResponseStatus.SUCCESS
-    assert any(record.message == "agent_v2_numeric_grounding_warning" for record in caplog.records)
-    warning = next(record for record in caplog.records if record.message == "agent_v2_numeric_grounding_warning")
+    assert any(record.message == "agent_numeric_grounding_warning" for record in caplog.records)
+    warning = next(record for record in caplog.records if record.message == "agent_numeric_grounding_warning")
     assert warning.unexpected_numbers == ["999"]
 
 
@@ -580,9 +579,9 @@ async def test_blocked_medication_turn_carries_into_short_diet_followup(test_db,
             store.acknowledge_onboarding(actor)
 
         async def must_not_run(**_kwargs):
-            raise AssertionError("Contextual treatment follow-up must be blocked before Agent V2")
+            raise AssertionError("Contextual treatment follow-up must be blocked before Agent")
 
-        monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", must_not_run)
+        monkeypatch.setattr("src.orchestrator.agent.run_agent", must_not_run)
         first = await handle_message(
             OrchestratorRequest(
                 message="Tôi nên uống thuốc gì để hạ WBC?",
@@ -625,8 +624,7 @@ def test_exact_live_emergency_reassurance_is_removed():
 
 
 @pytest.mark.asyncio
-async def test_observability_turn_log_records_canonical_disabled(monkeypatch):
-    """Khi AGENT_CHAT_V2=false, log phải ghi chat_engine=canonical và fallback_reason=v2_disabled."""
+async def test_observability_turn_log_records_agent_success(monkeypatch):
     from src.orchestrator import service as orchestrator_service
 
     logged_extras = []
@@ -635,45 +633,18 @@ async def test_observability_turn_log_records_canonical_disabled(monkeypatch):
         logged_extras.append(kwargs)
 
     monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
-    monkeypatch.setenv("AGENT_CHAT_V2", "false")
-    get_settings.cache_clear()
-
-    actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
-    default_session_store.acknowledge_onboarding(actor)
-
-    await handle_message(OrchestratorRequest(message="xin chào"), current_user=actor, db=object())
-
-    assert len(logged_extras) == 1
-    assert logged_extras[0]["chat_engine"] == "canonical"
-    assert logged_extras[0]["fallback_reason"] == "v2_disabled"
-
-
-@pytest.mark.asyncio
-async def test_observability_turn_log_records_agent_v2_success(monkeypatch):
-    """Khi AGENT_CHAT_V2=true và V2 chạy thành công, log phải ghi chat_engine=agent_v2 và fallback_reason=None."""
-    from src.orchestrator import service as orchestrator_service
-
-    logged_extras = []
-
-    def fake_log_turn(**kwargs):
-        logged_extras.append(kwargs)
-
-    monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
-    monkeypatch.setenv("AGENT_CHAT_V2", "true")
-    get_settings.cache_clear()
-
     response = OrchestratorResponse(
         intent=IntentEnum.EXPLAIN_CURRENT_RESULT,
         status=ResponseStatus.SUCCESS,
-        message="Phản hồi V2.",
+        message="Phản hồi Agent.",
         data_type=DataType.EXPLANATION,
-        data=ExplanationDataPayload(explanation="Phản hồi V2."),
+        data=ExplanationDataPayload(explanation="Phản hồi Agent."),
     )
 
     async def fake_agent(**_kwargs):
-        return AgentV2Result(response, "10", "WBC", "get_indicator")
+        return AgentResult(response, "10", "WBC", "get_indicator")
 
-    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", fake_agent)
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", fake_agent)
 
     actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
     default_session_store.acknowledge_onboarding(actor)
@@ -681,13 +652,12 @@ async def test_observability_turn_log_records_agent_v2_success(monkeypatch):
     await handle_message(OrchestratorRequest(message="WBC thế nào?"), current_user=actor, db=object())
 
     assert len(logged_extras) == 1
-    assert logged_extras[0]["chat_engine"] == "agent_v2"
-    assert logged_extras[0]["fallback_reason"] is None
+    assert logged_extras[0]["workflow_selected"] == "get_indicator"
+    assert logged_extras[0]["failure_code"] is None
 
 
 @pytest.mark.asyncio
-async def test_observability_turn_log_records_canonical_failure_fallback(monkeypatch):
-    """Khi AGENT_CHAT_V2=true nhưng V2 gặp lỗi runtime, log phải ghi chat_engine=canonical và fallback_reason=v2_failure."""
+async def test_provider_failure_returns_minimal_degraded_response(monkeypatch):
     from src.orchestrator import service as orchestrator_service
 
     logged_extras = []
@@ -696,20 +666,120 @@ async def test_observability_turn_log_records_canonical_failure_fallback(monkeyp
         logged_extras.append(kwargs)
 
     monkeypatch.setattr(orchestrator_service, "_log_turn", fake_log_turn)
-    monkeypatch.setenv("AGENT_CHAT_V2", "true")
-    get_settings.cache_clear()
 
     async def broken_agent(**_kwargs):
         raise RuntimeError("OpenAI provider network timeout")
 
-    monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", broken_agent)
+    monkeypatch.setattr("src.orchestrator.agent.run_agent", broken_agent)
 
     actor = SimpleNamespace(role="patient", user_id=77, username="patient77")
     default_session_store.acknowledge_onboarding(actor)
 
     result = await handle_message(OrchestratorRequest(message="xin chào"), current_user=actor, db=object())
 
-    assert result.status == ResponseStatus.SUCCESS
+    assert result.status == ResponseStatus.ERROR
+    assert result.reason_code == ReasonCode.LLM_UNAVAILABLE
+    assert result.data_type == DataType.BLOCKED
+    assert [action.action.value for action in result.suggested_actions] == ["RETRY"]
     assert len(logged_extras) == 1
-    assert logged_extras[0]["chat_engine"] == "canonical"
-    assert logged_extras[0]["fallback_reason"] == "v2_failure"
+    assert logged_extras[0]["workflow_selected"] == "provider_degraded"
+    assert logged_extras[0]["failure_code"] == ReasonCode.LLM_UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_whole_report_explanation_returns_existing_analysis_contract(test_db, monkeypatch):
+    db, actor = _patient(test_db)
+    try:
+        report = _add_wbc(db, actor.user_id, date(2026, 8, 20), 12.0, "high")
+        llm = ScriptedToolCallingLlm(
+            [
+                AIMessage(content="", tool_calls=[_call("get_current_report", {}, "report-1")]),
+                AIMessage(content="Phiếu hiện có một chỉ số WBC được đánh dấu cao."),
+            ]
+        )
+        monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
+
+        result = await run_agent(
+            message="Giải thích toàn bộ phiếu xét nghiệm",
+            current_user=actor,
+            db=db,
+            current_report_ref=str(report.id),
+            current_analyte=None,
+        )
+
+        assert result.response.intent == IntentEnum.ANALYZE_REPORT
+        assert result.response.data_type == DataType.ANALYSIS
+        assert result.workflow_selected == "get_current_report"
+        assert result.response.data.indicators[0].analyte_canonical == "WBC"
+    finally:
+        db.close()
+
+
+@pytest.mark.asyncio
+async def test_doctor_questions_are_returned_by_canonical_agent(monkeypatch):
+    actor = SimpleNamespace(role="patient", user_id=7, username="patient")
+    payload = {
+        "report_ref": "21",
+        "question_count": 1,
+        "questions": [{"text": "Tôi cần theo dõi WBC thế nào?", "priority": "high", "display_order": 1}],
+        "_ui_doctor_questions_payload": {
+            "data_type": "doctor_questions",
+            "questions": [{"text": "Tôi cần theo dõi WBC thế nào?", "priority": "high", "display_order": 1}],
+        },
+    }
+    monkeypatch.setattr(AgentToolbox, "get_doctor_questions", lambda self, report_ref=None, analyte=None: payload)
+    llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(content="", tool_calls=[_call("get_doctor_questions", {"analyte": "WBC"}, "doctor-1")]),
+            AIMessage(content="Đây là câu hỏi đã được phê duyệt để trao đổi với bác sĩ."),
+        ]
+    )
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
+
+    result = await run_agent(
+        message="Tôi nên hỏi gì bác sĩ về WBC?",
+        current_user=actor,
+        db=object(),
+        current_report_ref="21",
+        current_analyte="WBC",
+    )
+
+    assert result.response.intent == IntentEnum.GET_DOCTOR_QUESTIONS
+    assert result.response.data_type == DataType.DOCTOR_QUESTIONS
+    assert result.response.data.questions[0].text == "Tôi cần theo dõi WBC thế nào?"
+
+
+@pytest.mark.asyncio
+async def test_app_help_and_response_style_reach_canonical_agent(monkeypatch):
+    actor = SimpleNamespace(role="patient", user_id=7, username="patient")
+    monkeypatch.setattr(
+        AgentToolbox,
+        "search_app_help",
+        lambda self, query: {
+            "found": True,
+            "feature": "history",
+            "answer_context": "Mở mục Lịch sử trong thanh điều hướng.",
+            "source_refs": ["history::open"],
+        },
+    )
+    llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(content="", tool_calls=[_call("search_app_help", {"query": "xem lịch sử"}, "help-1")]),
+            AIMessage(content="Mở mục Lịch sử trong thanh điều hướng."),
+        ]
+    )
+    monkeypatch.setattr("src.orchestrator.agent.get_llm", lambda: llm)
+
+    result = await run_agent(
+        message="Làm sao xem lịch sử?",
+        current_user=actor,
+        db=object(),
+        current_report_ref=None,
+        current_analyte=None,
+        response_style="concise",
+    )
+
+    assert result.response.intent == IntentEnum.APP_HELP
+    assert result.workflow_selected == "search_app_help"
+    system_prompt = llm.received_messages[0][0].content
+    assert "response_style=concise" in system_prompt
