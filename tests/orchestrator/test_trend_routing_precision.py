@@ -72,9 +72,7 @@ def test_r2_numeric_value_detection(
 
 @pytest.mark.parametrize(
     "analyte_or_alias",
-    (
-        "HbA1c",
-    ),
+    ("HbA1c",),
 )
 def test_r2_approved_analyte_names_with_digits_are_not_values(analyte_or_alias: str) -> None:
     assert contains_lab_value(analyte_or_alias) is False

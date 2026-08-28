@@ -201,6 +201,7 @@ def _fetch_patient_report_by_date(current_user: object, db: object, report_date:
 
 def _normalize_no_accents(text: str) -> str:
     import unicodedata
+
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     without_accents = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     without_accents = without_accents.replace("đ", "d")
@@ -208,19 +209,49 @@ def _normalize_no_accents(text: str) -> str:
 
 
 WHOLE_REPORT_CUES = (
-    "tong the", "tong quan", "tat ca", "gan nhat", "gan day",
-    "nhin chung", "ca phieu", "toan bo", "phieu nay", "ket qua nay",
-    "co gi can chu y", "co gi dang chu y", "can chu y", "dang chu y",
-    "co bat thuong", "bat thuong khong", "co van de",
-    "the nao", "ra sao", "sao roi", "xem giup", "coi giup", "coi dum",
-    "tom tat", "em hoi lo", "toi hoi lo", "lo lang", "co sao khong",
-    "nhin chung ca phieu", "tong the phieu", "tong quan phieu"
+    "tong the",
+    "tong quan",
+    "tat ca",
+    "gan nhat",
+    "gan day",
+    "nhin chung",
+    "ca phieu",
+    "toan bo",
+    "phieu nay",
+    "ket qua nay",
+    "co gi can chu y",
+    "co gi dang chu y",
+    "can chu y",
+    "dang chu y",
+    "co bat thuong",
+    "bat thuong khong",
+    "co van de",
+    "the nao",
+    "ra sao",
+    "sao roi",
+    "xem giup",
+    "coi giup",
+    "coi dum",
+    "tom tat",
+    "em hoi lo",
+    "toi hoi lo",
+    "lo lang",
+    "co sao khong",
+    "nhin chung ca phieu",
+    "tong the phieu",
+    "tong quan phieu",
 )
 
 REFERENTIAL_ANALYTE_CUES = (
-    "chi so nay", "chi so do", "chi so ay", "chi so vua roi",
-    "gia tri cua no", "gia tri hien tai cua no", "gia tri hien tai cua chi so nay",
-    "ve chi so nay", "ve chi so do"
+    "chi so nay",
+    "chi so do",
+    "chi so ay",
+    "chi so vua roi",
+    "gia tri cua no",
+    "gia tri hien tai cua no",
+    "gia tri hien tai cua chi so nay",
+    "ve chi so nay",
+    "ve chi so do",
 )
 
 
@@ -293,10 +324,7 @@ def resolve_medical_context(
         current_analyte = explicit_analyte
     else:
         if is_referential and current_analyte is None:
-            if (
-                intent == IntentEnum.EXPLAIN_CURRENT_RESULT
-                and session.last_intent == IntentEnum.EXPLAIN_CURRENT_RESULT
-            ):
+            if intent == IntentEnum.EXPLAIN_CURRENT_RESULT and session.last_intent == IntentEnum.EXPLAIN_CURRENT_RESULT:
                 current_analyte = _single_relevant_report_analyte(
                     report_ref=current_report_ref,
                     current_user=current_user,
@@ -320,17 +348,11 @@ def resolve_medical_context(
         current_report_ref = explicit_report_ref
     elif explicit_report_date is not None:
         current_report_ref = _fetch_patient_report_by_date(current_user, db, explicit_report_date)
-    elif (
-        intent in {
-            IntentEnum.ANALYZE_REPORT,
-            IntentEnum.EXPLAIN_CURRENT_RESULT,
-            IntentEnum.GET_DOCTOR_QUESTIONS,
-        }
-        and (
-            is_generic_report_request
-            or any(cue in norm_no_acc for cue in _LATEST_REPORT_CUES)
-        )
-    ):
+    elif intent in {
+        IntentEnum.ANALYZE_REPORT,
+        IntentEnum.EXPLAIN_CURRENT_RESULT,
+        IntentEnum.GET_DOCTOR_QUESTIONS,
+    } and (is_generic_report_request or any(cue in norm_no_acc for cue in _LATEST_REPORT_CUES)):
         current_report_ref = _fetch_latest_patient_report(current_user, db)
 
     report_changed = current_report_ref != previous_report_ref

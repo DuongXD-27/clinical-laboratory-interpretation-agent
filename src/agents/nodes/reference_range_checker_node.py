@@ -106,6 +106,7 @@ def _classify(
         return "normal"
     return "unknown"
 
+
 async def reference_range_checker_node(state: AgentState) -> dict:
     """Kiểm tra giá trị chỉ số dựa trên khoảng tham chiếu để phân loại trạng thái."""
     raw_indicators = state.get("raw_indicators", [])
@@ -171,11 +172,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         upper = _parse_rule_bound(result.rule.get("range_upper"))
         ref_type = result.rule.get("reference_type")
         upper_op = result.rule.get("upper_operator")
-        classification_value = (
-            result.comparison_value
-            if result.comparison_value is not None
-            else numeric_value
-        )
+        classification_value = result.comparison_value if result.comparison_value is not None else numeric_value
         status = _classify(
             classification_value,
             lower,
@@ -187,11 +184,7 @@ async def reference_range_checker_node(state: AgentState) -> dict:
             indicators.append(assessment)
             continue
 
-        definition = (
-            catalog.resolve(result.canonical_analyte or name)
-            if catalog is not None
-            else None
-        )
+        definition = catalog.resolve(result.canonical_analyte or name) if catalog is not None else None
         if definition is not None:
             assessment["analyte_id"] = definition.analyte_id
         assessment["reference_low"] = _json_number_or_none(lower)
@@ -220,6 +213,4 @@ async def reference_range_checker_node(state: AgentState) -> dict:
 
         indicators.append(assessment)
 
-    return {
-        "indicators": indicators
-    }
+    return {"indicators": indicators}

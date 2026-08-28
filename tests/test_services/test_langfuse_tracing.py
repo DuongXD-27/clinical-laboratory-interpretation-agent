@@ -246,9 +246,9 @@ def test_get_llm_works_with_langfuse_switched_off(monkeypatch):
 
     callbacks = list(model.callbacks or [])
     # Không handler Langfuse nào — đây là điều test này tồn tại để kiểm.
-    assert not any(
-        type(cb).__module__.startswith("langfuse") for cb in callbacks
-    ), f"Langfuse đã tắt mà vẫn gắn handler: {callbacks}"
+    assert not any(type(cb).__module__.startswith("langfuse") for cb in callbacks), (
+        f"Langfuse đã tắt mà vẫn gắn handler: {callbacks}"
+    )
 
     # Và callback đếm thì luôn có, đúng một cái.
     assert sum(isinstance(cb, LlmUsageCallback) for cb in callbacks) == 1

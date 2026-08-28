@@ -154,9 +154,7 @@ async def test_real_hospital_lipid_names_reach_reference_checker(
     value,
     canonical,
 ):
-    result = await run_checker(
-        [{"name": raw_name, "value": value, "unit": "mmol/L"}]
-    )
+    result = await run_checker([{"name": raw_name, "value": value, "unit": "mmol/L"}])
     assessment = only_indicator(result)
 
     assert assessment["name"] == raw_name
@@ -166,9 +164,7 @@ async def test_real_hospital_lipid_names_reach_reference_checker(
 
 @pytest.mark.asyncio
 async def test_hospital_generic_glucose_never_reaches_fasting_rule():
-    result = await run_checker(
-        [{"name": "Định lượng Glucose [Máu]", "value": 5.2, "unit": "mmol/L"}]
-    )
+    result = await run_checker([{"name": "Định lượng Glucose [Máu]", "value": 5.2, "unit": "mmol/L"}])
     assessment = only_indicator(result)
 
     assert assessment["name"] == "Định lượng Glucose [Máu]"

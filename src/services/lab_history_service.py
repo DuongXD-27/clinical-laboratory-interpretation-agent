@@ -70,7 +70,11 @@ def _report_status(indicators: Iterable[object]) -> str:
             is_critical = bool(getattr(indicator, "is_critical", False))
         normalized_status = status.casefold()
         normalized_crit = critical_status.casefold()
-        if is_critical or normalized_status in {"critical_low", "critical_high"} or normalized_crit in {"critical_low", "critical_high"}:
+        if (
+            is_critical
+            or normalized_status in {"critical_low", "critical_high"}
+            or normalized_crit in {"critical_low", "critical_high"}
+        ):
             return "CRITICAL"
         if is_abnormal or normalized_status in {"low", "high"}:
             has_abnormal = True
@@ -132,7 +136,9 @@ def _canonical_result_rows(
                 "analyte_canonical": canonical_name,
                 "raw_value": raw_value,
                 "raw_unit": raw_unit,
-                "canonical_value": indicator.canonical_value if indicator.canonical_value is not None else indicator.value,
+                "canonical_value": indicator.canonical_value
+                if indicator.canonical_value is not None
+                else indicator.value,
                 "canonical_unit": canonical_unit,
                 "name": canonical_name,
                 "value": indicator.value,
@@ -277,11 +283,7 @@ def get_dashboard_summary(db: Session, *, username: str, limit: int = 5) -> dict
         "total_reports": total,
         "latest_test_date": reports[0].test_date if reports else None,
         "recent_reports": [_summary_row(report) for report in reports],
-        "newly_verified_count": sum(
-            1
-            for report in reports
-            if report.verification_status == "verified"
-        ),
+        "newly_verified_count": sum(1 for report in reports if report.verification_status == "verified"),
     }
 
 

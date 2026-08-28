@@ -189,7 +189,9 @@ class OrchestratorSessionContext(BaseModel):
         resolved_style = (
             response_style
             if isinstance(response_style, ResponseStyle)
-            else ResponseStyle(response_style) if response_style in set(ResponseStyle) else ResponseStyle.SIMPLE
+            else ResponseStyle(response_style)
+            if response_style in set(ResponseStyle)
+            else ResponseStyle.SIMPLE
         )
         context = cls(
             session_id=session_id,

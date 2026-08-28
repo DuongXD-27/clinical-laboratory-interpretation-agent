@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Offline/live evaluation tooling; not required by the production API image.
+ragas==0.4.3

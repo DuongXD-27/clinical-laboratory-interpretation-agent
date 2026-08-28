@@ -14,10 +14,7 @@ from src.orchestrator.service import OrchestratorRuntime, handle_message
 from src.orchestrator.session_store import InMemorySessionStore
 from src.services import history_repository
 
-APPROVED_EDUCATION = (
-    "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt "
-    "trong hệ thống miễn dịch."
-)
+APPROVED_EDUCATION = "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt trong hệ thống miễn dịch."
 APPROVED_SOURCE = "https://approved.example/wbc"
 
 

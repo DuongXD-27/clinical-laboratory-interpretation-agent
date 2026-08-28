@@ -34,9 +34,7 @@ def _fixture_rule(**overrides):
 
 
 def test_value_inside_active_fixture_rule_is_valid():
-    evaluator = InputIntegrityEvaluator(
-        PlausibilityRepository.from_dict(_fixture_config(rules=[_fixture_rule()]))
-    )
+    evaluator = InputIntegrityEvaluator(PlausibilityRepository.from_dict(_fixture_config(rules=[_fixture_rule()])))
 
     result = evaluator.evaluate(analyte="Potassium", value=5, canonical_unit="mmol/L")
 
@@ -46,9 +44,7 @@ def test_value_inside_active_fixture_rule_is_valid():
 
 
 def test_value_outside_active_fixture_rule_needs_review_without_correction():
-    evaluator = InputIntegrityEvaluator(
-        PlausibilityRepository.from_dict(_fixture_config(rules=[_fixture_rule()]))
-    )
+    evaluator = InputIntegrityEvaluator(PlausibilityRepository.from_dict(_fixture_config(rules=[_fixture_rule()])))
 
     result = evaluator.evaluate(analyte="Potassium", value=500, canonical_unit="mmol/L")
 
@@ -81,9 +77,7 @@ def test_active_rule_requires_complete_source_provenance():
 
 def test_inactive_rule_is_not_executable():
     rule = _fixture_rule(status="BLOCKED_BY_MEDICAL_DATA_AUTHORITY")
-    evaluator = InputIntegrityEvaluator(
-        PlausibilityRepository.from_dict(_fixture_config(rules=[rule]))
-    )
+    evaluator = InputIntegrityEvaluator(PlausibilityRepository.from_dict(_fixture_config(rules=[rule])))
 
     result = evaluator.evaluate(analyte="Potassium", value=500, canonical_unit="mmol/L")
 

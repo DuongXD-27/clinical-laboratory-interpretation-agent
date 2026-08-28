@@ -160,10 +160,13 @@ def evaluate_slos(rows: Iterable[object], *, group: str = GROUP_AI) -> dict[str,
     guardrail_fallbacks = 0
 
     for row in rows:
-        if classify_path(
-            str(getattr(row, "path", "") or ""),
-            str(getattr(row, "method", "GET") or "GET"),
-        ) != group:
+        if (
+            classify_path(
+                str(getattr(row, "path", "") or ""),
+                str(getattr(row, "method", "GET") or "GET"),
+            )
+            != group
+        ):
             continue
 
         total += 1

@@ -105,8 +105,7 @@ _LIST_NUMBER_RE = re.compile(r"(?m)^\s*\d+[.)]\s+")
 _CITATION_INDEX_RE = re.compile(r"\[\s*\d+\s*]")
 _REASSURANCE_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 _GROUNDING_BOUNDARY_MESSAGE = (
-    "Chỉ từ kết quả này, hệ thống không thể kết luận tình trạng sức khỏe tổng thể "
-    "hoặc mức độ khẩn cấp lâm sàng."
+    "Chỉ từ kết quả này, hệ thống không thể kết luận tình trạng sức khỏe tổng thể hoặc mức độ khẩn cấp lâm sàng."
 )
 
 
@@ -140,16 +139,11 @@ def _unsupported_reassurance_rule_ids(sentence: str) -> list[str]:
         matched.append("emergency_reassurance")
 
     patient_directed = any(
-        marker in normalized
-        for marker in ("cua ban", "co the ban", "suc khoe cua ban", "he mien dich cua ban")
+        marker in normalized for marker in ("cua ban", "co the ban", "suc khoe cua ban", "he mien dich cua ban")
     )
     physiology_claim = (
-        (
-            "he mien dich" in normalized
-            and any(claim in normalized for claim in ("hoat dong binh thuong", "khoe manh"))
-        )
-        or ("co the ban" in normalized and "hoat dong binh thuong" in normalized)
-    )
+        "he mien dich" in normalized and any(claim in normalized for claim in ("hoat dong binh thuong", "khoe manh"))
+    ) or ("co the ban" in normalized and "hoat dong binh thuong" in normalized)
     if patient_directed and physiology_claim:
         matched.append("patient_physiology_reassurance")
     return matched
@@ -184,11 +178,7 @@ def validate_or_sanitize_patient_reassurance(
             "conversation_id": conversation_id,
             "matched_rule_ids": list(dict.fromkeys(matched_rule_ids)),
             "tool_names": list(
-                dict.fromkeys(
-                    str(item.get("tool", ""))
-                    for item in authoritative_tool_results
-                    if item.get("tool")
-                )
+                dict.fromkeys(str(item.get("tool", "")) for item in authoritative_tool_results if item.get("tool"))
             ),
         },
     )
@@ -326,12 +316,10 @@ def _build_graph(
         response = await llm.ainvoke(state["messages"])
         calls_used = 1
         evidence_attempted = any(
-            item.get("tool") == "retrieve_medical_evidence" and item.get("ok")
-            for item in state.get("tool_results", [])
+            item.get("tool") == "retrieve_medical_evidence" and item.get("ok") for item in state.get("tool_results", [])
         )
         history_attempted = any(
-            item.get("tool") == "get_indicator_history" and item.get("ok")
-            for item in state.get("tool_results", [])
+            item.get("tool") == "get_indicator_history" and item.get("ok") for item in state.get("tool_results", [])
         )
         missing_required_tools: list[str] = []
         if require_evidence and not evidence_attempted:
@@ -385,11 +373,7 @@ def _build_graph(
             if isinstance(result.get("data"), dict):
                 public_result = {
                     **result,
-                    "data": {
-                        key: value
-                        for key, value in result["data"].items()
-                        if not str(key).startswith("_")
-                    },
+                    "data": {key: value for key, value in result["data"].items() if not str(key).startswith("_")},
                 }
             serialized = json.dumps(public_result, ensure_ascii=False, default=str)
             if name == "retrieve_medical_evidence":
@@ -472,7 +456,9 @@ def _response_payload(
     if histories:
         history = histories[-1]
         normalized = _normalize(message)
-        pointer = history.get("previous") if "lan truoc" in normalized or "so voi" in normalized else history.get("current")
+        pointer = (
+            history.get("previous") if "lan truoc" in normalized or "so voi" in normalized else history.get("current")
+        )
         index = pointer.get("index") if isinstance(pointer, dict) else None
         measurements = history.get("measurements", [])
         selected_fact = measurements[index] if isinstance(index, int) and 0 <= index < len(measurements) else None
@@ -492,7 +478,9 @@ def _response_payload(
     report_ref = (
         None
         if intent == IntentEnum.VIEW_HISTORY
-        else selected_fact.get("report_ref") if selected_fact else (reports[-1].get("report_ref") if reports else None)
+        else selected_fact.get("report_ref")
+        if selected_fact
+        else (reports[-1].get("report_ref") if reports else None)
     )
     analyte = selected_fact.get("analyte") if selected_fact else None
     return intent, payload, report_ref, analyte, workflow

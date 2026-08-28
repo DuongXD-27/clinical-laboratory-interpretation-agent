@@ -323,7 +323,7 @@ async def test_total_counts_all_matches_not_just_the_page(client, admin_account)
 async def test_tracing_status_reports_configuration_without_leaking_keys(
     client, admin_account, monkeypatch, configured
 ):
-    """"Không thấy trace nào" có hai nguyên nhân khác hẳn nhau.
+    """\"Không thấy trace nào" có hai nguyên nhân khác hẳn nhau.
 
     Chưa cấu hình key, hay đã cấu hình mà chưa có traffic. Endpoint này phân
     biệt hai trường hợp đó mà không phải vào đọc biến môi trường trên Railway.
@@ -399,6 +399,4 @@ async def test_traces_never_reach_the_developer_database(client, admin_account, 
     with test_db.session() as session:
         in_temp_db = session.execute(select(func.count(RequestTrace.id))).scalar_one()
 
-    assert in_temp_db >= 1, (
-        "trace không rơi vào DB tạm của test — nhiều khả năng middleware đang ghi vào data/app.db"
-    )
+    assert in_temp_db >= 1, "trace không rơi vào DB tạm của test — nhiều khả năng middleware đang ghi vào data/app.db"

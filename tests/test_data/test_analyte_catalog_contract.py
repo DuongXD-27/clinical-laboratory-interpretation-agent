@@ -65,13 +65,11 @@ def _json(path: Path):
 
 def _lookup_key(value: object) -> str:
     decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
-    without_accents = "".join(
-        character for character in decomposed if not unicodedata.combining(character)
-    )
+    without_accents = "".join(character for character in decomposed if not unicodedata.combining(character))
     without_accents = without_accents.replace("đ", "d")
-    return " ".join(part for part in "".join(
-        character if character.isalnum() else " " for character in without_accents
-    ).split())
+    return " ".join(
+        part for part in "".join(character if character.isalnum() else " " for character in without_accents).split()
+    )
 
 
 def _units_by_name() -> dict[str, str]:
@@ -106,19 +104,13 @@ def test_cat_003_aliases_are_unambiguous_under_current_normalization() -> None:
         for value in (entry.analyte_id, entry.canonical_name, *entry.aliases):
             by_key.setdefault(_lookup_key(value), set()).add(entry.canonical_name)
 
-    ambiguous = {
-        key: sorted(values)
-        for key, values in by_key.items()
-        if len(values) > 1
-    }
+    ambiguous = {key: sorted(values) for key, values in by_key.items() if len(values) > 1}
     assert ambiguous == {}
 
 
 def test_cat_004_approved_set_matches_reference_checker_config_exactly() -> None:
     catalog_approved = {
-        entry.canonical_name
-        for entry in get_analyte_catalog_contract().entries
-        if entry.runtime_status == "APPROVED"
+        entry.canonical_name for entry in get_analyte_catalog_contract().entries if entry.runtime_status == "APPROVED"
     }
     config_approved = set(_json(REFERENCE_CONFIG)["approved_analytes"])
 

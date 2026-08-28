@@ -63,17 +63,11 @@ async def run(args: argparse.Namespace) -> int:
             except Exception:
                 duration_ms = (time.perf_counter() - started_at) * 1000
                 failures += 1
-                print(
-                    f"run={run_number} provider={args.provider} "
-                    f"duration_ms={duration_ms:.3f} outcome=fail"
-                )
+                print(f"run={run_number} provider={args.provider} duration_ms={duration_ms:.3f} outcome=fail")
             else:
                 duration_ms = (time.perf_counter() - started_at) * 1000
                 durations.append(duration_ms)
-                print(
-                    f"run={run_number} provider={args.provider} "
-                    f"duration_ms={duration_ms:.3f} outcome=success"
-                )
+                print(f"run={run_number} provider={args.provider} duration_ms={duration_ms:.3f} outcome=success")
             if run_number < args.runs and args.delay_seconds:
                 await asyncio.sleep(args.delay_seconds)
     finally:
@@ -81,10 +75,7 @@ async def run(args: argparse.Namespace) -> int:
 
     success_rate = len(durations) / args.runs * 100
     if not durations:
-        print(
-            f"summary provider={args.provider} runs={args.runs} success_rate=0.0% "
-            f"failures={failures}"
-        )
+        print(f"summary provider={args.provider} runs={args.runs} success_rate=0.0% failures={failures}")
         return 1
     print(
         f"summary provider={args.provider} runs={args.runs} "

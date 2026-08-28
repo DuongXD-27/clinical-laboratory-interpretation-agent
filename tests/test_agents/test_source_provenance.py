@@ -9,9 +9,7 @@ async def test_fpg_reference_and_critical_sources_are_distinct_claim_categories(
     state = {
         "patient_age": 35,
         "patient_gender": "male",
-        "raw_indicators": [
-            {"name": "Fasting plasma glucose", "value": 30, "unit": "mmol/L"}
-        ],
+        "raw_indicators": [{"name": "Fasting plasma glucose", "value": 30, "unit": "mmol/L"}],
     }
     ranged = await reference_range_checker_node(state)
     detected = await detect_critical_values_node({**state, **ranged})

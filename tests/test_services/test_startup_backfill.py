@@ -10,6 +10,7 @@ Tests verify:
 - START-07  normal refresh_review_flags unchanged behavior
 - START-08  verification_status / priority_score / queued_at semantics preserved
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -50,9 +51,7 @@ def db_session(test_db) -> Session:
 
 def _patient_id(db: Session) -> int:
     """Return the id of the seeded 'benhnhan' demo patient."""
-    return db.execute(
-        select(User.id).where(User.username == "benhnhan")
-    ).scalar_one()
+    return db.execute(select(User.id).where(User.username == "benhnhan")).scalar_one()
 
 
 def _make_report(
@@ -196,7 +195,7 @@ def test_start_03_stale_flags_repaired_not_skipped(db_session: Session):
     wrong_flag = ReviewFlag(
         report_id=report.id,
         finding_id=report.indicators[0].id,
-        code=FLAG_LOW_OCR,       # wrong code — should be FLAG_CRITICAL
+        code=FLAG_LOW_OCR,  # wrong code — should be FLAG_CRITICAL
         severity="medium",
         detail="stale placeholder",
     )

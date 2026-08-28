@@ -50,9 +50,7 @@ def _rel_error(actual: float, expected: float) -> float:
     return abs(actual - expected) / max(abs(expected), 1e-9)
 
 
-async def evaluate_folder(
-    processor: ImageProcessor, adapter: VisionAdapter, folder: Path
-) -> dict:
+async def evaluate_folder(processor: ImageProcessor, adapter: VisionAdapter, folder: Path) -> dict:
     report_path = folder / "report.png"
     raw = report_path.read_bytes()
     processed = processor.process(raw, filename="report.png")
@@ -61,9 +59,7 @@ async def evaluate_folder(
     matched = _match_by_name(drafts)
     results: list[dict] = []
     for exp in EXPECTED:
-        draft = matched.get(
-            "glucose" if "Glucose" in exp["name"] else "ldl" if "LDL" in exp["name"] else "kali"
-        )
+        draft = matched.get("glucose" if "Glucose" in exp["name"] else "ldl" if "LDL" in exp["name"] else "kali")
         if draft is None:
             results.append({**exp, "found": False, "abs_err": None, "confidence": None})
             continue
@@ -96,15 +92,8 @@ async def main() -> None:
             summary.append(out)
             for r in out["results"]:
                 status = f"abs_err={r['abs_err']:.3f}" if r["found"] else "NOT FOUND"
-                conf = (
-                    f"conf={r['confidence']:.2f}"
-                    if r.get("confidence") is not None
-                    else ""
-                )
-                print(
-                    f"  {r['name']:<16} expected={r['value']:>5} "
-                    f"{status:<16} {conf}"
-                )
+                conf = f"conf={r['confidence']:.2f}" if r.get("confidence") is not None else ""
+                print(f"  {r['name']:<16} expected={r['value']:>5} {status:<16} {conf}")
     finally:
         await close_vision_clients()
 

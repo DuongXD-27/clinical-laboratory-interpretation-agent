@@ -60,11 +60,7 @@ def test_sync_01_input_inventory():
 
     all_rules = json.loads(REFERENCE_JSON.read_text(encoding="utf-8"))
     # Primary-only rules are those without source_origin=explanations.json
-    primary_analytes = {
-        r["analyte_canonical"]
-        for r in all_rules
-        if r.get("source_origin") != "explanations.json"
-    }
+    primary_analytes = {r["analyte_canonical"] for r in all_rules if r.get("source_origin") != "explanations.json"}
     assert len(primary_analytes) >= 30
 
 
@@ -101,11 +97,7 @@ def test_sync_03_missing_analytes_detected():
     entries = _load_explanations()
     # Primary analytes are those without supplemental source_origin
     all_rules = _load_catalog_json()
-    primary_analytes = {
-        r["analyte_canonical"]
-        for r in all_rules
-        if r.get("source_origin") != "explanations.json"
-    }
+    primary_analytes = {r["analyte_canonical"] for r in all_rules if r.get("source_origin") != "explanations.json"}
     explanation_resolved = {canonical_analyte(e.get("canonical_name") or e.get("name")) for e in entries}
     missing = explanation_resolved - primary_analytes
     assert isinstance(missing, set)
@@ -246,8 +238,10 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
 
     # Primary rules for SUPPLEMENTAL_REPLACEMENT_ANALYTES are intentionally excluded from the combined catalog
     from src.scripts.build_reference_config import SUPPLEMENTAL_REPLACEMENT_ANALYTES
+
     non_replacement_baseline = {
-        rule_id: rule for rule_id, rule in baseline_by_id.items()
+        rule_id: rule
+        for rule_id, rule in baseline_by_id.items()
         if rule.get("analyte_canonical") not in SUPPLEMENTAL_REPLACEMENT_ANALYTES
     }
 
@@ -255,7 +249,14 @@ def test_sync_12_existing_rules_unchanged(tmp_path: Path):
     for rule_id, primary_rule in non_replacement_baseline.items():
         assert rule_id in catalog_by_id, f"Primary rule {rule_id} missing from combined catalog"
         combined_rule = catalog_by_id[rule_id]
-        for key in ("analyte_canonical", "unit_canonical", "range_lower", "range_upper", "reference_type", "source_url"):
+        for key in (
+            "analyte_canonical",
+            "unit_canonical",
+            "range_lower",
+            "range_upper",
+            "reference_type",
+            "source_url",
+        ):
             assert combined_rule.get(key) == primary_rule.get(key), (
                 f"{rule_id} field '{key}' changed: {primary_rule.get(key)!r} → {combined_rule.get(key)!r}"
             )
@@ -312,6 +313,7 @@ def test_sync_15_approved_ri_rules_match():
 # ---------------------------------------------------------------------------
 def test_sync_16_critical_separation():
     from pathlib import Path as _Path
+
     critical_path = _Path(__file__).resolve().parents[2] / "data/reference/critical_thresholds.json"
     critical = json.loads(critical_path.read_text(encoding="utf-8"))
 
@@ -320,6 +322,7 @@ def test_sync_16_critical_separation():
 
     # Verify the file was not modified
     import hashlib
+
     digest = hashlib.sha256(critical_path.read_bytes()).hexdigest().upper()
     # File must be loadable and contain only the canonical Potassium key.
     # (protected-file diff check is in Phase 15 of the TIP)

@@ -148,9 +148,7 @@ class AgentToolbox:
     def get_current_report(self) -> dict[str, Any]:
         report_ref = self._report_ref()
         report = get_my_report(self.current_user, self.db, report_ref)
-        test_date = self.db.scalar(
-            select(LabReport.test_date).where(LabReport.id == int(report_ref))
-        )
+        test_date = self.db.scalar(select(LabReport.test_date).where(LabReport.id == int(report_ref)))
         indicators = list(report.indicators)
         return {
             "report_ref": report_ref,
@@ -164,9 +162,7 @@ class AgentToolbox:
         resolved = _resolved_analyte(analyte or self.current_analyte)
         selected_ref = self._report_ref(report_ref)
         report = get_my_report(self.current_user, self.db, selected_ref)
-        test_date = self.db.scalar(
-            select(LabReport.test_date).where(LabReport.id == int(selected_ref))
-        )
+        test_date = self.db.scalar(select(LabReport.test_date).where(LabReport.id == int(selected_ref)))
         for indicator in report.indicators:
             if resolved.casefold() in _indicator_names(indicator):
                 return _indicator_facts(
@@ -180,15 +176,12 @@ class AgentToolbox:
         _, patient_id = _require_patient(self.current_user)
         resolved = _resolved_analyte(analyte or self.current_analyte)
         safe_limit = max(1, min(int(limit), 10))
-        rows = (
-            self.db.execute(
-                select(LabReport, ReportIndicator)
-                .join(ReportIndicator, ReportIndicator.report_id == LabReport.id)
-                .where(LabReport.patient_id == patient_id)
-                .order_by(LabReport.test_date.desc(), LabReport.id.desc())
-            )
-            .all()
-        )
+        rows = self.db.execute(
+            select(LabReport, ReportIndicator)
+            .join(ReportIndicator, ReportIndicator.report_id == LabReport.id)
+            .where(LabReport.patient_id == patient_id)
+            .order_by(LabReport.test_date.desc(), LabReport.id.desc())
+        ).all()
         measurements: list[dict[str, Any]] = []
         for report, indicator in rows:
             if resolved.casefold() not in _indicator_names(indicator):
@@ -332,9 +325,7 @@ class AgentToolbox:
     ) -> dict[str, Any]:
         from src.orchestrator.medical_context import extract_explicit_analyte
 
-        resolved = _resolved_analyte(
-            analyte or self.current_analyte or extract_explicit_analyte(query)
-        )
+        resolved = _resolved_analyte(analyte or self.current_analyte or extract_explicit_analyte(query))
         if not resolved:
             return {"evidence": [], "sufficient": False}
         chunks = get_medical_knowledge_retriever().retrieve(

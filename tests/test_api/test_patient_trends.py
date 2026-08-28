@@ -909,7 +909,12 @@ async def test_section_trend_explanation_escalates_with_fixed_notice(isolated_cl
         start=1,
     ):
         date_text = f"2026-08-{index:02d}"
-        _save(session_local, "benhnhan", date_text, [{"name": name, "value": value, "unit": "umol/L" if name == "Creatinine" else "mmol/L"}])
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [{"name": name, "value": value, "unit": "umol/L" if name == "Creatinine" else "mmol/L"}],
+        )
     mock_llm = SimpleNamespace(
         ainvoke=AsyncMock(return_value=SimpleNamespace(content="Creatinine và Potassium cùng tăng qua các lần đo."))
     )

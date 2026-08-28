@@ -49,17 +49,12 @@ class OCRIndicatorDraft(BaseModel):
 
     raw_text: str = Field(
         default="",
-        description=(
-            "Chuỗi văn bản thô tương ứng trên ảnh, dùng để đối chiếu "
-            "trong UI review"
-        ),
+        description=("Chuỗi văn bản thô tương ứng trên ảnh, dùng để đối chiếu trong UI review"),
     )
 
     needs_review: bool = Field(
         default=False,
-        description=(
-            "True nếu confidence thấp và cần người dùng review kỹ"
-        ),
+        description=("True nếu confidence thấp và cần người dùng review kỹ"),
     )
     supported: bool = Field(
         default=True,
@@ -94,9 +89,7 @@ class OCRReviewResponse(BaseModel):
 
     review_token: str = Field(
         ...,
-        description=(
-            "Token ký ngắn hạn dùng để kiểm chứng phiên OCR review"
-        ),
+        description=("Token ký ngắn hạn dùng để kiểm chứng phiên OCR review"),
     )
 
     low_confidence_threshold: float = Field(
@@ -113,9 +106,7 @@ class OCRReviewResponse(BaseModel):
 
     metadata_hint: dict = Field(
         default_factory=dict,
-        description=(
-            "Metadata bệnh nhân đọc được nếu có; mặc định trống"
-        ),
+        description=("Metadata bệnh nhân đọc được nếu có; mặc định trống"),
     )
 
     indicators: list[OCRIndicatorDraft] = Field(
@@ -157,9 +148,7 @@ class OCRUploadPolicyResponse(BaseModel):
 
     custom_image_allowed: bool = Field(
         ...,
-        description=(
-            "False khi mode=demo_only; chỉ nhận ảnh mẫu"
-        ),
+        description=("False khi mode=demo_only; chỉ nhận ảnh mẫu"),
     )
 
     consent_text: str
@@ -201,9 +190,7 @@ class OCRReviewedIndicator(BaseModel):
 
     low_confidence_acknowledged: bool = Field(
         default=False,
-        description=(
-            "Bắt buộc nếu confidence gốc dưới ngưỡng"
-        ),
+        description=("Bắt buộc nếu confidence gốc dưới ngưỡng"),
     )
 
 

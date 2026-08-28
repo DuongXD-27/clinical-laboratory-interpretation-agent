@@ -183,7 +183,5 @@ def test_rt_cat_012_legacy_config_catalog_owned_fields_are_strictly_synced() -> 
     assert set(config["approved_analytes"]) == set(catalog.approved_names)
     assert config["analyte_aliases"] == catalog.runtime_alias_map()
     assert set(config["hold_analytes"]) == {
-        entry.canonical_name
-        for entry in catalog.entries
-        if entry.runtime_status == "HOLD"
+        entry.canonical_name for entry in catalog.entries if entry.runtime_status == "HOLD"
     }

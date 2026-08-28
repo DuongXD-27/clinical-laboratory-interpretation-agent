@@ -70,14 +70,10 @@ def _mask(*, data: Any, **_kwargs: Any) -> Any:
     """
 
     if isinstance(data, dict):
-        return {
-            key: (value if key in _SAFE_METADATA_KEYS else MASKED_PLACEHOLDER)
-            for key, value in data.items()
-        }
+        return {key: (value if key in _SAFE_METADATA_KEYS else MASKED_PLACEHOLDER) for key, value in data.items()}
     if isinstance(data, list):
         return [_mask(data=item) for item in data]
     return MASKED_PLACEHOLDER
-
 
 
 # Attribute chua thong bao loi cua provider tren span Langfuse.
@@ -214,7 +210,6 @@ def get_callback_handler() -> Any | None:
     except Exception:
         logger.warning("langfuse_callback_unavailable", exc_info=True)
         return None
-
 
 
 def _build_scrubbing_handler() -> Any:

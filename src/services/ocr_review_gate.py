@@ -40,8 +40,7 @@ OCR_REVIEW_EXPIRED = "EXPIRED"
 OCRReviewStatus = Literal["PENDING", "CONSUMED", "EXPIRED", "INVALID", "NONE"]
 
 AMBIGUOUS_ANALYTE_MESSAGE = (
-    "Đã nhận diện đây là xét nghiệm Glucose, nhưng chưa đủ thông tin để xác định "
-    "đây có phải glucose lúc đói hay không."
+    "Đã nhận diện đây là xét nghiệm Glucose, nhưng chưa đủ thông tin để xác định đây có phải glucose lúc đói hay không."
 )
 
 
@@ -203,19 +202,13 @@ def _decode_review_payload(token: str, *, username: str) -> dict:
             algorithms=[settings.jwt_algorithm],
         )
     except JWTError as exc:
-        raise OCRReviewGateError(
-            "Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn."
-        ) from exc
+        raise OCRReviewGateError("Phiên xác nhận OCR không hợp lệ hoặc đã hết hạn.") from exc
 
     if payload.get("purpose") != _TOKEN_PURPOSE:
-        raise OCRReviewGateError(
-            "Token không thuộc luồng xác nhận OCR."
-        )
+        raise OCRReviewGateError("Token không thuộc luồng xác nhận OCR.")
 
     if payload.get("sub") != username:
-        raise OCRReviewGateError(
-            "Phiên xác nhận OCR không thuộc người dùng hiện tại."
-        )
+        raise OCRReviewGateError("Phiên xác nhận OCR không thuộc người dùng hiện tại.")
 
     return payload
 
@@ -285,11 +278,7 @@ def prepare_review(
                 update={
                     "needs_review": supported and draft.confidence < threshold,
                     "supported": supported,
-                    "unsupported_reason": (
-                        ""
-                        if supported
-                        else _unsupported_reason(draft.name)
-                    ),
+                    "unsupported_reason": ("" if supported else _unsupported_reason(draft.name)),
                 }
             )
         )
@@ -301,18 +290,14 @@ def prepare_review(
         "sub": username,
         "exp": expires_at,
         "threshold": threshold,
-
         # Tên file do server thấy ở bước upload.
         # Không phải path và không chứa image bytes.
         "source_image": source_image,
-
         "drafts": [
             {
                 "draft_id": draft.draft_id,
-
                 # Confidence phải giữ nguyên giá trị Vision server trả về.
                 "confidence": draft.confidence,
-
                 # Raw OCR text cũng là provenance server-observed.
                 # User được sửa name/value/unit nhưng không được giả raw_text.
                 "raw_text": draft.raw_text,
@@ -366,18 +351,11 @@ def validate_review(
     signed_rows = payload.get("drafts")
     source_image = payload.get("source_image", "")
 
-    if (
-        not isinstance(threshold, (int, float))
-        or not isinstance(signed_rows, list)
-    ):
-        raise OCRReviewGateError(
-            "Token OCR thiếu dữ liệu kiểm chứng."
-        )
+    if not isinstance(threshold, (int, float)) or not isinstance(signed_rows, list):
+        raise OCRReviewGateError("Token OCR thiếu dữ liệu kiểm chứng.")
 
     if not isinstance(source_image, str):
-        raise OCRReviewGateError(
-            "Token OCR chứa thông tin nguồn không hợp lệ."
-        )
+        raise OCRReviewGateError("Token OCR chứa thông tin nguồn không hợp lệ.")
 
     # draft_id ->
     # {
@@ -388,9 +366,7 @@ def validate_review(
 
     for signed_row in signed_rows:
         if not isinstance(signed_row, dict):
-            raise OCRReviewGateError(
-                "Token OCR có dữ liệu không hợp lệ."
-            )
+            raise OCRReviewGateError("Token OCR có dữ liệu không hợp lệ.")
 
         draft_id = signed_row.get("draft_id")
         confidence = signed_row.get("confidence")
@@ -398,19 +374,11 @@ def validate_review(
         # Backward-compatible default cho token/test cũ.
         raw_text = signed_row.get("raw_text", "")
 
-        if (
-            not isinstance(draft_id, str)
-            or not isinstance(confidence, (int, float))
-            or not isinstance(raw_text, str)
-        ):
-            raise OCRReviewGateError(
-                "Token OCR có dữ liệu không hợp lệ."
-            )
+        if not isinstance(draft_id, str) or not isinstance(confidence, (int, float)) or not isinstance(raw_text, str):
+            raise OCRReviewGateError("Token OCR có dữ liệu không hợp lệ.")
 
         if draft_id in signed_by_id:
-            raise OCRReviewGateError(
-                "Token OCR chứa định danh trùng lặp."
-            )
+            raise OCRReviewGateError("Token OCR chứa định danh trùng lặp.")
 
         signed_by_id[draft_id] = {
             "confidence": float(confidence),
@@ -421,21 +389,13 @@ def validate_review(
     # Ensure client reviewed exactly the rows issued by server
     # ------------------------------------------------------------------
 
-    submitted_ids = [
-        row.draft_id
-        for row in reviewed_indicators
-    ]
+    submitted_ids = [row.draft_id for row in reviewed_indicators]
 
     if len(submitted_ids) != len(set(submitted_ids)):
-        raise OCRReviewGateError(
-            "Danh sách xác nhận có dòng OCR trùng lặp."
-        )
+        raise OCRReviewGateError("Danh sách xác nhận có dòng OCR trùng lặp.")
 
     if set(submitted_ids) != set(signed_by_id):
-        raise OCRReviewGateError(
-            "Phải kiểm tra mọi dòng OCR; không được thêm hoặc bỏ dòng "
-            "ngoài phiên review."
-        )
+        raise OCRReviewGateError("Phải kiểm tra mọi dòng OCR; không được thêm hoặc bỏ dòng ngoài phiên review.")
 
     # ------------------------------------------------------------------
     # Build graph-safe drafts
@@ -454,19 +414,10 @@ def validate_review(
         is_low_confidence = supported and confidence < float(threshold)
 
         if not row.reviewed:
-            raise OCRReviewGateError(
-                f"Chỉ số {row.name} chưa được đối chiếu thủ công."
-            )
+            raise OCRReviewGateError(f"Chỉ số {row.name} chưa được đối chiếu thủ công.")
 
-        if (
-            row.included
-            and is_low_confidence
-            and not row.low_confidence_acknowledged
-        ):
-            raise OCRReviewGateError(
-                f"Chỉ số {row.name} có độ tin cậy thấp "
-                "và cần xác nhận riêng."
-            )
+        if row.included and is_low_confidence and not row.low_confidence_acknowledged:
+            raise OCRReviewGateError(f"Chỉ số {row.name} có độ tin cậy thấp và cần xác nhận riêng.")
 
         # name/value/unit lấy từ dữ liệu người dùng đã review.
         #
@@ -481,22 +432,16 @@ def validate_review(
             raw_text=raw_text,
             needs_review=is_low_confidence,
             supported=supported,
-            unsupported_reason=(
-                "" if supported else _unsupported_reason(row.name)
-            ),
+            unsupported_reason=("" if supported else _unsupported_reason(row.name)),
         )
 
         drafts.append(draft)
 
         if row.included:
-            included_inputs.append(
-                draft.to_indicator_input()
-            )
+            included_inputs.append(draft.to_indicator_input())
 
     if not included_inputs:
-        raise OCRReviewGateError(
-            "Cần giữ lại ít nhất một chỉ số đã xác nhận để phân tích."
-        )
+        raise OCRReviewGateError("Cần giữ lại ít nhất một chỉ số đã xác nhận để phân tích.")
 
     return (
         drafts,

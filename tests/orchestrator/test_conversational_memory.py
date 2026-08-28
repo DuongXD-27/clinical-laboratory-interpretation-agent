@@ -58,6 +58,7 @@ async def test_follow_up_analyte_memory(monkeypatch):
             return "EXPLAIN_CURRENT_RESULT"
 
     from src.orchestrator import intent_router
+
     monkeypatch.setattr(intent_router, "get_llm", lambda: MockLLM())
 
     # Set pending question back for testing LLM prompt injection
@@ -65,6 +66,7 @@ async def test_follow_up_analyte_memory(monkeypatch):
     import time
 
     from src.models.orchestrator_schemas import ConversationState
+
     default_session_store.update_after_turn(
         user,
         session,
@@ -72,7 +74,7 @@ async def test_follow_up_analyte_memory(monkeypatch):
         conversation_state=ConversationState(
             pending_question="Bạn muốn xem chỉ số nào?",
             pending_question_timestamp=time.time(),
-        )
+        ),
     )
 
     # Free-form natural language that is not a plain keyword

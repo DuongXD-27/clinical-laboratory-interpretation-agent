@@ -67,11 +67,7 @@ def _session_hash(session_id: str) -> str:
 
 
 def _blocked_response(intent: IntentEnum, reason_code: ReasonCode, message: str) -> OrchestratorResponse:
-    action = (
-        [ConfirmOcrAction(review_ref="ocr-review")]
-        if reason_code == ReasonCode.OCR_REVIEW_REQUIRED
-        else []
-    )
+    action = [ConfirmOcrAction(review_ref="ocr-review")] if reason_code == ReasonCode.OCR_REVIEW_REQUIRED else []
     return OrchestratorResponse(
         intent=intent,
         status=ResponseStatus.BLOCKED,
@@ -88,7 +84,9 @@ def _blocked_response(intent: IntentEnum, reason_code: ReasonCode, message: str)
     )
 
 
-def _needs_input_response(intent: IntentEnum, reason_code: ReasonCode, message: str, missing: list[str]) -> OrchestratorResponse:
+def _needs_input_response(
+    intent: IntentEnum, reason_code: ReasonCode, message: str, missing: list[str]
+) -> OrchestratorResponse:
     friendly_message = map_needs_input_prompt(missing, message)
     return OrchestratorResponse(
         intent=intent,
@@ -228,7 +226,9 @@ def _is_unclear_input(message: str) -> bool:
 
     # 9. Short nonsense tokens combination (e.g. "abc xyz", "123 abc")
     if len(lower_tokens) <= 2:
-        if all(t in {"abc", "xyz", "qwe", "asd", "zxc", "123", "456", "789", "bla", "blah", "test"} for t in lower_tokens):
+        if all(
+            t in {"abc", "xyz", "qwe", "asd", "zxc", "123", "456", "789", "bla", "blah", "test"} for t in lower_tokens
+        ):
             return True
         if norm_no_acc in {"o kia", "noi gi do", "abc xyz", "123 abc", "blah blah", "test test"}:
             return True
@@ -262,7 +262,7 @@ def _log_turn(
             "workflow_outcome": "blocked" if failure_code else "completed",
             "failure_code": failure_code.value if failure_code is not None else None,
             "guardrail_triggered": guardrail_triggered,
-            "authorization_outcome":"denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
+            "authorization_outcome": "denied" if failure_code == ReasonCode.UNSUPPORTED_CAPABILITY else "allowed",
             "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
         },
     )
@@ -386,10 +386,7 @@ def _immediately_previous_reason_code(
     if not rows or len(rows) < 2:
         return None
     previous, current = rows[-2], rows[-1]
-    if (
-        previous.role != conversation_repository.ROLE_ASSISTANT
-        or current.role != conversation_repository.ROLE_USER
-    ):
+    if previous.role != conversation_repository.ROLE_ASSISTANT or current.role != conversation_repository.ROLE_USER:
         return None
     try:
         return ReasonCode(previous.reason_code) if previous.reason_code else None
@@ -423,12 +420,16 @@ async def _handle_message_core(
 
     reason = role_admission_gate(current_user)
     if reason is not None:
-        return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vai trò này chưa được hỗ trợ trong Orchestrator V1.")
+        return _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vai trò này chưa được hỗ trợ trong Orchestrator V1."
+        )
 
     try:
         session = runtime.session_store.get_or_create(current_user)
     except ValueError:
-        return _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ.")
+        return _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE, ReasonCode.AUTH_EXPIRED, "Phiên đăng nhập không hợp lệ."
+        )
 
     route: RouteDecision | None = None
 
@@ -458,7 +459,9 @@ async def _handle_message_core(
 
     reason = onboarding_gate(session)
     if reason is not None:
-        response = _blocked_response(IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vui lòng xác nhận hướng dẫn sử dụng trước.")
+        response = _blocked_response(
+            IntentEnum.UNSUPPORTED_OR_UNSAFE, reason, "Vui lòng xác nhận hướng dẫn sử dụng trước."
+        )
         _log_turn(
             request_id=request_id,
             session_id=session.session_id,
@@ -488,9 +491,12 @@ async def _handle_message_core(
 
     # 2. Sensitive system / security gate
     from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
+
     sensitive_reason = sensitive_system_gate(request.message)
     if sensitive_reason is not None:
-        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=sensitive_reason, route_confidence=1.0)
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=sensitive_reason, route_confidence=1.0
+        )
         response = _blocked_response(route.intent, route.reason_code, SENSITIVE_SYSTEM_MESSAGE)
         _log_turn(
             request_id=request_id,
@@ -562,7 +568,9 @@ async def _handle_message_core(
         prior_reason_code=_immediately_previous_reason_code(db, current_user),
     )
     if followup_reason is not None:
-        route = RouteDecision(intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0)
+        route = RouteDecision(
+            intent=IntentEnum.UNSUPPORTED_OR_UNSAFE, reason_code=followup_reason, route_confidence=1.0
+        )
         response = _blocked_response(route.intent, route.reason_code, _safety_refusal_message(route.reason_code))
         _log_turn(
             request_id=request_id,
@@ -577,7 +585,9 @@ async def _handle_message_core(
 
     # 5. OCR bypass check
     if _is_ocr_bypass_request(request.message):
-        route = RouteDecision(intent=IntentEnum.ANALYZE_REPORT, reason_code=ReasonCode.OCR_REVIEW_REQUIRED, route_confidence=1.0)
+        route = RouteDecision(
+            intent=IntentEnum.ANALYZE_REPORT, reason_code=ReasonCode.OCR_REVIEW_REQUIRED, route_confidence=1.0
+        )
         response = _blocked_response(
             route.intent,
             route.reason_code,
@@ -597,7 +607,7 @@ async def _handle_message_core(
     # VMEC-05 fast slice: deterministic input gates above retain precedence.
     # Only authenticated patients enter the tool-calling graph; guests keep
     # the established capability policy. Any V2 runtime failure falls through
-    # to the complete legacy path below.
+    # to the complete canonical path below.
     from src.config import get_settings
     from src.models.db import ROLE_PATIENT
 
@@ -614,7 +624,7 @@ async def _handle_message_core(
                 current_analyte=session.current_analyte,
             )
         except Exception:
-            logger.warning("Agent Chat V2 unavailable; falling back to legacy orchestrator", exc_info=True)
+            logger.warning("Agent Chat V2 unavailable; falling back to canonical orchestrator", exc_info=True)
         else:
             from src.models.orchestrator_schemas import ConversationState
 
@@ -635,9 +645,7 @@ async def _handle_message_core(
                 workflow_selected=agent_result.workflow_selected,
                 failure_code=agent_result.response.reason_code,
                 started_at=started_at,
-                guardrail_triggered=(
-                    agent_result.response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
-                ),
+                guardrail_triggered=(agent_result.response.reason_code == ReasonCode.GUARDRAIL_BLOCKED),
             )
             return agent_result.response
 
@@ -652,9 +660,7 @@ async def _handle_message_core(
     provenance_turn = is_provenance_request(request.message)
 
     has_medical_context = (
-        session.current_report_ref is not None
-        or session.current_analyte is not None
-        or (role == ROLE_PATIENT)
+        session.current_report_ref is not None or session.current_analyte is not None or (role == ROLE_PATIENT)
     )
     await emit_progress(progress_callback, ProgressStage.ROUTING)
     if provenance_turn:
@@ -712,6 +718,7 @@ async def _handle_message_core(
 
     # 7. Medical context resolver (Autonomous context retrieval)
     from src.orchestrator.medical_context import resolve_medical_context
+
     await emit_progress(progress_callback, ProgressStage.MEDICAL_CONTEXT)
     resolved = resolve_medical_context(
         message=request.message,
@@ -729,6 +736,7 @@ async def _handle_message_core(
             ["current_analyte"],
         )
         from src.models.orchestrator_schemas import ConversationState
+
         runtime.session_store.update_after_turn(
             current_user,
             session,
@@ -838,15 +846,13 @@ async def _handle_message_core(
 
     # Save conversation state with active timestamp
     from src.models.orchestrator_schemas import ConversationState
+
     new_state = ConversationState(
         pending_question=final_response.message if final_response.status == ResponseStatus.NEEDS_INPUT else None,
         pending_question_timestamp=time.time() if final_response.status == ResponseStatus.NEEDS_INPUT else None,
     )
 
-    clear_analyte = (
-        result.status == ResponseStatus.SUCCESS
-        and result.workflow_selected == "get_my_report_summary"
-    )
+    clear_analyte = result.status == ResponseStatus.SUCCESS and result.workflow_selected == "get_my_report_summary"
 
     runtime.session_store.update_after_turn(
         current_user,
@@ -866,9 +872,7 @@ async def _handle_message_core(
         workflow_selected=result.workflow_selected,
         failure_code=result.reason_code,
         started_at=started_at,
-        guardrail_triggered=(
-            final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED
-        ),
+        guardrail_triggered=(final_response.reason_code == ReasonCode.GUARDRAIL_BLOCKED),
     )
     return final_response
 

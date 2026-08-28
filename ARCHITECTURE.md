@@ -151,7 +151,7 @@ flowchart LR
   - `/health` & `/ready`: Kiểm tra tình trạng hoạt động và độ sẵn sàng của RAG.
 - **Authentication:** JSON Web Tokens (JWT - HS256) hỗ trợ 3 vai trò: `patient`, `doctor`, và `guest` (phiên khách tạm thời, không lưu row persistent vào bảng users).
 
-### 2A. Orchestrator V1 (Patient/Guest Hybrid Assistant)
+### 2A. Conversational Orchestrator (Canonical + Agent V2 Rollout)
 - **Purpose:** Cung cấp lớp hội thoại để điều hướng các khả năng đã được phê duyệt: giải thích kết quả hiện tại, xem lịch sử, xem xu hướng, chuẩn bị câu hỏi cho bác sĩ và chuyển người dùng tới luồng OCR review hiện có.
 - **Roles:** Assistant V1 chỉ nhận `guest` và `patient`. `doctor` bị chặn trước router/workflow/DB với `UNSUPPORTED_CAPABILITY`; doctor-facing app/routes không thay đổi.
 - **Intents cố định:** `UNSUPPORTED_OR_UNSAFE`, `ANALYZE_REPORT`, `EXPLAIN_CURRENT_RESULT`, `VIEW_HISTORY`, `ANALYZE_TREND`, `GET_DOCTOR_QUESTIONS`.
@@ -174,7 +174,7 @@ Patient/Guest UI
 ```
 
 - **Response authority:** LLM chỉ được sinh nội dung `message`. Server kiểm soát `intent`, `status`, `reason_code`, `data`, `data_type`, `sources`, `suggested_actions` và `safety_notice`.
-- **Context:** Session context chỉ giữ thông tin tối thiểu như report hiện tại, analyte hiện tại, intent gần nhất, onboarding và trạng thái OCR pending. Không có persistent long-term chat memory.
+- **Context:** `medical_context.py` resolves the active report/analyte. Patient conversation messages and session context are persisted through `conversation_repository.py` with patient ownership checks; guest context remains short-lived.
 - **OCR boundary:** Orchestrator chỉ đọc trạng thái pending review. Nó không đọc `ocr_drafts` để tạo input phân tích; dữ liệu OCR vào medical pipeline qua đúng `/api/v1/ocr/confirm`.
 
 ### 3. AI Agent (LangGraph)
@@ -202,7 +202,7 @@ graph LR
     GUARD --> FINISH([End])
 ```
 
-The Orchestrator V1 is outside this LangGraph graph. It may call approved
+The conversational orchestrator is outside this report-analysis LangGraph graph. It may call approved
 workflows/wrappers, but it does not reorder the medical graph and does not add a
 second route for OCR-derived medical input.
 
@@ -218,7 +218,7 @@ second route for OCR-derived medical input.
   - `doctor_notes`: Ghi chú nhận xét chuyên môn của bác sĩ (HITL notes).
   - `report_doctor_views`: Lịch sử bác sĩ đã mở xem phiếu xét nghiệm.
   - `out_of_scope_log`: Nhật ký ghi nhận các chỉ số ngoài danh mục hỗ trợ.
-- **Migrations:** Khởi tạo qua `Base.metadata.create_all()` kết hợp cơ chế idempotent runtime migration tối thiểu cho SQLite (`_migrate_sqlite_schema()`).
+- **Schema/startup reconciliation:** `Base.metadata.create_all()` creates missing tables; `add_missing_columns()`, `backfill_added_column_defaults()`, and `add_missing_indexes()` perform minimal idempotent reconciliation. Package-aware manual migrations and backfill ownership are documented in `src/scripts/README.md`.
 
 ### 5. Vector Store
 - **Type:** ChromaDB cục bộ (`./data/chroma`).

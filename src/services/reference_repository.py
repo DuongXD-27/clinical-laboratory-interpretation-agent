@@ -153,34 +153,23 @@ class ReferenceRepository:
         config_approved = {str(item).strip() for item in config["approved_analytes"]}
         catalog_approved = set(catalog_contract.approved_names)
         if config_approved != catalog_approved:
-            raise ReferenceRepositoryError(
-                "reference_checker_config approved_analytes drift from analyte_catalog"
-            )
+            raise ReferenceRepositoryError("reference_checker_config approved_analytes drift from analyte_catalog")
 
         config_aliases = {
-            str(alias).strip(): str(canonical).strip()
-            for alias, canonical in config["analyte_aliases"].items()
+            str(alias).strip(): str(canonical).strip() for alias, canonical in config["analyte_aliases"].items()
         }
         catalog_aliases = catalog_contract.runtime_alias_map()
         if config_aliases != catalog_aliases:
-            raise ReferenceRepositoryError(
-                "reference_checker_config analyte_aliases drift from analyte_catalog"
-            )
+            raise ReferenceRepositoryError("reference_checker_config analyte_aliases drift from analyte_catalog")
 
         config_holds = {
             str(name).strip()
             for name, metadata in config.get("hold_analytes", {}).items()
             if isinstance(metadata, dict) and str(metadata.get("status", "")).strip().upper() == "HOLD"
         }
-        catalog_holds = {
-            entry.canonical_name
-            for entry in catalog_contract.entries
-            if entry.runtime_status == "HOLD"
-        }
+        catalog_holds = {entry.canonical_name for entry in catalog_contract.entries if entry.runtime_status == "HOLD"}
         if config_holds != catalog_holds:
-            raise ReferenceRepositoryError(
-                "reference_checker_config hold_analytes drift from analyte_catalog"
-            )
+            raise ReferenceRepositoryError("reference_checker_config hold_analytes drift from analyte_catalog")
 
     @staticmethod
     def _load_trend_gap_policy(
@@ -197,17 +186,11 @@ class ReferenceRepository:
         if raw_policy is None:
             return MappingProxyType({name: None for name in requested_approved})
         if not isinstance(raw_policy, dict) or set(raw_policy) != requested_approved:
-            raise ReferenceRepositoryError(
-                "trend_max_gap_days must declare exactly the approved analytes"
-            )
+            raise ReferenceRepositoryError("trend_max_gap_days must declare exactly the approved analytes")
         normalized: dict[str, int | None] = {}
         for analyte, value in raw_policy.items():
-            if value is not None and (
-                not isinstance(value, int) or isinstance(value, bool) or value < 1
-            ):
-                raise ReferenceRepositoryError(
-                    f"trend_max_gap_days for {analyte} must be a positive integer or null"
-                )
+            if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
+                raise ReferenceRepositoryError(f"trend_max_gap_days for {analyte} must be a positive integer or null")
             normalized[analyte] = value
         return MappingProxyType(normalized)
 
@@ -430,7 +413,9 @@ class ReferenceRepository:
                 else:
                     if canonical == "HDL-C":
                         baseline_cdl = [
-                            r for r in cdl_candidates if r.get("range_lower") is not None and r.get("range_upper") is not None
+                            r
+                            for r in cdl_candidates
+                            if r.get("range_lower") is not None and r.get("range_upper") is not None
                         ]
                     else:
                         baseline_cdl = [
@@ -554,11 +539,7 @@ class ReferenceRepository:
         if semantic == "normal":
             chosen_index = baseline_index
         elif semantic == "high":
-            candidates = [
-                index
-                for index in range(baseline_index + 1, len(segments))
-                if contains(index)
-            ]
+            candidates = [index for index in range(baseline_index + 1, len(segments)) if contains(index)]
             if not candidates:
                 return None
             chosen_index = max(candidates)

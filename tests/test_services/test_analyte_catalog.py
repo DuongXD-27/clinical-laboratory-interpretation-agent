@@ -86,4 +86,3 @@ def test_critical_status_selection():
     # CRITICAL_LOW selects critical_low_note
     assert potassium.explanation_for_status("critical_low") == potassium.critical_low_note
     assert potassium.explanation_for_status("low", critical_status="critical_low") == potassium.critical_low_note
-

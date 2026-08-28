@@ -166,9 +166,7 @@ async def test_ocr_upload_requires_auth(client):
 @pytest.mark.asyncio
 async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monkeypatch):
     def missing_provider():
-        raise ocr_routes.VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
-        )
+        raise ocr_routes.VisionAdapterError("OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend.")
 
     monkeypatch.setattr(ocr_routes, "_get_dependencies", missing_provider)
     monkeypatch.setattr(get_settings(), "ocr_upload_mode", "open_with_consent")
@@ -185,10 +183,7 @@ async def test_ocr_upload_reports_missing_provider_config_with_cors(client, monk
     assert "GOOGLE_API_KEY" in response.json()["detail"]
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
     assert response.headers["X-OCR-Error-Code"] == "PROVIDER_UNAVAILABLE"
-    exposed = {
-        value.strip().casefold()
-        for value in response.headers["access-control-expose-headers"].split(",")
-    }
+    exposed = {value.strip().casefold() for value in response.headers["access-control-expose-headers"].split(",")}
     assert "x-ocr-error-code" in exposed
 
 
@@ -506,10 +501,7 @@ def test_ocr_hospital_labels_resolve_safe_lipids_and_expose_glucose_ambiguity():
         "Định lượng Glucose [Máu]",
     ]
     drafts, _ = prepare_review(
-        [
-            OCRIndicatorDraft(name=name, value=1.0, unit="mmol/L", confidence=0.95)
-            for name in names
-        ],
+        [OCRIndicatorDraft(name=name, value=1.0, unit="mmol/L", confidence=0.95) for name in names],
         username="benhnhan",
     )
     by_name = {draft.name: draft for draft in drafts}

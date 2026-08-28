@@ -59,18 +59,12 @@ def test_locked_35_analytes_complete_mapping():
 # 2. Fine-Grained Chunk Generation & Determinism Tests
 # ---------------------------------------------------------------------------
 def test_generate_chunk_id_format():
-    assert (
-        generate_chunk_id("wbc", "description", "SRC-001")
-        == "wbc::description::SRC-001"
-    )
+    assert generate_chunk_id("wbc", "description", "SRC-001") == "wbc::description::SRC-001"
     assert (
         generate_chunk_id("ldl_c", "band_note", "SRC-NCEP", band_id="very_high")
         == "ldl_c::band_note::very_high::SRC-NCEP"
     )
-    assert (
-        generate_chunk_id("potassium", "critical_low_note", "SRC-NHS")
-        == "potassium::critical_low_note::SRC-NHS"
-    )
+    assert generate_chunk_id("potassium", "critical_low_note", "SRC-NHS") == "potassium::critical_low_note::SRC-NHS"
 
 
 def test_source_reorder_stability():

@@ -102,9 +102,7 @@ class SpanNode:
             "name": self.name,
             "duration_ms": round(self.duration_ms, 3),
             "depth": self.depth,
-            "unaccounted_ms": (
-                round(self.unaccounted_ms, 3) if self.unaccounted_ms is not None else None
-            ),
+            "unaccounted_ms": (round(self.unaccounted_ms, 3) if self.unaccounted_ms is not None else None),
             "share_pct": self.share_pct,
         }
 
@@ -144,9 +142,7 @@ def build_span_tree(raw: str | None) -> dict[str, object]:
         return {"rows": [], "aggregates": [], "total_ms": None}
 
     aggregates = [
-        {"name": name, "duration_ms": round(measured[name], 3)}
-        for name in sorted(AGGREGATE_SPANS)
-        if name in measured
+        {"name": name, "duration_ms": round(measured[name], 3)} for name in sorted(AGGREGATE_SPANS) if name in measured
     ]
 
     total_ms = measured.get(ROOT_SPAN)
@@ -183,9 +179,7 @@ def build_span_tree(raw: str | None) -> dict[str, object]:
             duration_ms=duration,
             depth=depth,
             unaccounted_ms=unaccounted,
-            share_pct=(
-                round(duration / total_ms * 100, 1) if total_ms and total_ms > 0 else None
-            ),
+            share_pct=(round(duration / total_ms * 100, 1) if total_ms and total_ms > 0 else None),
         )
         rows.append(node.as_row())
         for kid in kids:
@@ -199,9 +193,7 @@ def build_span_tree(raw: str | None) -> dict[str, object]:
         for name in sorted(measured, key=lambda k: -measured[k]):
             if name in AGGREGATE_SPANS:
                 continue
-            rows.append(
-                SpanNode(name=name, duration_ms=measured[name], depth=0).as_row()
-            )
+            rows.append(SpanNode(name=name, duration_ms=measured[name], depth=0).as_row())
 
     return {"rows": rows, "aggregates": aggregates, "total_ms": total_ms}
 

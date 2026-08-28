@@ -80,9 +80,7 @@ APPROVED_MOCK_UNIT_GAPS = {
 
 def _lookup_key(value: object) -> str:
     decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
-    without_accents = "".join(
-        character for character in decomposed if not unicodedata.combining(character)
-    )
+    without_accents = "".join(character for character in decomposed if not unicodedata.combining(character))
     without_accents = without_accents.replace("đ", "d")
     return re.sub(r"[^a-z0-9]+", " ", without_accents).strip()
 
@@ -145,11 +143,7 @@ def test_ui_mock_003_004_005_frontend_support_status_matches_catalog() -> None:
     catalog = get_analyte_catalog_contract()
     manual_by_name = {entry["name"]: entry for entry in _manual_entries()}
 
-    approved = {
-        name
-        for name, manual in manual_by_name.items()
-        if manual["runtime_status"] == "APPROVED"
-    }
+    approved = {name for name, manual in manual_by_name.items() if manual["runtime_status"] == "APPROVED"}
     assert approved == APPROVED_EXACT_SET
     assert manual_by_name["Uric acid"]["runtime_status"] == "APPROVED"
     assert "eGFR" not in manual_by_name

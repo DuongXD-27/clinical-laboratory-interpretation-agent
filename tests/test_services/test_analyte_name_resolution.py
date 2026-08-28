@@ -45,9 +45,7 @@ def test_all_locked_names_reject_unapproved_suffixes(canonical, repository):
 
 def test_every_catalog_alias_and_explicit_runtime_alias_resolves(repository):
     payload = json.loads(
-        (Path(__file__).parents[2] / "data/reference/analyte_catalog.json").read_text(
-            encoding="utf-8"
-        )
+        (Path(__file__).parents[2] / "data/reference/analyte_catalog.json").read_text(encoding="utf-8")
     )
     aliases = [
         (alias, entry["canonical_name"])

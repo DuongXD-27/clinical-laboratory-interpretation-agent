@@ -112,7 +112,6 @@ app.add_middleware(
 )
 
 
-
 def _persist_trace(fields: dict, server_timing: str, user_role: str | None) -> None:
     """Ghi mot dong trace, mo session rieng.
 

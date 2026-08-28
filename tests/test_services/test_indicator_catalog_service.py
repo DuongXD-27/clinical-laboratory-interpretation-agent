@@ -46,7 +46,5 @@ def test_all_approved_analytes_have_an_adult_rule_for_both_recorded_sexes():
 
 
 def test_gap_policy_declares_exactly_the_approved_catalog():
-    config = json.loads(
-        (REPO_ROOT / "data/reference/reference_checker_config.json").read_text(encoding="utf-8")
-    )
+    config = json.loads((REPO_ROOT / "data/reference/reference_checker_config.json").read_text(encoding="utf-8"))
     assert set(config["trend_max_gap_days"]) == set(config["approved_analytes"])

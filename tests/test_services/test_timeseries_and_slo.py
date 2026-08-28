@@ -66,9 +66,7 @@ def _row(
     ("hours", "expected_points_min", "expected_points_max"),
     [(1, 10, 30), (8, 10, 30), (24, 10, 30), (24 * 7, 10, 30)],
 )
-def test_every_window_yields_a_readable_number_of_points(
-    hours, expected_points_min, expected_points_max
-):
+def test_every_window_yields_a_readable_number_of_points(hours, expected_points_min, expected_points_max):
     """Mọi cửa sổ ra 10–30 điểm.
 
     Mốc cố định 1 giờ thì cửa sổ "1 giờ qua" ra đúng MỘT điểm — không phải biểu
@@ -78,9 +76,7 @@ def test_every_window_yields_a_readable_number_of_points(
 
     bucket = pick_bucket_minutes(hours * 60)
     points = hours * 60 / bucket
-    assert expected_points_min <= points <= expected_points_max, (
-        f"{hours}h -> mốc {bucket} phút -> {points} điểm"
-    )
+    assert expected_points_min <= points <= expected_points_max, f"{hours}h -> mốc {bucket} phút -> {points} điểm"
 
 
 # --- mốc rỗng ----------------------------------------------------------------
@@ -290,9 +286,7 @@ def test_latency_slo_counts_requests_under_the_threshold():
     # Và nhiều hơn một chút là vi phạm thật.
     rows.append(_row(0, duration=20000.0))
     worse = trace_slo.evaluate_slos(rows)
-    assert next(s for s in worse["slos"] if s["name"] == "latency")["status"] == (
-        trace_slo.STATUS_BREACHED
-    )
+    assert next(s for s in worse["slos"] if s["name"] == "latency")["status"] == (trace_slo.STATUS_BREACHED)
 
 
 def test_quality_slo_samples_llm_calls_not_requests():

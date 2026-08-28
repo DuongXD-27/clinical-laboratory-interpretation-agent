@@ -66,10 +66,7 @@ def _save_report(
                 patient_gender="male",
                 test_date=date(2026, 8, 24),
                 language="vi",
-                indicators=[
-                    {"name": row["name"], "value": row["value"], "unit": row["unit"]}
-                    for row in rows
-                ],
+                indicators=[{"name": row["name"], "value": row["value"], "unit": row["unit"]} for row in rows],
             ),
             response=_response(rows),
             questions=questions,

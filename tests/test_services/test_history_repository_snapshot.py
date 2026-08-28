@@ -16,6 +16,7 @@ def patient(test_db):
         db.refresh(u)
     return u
 
+
 def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
     """Chứng minh metadata hiển thị được lưu chuẩn theo thiết kế."""
 
@@ -31,52 +32,97 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
             {"name": "Fasting plasma glucose", "value": 7.5, "unit": "mmol/L"},
             {"name": "Uric acid", "value": 400.0, "unit": "umol/L"},
             {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
-        ]
+        ],
     )
 
     response = AnalyzeResponse(
         indicators=[
             # A. WBC RI
             IndicatorResultSchema(
-                name="WBC", value=15.0, unit="10^9/L", status="high",
-                rule_type="RI", reference_low=4.0, reference_high=10.0,
-                is_abnormal=True, is_critical=False, explanation=""
+                name="WBC",
+                value=15.0,
+                unit="10^9/L",
+                status="high",
+                rule_type="RI",
+                reference_low=4.0,
+                reference_high=10.0,
+                is_abnormal=True,
+                is_critical=False,
+                explanation="",
             ),
             # B. AST ONE_SIDED_LIMIT
             IndicatorResultSchema(
-                name="AST", value=45.0, unit="U/L", status="high",
-                rule_type="ONE_SIDED_LIMIT", upper_operator="<", reference_high=40.0,
-                is_abnormal=True, is_critical=False, explanation=""
+                name="AST",
+                value=45.0,
+                unit="U/L",
+                status="high",
+                rule_type="ONE_SIDED_LIMIT",
+                upper_operator="<",
+                reference_high=40.0,
+                is_abnormal=True,
+                is_critical=False,
+                explanation="",
             ),
             # C. Triglyceride BAND
             IndicatorResultSchema(
-                name="Triglyceride", value=6.0, unit="mmol/L", status="very_high",
-                rule_type="BAND", band_id="very_high",
-                is_abnormal=True, is_critical=False, explanation=""
+                name="Triglyceride",
+                value=6.0,
+                unit="mmol/L",
+                status="very_high",
+                rule_type="BAND",
+                band_id="very_high",
+                is_abnormal=True,
+                is_critical=False,
+                explanation="",
             ),
             # D. HbA1c CDL
             IndicatorResultSchema(
-                name="HbA1c", value=6.0, unit="%", status="prediabetes",
-                rule_type="CDL", band_id="prediabetes",
-                is_abnormal=True, is_critical=False, explanation=""
+                name="HbA1c",
+                value=6.0,
+                unit="%",
+                status="prediabetes",
+                rule_type="CDL",
+                band_id="prediabetes",
+                is_abnormal=True,
+                is_critical=False,
+                explanation="",
             ),
             # E. FPG CDL
             IndicatorResultSchema(
-                name="Fasting plasma glucose", value=7.5, unit="mmol/L", status="provisional_diabetes",
-                rule_type="CDL", band_id="provisional_diabetes",
-                is_abnormal=True, is_critical=False, explanation=""
+                name="Fasting plasma glucose",
+                value=7.5,
+                unit="mmol/L",
+                status="provisional_diabetes",
+                rule_type="CDL",
+                band_id="provisional_diabetes",
+                is_abnormal=True,
+                is_critical=False,
+                explanation="",
             ),
             # F. Uric acid UNKNOWN
             IndicatorResultSchema(
-                name="Uric acid", value=400.0, unit="umol/L", status="unknown",
-                rule_type=None, evaluation_reason="analyte_not_supported",
-                is_abnormal=False, is_critical=False, explanation=""
+                name="Uric acid",
+                value=400.0,
+                unit="umol/L",
+                status="unknown",
+                rule_type=None,
+                evaluation_reason="analyte_not_supported",
+                is_abnormal=False,
+                is_critical=False,
+                explanation="",
             ),
             # G. Total bilirubin critical
             IndicatorResultSchema(
-                name="Total bilirubin", value=300.0, unit="umol/L", status="high",
-                critical_status="critical_high", rule_type="RI", reference_high=21.0,
-                is_abnormal=True, is_critical=True, explanation=""
+                name="Total bilirubin",
+                value=300.0,
+                unit="umol/L",
+                status="high",
+                critical_status="critical_high",
+                rule_type="RI",
+                reference_high=21.0,
+                is_abnormal=True,
+                is_critical=True,
+                explanation="",
             ),
         ],
         critical_alerts=[
@@ -119,16 +165,13 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
         assert ast_api.rule_type == "ONE_SIDED_LIMIT"
         assert ast_api.upper_operator == "<"
 
+
 def test_legacy_history_compatibility(test_db, patient):
     """Test old row without the newly added metadata."""
 
     with test_db.session() as db:
         # Bỏ qua repository layer, insert trực tiếp mô phỏng data cũ
-        report = LabReport(
-            patient_id=patient.id,
-            test_date=date(2026, 1, 1),
-            language="vi"
-        )
+        report = LabReport(patient_id=patient.id, test_date=date(2026, 1, 1), language="vi")
         db.add(report)
         db.flush()
 
@@ -143,7 +186,7 @@ def test_legacy_history_compatibility(test_db, patient):
             rule_type=None,
             band_id=None,
             upper_operator=None,
-            evaluation_reason=None
+            evaluation_reason=None,
         )
         db.add(indicator)
         db.commit()

@@ -30,10 +30,11 @@ async def main():
         "patient_gender": report.get("patient_gender", "male"),
         "test_date": report.get("test_date", "2026-08-01"),
         "language": "vi",
-        "raw_indicators": indicators
+        "raw_indicators": indicators,
     }
 
     import uuid
+
     print("Invoking graph...")
     config = {"configurable": {"thread_id": uuid.uuid4().hex}}
     final_state = await agent.ainvoke(initial_state, config=config)
@@ -50,6 +51,7 @@ async def main():
     print(f"Has critical values: {final_state.get('has_critical_values')}")
     print(f"Critical alerts: {final_state.get('critical_alerts')}")
     print(f"Guardrail passed: {final_state.get('guardrail_passed')}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

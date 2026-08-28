@@ -23,6 +23,7 @@ from src.services.app_help_retriever import AppHelpChunkMatch, AppHelpRetrievalR
 # AH-01..AH-05: known app-help phrasings route to APP_HELP
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "message",
     [
@@ -43,6 +44,7 @@ def test_ah01_to_ah05_route_to_app_help(message):
 # AH-06, AH-07: medical questions must NOT be classified as APP_HELP
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "message",
     [
@@ -59,6 +61,7 @@ def test_ah06_ah07_medical_questions_are_not_app_help(message):
 # ==============================================================================
 # AH-10, AH-12: fail-closed, never invent a route/button
 # ==============================================================================
+
 
 @dataclass
 class _FakeUser:
@@ -119,6 +122,7 @@ async def test_app_help_disabled_fails_closed_not_silently(monkeypatch):
 # ==============================================================================
 # AH-11: role-aware answer when a doctor asks about a patient-only workflow
 # ==============================================================================
+
 
 class _PatientOnlyRetriever:
     def retrieve(self, query, *, requester_role=None):
@@ -181,6 +185,7 @@ async def test_patient_asking_own_role_workflow_gets_no_caveat(monkeypatch):
 # (yeu-cau-vu.txt mục D requires a "deterministic / grounded answer").
 # ==============================================================================
 
+
 class _FakeComposerLLM:
     """Mirrors test_response_composer.py's FakeLLM: get_llm() -> object with
     .with_structured_output(schema) -> self, .ainvoke(messages) -> output."""
@@ -204,10 +209,7 @@ async def test_app_help_llm_rewrite_is_used_when_it_stays_grounded(monkeypatch):
     # like internal docs, so a bounded rewrite for natural chat tone is
     # allowed as long as it can't introduce a new claim.
     fallback = 'Vào mục "Phân tích xét nghiệm" trên menu, rồi bấm nút "Tải ảnh phiếu".'
-    natural_rewrite = (
-        'Bạn vào mục "Phân tích xét nghiệm" trên menu, '
-        'rồi bấm nút "Tải ảnh phiếu" để tải phiếu lên nhé.'
-    )
+    natural_rewrite = 'Bạn vào mục "Phân tích xét nghiệm" trên menu, rồi bấm nút "Tải ảnh phiếu" để tải phiếu lên nhé.'
     monkeypatch.setattr(
         response_composer,
         "get_llm",
@@ -233,12 +235,10 @@ async def test_app_help_llm_rewrite_keeping_raw_route_or_filename_is_rejected(mo
     # rewrite carrying one reintroduced internal-docs artifacts into the
     # chat. Users navigate by clicking menu items, not typing URLs.
     fallback = (
-        "Phía bệnh nhân: panel \"Câu hỏi mang đi hỏi bác sĩ\" hiện dưới kết quả "
-        "phân tích và trên trang chi tiết phiếu."
+        'Phía bệnh nhân: panel "Câu hỏi mang đi hỏi bác sĩ" hiện dưới kết quả phân tích và trên trang chi tiết phiếu.'
     )
     artifact_rewrite = (
-        "Panel \"Câu hỏi mang đi hỏi bác sĩ\" hiện tại /patient/analysis "
-        "(component QuestionsForDoctorPanel.tsx)."
+        'Panel "Câu hỏi mang đi hỏi bác sĩ" hiện tại /patient/analysis (component QuestionsForDoctorPanel.tsx).'
     )
     monkeypatch.setattr(
         response_composer,
@@ -303,11 +303,7 @@ async def test_app_help_composer_unavailable_falls_back_to_verbatim(monkeypatch)
 def test_clean_app_help_text_strips_heading_and_file_refs():
     from src.orchestrator.dispatcher import _clean_app_help_text
 
-    raw = (
-        "Feature này dùng để làm gì?\n\n"
-        "Cho phép bệnh nhân nhập kết quả xét nghiệm "
-        "(xem file `ocr-review.md`)."
-    )
+    raw = "Feature này dùng để làm gì?\n\nCho phép bệnh nhân nhập kết quả xét nghiệm (xem file `ocr-review.md`)."
     cleaned = _clean_app_help_text(raw)
     assert "Feature này dùng để làm gì?" not in cleaned
     assert "ocr-review.md" not in cleaned
@@ -349,11 +345,11 @@ def test_clean_app_help_text_strips_bare_inline_paths_and_component_refs():
         "Người dùng tìm ở đâu?\n\n"
         "Phía bệnh nhân:\n"
         '- Panel "Câu hỏi mang đi hỏi bác sĩ" hiện dưới kết quả phân tích tại '
-        '`/patient/analysis` và trên `/patient/reports/{reportId}` '
-        '(component `QuestionsForDoctorPanel.tsx`).\n'
+        "`/patient/analysis` và trên `/patient/reports/{reportId}` "
+        "(component `QuestionsForDoctorPanel.tsx`).\n"
         "Phía bác sĩ:\n"
         "- Câu hỏi của bệnh nhân hiện trong sidebar khi bác sĩ mở một phiếu tại "
-        '`/doctor/reports/{reportId}` (component `DoctorReportSidebar.tsx`, mục '
+        "`/doctor/reports/{reportId}` (component `DoctorReportSidebar.tsx`, mục "
         '"Câu hỏi của bệnh nhân (N)").'
     )
     cleaned = _clean_app_help_text(raw)
@@ -385,7 +381,7 @@ async def test_app_help_build_final_response_surfaces_the_real_explanation(monke
 
     monkeypatch.setattr(response_composer, "get_llm", _boom)
 
-    explanation = "Vào mục \"Lịch sử kết quả\" trên menu để xem các phiếu đã lưu."
+    explanation = 'Vào mục "Lịch sử kết quả" trên menu để xem các phiếu đã lưu.'
     response = await response_composer.build_final_response(
         intent=IntentEnum.APP_HELP,
         status=ResponseStatus.SUCCESS,
@@ -404,6 +400,7 @@ async def test_app_help_build_final_response_surfaces_the_real_explanation(monke
 # report ingestion now" — surfacing a NEEDS_INPUT "no report found"
 # message instead of upload instructions).
 # ==============================================================================
+
 
 @pytest.mark.parametrize(
     "message",
@@ -426,6 +423,7 @@ def test_alternate_how_phrasings_route_to_app_help(message):
 # Regression: found via a systematic routing audit (checking many phrasings
 # per feature, not just the hand-picked ones already covered above).
 # ==============================================================================
+
 
 @pytest.mark.parametrize(
     "message,wrong_intent",

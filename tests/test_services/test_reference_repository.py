@@ -101,7 +101,9 @@ def base_rules():
         make_rule("RBC", sex="M", unit="10^12/L", lower=4.5, upper=6.2),
         make_rule("RBC", sex="F", unit="10^12/L", lower=4.0, upper=5.5),
         make_rule("Fasting plasma glucose", unit="mmol/L", age_scope="Adult", lower=4.1, upper=6.1),
-        make_rule("Fasting plasma glucose", unit="mmol/L", age_scope="Adult", lower=5.6, upper=6.9, reference_type="CDL"),
+        make_rule(
+            "Fasting plasma glucose", unit="mmol/L", age_scope="Adult", lower=5.6, upper=6.9, reference_type="CDL"
+        ),
         make_rule("Creatinine", sex="M", unit="umol/L", age_scope="Adult", lower=59, upper=104),
         make_rule("Creatinine", sex="F", unit="umol/L", age_scope="Adult", lower=45, upper=84),
         make_rule("HDL-C", unit="mmol/L", age_scope="Adult", lower=1.0, upper=1.5, reference_type="CDL"),

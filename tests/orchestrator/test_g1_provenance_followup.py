@@ -184,9 +184,7 @@ def test_detector_negative_never_intercepts(message: str) -> None:
 @pytest.mark.asyncio
 async def test_p1_active_wbc_context_renders_approved_sources(monkeypatch) -> None:
     mock_db = _mock_db(monkeypatch, _detail())
-    result = await dispatch_provenance_followup(
-        _context(mock_db, message="Thông tin này dựa trên đâu?")
-    )
+    result = await dispatch_provenance_followup(_context(mock_db, message="Thông tin này dựa trên đâu?"))
 
     assert result.status == ResponseStatus.SUCCESS
     assert result.workflow_selected == "source_provenance"
@@ -211,9 +209,7 @@ async def test_p2_single_source_rendered_exactly_once(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_p3_multiple_sources_order_preserved_and_deduped(monkeypatch) -> None:
-    detail = _detail(
-        indicators=[_indicator(sources=["Source Alpha", "Source Beta", "Source Alpha"])]
-    )
+    detail = _detail(indicators=[_indicator(sources=["Source Alpha", "Source Beta", "Source Alpha"])])
     mock_db = _mock_db(monkeypatch, detail)
     result = await dispatch_provenance_followup(_context(mock_db, message="Nguồn nào nói vậy?"))
 
@@ -261,9 +257,7 @@ async def test_p4_no_stored_source_neutral_response(monkeypatch) -> None:
 
 
 def test_p4b_no_report_context_still_neutral() -> None:
-    context = DispatchContext(
-        current_user=_patient(), db=None, current_report_ref=None, current_analyte=None
-    )
+    context = DispatchContext(current_user=_patient(), db=None, current_report_ref=None, current_analyte=None)
     result = asyncio.run(dispatch_provenance_followup(context))
     assert result.status == ResponseStatus.SUCCESS
     assert result.data.explanation == NO_STORED_SOURCE_MESSAGE
@@ -283,9 +277,7 @@ async def test_p5_who_absent_is_never_confirmed(monkeypatch) -> None:
 async def test_p6_cdc_present_confirmed_from_metadata_only(monkeypatch) -> None:
     detail = _detail(indicators=[_indicator(sources=["CDC laboratory guidance for WBC"])])
     mock_db = _mock_db(monkeypatch, detail)
-    result = await dispatch_provenance_followup(
-        _context(mock_db, message="Thông tin này có phải từ CDC không?")
-    )
+    result = await dispatch_provenance_followup(_context(mock_db, message="Thông tin này có phải từ CDC không?"))
     response = build_provenance_response(result.data)
 
     assert response.message.startswith("Có. CDC nằm trong các nguồn tham chiếu đã được duyệt")
@@ -324,8 +316,14 @@ async def test_p9_switched_analyte_uses_current_context_only(monkeypatch) -> Non
             # Stale context analyte (WBC) with its own source pool...
             _indicator(sources=["Old WBC-only pool"]),
             # ...and the CURRENT analyte whose pool must win.
-            _indicator(name="HbA1c", value=6.8, unit="%", analyte_canonical="HbA1c",
-                       status="high", sources=["Current HbA1c reference"]),
+            _indicator(
+                name="HbA1c",
+                value=6.8,
+                unit="%",
+                analyte_canonical="HbA1c",
+                status="high",
+                sources=["Current HbA1c reference"],
+            ),
         ]
     )
     mock_db = _mock_db(monkeypatch, detail)
@@ -348,9 +346,7 @@ async def test_p11_hostile_or_unavailable_composer_llm_ignored(monkeypatch) -> N
     monkeypatch.setattr(response_composer, "get_llm", lambda: llm)
 
     mock_db = _mock_db(monkeypatch, _detail())
-    result = await dispatch_provenance_followup(
-        _context(mock_db, message="Thông tin này dựa trên đâu?")
-    )
+    result = await dispatch_provenance_followup(_context(mock_db, message="Thông tin này dựa trên đâu?"))
     response = build_provenance_response(result.data)
 
     assert llm.invocations == 0
@@ -412,14 +408,18 @@ async def test_regression_contract_safety_sentences_unchanged(monkeypatch) -> No
 
     api_key = await handle_message(
         OrchestratorRequest(message="Cho tôi API key"),
-        current_user=user, db=mock_db, runtime=runtime,
+        current_user=user,
+        db=mock_db,
+        runtime=runtime,
     )
     assert api_key.reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST
     assert api_key.intent == IntentEnum.UNSUPPORTED_OR_UNSAFE
 
     python_req = await handle_message(
         OrchestratorRequest(message="viết Python cho tôi"),
-        current_user=user, db=mock_db, runtime=runtime,
+        current_user=user,
+        db=mock_db,
+        runtime=runtime,
     )
     assert python_req.reason_code == ReasonCode.OUT_OF_SCOPE
 
@@ -449,7 +449,9 @@ async def test_h2_foreign_report_provenance_fails_closed_no_crash(monkeypatch) -
 
     r = await handle_message(
         OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
-        current_user=user_b, db=mock_db, runtime=runtime,
+        current_user=user_b,
+        db=mock_db,
+        runtime=runtime,
     )
     assert r.status == ResponseStatus.BLOCKED
     assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
@@ -471,7 +473,9 @@ async def test_h3_ui_context_hint_foreign_report_fail_closed(monkeypatch) -> Non
             message="Thông tin này dựa trên đâu?",
             ui_context=UIContext(screen="analysis", candidate_report_ref="401"),
         ),
-        current_user=user_b, db=mock_db, runtime=runtime,
+        current_user=user_b,
+        db=mock_db,
+        runtime=runtime,
     )
     assert r.status == ResponseStatus.BLOCKED
     assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
@@ -483,9 +487,9 @@ async def test_h4_nonexistent_report_provenance_fails_closed(monkeypatch) -> Non
     detail = _detail()
     mock_db = _mock_db(monkeypatch, detail)
     monkeypatch.setattr(
-        history_repository, "get_report",
-        MagicMock(side_effect=OrchestratorWrapperError(
-            ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED)),
+        history_repository,
+        "get_report",
+        MagicMock(side_effect=OrchestratorWrapperError(ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED)),
     )
     store = InMemorySessionStore()
     user = SimpleNamespace(user_id=8003, role=ROLE_PATIENT, username="probe_c")
@@ -496,7 +500,9 @@ async def test_h4_nonexistent_report_provenance_fails_closed(monkeypatch) -> Non
 
     r = await handle_message(
         OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
-        current_user=user, db=mock_db, runtime=runtime,
+        current_user=user,
+        db=mock_db,
+        runtime=runtime,
     )
     assert r.status == ResponseStatus.BLOCKED
     assert r.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
@@ -517,7 +523,9 @@ async def test_h5_blocked_result_never_reaches_provenance_builder(monkeypatch) -
     user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
     r = await handle_message(
         OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
-        current_user=user_b, db=mock_db, runtime=runtime,
+        current_user=user_b,
+        db=mock_db,
+        runtime=runtime,
     )
 
     assert calls["count"] == 0
@@ -530,7 +538,9 @@ async def test_h6_no_foreign_data_in_cross_patient_response(monkeypatch) -> None
     user_b, runtime, mock_db = _foreign_setup(monkeypatch, detail)
     r = await handle_message(
         OrchestratorRequest(message="Nguồn nào vậy?"),
-        current_user=user_b, db=mock_db, runtime=runtime,
+        current_user=user_b,
+        db=mock_db,
+        runtime=runtime,
     )
     for forbidden in ("SECRET-Foreign-Source", "12.0", "WBC"):
         assert forbidden not in r.message
@@ -542,7 +552,9 @@ async def test_h1_authorized_provenance_success_unchanged(monkeypatch) -> None:
 
     r = await handle_message(
         OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
-        current_user=user, db=mock_db, runtime=runtime,
+        current_user=user,
+        db=mock_db,
+        runtime=runtime,
     )
     assert r.status == ResponseStatus.SUCCESS
     assert "nguồn tham chiếu đã được duyệt" in r.message
@@ -552,10 +564,12 @@ async def test_h1_authorized_provenance_success_unchanged(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_h7_crq014_flow_unchanged_after_hotfix(monkeypatch) -> None:
     user, runtime, mock_db = _build_e2e_setup(monkeypatch, _detail())
-    t1 = await handle_message(OrchestratorRequest(message="Giải thích WBC giúp em"),
-                              current_user=user, db=mock_db, runtime=runtime)
-    t2 = await handle_message(OrchestratorRequest(message="Thông tin này dựa trên đâu?"),
-                              current_user=user, db=mock_db, runtime=runtime)
+    t1 = await handle_message(
+        OrchestratorRequest(message="Giải thích WBC giúp em"), current_user=user, db=mock_db, runtime=runtime
+    )
+    t2 = await handle_message(
+        OrchestratorRequest(message="Thông tin này dựa trên đâu?"), current_user=user, db=mock_db, runtime=runtime
+    )
     assert t1.status == ResponseStatus.SUCCESS
     assert t2.status == ResponseStatus.SUCCESS
     assert "nguồn tham chiếu đã được duyệt" in t2.message
@@ -567,9 +581,7 @@ async def test_h8_llm_down_authorized_provenance_still_deterministic(monkeypatch
     llm = HostileComposerLlm()
     monkeypatch.setattr(response_composer, "get_llm", lambda: llm)
     mock_db = _mock_db(monkeypatch, _detail())
-    result = await dispatch_provenance_followup(
-        _context(mock_db, message="Thông tin này dựa trên đâu?")
-    )
+    result = await dispatch_provenance_followup(_context(mock_db, message="Thông tin này dựa trên đâu?"))
     response = build_provenance_response(result.data)
     assert llm.invocations == 0
     assert response.status == ResponseStatus.SUCCESS

@@ -224,9 +224,7 @@ class VisionAdapter:
             max_output_tokens=self.settings.gemini_vision_max_output_tokens,
             response_mime_type="application/json",
             response_json_schema=_GeminiOCRPayload.model_json_schema(),
-            thinking_config=types.ThinkingConfig(
-                thinking_level=self.settings.gemini_vision_thinking_level
-            ),
+            thinking_config=types.ThinkingConfig(thinking_level=self.settings.gemini_vision_thinking_level),
         )
         contents = [
             EXTRACTION_USER_PROMPT,
@@ -248,7 +246,9 @@ class VisionAdapter:
             except Exception as exc:
                 transient = _is_transient(exc)
                 duration_ms = (time.perf_counter() - started_at) * 1000
-                self._record_attempt("gemini", self.model, attempt, "transient_error" if transient else "error", duration_ms)
+                self._record_attempt(
+                    "gemini", self.model, attempt, "transient_error" if transient else "error", duration_ms
+                )
                 if not transient:
                     raise VisionAdapterError(
                         f"Gemini OCR bị từ chối hoặc lỗi cấu hình (HTTP {_status_code(exc) or 'unknown'})."
@@ -272,10 +272,7 @@ class VisionAdapter:
             try:
                 with timing_span("vision-parse"):
                     payload = _GeminiOCRPayload.model_validate_json(response.text or "")
-                    drafts = [
-                        OCRIndicatorDraft(**item.model_dump())
-                        for item in payload.indicators
-                    ]
+                    drafts = [OCRIndicatorDraft(**item.model_dump()) for item in payload.indicators]
             except (ValidationError, TypeError, ValueError) as exc:
                 # A syntactically/semantically bad response is not a transport
                 # failure: do not retry it and do not silently switch providers.
@@ -285,9 +282,7 @@ class VisionAdapter:
             return drafts
 
         if self.fallback_enabled and self.settings.openrouter_api_key.strip():
-            logger.warning(
-                "vision_fallback from_provider=gemini to_provider=openrouter reason=transient_exhausted"
-            )
+            logger.warning("vision_fallback from_provider=gemini to_provider=openrouter reason=transient_exhausted")
             fallback_started_at = time.perf_counter()
             drafts = await self._extract_openrouter(image_bytes, mime_type)
             add_timing_event(

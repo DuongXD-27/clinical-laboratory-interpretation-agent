@@ -349,10 +349,7 @@ async def test_urea_high_uses_only_safe_grounding_segments(monkeypatch):
         async def ainvoke(self, messages):
             self.prompt = messages[0].content
             return ExplanationOutput(
-                explanation=(
-                    "Giá trị Urea là 7.9 mmol/L. "
-                    "Ure là sản phẩm chuyển hóa của protein."
-                )
+                explanation=("Giá trị Urea là 7.9 mmol/L. Ure là sản phẩm chuyển hóa của protein.")
             )
 
     structured_llm = CapturingStructuredLLM()

@@ -188,8 +188,7 @@ chung, semantic search trộn lẫn nội dung tăng/giảm/bình thường.
 `vector_store.get_by_metadata()`, **không tốn embedding call**:
 
 ```python
-where = {"$and": [{"analyte_id": analyte_id},
-                  {"note_type": {"$in": note_types}}]}
+where = {"$and": [{"analyte_id": analyte_id}, {"note_type": {"$in": note_types}}]}
 ```
 
 Điểm số (`_metadata_score`) **không còn là 1.0 cứng cho mọi chunk khớp nhãn**
@@ -252,10 +251,9 @@ chiếu độc lập.
 ### Analyzer (`analyzer_node.py::process_single_indicator`)
 
 ```python
-chunks = await _retrieve_optional_context(retriever, rag_semaphore,
-                                           analyte_id, name, status)
+chunks = await _retrieve_optional_context(retriever, rag_semaphore, analyte_id, name, status)
 rag_context = build_bounded_context(chunks, max_chars=settings.max_analyzer_context_chars)
-context = rag_context or curated_explanation   # RAG optional — luôn có fallback
+context = rag_context or curated_explanation  # RAG optional — luôn có fallback
 ```
 
 - Prompt nhận `context` bọc trong `<context>...</context>` +

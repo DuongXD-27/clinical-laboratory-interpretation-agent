@@ -15,9 +15,9 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 - **LLM Analyzer**: Diễn giải ý nghĩa chỉ số bằng ngôn ngữ phổ thông, gần gũi với người bệnh.
 - **Medical Guardrail**: Chặn triệt để mọi hành vi chẩn đoán bệnh, suy đoán nguyên nhân cá nhân hóa hoặc chỉ định điều trị.
 - **Doctor Questions Generator**: Gợi ý các câu hỏi trọng tâm để bệnh nhân chủ động trao đổi với bác sĩ trong lần khám tiếp theo.
-- **Patient/Guest Hybrid Assistant (Orchestrator V1)**: Trợ lý nổi trong giao diện bệnh nhân/khách để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa.
+- **Patient/Guest Conversational Assistant**: Trợ lý nổi trong giao diện bệnh nhân/khách để điều hướng kết quả, lịch sử, xu hướng, câu hỏi cho bác sĩ và luồng OCR đã review. Trợ lý không tự quyết định trạng thái y khoa; Agent V2 là nhánh rollout opt-in với canonical fallback.
 
-### Orchestrator V1 scope
+### Canonical orchestrator scope
 
 - **Roles hỗ trợ trên Assistant**: `guest`, `patient`.
 - **Doctor conversational support**: deferred to V2; doctor-facing routes hiện có vẫn hoạt động riêng.
@@ -139,16 +139,20 @@ python -m venv .venv
 # Kích hoạt venv
 .\.venv\Scripts\Activate.ps1
 
-# Cài đặt thư viện phụ thuộc
-pip install -r requirements.txt
+# Cài đặt runtime + lint/test tooling
+pip install -r requirements-dev.txt
 ```
 
 **Trên Linux / macOS (Bash):**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
+
+Dependency ownership is explicit: `requirements.txt` is the production/Docker
+runtime authority, `requirements-dev.txt` adds lint and test tools, and
+`requirements-eval.txt` adds optional evaluation tooling.
 
 ### Bước 2: Cấu hình biến môi trường
 ```powershell
@@ -358,9 +362,22 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/v1/analyze" -Method Post -Head
 make verify
 ```
 
-This runs repository-wide Ruff checks, the backend suite with a repository-local
-pytest temp base, and the existing frontend lint/test/build scripts. It does not
-install dependencies, rewrite source, or update lockfiles.
+This runs repository-wide Ruff lint and format checks, the backend suite with a
+repository-local pytest temp base, the frontend lint/test/build scripts, and the
+generated-artifact guard. It does not install dependencies, rewrite source, or
+update lockfiles.
+
+Equivalent direct commands (including Windows environments without GNU Make):
+```powershell
+ruff check .
+ruff format --check .
+python -m pytest -v --basetemp scratch/pytest-local
+python scripts/check_tracked_generated_artifacts.py
+cd frontend
+npm run lint
+npm test
+npm run build
+```
 
 **Backend Unit & Integration Tests:**
 ```powershell
@@ -372,9 +389,9 @@ make test
 make lint
 ```
 
-`make format-check` observes the repository-wide historical formatting debt; it
-never formats files. Python type checking is not part of verification because no
-supported type checker is declared in `requirements.txt`.
+`make format-check` is non-mutating and must pass. `make format` is the explicit
+mutating formatter command. Python type checking is not part of verification
+because no supported Python type checker is declared.
 
 **Frontend Unit Tests:**
 ```powershell
@@ -409,6 +426,10 @@ Kết quả cuối cùng được ghi trong [Orchestrator V1 Final Verify Eviden
 
 ## 13. Evaluation
 
+Install optional evaluation dependencies with `pip install -r requirements-eval.txt`.
+Evaluation datasets and retained run evidence live under
+`eval/`; they are not installed into the production container.
+
 Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 
 - [Manual E2E Evaluation Evidence](eval/manual_e2e_evidence.md) — Kiểm chứng thực nghiệm 5 ca E2E chính + 1 ca an toàn bổ sung trên runtime thực tế.
@@ -432,7 +453,7 @@ Các báo cáo và bằng chứng kiểm nghiệm chi tiết của hệ thống:
 - **Ý nghĩa của HIGH / LOW**: Tăng/giảm ngoài khoảng tham chiếu không tự động đồng nghĩa với tình trạng nguy kịch.
 - **Tính tất định của Giá trị Nguy kịch (Critical Values)**: Được kiểm soát bởi Deterministic Rule Engine với ngưỡng cố định, hoàn toàn không phụ thuộc vào suy luận xác suất của LLM.
 - **Unsupported analyte fail-closed**: `status="unknown"` không gọi general RAG và không gọi LLM giải thích; chỉ cho phép nội dung curated đã phê duyệt nếu có.
-- **Không có long-term chat memory**: Assistant chỉ giữ session context tối thiểu; không lưu lịch sử chat dài hạn.
+- **Conversation persistence có kiểm soát**: Patient conversations are persisted with ownership enforced by the server-side conversation repository; guest context remains short-lived and cannot access patient history.
 - **Doctor Assistant deferred**: Bác sĩ dùng các route/app doctor hiện có; chatbot doctor không thuộc V1.
 - **RAG live quality**: TIP-007 không đo live RAGAS quality score mới.
 - **Phạm vi kiểm thử**: Các kết quả kiểm nghiệm hiện tại phản ánh tập dữ liệu xét nghiệm và các chỉ số được hỗ trợ trong phạm vi MVP, không đảm bảo tính đúng đắn cho mọi tình huống bệnh lý hay mọi định dạng phiếu xét nghiệm nằm ngoài danh mục.

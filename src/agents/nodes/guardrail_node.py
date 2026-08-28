@@ -112,11 +112,7 @@ Chỉ trả về mỗi câu hỏi trên một dòng bắt đầu bằng "- ".
     try:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         visible_content = _visible_text_content(response.content)
-        rewritten = [
-            line.strip().removeprefix("-").strip()
-            for line in visible_content.splitlines()
-            if line.strip()
-        ]
+        rewritten = [line.strip().removeprefix("-").strip() for line in visible_content.splitlines() if line.strip()]
     except Exception as exc:
         add_timing_event(
             "guardrail-rewrite-call",
@@ -253,16 +249,8 @@ async def guardrail_node(state: AgentState) -> dict:
             retrieved_contexts,
             max_chars=get_settings().max_guardrail_context_chars,
         )
-        rewritten = (
-            await rewrite_with_llm(active_llm, summary, summary_context)
-            if active_llm
-            else summary
-        )
-        summary = (
-            templates.fallback_summary
-            if rewrite_requires_fallback(rewritten, "summary sau retry")
-            else rewritten
-        )
+        rewritten = await rewrite_with_llm(active_llm, summary, summary_context) if active_llm else summary
+        summary = templates.fallback_summary if rewrite_requires_fallback(rewritten, "summary sau retry") else rewritten
 
     for explanation in explanations:
         indicator_name = str(explanation.get("indicator_name", ""))
@@ -329,16 +317,11 @@ async def guardrail_node(state: AgentState) -> dict:
     if any(violations_for(question, "câu hỏi cho bác sĩ") for question in questions_for_doctor):
         active_llm = retry_llm()
         rewritten_questions = (
-            await rewrite_questions_with_llm(active_llm, questions_for_doctor)
-            if active_llm
-            else questions_for_doctor
+            await rewrite_questions_with_llm(active_llm, questions_for_doctor) if active_llm else questions_for_doctor
         )
         questions_for_doctor = (
             list(templates.doctor_questions_fallback)
-            if any(
-                violations_for(question, "câu hỏi sau retry")
-                for question in rewritten_questions
-            )
+            if any(violations_for(question, "câu hỏi sau retry") for question in rewritten_questions)
             else rewritten_questions
         )
 
@@ -346,16 +329,8 @@ async def guardrail_node(state: AgentState) -> dict:
         disclaimer = templates.disclaimer
     elif violations_for(disclaimer, "disclaimer"):
         active_llm = retry_llm()
-        rewritten = (
-            await rewrite_with_llm(active_llm, disclaimer)
-            if active_llm
-            else disclaimer
-        )
-        disclaimer = (
-            templates.disclaimer
-            if rewrite_requires_fallback(rewritten, "disclaimer sau retry")
-            else rewritten
-        )
+        rewritten = await rewrite_with_llm(active_llm, disclaimer) if active_llm else disclaimer
+        disclaimer = templates.disclaimer if rewrite_requires_fallback(rewritten, "disclaimer sau retry") else rewritten
 
     return {
         # False records that unsafe content was generated, even when the final

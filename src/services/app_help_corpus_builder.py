@@ -54,9 +54,7 @@ def _slugify(value: str) -> str:
 def _parse_front_matter(raw: str, source_file: str) -> tuple[dict[str, str], str]:
     match = _FRONT_MATTER_RE.match(raw.strip() + "\n")
     if not match:
-        raise AppHelpCorpusError(
-            f"{source_file}: missing fenced metadata block at top of file"
-        )
+        raise AppHelpCorpusError(f"{source_file}: missing fenced metadata block at top of file")
     block, body = match.group(1), match.group(2)
     metadata: dict[str, str] = {}
     for line in block.splitlines():

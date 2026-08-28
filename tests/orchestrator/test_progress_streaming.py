@@ -91,7 +91,9 @@ async def test_started_progress_completed_order_schema_and_sequence(monkeypatch)
     assert [event.sequence for event in events] == list(range(1, len(events) + 1))
     assert len({event.turn_id for event in events}) == 1
     assert events[0].turn_id
-    terminals = [event for event in events if event.event_type in {StreamEventType.MESSAGE_COMPLETED, StreamEventType.ERROR}]
+    terminals = [
+        event for event in events if event.event_type in {StreamEventType.MESSAGE_COMPLETED, StreamEventType.ERROR}
+    ]
     assert len(terminals) == 1
     completed = terminals[0]
     assert completed.event_type == StreamEventType.MESSAGE_COMPLETED
@@ -140,7 +142,9 @@ async def test_service_emits_real_routing_context_and_composition_boundaries(mon
     monkeypatch.setattr("src.orchestrator.service.route_intent", fake_route)
     monkeypatch.setattr("src.orchestrator.medical_context.resolve_medical_context", fake_resolve)
     monkeypatch.setattr("src.orchestrator.service.dispatch_workflow", fake_dispatch)
-    monkeypatch.setattr("src.orchestrator.response_composer.get_llm", lambda: (_ for _ in ()).throw(RuntimeError("offline")))
+    monkeypatch.setattr(
+        "src.orchestrator.response_composer.get_llm", lambda: (_ for _ in ()).throw(RuntimeError("offline"))
+    )
 
     response = await handle_message(
         OrchestratorRequest(message="Giải thích WBC"),
@@ -173,7 +177,9 @@ async def test_trend_dispatch_emits_longitudinal_only_when_retrieval_starts(monk
             result_count=3,
             trend_available=True,
             points=[
-                TrendPointResponse(report_id=index, test_date=date(2026, 8, index), value=float(index), assessment="normal")
+                TrendPointResponse(
+                    report_id=index, test_date=date(2026, 8, index), value=float(index), assessment="normal"
+                )
                 for index in (1, 2, 3)
             ],
             observed_direction="increasing",

@@ -208,9 +208,7 @@ def summarise_by_group(
             max_ms=round(max(acc.durations), 1) if acc.durations else None,
             error_count=acc.error_count,
             error_rate_pct=round(acc.error_count / count * 100, 2) if count else None,
-            requests_per_min=(
-                round(count / window_minutes, 2) if window_minutes and window_minutes > 0 else None
-            ),
+            requests_per_min=(round(count / window_minutes, 2) if window_minutes and window_minutes > 0 else None),
             llm_call_count=acc.llm_call_count,
             llm_error_count=acc.llm_error_count,
             input_tokens=acc.input_tokens,
@@ -221,9 +219,7 @@ def summarise_by_group(
             # `/analyze` nhieu chi so goi LLM nhieu lan, con mot request khong
             # goi LLM thi khong nen keo con so nay xuong.
             cost_per_call_usd=(
-                round(acc.cost_usd / acc.llm_call_count, 6)
-                if acc.priced_any and acc.llm_call_count
-                else None
+                round(acc.cost_usd / acc.llm_call_count, 6) if acc.priced_any and acc.llm_call_count else None
             ),
         )
         result[group] = metrics.as_dict()

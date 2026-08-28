@@ -203,9 +203,7 @@ def test_req_u02_no_action_variant_declares_free_form_payload():
 
 def test_ac7_request_rejects_pending_ocr_review():
     with pytest.raises(ValidationError):
-        OrchestratorRequest.model_validate(
-            {"message": "hello", "pending_ocr_review": False}
-        )
+        OrchestratorRequest.model_validate({"message": "hello", "pending_ocr_review": False})
 
 
 @pytest.mark.parametrize(
@@ -292,9 +290,7 @@ def test_req_s02_session_context_declares_all_required_fields():
         "conversation_state",
         "response_style",
     }
-    declared = set(OrchestratorSessionContext.model_fields) | set(
-        OrchestratorSessionContext.model_computed_fields
-    )
+    declared = set(OrchestratorSessionContext.model_fields) | set(OrchestratorSessionContext.model_computed_fields)
     assert declared == required
 
     # REQ-C03: pending_ocr_review must remain derived, not client-settable.
@@ -306,9 +302,7 @@ def test_ac12_confirm_ocr_action_carries_only_review_reference():
     assert set(ConfirmOcrAction.model_fields) == {"action", "review_ref"}
     forbidden_fragments = ("indicator", "value", "unit", "draft", "analyte")
     assert not any(
-        fragment in field_name
-        for field_name in ConfirmOcrAction.model_fields
-        for fragment in forbidden_fragments
+        fragment in field_name for field_name in ConfirmOcrAction.model_fields for fragment in forbidden_fragments
     )
 
 

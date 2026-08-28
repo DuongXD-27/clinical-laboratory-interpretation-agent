@@ -65,8 +65,7 @@ def test_bounded_columns_are_wide_enough(model, column, minimum):
     assert isinstance(col.type, String)
     assert col.type.length is not None
     assert col.type.length >= minimum, (
-        f"{model.__tablename__}.{column} chỉ có {col.type.length} ký tự, "
-        f"cần tối thiểu {minimum}."
+        f"{model.__tablename__}.{column} chỉ có {col.type.length} ký tự, cần tối thiểu {minimum}."
     )
 
 

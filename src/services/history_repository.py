@@ -159,9 +159,7 @@ def _catalog_entry_for_snapshot(
     if canonical_name in cache:
         return cache[canonical_name]
 
-    entry = db.scalar(
-        select(IndicatorCatalog).where(IndicatorCatalog.canonical_name == canonical_name)
-    )
+    entry = db.scalar(select(IndicatorCatalog).where(IndicatorCatalog.canonical_name == canonical_name))
     if entry is None:
         entry = IndicatorCatalog(
             canonical_name=configured.canonical_name,
@@ -441,23 +439,15 @@ def get_report(
     return (
         db.execute(
             select(LabReport)
-            .where(
-                LabReport.id == report_id
-            )
+            .where(LabReport.id == report_id)
             .options(
                 selectinload(LabReport.patient),
                 selectinload(LabReport.verified_by),
-                selectinload(LabReport.indicators).selectinload(
-                    ReportIndicator.reviewed_by
-                ),
+                selectinload(LabReport.indicators).selectinload(ReportIndicator.reviewed_by),
                 selectinload(LabReport.critical_alerts),
-                selectinload(LabReport.questions).selectinload(
-                    ReportQuestion.answered_by
-                ),
+                selectinload(LabReport.questions).selectinload(ReportQuestion.answered_by),
                 selectinload(LabReport.out_of_scope_entries),
-                selectinload(LabReport.doctor_views).selectinload(
-                    ReportDoctorView.doctor
-                ),
+                selectinload(LabReport.doctor_views).selectinload(ReportDoctorView.doctor),
             )
         )
     ).scalar_one_or_none()
@@ -612,11 +602,7 @@ def _to_summary(
         reviewed_by_doctor=_is_reviewed(report, has_notes=has_notes),
         has_doctor_notes=has_notes,
         verification_status=report.verification_status or "unverified",
-        verified_by_username=(
-            report.verified_by.username
-            if report.verified_by is not None
-            else None
-        ),
+        verified_by_username=(report.verified_by.username if report.verified_by is not None else None),
         verified_at=report.verified_at,
     )
 
@@ -675,11 +661,7 @@ def to_detail(
                 review_outcome=indicator.review_outcome or "pending",
                 doctor_note=indicator.doctor_note,
                 ai_text_snapshot=indicator.ai_text_snapshot,
-                reviewed_by_username=(
-                    indicator.reviewed_by.username
-                    if indicator.reviewed_by is not None
-                    else None
-                ),
+                reviewed_by_username=(indicator.reviewed_by.username if indicator.reviewed_by is not None else None),
                 reviewed_at=indicator.reviewed_at,
                 sources=list(indicator.sources or []),
                 citations=_structured_explanation_sources(indicator),
@@ -711,11 +693,7 @@ def to_detail(
         reviewed_by_doctor=_is_reviewed(report, has_notes=bool(notes)),
         has_doctor_notes=bool(notes),
         verification_status=report.verification_status or "unverified",
-        verified_by_username=(
-            report.verified_by.username
-            if report.verified_by is not None
-            else None
-        ),
+        verified_by_username=(report.verified_by.username if report.verified_by is not None else None),
         verified_at=report.verified_at,
     )
 
@@ -923,13 +901,17 @@ def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
         return {}
 
     # Target rows where ANY required canonical field is NULL
-    indicators = db.execute(
-        select(ReportIndicator).where(
-            (ReportIndicator.analyte_canonical.is_(None)) |
-            (ReportIndicator.canonical_value.is_(None)) |
-            (ReportIndicator.canonical_unit.is_(None))
+    indicators = (
+        db.execute(
+            select(ReportIndicator).where(
+                (ReportIndicator.analyte_canonical.is_(None))
+                | (ReportIndicator.canonical_value.is_(None))
+                | (ReportIndicator.canonical_unit.is_(None))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     if not indicators:
         return {}
@@ -989,9 +971,7 @@ def backfill_legacy_canonical_indicators(db: Session) -> dict[str, int]:
         if conflict:
             partial_rows_conflicting += 1
             logger.warning(
-                "Conflict during legacy backfill for report %s indicator %s. Skipping.",
-                ind.report_id,
-                ind.id
+                "Conflict during legacy backfill for report %s indicator %s. Skipping.", ind.report_id, ind.id
             )
             continue
 

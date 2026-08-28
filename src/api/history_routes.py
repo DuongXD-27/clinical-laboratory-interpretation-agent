@@ -63,9 +63,7 @@ async def list_history(
     ),
     patient_username: str | None = Query(
         default=None,
-        description=(
-            "Chỉ doctor dùng được: xem lịch sử của một patient cụ thể."
-        ),
+        description=("Chỉ doctor dùng được: xem lịch sử của một patient cụ thể."),
     ),
     limit: int = Query(
         default=50,
@@ -79,17 +77,10 @@ async def list_history(
     current_user: CurrentUser = Depends(_history_user),
     db: Session = Depends(get_db),
 ) -> LabReportListResponse:
-    if (
-        from_date is not None
-        and to_date is not None
-        and from_date > to_date
-    ):
+    if from_date is not None and to_date is not None and from_date > to_date:
         raise HTTPException(
             status_code=422,
-            detail=(
-                "Khoảng ngày không hợp lệ: "
-                "'from' phải trước hoặc bằng 'to'."
-            ),
+            detail=("Khoảng ngày không hợp lệ: 'from' phải trước hoặc bằng 'to'."),
         )
 
     if current_user.role == ROLE_PATIENT:
@@ -157,10 +148,7 @@ async def get_history_detail(
             detail="Không tìm thấy phiếu xét nghiệm.",
         )
 
-    if (
-        current_user.role == ROLE_PATIENT
-        and report.patient_id != current_user.user_id
-    ):
+    if current_user.role == ROLE_PATIENT and report.patient_id != current_user.user_id:
         # Không trả 403 vì 403 xác nhận report ID của người khác tồn tại.
         #
         # Trả 404 giúp tránh information disclosure qua ID enumeration.
@@ -197,10 +185,7 @@ def _load_report_for(
     if report is None:
         raise not_found
 
-    if (
-        current_user.role == ROLE_PATIENT
-        and report.patient_id != current_user.user_id
-    ):
+    if current_user.role == ROLE_PATIENT and report.patient_id != current_user.user_id:
         raise not_found
 
     return report

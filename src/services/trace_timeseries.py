@@ -31,10 +31,10 @@ from src.services.trace_metrics import GROUP_AI, classify_path, percentile
 # (cua so toi da tinh bang phut, kich thuoc moc tinh bang phut)
 # Chon de moi cua so ra khoang 12-30 diem.
 _BUCKET_LADDER: tuple[tuple[float, int], ...] = (
-    (90, 5),          # <= 1.5 gio  -> moc 5 phut   (18 diem cho 1 gio)
-    (8 * 60, 30),     # <= 8 gio    -> moc 30 phut  (16 diem cho 8 gio)
-    (36 * 60, 60),    # <= 36 gio   -> moc 1 gio    (24 diem cho 24 gio)
-    (10 * 24 * 60, 360),   # <= 10 ngay -> moc 6 gio (28 diem cho 7 ngay)
+    (90, 5),  # <= 1.5 gio  -> moc 5 phut   (18 diem cho 1 gio)
+    (8 * 60, 30),  # <= 8 gio    -> moc 30 phut  (16 diem cho 8 gio)
+    (36 * 60, 60),  # <= 36 gio   -> moc 1 gio    (24 diem cho 24 gio)
+    (10 * 24 * 60, 360),  # <= 10 ngay -> moc 6 gio (28 diem cho 7 ngay)
 )
 _FALLBACK_BUCKET_MINUTES = 24 * 60
 
@@ -102,10 +102,13 @@ def build_timeseries(
         return index if 0 <= index < len(buckets) else None
 
     for row in rows:
-        if classify_path(
-            str(getattr(row, "path", "") or ""),
-            str(getattr(row, "method", "GET") or "GET"),
-        ) != group:
+        if (
+            classify_path(
+                str(getattr(row, "path", "") or ""),
+                str(getattr(row, "method", "GET") or "GET"),
+            )
+            != group
+        ):
             continue
 
         created = getattr(row, "created_at", None)
@@ -131,12 +134,8 @@ def build_timeseries(
         bucket.output_tokens += int(getattr(row, "llm_output_tokens", 0) or 0)
         bucket.llm_call_count += int(getattr(row, "llm_call_count", 0) or 0)
         bucket.llm_error_count += int(getattr(row, "llm_error_count", 0) or 0)
-        bucket.guardrail_fallback_count += int(
-            getattr(row, "guardrail_fallback_count", 0) or 0
-        )
-        bucket.guardrail_rewrite_count += int(
-            getattr(row, "guardrail_rewrite_count", 0) or 0
-        )
+        bucket.guardrail_fallback_count += int(getattr(row, "guardrail_fallback_count", 0) or 0)
+        bucket.guardrail_rewrite_count += int(getattr(row, "guardrail_rewrite_count", 0) or 0)
 
         cost = getattr(row, "llm_cost_usd", None)
         if cost is not None:
@@ -152,9 +151,7 @@ def build_timeseries(
             "p99_ms": percentile(bucket.durations, 99),
             "error_count": bucket.error_count,
             "error_rate_pct": (
-                round(bucket.error_count / len(bucket.durations) * 100, 2)
-                if bucket.durations
-                else None
+                round(bucket.error_count / len(bucket.durations) * 100, 2) if bucket.durations else None
             ),
             "errors_by_type": dict(sorted(bucket.errors_by_type.items())),
             "input_tokens": bucket.input_tokens,
@@ -169,9 +166,7 @@ def build_timeseries(
             # gia truc tuyen ma he thong chua co.
             "guardrail_fallback_rate_pct": (
                 round(
-                    bucket.guardrail_fallback_count
-                    / (bucket.guardrail_fallback_count + bucket.llm_call_count)
-                    * 100,
+                    bucket.guardrail_fallback_count / (bucket.guardrail_fallback_count + bucket.llm_call_count) * 100,
                     2,
                 )
                 if (bucket.guardrail_fallback_count + bucket.llm_call_count)
@@ -189,9 +184,7 @@ def build_timeseries(
         "points": points,
         # Moi nhom loi xuat hien trong ca cua so, de bieu do biet can bao nhieu
         # duong ma khong phai quet lai tung diem.
-        "error_types": sorted(
-            {key for bucket in buckets for key in bucket.errors_by_type}
-        ),
+        "error_types": sorted({key for bucket in buckets for key in bucket.errors_by_type}),
     }
 
 

@@ -92,9 +92,7 @@ def verify_id_token(credential: str) -> GoogleIdentity:
     if isinstance(verified, str):
         verified = verified.lower() == "true"
     if not verified:
-        raise GoogleIdentityError(
-            "Tài khoản Google này chưa xác minh email nên chưa dùng để đăng nhập được."
-        )
+        raise GoogleIdentityError("Tài khoản Google này chưa xác minh email nên chưa dùng để đăng nhập được.")
 
     email = normalise_email(claims.get("email"))
     if not email:

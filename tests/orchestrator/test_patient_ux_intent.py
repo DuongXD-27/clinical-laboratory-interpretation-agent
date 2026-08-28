@@ -47,6 +47,7 @@ async def test_guest_without_medical_context_vague_request():
         user_role=ROLE_GUEST,
         onboarding_acknowledged=True,
     )
+
     # Mock LLM for fallback
     class MockLLM:
         async def ainvoke(self, prompt: str):
@@ -55,6 +56,7 @@ async def test_guest_without_medical_context_vague_request():
     from _pytest.monkeypatch import MonkeyPatch
 
     from src.orchestrator import intent_router
+
     mp = MonkeyPatch()
     mp.setattr(intent_router, "get_llm", lambda: MockLLM())
 

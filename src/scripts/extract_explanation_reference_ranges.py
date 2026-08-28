@@ -128,9 +128,7 @@ def extract_supplemental_rules(
 
         # New schema: sources is a list of objects with a "url" field
         raw_sources = entry.get("sources", [])
-        sources: list[str] = [
-            str(src["url"]) for src in raw_sources if isinstance(src, dict) and src.get("url")
-        ]
+        sources: list[str] = [str(src["url"]) for src in raw_sources if isinstance(src, dict) and src.get("url")]
         primary_source_url = sources[0] if sources else None
         # No "id" field in new schema; derive from name
         entry_id = indicator.lower().replace("-", "_").replace(" ", "_")
@@ -173,35 +171,37 @@ def extract_supplemental_rules(
                 range_lower = float(low) if low is not None else None
                 range_upper = float(high) if high is not None else None
 
-            rules.append({
-                "rule_id": f"{prefix}-{seq:03d}",
-                "source_row_number": None,
-                "analyte_canonical": analyte,
-                "specimen": None,
-                "fasting_required": None,
-                "sex": sex,
-                "age_scope": "Adult",
-                "unit_machine": unit,
-                "unit_display_vn": unit,
-                "unit_raw": unit,
-                "unit_canonical": unit,
-                "value_type": None,
-                "range_lower": range_lower,
-                "range_upper": range_upper,
-                "reference_type": rng.get("reference_type"),
-                "source_priority_tier": None,
-                "source_url": primary_source_url,
-                "confidence": "CURATED",
-                "source_origin": "explanations.json",
-                "source_entry_id": entry_id,
-                "range_group": group,
-                "range_note": note,
-                "source_urls": sources,
-                "source_unit_original": source_unit_original,
-                "source_range_lower_original": source_range_lower_original,
-                "source_range_upper_original": source_range_upper_original,
-                "conversion_factor": conversion_factor,
-                "conversion_rounding": conversion_rounding,
-            })
+            rules.append(
+                {
+                    "rule_id": f"{prefix}-{seq:03d}",
+                    "source_row_number": None,
+                    "analyte_canonical": analyte,
+                    "specimen": None,
+                    "fasting_required": None,
+                    "sex": sex,
+                    "age_scope": "Adult",
+                    "unit_machine": unit,
+                    "unit_display_vn": unit,
+                    "unit_raw": unit,
+                    "unit_canonical": unit,
+                    "value_type": None,
+                    "range_lower": range_lower,
+                    "range_upper": range_upper,
+                    "reference_type": rng.get("reference_type"),
+                    "source_priority_tier": None,
+                    "source_url": primary_source_url,
+                    "confidence": "CURATED",
+                    "source_origin": "explanations.json",
+                    "source_entry_id": entry_id,
+                    "range_group": group,
+                    "range_note": note,
+                    "source_urls": sources,
+                    "source_unit_original": source_unit_original,
+                    "source_range_lower_original": source_range_lower_original,
+                    "source_range_upper_original": source_range_upper_original,
+                    "conversion_factor": conversion_factor,
+                    "conversion_rounding": conversion_rounding,
+                }
+            )
 
     return rules, [dict(w) for w in _BOUNDARY_WARNINGS]

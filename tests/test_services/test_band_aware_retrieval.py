@@ -40,9 +40,8 @@ def repository() -> ReferenceRepository:
 
 def test_resolve_band_hba1c_matrix(repository):
     def resolve(value):
-        return repository.resolve_band(
-            analyte="HbA1c", value=value, unit="%", patient_gender="male", patient_age=35
-        )
+        return repository.resolve_band(analyte="HbA1c", value=value, unit="%", patient_gender="male", patient_age=35)
+
     # Boundary-consistent with the Reference Checker:
     # 5.7 is NOT strictly above the baseline upper bound -> checker NORMAL.
     assert resolve(4.5) == "normal_glycemia"
@@ -73,27 +72,18 @@ def test_resolve_band_other_banded_analytes(repository):
         == "impaired_fasting_glucose"
     )
     assert (
-        repository.resolve_band(
-            analyte="HDL-C", value=1.2, unit="mmol/L", patient_gender="male", patient_age=35
-        )
+        repository.resolve_band(analyte="HDL-C", value=1.2, unit="mmol/L", patient_gender="male", patient_age=35)
         == "intermediate"
     )
     assert (
-        repository.resolve_band(
-            analyte="LDL-C", value=5.2, unit="mmol/L", patient_gender="male", patient_age=35
-        )
+        repository.resolve_band(analyte="LDL-C", value=5.2, unit="mmol/L", patient_gender="male", patient_age=35)
         == "very_high"
     )
 
 
 def test_resolve_band_fail_closed(repository):
     # Non-banded / unsupported analytes never receive a band hint.
-    assert (
-        repository.resolve_band(
-            analyte="WBC", value=12.0, unit="G/L", patient_gender="male", patient_age=35
-        )
-        is None
-    )
+    assert repository.resolve_band(analyte="WBC", value=12.0, unit="G/L", patient_gender="male", patient_age=35) is None
     assert (
         repository.resolve_band(
             analyte="Totally Unknown Analyte",
@@ -106,9 +96,7 @@ def test_resolve_band_fail_closed(repository):
     )
     # Unparseable values fail closed instead of guessing.
     assert (
-        repository.resolve_band(
-            analyte="HbA1c", value="not-a-number", unit="%", patient_gender="male", patient_age=35
-        )
+        repository.resolve_band(analyte="HbA1c", value="not-a-number", unit="%", patient_gender="male", patient_age=35)
         is None
     )
 
@@ -196,8 +184,12 @@ NORMAL_BAND_TEXT = _long(
 DIABETES_BAND_TEXT = _long(
     "Ngưỡng chẩn đoán đái tháo đường từ 6.5%. Với người chưa từng được chẩn đoán, kết quả cần được làm lại bằng mẫu máu mới."
 )
-GENERIC_DESCRIPTION = _long("HbA1c phản ánh nồng độ đường huyết trung bình của cơ thể trong khoảng 2 đến 3 tháng gần nhất.")
-JUNK_DESCRIPTION = "vector chroma vector chroma vector chroma vector chroma vector chroma junk content entirely off topic."
+GENERIC_DESCRIPTION = _long(
+    "HbA1c phản ánh nồng độ đường huyết trung bình của cơ thể trong khoảng 2 đến 3 tháng gần nhất."
+)
+JUNK_DESCRIPTION = (
+    "vector chroma vector chroma vector chroma vector chroma vector chroma junk content entirely off topic."
+)
 
 
 def _ingest(tmp_path, chunks):
@@ -219,8 +211,16 @@ def _ingest(tmp_path, chunks):
 
 def _hba1c_chunks() -> list[CorpusChunk]:
     return [
-        _chunk("https://src.test/normal", "SRC-NORMAL", NORMAL_BAND_TEXT, band_id="normal_glycemia", note_type="band_note"),
-        _chunk("https://src.test/diabetes", "SRC-DIABETES", DIABETES_BAND_TEXT, band_id="diabetes_diagnostic_threshold", note_type="band_note"),
+        _chunk(
+            "https://src.test/normal", "SRC-NORMAL", NORMAL_BAND_TEXT, band_id="normal_glycemia", note_type="band_note"
+        ),
+        _chunk(
+            "https://src.test/diabetes",
+            "SRC-DIABETES",
+            DIABETES_BAND_TEXT,
+            band_id="diabetes_diagnostic_threshold",
+            note_type="band_note",
+        ),
         _chunk("https://src.test/desc-a", "SRC-DESC-A", GENERIC_DESCRIPTION),
     ]
 
@@ -252,9 +252,13 @@ def test_fusion_dedup_skips_duplicate_source_but_refills_with_others(tmp_path):
     # per-source diversity must prefer different-source descriptions.
     chunks[2] = _chunk("https://src.test/diabetes", "SRC-DIABETES", GENERIC_DESCRIPTION)
     chunks.append(
-        _chunk("https://src.test/limitation", "SRC-LIMITATION", _long(
-            "Kết quả HbA1c có thể bị ảnh hưởng bởi các tình trạng thay đổi đời sống hồng cầu cần được lưu ý khi đánh giá."
-        ))
+        _chunk(
+            "https://src.test/limitation",
+            "SRC-LIMITATION",
+            _long(
+                "Kết quả HbA1c có thể bị ảnh hưởng bởi các tình trạng thay đổi đời sống hồng cầu cần được lưu ý khi đánh giá."
+            ),
+        )
     )
     retriever = _ingest(tmp_path, chunks)
 
@@ -416,8 +420,7 @@ async def test_checker_and_resolve_band_agree_at_every_boundary(repository):
                 patient_age=35,
             )
             assert band == expected_band, (
-                f"{analyte} {value}: band {band!r} != audited {expected_band!r} "
-                f"(checker status {checker_status!r})"
+                f"{analyte} {value}: band {band!r} != audited {expected_band!r} (checker status {checker_status!r})"
             )
 
 
@@ -427,7 +430,7 @@ def test_gap_value_resolves_to_none_and_no_band_note(monkeypatch, repository):
     from src.services import reference_repository as repo_module
 
     real_rules = repository._rules_by_analyte.get("HbA1c", ())
-    template_low = copy.deepcopy(real_rules[0])   # (None, 5.7)-style row
+    template_low = copy.deepcopy(real_rules[0])  # (None, 5.7)-style row
     template_high = copy.deepcopy(real_rules[2])  # (6.5, None)-style row
     template_low["range_upper"] = 5.0
     template_high["range_lower"] = 9.0

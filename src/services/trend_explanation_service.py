@@ -327,9 +327,7 @@ def _trend_prompt(
     pct_section = ""
     if pct_change is not None and pct_direction is not None:
         change_phrase = (
-            f"{pct_direction} {pct_change}%"
-            if pct_direction != "không đổi"
-            else f"không có biến động ({pct_change}%)"
+            f"{pct_direction} {pct_change}%" if pct_direction != "không đổi" else f"không có biến động ({pct_change}%)"
         )
         pct_section = (
             f"\nMức biến động giữa lần gần nhất và lần ngay trước: {change_phrase} "

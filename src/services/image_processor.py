@@ -72,15 +72,11 @@ class ImageProcessor:
 
         fmt = (img.format or "").lower()
         if fmt not in SUPPORTED_FORMATS:
-            raise ImageProcessorError(
-                f"Định dạng không hỗ trợ: {fmt or 'unknown'} (chỉ {sorted(SUPPORTED_FORMATS)})."
-            )
+            raise ImageProcessorError(f"Định dạng không hỗ trợ: {fmt or 'unknown'} (chỉ {sorted(SUPPORTED_FORMATS)}).")
 
         max_mb = self.settings.vision_max_image_mb
         if len(raw_bytes) > max_mb * 1024 * 1024:
-            raise ImageProcessorError(
-                f"Ảnh vượt giới hạn {max_mb}MB ({len(raw_bytes) / 1024 / 1024:.1f}MB)."
-            )
+            raise ImageProcessorError(f"Ảnh vượt giới hạn {max_mb}MB ({len(raw_bytes) / 1024 / 1024:.1f}MB).")
 
         # Bỏ kênh alpha (JPEG không có alpha) bằng nền trắng.
         if img.mode in ("RGBA", "LA", "P"):

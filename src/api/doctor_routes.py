@@ -110,9 +110,7 @@ async def complete_report(
             report_id,
             doctor_id=_doctor_id(current_user),
         )
-        return DoctorCompleteReportResponse(
-            report=service.complete_report_response(report)
-        )
+        return DoctorCompleteReportResponse(report=service.complete_report_response(report))
     except service.ReportNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except service.PendingFindingsError as exc:

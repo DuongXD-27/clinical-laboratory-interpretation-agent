@@ -47,10 +47,7 @@ from src.services.request_timing import timing_span
 
 router = APIRouter()
 
-CONSENT_TEXT = (
-    "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm "
-    "thật của tôi hay của người khác."
-)
+CONSENT_TEXT = "Tôi xác nhận đây là dữ liệu mô phỏng, không phải phiếu xét nghiệm thật của tôi hay của người khác."
 
 
 def _clean_source_filename(filename: str | None) -> str:
@@ -66,9 +63,7 @@ def _get_dependencies() -> tuple[ImageProcessor, VisionAdapter]:
     """Khởi tạo OCR dependencies sau khi request vượt qua policy gates."""
 
     if not get_settings().google_api_key.strip():
-        raise VisionAdapterError(
-            "OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend."
-        )
+        raise VisionAdapterError("OCR chưa được cấu hình: thiếu GOOGLE_API_KEY trên backend.")
 
     with timing_span("image-processor-init"):
         processor = ImageProcessor()
@@ -200,9 +195,7 @@ async def ocr_upload(
     if not consent_acknowledged:
         raise HTTPException(
             status_code=400,
-            detail=(
-                f"Cần xác nhận trước khi tải ảnh: {CONSENT_TEXT}"
-            ),
+            detail=(f"Cần xác nhận trước khi tải ảnh: {CONSENT_TEXT}"),
             headers=ocr_error_headers(REVIEW_REQUIRED),
         )
 
@@ -215,16 +208,9 @@ async def ocr_upload(
     # Gate 3: demo_only chỉ nhận ảnh mẫu
     # ------------------------------------------------------------------
     with timing_span("ocr-sample-policy-check"):
-        known_sample = (
-            is_known_sample(raw)
-            if settings.ocr_upload_mode == "demo_only"
-            else True
-        )
+        known_sample = is_known_sample(raw) if settings.ocr_upload_mode == "demo_only" else True
 
-    if (
-        settings.ocr_upload_mode == "demo_only"
-        and not known_sample
-    ):
+    if settings.ocr_upload_mode == "demo_only" and not known_sample:
         raise HTTPException(
             status_code=403,
             detail=(
@@ -310,12 +296,8 @@ async def ocr_upload(
             adapter.model,
         ),
         review_token=review_token,
-        low_confidence_threshold=(
-            settings.ocr_low_confidence_threshold
-        ),
-        expires_in_seconds=(
-            settings.ocr_review_token_expire_minutes * 60
-        ),
+        low_confidence_threshold=(settings.ocr_low_confidence_threshold),
+        expires_in_seconds=(settings.ocr_review_token_expire_minutes * 60),
         metadata_hint={},
         indicators=prepared_drafts,
     )
@@ -362,10 +344,7 @@ async def ocr_confirm(
     if not supported_inputs:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Phiếu này chưa có chỉ số nào nằm trong "
-                "danh sách hiện được hỗ trợ."
-            ),
+            detail=("Phiếu này chưa có chỉ số nào nằm trong danh sách hiện được hỗ trợ."),
             headers=ocr_error_headers(NO_SUPPORTED_ANALYTES),
         )
 
@@ -389,10 +368,7 @@ async def ocr_confirm(
             patient_gender=request.patient_gender,
             test_date=request.test_date,
             language=request.language,
-            indicators=[
-                IndicatorInputSchema(**item)
-                for item in supported_inputs
-            ],
+            indicators=[IndicatorInputSchema(**item) for item in supported_inputs],
         )
 
     # Local import tránh module cycle và đảm bảo manual/OCR dùng chung

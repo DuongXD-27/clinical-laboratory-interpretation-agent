@@ -60,8 +60,7 @@ class AnalyteCatalogContract:
                 existing = self._by_key.get(key)
                 if existing is not None and existing.canonical_name != entry.canonical_name:
                     raise AnalyteCatalogError(
-                        f"alias {value!r} maps to both "
-                        f"{existing.canonical_name!r} and {entry.canonical_name!r}"
+                        f"alias {value!r} maps to both {existing.canonical_name!r} and {entry.canonical_name!r}"
                     )
                 if key:
                     self._by_key[key] = entry
@@ -266,9 +265,7 @@ class AnalyteCatalog:
                 raise AnalyteCatalogError(f"analyte definition at index {index} must be an object")
             indicator = str(item.get("canonical_name") or item.get("name") or "").strip()
             if not indicator:
-                raise AnalyteCatalogError(
-                    f"analyte definition at index {index} requires 'canonical_name' or 'name'"
-                )
+                raise AnalyteCatalogError(f"analyte definition at index {index} requires 'canonical_name' or 'name'")
             # Use authoritative shared resolver
             analyte_id = str(item.get("analyte_id") or canonical_analyte_id(indicator)).strip()
 

@@ -215,12 +215,15 @@ def test_insufficient_data_message_remains_unchanged():
         observed_direction=None,
     )
 
-    assert deterministic_message_for(
-        ResponseStatus.NEEDS_INPUT,
-        ReasonCode.TREND_INSUFFICIENT_POINTS,
-        IntentEnum.ANALYZE_TREND,
-        payload,
-    ) == "Chưa đủ dữ liệu để tạo xu hướng cho chỉ số này."
+    assert (
+        deterministic_message_for(
+            ResponseStatus.NEEDS_INPUT,
+            ReasonCode.TREND_INSUFFICIENT_POINTS,
+            IntentEnum.ANALYZE_TREND,
+            payload,
+        )
+        == "Chưa đủ dữ liệu để tạo xu hướng cho chỉ số này."
+    )
 
 
 @pytest.mark.asyncio

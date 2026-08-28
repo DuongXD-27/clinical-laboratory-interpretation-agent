@@ -110,9 +110,7 @@ class LlmUsageCallback(BaseCallbackHandler):
     def on_llm_start(self, serialized: Any, prompts: Any, *, run_id: UUID | None = None, **kwargs: Any) -> None:
         self._mark_start(run_id)
 
-    def on_chat_model_start(
-        self, serialized: Any, messages: Any, *, run_id: UUID | None = None, **kwargs: Any
-    ) -> None:
+    def on_chat_model_start(self, serialized: Any, messages: Any, *, run_id: UUID | None = None, **kwargs: Any) -> None:
         self._mark_start(run_id)
 
     def on_llm_end(self, response: Any, *, run_id: UUID | None = None, **kwargs: Any) -> None:

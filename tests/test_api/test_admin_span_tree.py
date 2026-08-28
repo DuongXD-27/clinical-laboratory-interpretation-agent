@@ -127,9 +127,7 @@ async def test_db_query_is_reported_separately_from_the_tree(client, seeded_admi
 
 
 @pytest.mark.asyncio
-async def test_trace_without_server_timing_returns_an_empty_tree_not_500(
-    client, test_db, seeded_admin
-):
+async def test_trace_without_server_timing_returns_an_empty_tree_not_500(client, test_db, seeded_admin):
     """Trace từ bản cũ không có `server_timing` — trả cây rỗng, không nổ."""
 
     with test_db.session() as session:

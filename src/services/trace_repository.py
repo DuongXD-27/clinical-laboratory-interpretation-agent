@@ -81,11 +81,7 @@ def record_trace(
             # KHONG dung `_num` cho chi phi: `_num` doi None thanh 0.0, ma o day
             # `None` mang thong tin — "chua tinh duoc gia". Ep ve 0.0 la bien
             # "khong biet" thanh "mien phi".
-            llm_cost_usd=(
-                float(fields["llm_cost_usd"])
-                if fields.get("llm_cost_usd") is not None
-                else None
-            ),
+            llm_cost_usd=(float(fields["llm_cost_usd"]) if fields.get("llm_cost_usd") is not None else None),
             llm_unpriced_call_count=int(_num("llm_unpriced_call_count")),
             guardrail_fallback_count=int(_num("guardrail_fallback_count")),
             guardrail_rewrite_count=int(_num("guardrail_rewrite_count")),
@@ -96,9 +92,7 @@ def record_trace(
                 if fields.get("error_type")
                 else error_taxonomy.classify_status(int(_num("status_code")))
             ),
-            error_raw_type=(
-                str(fields["error_raw_type"])[:64] if fields.get("error_raw_type") else None
-            ),
+            error_raw_type=(str(fields["error_raw_type"])[:64] if fields.get("error_raw_type") else None),
             user_role=user_role,
             server_timing=server_timing,
         )
@@ -157,11 +151,7 @@ def list_traces(
 
     total = int(db.execute(count_query).scalar_one())
     rows = (
-        db.execute(
-            query.order_by(RequestTrace.created_at.desc(), RequestTrace.id.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        db.execute(query.order_by(RequestTrace.created_at.desc(), RequestTrace.id.desc()).limit(limit).offset(offset))
         .scalars()
         .all()
     )
@@ -173,10 +163,7 @@ def get_trace(db: Session, request_id: str) -> RequestTrace | None:
 
     return (
         db.execute(
-            select(RequestTrace)
-            .where(RequestTrace.request_id == request_id)
-            .order_by(RequestTrace.id.desc())
-            .limit(1)
+            select(RequestTrace).where(RequestTrace.request_id == request_id).order_by(RequestTrace.id.desc()).limit(1)
         )
         .scalars()
         .first()
@@ -300,9 +287,7 @@ def prune_older_than(db: Session, *, days: int) -> int:
 
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
     try:
-        deleted = (
-            db.query(RequestTrace).filter(RequestTrace.created_at < cutoff).delete(synchronize_session=False)
-        )
+        deleted = db.query(RequestTrace).filter(RequestTrace.created_at < cutoff).delete(synchronize_session=False)
         db.commit()
         if deleted:
             logger.info("trace_pruned", extra={"deleted": deleted, "older_than_days": days})

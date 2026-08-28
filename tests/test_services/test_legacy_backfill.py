@@ -126,7 +126,7 @@ def test_backfill_conflict(db_session: Session, clean_report: LabReport):
         name="WBC",
         value=6.5,
         unit="10^9/L",
-        analyte_canonical="Creatinine", # conflicting
+        analyte_canonical="Creatinine",  # conflicting
     )
     db_session.add(ind)
     db_session.commit()
@@ -155,6 +155,3 @@ def test_backfill_partial_null_safe(db_session: Session, clean_report: LabReport
     db_session.refresh(ind)
     assert ind.canonical_value == 6.5
     assert metrics.get("PARTIAL_ROWS_COMPLETED") == 1
-
-
-

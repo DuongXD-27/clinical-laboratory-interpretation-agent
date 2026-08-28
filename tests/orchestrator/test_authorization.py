@@ -184,7 +184,9 @@ def test_st2_nonexistent_report_and_cross_user_report_are_indistinguishable(test
     _create_patient(test_db, "patient_b")
     report_b = _save_report(test_db, "patient_b", date(2026, 8, 2), [{"name": "WBC", "value": 7, "unit": "10^9/L"}])
     with test_db.session() as db:
-        cross_user = _raise_reason(wrappers.get_my_report, _current_patient("patient_a", patient_a_key), db, str(report_b))
+        cross_user = _raise_reason(
+            wrappers.get_my_report, _current_patient("patient_a", patient_a_key), db, str(report_b)
+        )
         missing = _raise_reason(wrappers.get_my_report, _current_patient("patient_a", patient_a_key), db, "999999")
     assert cross_user.reason_code == missing.reason_code == ReasonCode.REPORT_NOT_FOUND_OR_UNAUTHORIZED
     assert str(cross_user) == str(missing)
@@ -204,7 +206,9 @@ def test_st3_identity_comes_from_current_user_and_injection_is_rejected_or_ignor
         with pytest.raises(TypeError):
             wrappers.get_my_history(_current_patient("patient_a", patient_a_key), db, patient_id=patient_b_key)
         with pytest.raises(TypeError):
-            wrappers.get_my_report(_current_patient("patient_a", patient_a_key), db, str(report_a), user_id=patient_b_key)
+            wrappers.get_my_report(
+                _current_patient("patient_a", patient_a_key), db, str(report_a), user_id=patient_b_key
+            )
         with pytest.raises(TypeError):
             wrappers.get_report_questions(
                 _current_patient("patient_a", patient_a_key),
@@ -238,8 +242,12 @@ def test_st6_guest_get_my_indicator_trend_denied_before_db_query():
 
 def test_st7_guest_questions_allow_session_result_but_deny_report_ref(test_db):
     _create_patient(test_db, "patient_a")
-    report_a = _save_report(test_db, "patient_a", date(2026, 8, 3), [{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}])
-    session_result = AnalysisDataPayload(indicators=_response([{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}]).indicators)
+    report_a = _save_report(
+        test_db, "patient_a", date(2026, 8, 3), [{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}]
+    )
+    session_result = AnalysisDataPayload(
+        indicators=_response([{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}]).indicators
+    )
     with test_db.session() as db:
         denied = _raise_reason(wrappers.get_report_questions, _guest(), db, report_ref=str(report_a))
         allowed = wrappers.get_report_questions(_guest(), db, session_result=session_result)
@@ -306,9 +314,7 @@ def test_st13_static_history_list_reports_call_is_always_patient_scoped():
         calls.extend(
             node
             for node in ast.walk(tree)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "list_reports"
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "list_reports"
         )
     assert calls
     for call in calls:
@@ -363,11 +369,7 @@ def test_st15_static_orchestrator_does_not_read_ocr_drafts_or_build_ocr_analysis
         tree = ast.parse(source)
         for node in ast.walk(tree):
             if isinstance(node, ast.List | ast.Dict | ast.ListComp | ast.DictComp):
-                names = {
-                    child.id
-                    for child in ast.walk(node)
-                    if isinstance(child, ast.Name)
-                }
+                names = {child.id for child in ast.walk(node) if isinstance(child, ast.Name)}
                 assert not any("draft" in name.casefold() for name in names)
 
 
@@ -387,11 +389,15 @@ def test_st16_trend_report_ids_are_owned_by_authenticated_patient(test_db):
 
 def test_wrappers_return_tip_001_payload_types(test_db):
     patient_key = _create_patient(test_db, "patient_a")
-    report_ref = _save_report(test_db, "patient_a", date(2026, 8, 3), [{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}])
+    report_ref = _save_report(
+        test_db, "patient_a", date(2026, 8, 3), [{"name": "WBC", "value": 12, "unit": "10^9/L", "status": "high"}]
+    )
     _seed_ldl_series(test_db, "patient_a", count=MIN_TREND_POINTS, start_day=10)
     with test_db.session() as db:
         current_user = _current_patient("patient_a", patient_key)
         assert isinstance(wrappers.get_my_history(current_user, db), HistorySummaryPayload)
         assert isinstance(wrappers.get_my_report(current_user, db, str(report_ref)), AnalysisDataPayload)
         assert isinstance(wrappers.get_my_indicator_trend(current_user, db, "LDL-C"), TrendDataPayload)
-        assert isinstance(wrappers.get_report_questions(current_user, db, report_ref=str(report_ref)), DoctorQuestionsPayload)
+        assert isinstance(
+            wrappers.get_report_questions(current_user, db, report_ref=str(report_ref)), DoctorQuestionsPayload
+        )

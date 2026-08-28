@@ -80,11 +80,7 @@ def test_children_are_ordered_slowest_first():
     """Nút chậm nhất lên đầu — người mở cây span đang đi tìm chỗ chậm."""
 
     tree = build_span_tree(PRODUCTION_ANALYZE)
-    graph_children = [
-        row["name"]
-        for row in tree["rows"]
-        if row["depth"] == 2 and row["name"].startswith("analysis-")
-    ]
+    graph_children = [row["name"] for row in tree["rows"] if row["depth"] == 2 and row["name"].startswith("analysis-")]
     assert graph_children[0] == "analysis-analyzer"
 
 
@@ -118,9 +114,7 @@ def test_unaccounted_time_at_the_root_is_surfaced():
 def test_unaccounted_time_inside_the_graph_is_surfaced():
     rows = _rows_by_name(build_span_tree(PRODUCTION_ANALYZE))
     children = 3.981 + 0.049 + 4635.545 + 0.953 + 1.233
-    assert rows["analysis-graph-total"]["unaccounted_ms"] == pytest.approx(
-        4651.840 - children, abs=0.01
-    )
+    assert rows["analysis-graph-total"]["unaccounted_ms"] == pytest.approx(4651.840 - children, abs=0.01)
 
 
 def test_leaf_nodes_report_none_not_zero_unaccounted():

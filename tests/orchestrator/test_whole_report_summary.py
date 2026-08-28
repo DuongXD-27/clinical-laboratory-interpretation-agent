@@ -203,7 +203,9 @@ async def test_02_critical_prioritization_and_no_duplication(monkeypatch):
     assert "CHỈ SỐ NGUY KỊCH" in summary_text
     assert "Potassium: 6.8 mmol/L" in summary_text
     # Critical item is not duplicated in ordinary High/Low section
-    abnormal_section = summary_text.split("Các chỉ số nằm ngoài khoảng tham chiếu:")[1].split("Các chỉ số chưa xác định")[0]
+    abnormal_section = summary_text.split("Các chỉ số nằm ngoài khoảng tham chiếu:")[1].split(
+        "Các chỉ số chưa xác định"
+    )[0]
     assert "Potassium" not in abnormal_section
     assert "WBC" in abnormal_section
 
@@ -293,7 +295,18 @@ async def test_06_whole_report_vague_query_no_uicontext(monkeypatch):
     monkeypatch.setattr(
         history_repository,
         "list_reports",
-        lambda db, **kwargs: (1, [LabReportSummarySchema(id=42, test_date=date(2026, 8, 15), created_at=datetime(2026, 8, 15, 10, 0, 0), has_critical_values=False, summary="")]),
+        lambda db, **kwargs: (
+            1,
+            [
+                LabReportSummarySchema(
+                    id=42,
+                    test_date=date(2026, 8, 15),
+                    created_at=datetime(2026, 8, 15, 10, 0, 0),
+                    has_critical_values=False,
+                    summary="",
+                )
+            ],
+        ),
     )
     monkeypatch.setattr(history_repository, "get_report", lambda db, rid: MagicMock(id=42, patient_id=101))
     monkeypatch.setattr(history_repository, "to_detail", lambda r: detail)
@@ -320,7 +333,18 @@ async def test_07_abnormal_summary_wording(monkeypatch):
     monkeypatch.setattr(
         history_repository,
         "list_reports",
-        lambda db, **kwargs: (1, [LabReportSummarySchema(id=42, test_date=date(2026, 8, 15), created_at=datetime(2026, 8, 15, 10, 0, 0), has_critical_values=False, summary="")]),
+        lambda db, **kwargs: (
+            1,
+            [
+                LabReportSummarySchema(
+                    id=42,
+                    test_date=date(2026, 8, 15),
+                    created_at=datetime(2026, 8, 15, 10, 0, 0),
+                    has_critical_values=False,
+                    summary="",
+                )
+            ],
+        ),
     )
     monkeypatch.setattr(history_repository, "get_report", lambda db, rid: MagicMock(id=42, patient_id=101))
     monkeypatch.setattr(history_repository, "to_detail", lambda r: detail)
@@ -364,7 +388,18 @@ async def test_09_10_multi_turn_journey(monkeypatch):
     monkeypatch.setattr(
         history_repository,
         "list_reports",
-        lambda db, **kwargs: (1, [LabReportSummarySchema(id=42, test_date=date(2026, 8, 15), created_at=datetime(2026, 8, 15, 10, 0, 0), has_critical_values=False, summary="")]),
+        lambda db, **kwargs: (
+            1,
+            [
+                LabReportSummarySchema(
+                    id=42,
+                    test_date=date(2026, 8, 15),
+                    created_at=datetime(2026, 8, 15, 10, 0, 0),
+                    has_critical_values=False,
+                    summary="",
+                )
+            ],
+        ),
     )
     monkeypatch.setattr(history_repository, "get_report", lambda db, rid: MagicMock(id=42, patient_id=101))
     monkeypatch.setattr(history_repository, "to_detail", lambda r: detail)
@@ -402,7 +437,18 @@ async def test_11_referential_trend_follow_up(monkeypatch):
     monkeypatch.setattr(
         history_repository,
         "list_reports",
-        lambda db, **kwargs: (1, [LabReportSummarySchema(id=42, test_date=date(2026, 8, 15), created_at=datetime(2026, 8, 15, 10, 0, 0), has_critical_values=False, summary="")]),
+        lambda db, **kwargs: (
+            1,
+            [
+                LabReportSummarySchema(
+                    id=42,
+                    test_date=date(2026, 8, 15),
+                    created_at=datetime(2026, 8, 15, 10, 0, 0),
+                    has_critical_values=False,
+                    summary="",
+                )
+            ],
+        ),
     )
     monkeypatch.setattr(history_repository, "get_report", lambda db, rid: MagicMock(id=42, patient_id=101))
     monkeypatch.setattr(history_repository, "to_detail", lambda r: detail)
@@ -463,7 +509,18 @@ async def test_13_uicontext_independence(monkeypatch):
     monkeypatch.setattr(
         history_repository,
         "list_reports",
-        lambda db, **kwargs: (1, [LabReportSummarySchema(id=42, test_date=date(2026, 8, 15), created_at=datetime(2026, 8, 15, 10, 0, 0), has_critical_values=False, summary="")]),
+        lambda db, **kwargs: (
+            1,
+            [
+                LabReportSummarySchema(
+                    id=42,
+                    test_date=date(2026, 8, 15),
+                    created_at=datetime(2026, 8, 15, 10, 0, 0),
+                    has_critical_values=False,
+                    summary="",
+                )
+            ],
+        ),
     )
     monkeypatch.setattr(history_repository, "get_report", lambda db, rid: MagicMock(id=42, patient_id=101))
     monkeypatch.setattr(history_repository, "to_detail", lambda r: detail)

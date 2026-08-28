@@ -54,7 +54,9 @@ def main() -> None:
         all_correct = all_correct and correct
         score = top.score if top else 0.0
         genuine_scores.append(score)
-        print(f"{'OK ' if correct else 'FAIL'}  score={score:.4f}  feature={top.feature if top else '-':18s}  {question}")
+        print(
+            f"{'OK ' if correct else 'FAIL'}  score={score:.4f}  feature={top.feature if top else '-':18s}  {question}"
+        )
 
     print("\n=== ADVERSARIAL (must fail closed, has_match=False) ===")
     adversarial_scores: list[float] = []

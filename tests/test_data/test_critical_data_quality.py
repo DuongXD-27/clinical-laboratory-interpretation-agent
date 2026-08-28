@@ -6,6 +6,7 @@ CRIT-02: Canonical-only critical registry with no alias records
 CRIT-03: All runtime-approved analytes present in all 3 files (coverage + case consistency)
 CRIT-04: Metric/unit match with units_metric.csv
 """
+
 from __future__ import annotations
 
 import csv
@@ -18,51 +19,88 @@ from src.services.analyte_resolver import LOCKED_35_ANALYTES
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-CRITICAL_PATH      = REPO_ROOT / "data/reference/critical_thresholds.json"
-EXPLANATION_PATH   = REPO_ROOT / "data/reference/explanations.json"
+CRITICAL_PATH = REPO_ROOT / "data/reference/critical_thresholds.json"
+EXPLANATION_PATH = REPO_ROOT / "data/reference/explanations.json"
 REFERENCE_JSON_PATH = REPO_ROOT / "data/reference/reference_ranges.json"
-UNITS_CSV_PATH     = REPO_ROOT / "data/reference/units_metric.csv"
+UNITS_CSV_PATH = REPO_ROOT / "data/reference/units_metric.csv"
 
 # Canonical names as defined in reference_checker_config.json
-APPROVED_ANALYTES = frozenset({
-    "WBC", "RBC", "HGB", "HCT", "MCV", "MCH", "MCHC", "RDW-CV", "PLT",
-    "Neutrophils %", "Neutrophils abs", "Lymphocytes %", "Lymphocytes abs",
-    "Monocytes %", "Monocytes abs", "Eosinophils %", "Eosinophils abs",
-    "Sodium", "Potassium", "Chloride", "Fasting plasma glucose", "HbA1c",
-    "LDL-C", "HDL-C", "Creatinine", "Urea", "Uric acid", "AST", "ALT", "GGT",
-    "Total bilirubin", "Total protein", "Albumin", "Total cholesterol", "Triglyceride",
-})
+APPROVED_ANALYTES = frozenset(
+    {
+        "WBC",
+        "RBC",
+        "HGB",
+        "HCT",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "RDW-CV",
+        "PLT",
+        "Neutrophils %",
+        "Neutrophils abs",
+        "Lymphocytes %",
+        "Lymphocytes abs",
+        "Monocytes %",
+        "Monocytes abs",
+        "Eosinophils %",
+        "Eosinophils abs",
+        "Sodium",
+        "Potassium",
+        "Chloride",
+        "Fasting plasma glucose",
+        "HbA1c",
+        "LDL-C",
+        "HDL-C",
+        "Creatinine",
+        "Urea",
+        "Uric acid",
+        "AST",
+        "ALT",
+        "GGT",
+        "Total bilirubin",
+        "Total protein",
+        "Albumin",
+        "Total cholesterol",
+        "Triglyceride",
+    }
+)
 
 # Alias spellings forbidden as independent production registry records
-_FORBIDDEN_CRITICAL_ALIASES = frozenset({
-    "Kali",
-    "Glucose",
-    "Fasting Plasma Glucose",
-    "Hemoglobin",
-})
+_FORBIDDEN_CRITICAL_ALIASES = frozenset(
+    {
+        "Kali",
+        "Glucose",
+        "Fasting Plasma Glucose",
+        "Hemoglobin",
+    }
+)
 
 _CRITICAL_OPERATORS = frozenset({"<", "<=", ">", ">="})
-_FINAL_PROVENANCE_KEYS = frozenset({
-    "source_id",
-    "source_title",
-    "source_document_id",
-    "source_revision",
-    "source_date",
-    "source_url",
-    "source_page",
-    "source_literal",
-    "source_analyte_label",
-    "population_context",
-    "qualifier",
-})
-_INACTIVE_PROVENANCE_KEYS = frozenset({
-    "source_id",
-    "source_title",
-    "source_document_id",
-    "source_revision",
-    "source_date",
-    "source_url",
-})
+_FINAL_PROVENANCE_KEYS = frozenset(
+    {
+        "source_id",
+        "source_title",
+        "source_document_id",
+        "source_revision",
+        "source_date",
+        "source_url",
+        "source_page",
+        "source_literal",
+        "source_analyte_label",
+        "population_context",
+        "qualifier",
+    }
+)
+_INACTIVE_PROVENANCE_KEYS = frozenset(
+    {
+        "source_id",
+        "source_title",
+        "source_document_id",
+        "source_revision",
+        "source_date",
+        "source_url",
+    }
+)
 _ARUP_SOURCE_IDENTITY = {
     "source_id": "SRC-CRIT-ARUP-REV46",
     "source_title": "CRITICAL VALUES LIST",
@@ -145,23 +183,29 @@ _EXPECTED_INACTIVE_REASONS = {
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _load_critical() -> dict:
     return json.loads(CRITICAL_PATH.read_text(encoding="utf-8"))
+
 
 def _load_explanation() -> list[dict]:
     return json.loads(EXPLANATION_PATH.read_text(encoding="utf-8"))
 
+
 def _load_reference() -> list[dict]:
     return json.loads(REFERENCE_JSON_PATH.read_text(encoding="utf-8"))
+
 
 def _load_units_csv() -> dict[str, str]:
     """Return {test_name: standardized_unit}."""
     with UNITS_CSV_PATH.open(encoding="utf-8-sig", newline="") as f:
         return {row["test_name"]: row["standardized_unit"] for row in csv.DictReader(f)}
 
+
 def _normalize_unit(unit: str) -> str:
     """Normalize µ/μ → u so µmol/L and umol/L compare equal."""
     return unit.replace("µ", "u").replace("μ", "u").strip()
+
 
 def _csv_units_by_canonical(units_csv: dict[str, str]) -> dict[str, str]:
     """Build {canonical_lower: normalized_unit} from units_metric.csv."""
@@ -213,16 +257,16 @@ def _validate_final_arup_record(record: dict) -> list[str]:
         "low",
         current_migration_compatibility=False,
     )
-    errors.extend(_validate_side_pair(
-        record,
-        "high",
-        current_migration_compatibility=False,
-    ))
+    errors.extend(
+        _validate_side_pair(
+            record,
+            "high",
+            current_migration_compatibility=False,
+        )
+    )
 
     has_active_side = any(
-        isinstance(record.get(side), (int, float))
-        and not isinstance(record.get(side), bool)
-        and record[side] >= 0
+        isinstance(record.get(side), (int, float)) and not isinstance(record.get(side), bool) and record[side] >= 0
         for side in ("low", "high")
     )
     if has_active_side:
@@ -235,6 +279,7 @@ def _validate_final_arup_record(record: dict) -> list[str]:
 
 # ── CRIT-01 ──────────────────────────────────────────────────────────────────
 
+
 def test_crit_01_no_duplicate_names_in_explanation_new():
     """Each analyte name must appear exactly once in explanations.json."""
     entries = _load_explanation()
@@ -246,12 +291,11 @@ def test_crit_01_no_duplicate_names_in_explanation_new():
             duplicates.append(f"'{name}' at index {seen[name]} and {i}")
         else:
             seen[name] = i
-    assert not duplicates, (
-        "Duplicate names in explanations.json:\n" + "\n".join(duplicates)
-    )
+    assert not duplicates, "Duplicate names in explanations.json:\n" + "\n".join(duplicates)
 
 
 # ── CRIT-02 ──────────────────────────────────────────────────────────────────
+
 
 def test_crit_02_production_registry_is_canonical_only_without_alias_records():
     critical_keys = set(_load_critical())
@@ -262,6 +306,7 @@ def test_crit_02_production_registry_is_canonical_only_without_alias_records():
 
 
 # ── CRIT-03 ──────────────────────────────────────────────────────────────────
+
 
 def test_crit_03a_approved_analytes_in_explanation_new():
     """All approved analytes must be present in explanations.json (case-insensitive)."""
@@ -287,16 +332,16 @@ def test_crit_03d_name_case_consistency_across_files():
     For each approved analyte, the exact casing must be identical across all 3 files.
     Reports all mismatches so they can be reviewed together before any fix.
     """
-    exp_names      = {e["name"].lower(): e["name"] for e in _load_explanation()}
+    exp_names = {e["name"].lower(): e["name"] for e in _load_explanation()}
     crit_canonicals = {key.lower(): key for key in _load_critical()}
-    ref_names      = {r["analyte_canonical"].lower(): r["analyte_canonical"] for r in _load_reference()}
+    ref_names = {r["analyte_canonical"].lower(): r["analyte_canonical"] for r in _load_reference()}
 
     mismatches: list[str] = []
     for analyte in sorted(APPROVED_ANALYTES):
         key = analyte.lower()
-        exp_actual  = exp_names.get(key)
+        exp_actual = exp_names.get(key)
         crit_actual = crit_canonicals.get(key)
-        ref_actual  = ref_names.get(key)
+        ref_actual = ref_names.get(key)
 
         all_actual = {n for n in (exp_actual, crit_actual, ref_actual) if n is not None}
         if len(all_actual) > 1:
@@ -307,19 +352,18 @@ def test_crit_03d_name_case_consistency_across_files():
                 f"reference_ranges={ref_actual!r}"
             )
 
-    assert not mismatches, (
-        "Name case inconsistencies across files:\n" + "\n".join(mismatches)
-    )
+    assert not mismatches, "Name case inconsistencies across files:\n" + "\n".join(mismatches)
 
 
 # ── CRIT-04 ──────────────────────────────────────────────────────────────────
+
 
 def test_crit_04a_explanation_new_metric_vs_units_csv():
     """
     Each analyte's `metric` in explanations.json must match the
     standardized_unit in units_metric.csv (after alias resolution and µ normalization).
     """
-    entries   = _load_explanation()
+    entries = _load_explanation()
     csv_units = _csv_units_by_canonical(_load_units_csv())
 
     not_in_csv: list[str] = []
@@ -337,23 +381,17 @@ def test_crit_04a_explanation_new_metric_vs_units_csv():
             continue
 
         expected = csv_units[key]
-        actual   = _normalize_unit(metric)
+        actual = _normalize_unit(metric)
         if actual != expected:
-            mismatches.append(
-                f"  '{name}': metric='{metric}' (normalized='{actual}') "
-                f"!= units_metric.csv='{expected}'"
-            )
+            mismatches.append(f"  '{name}': metric='{metric}' (normalized='{actual}') != units_metric.csv='{expected}'")
 
     errors = not_in_csv + mismatches
-    assert not errors, (
-        "Metric issues between explanations.json and units_metric.csv:\n"
-        + "\n".join(errors)
-    )
+    assert not errors, "Metric issues between explanations.json and units_metric.csv:\n" + "\n".join(errors)
 
 
 def test_crit_04b_critical_thresholds_unit_vs_units_csv():
     """Units match units_metric.csv except for the approved FPG conversion."""
-    critical  = _load_critical()
+    critical = _load_critical()
     csv_units = _csv_units_by_canonical(_load_units_csv())
 
     not_in_csv: list[str] = []
@@ -362,13 +400,11 @@ def test_crit_04b_critical_thresholds_unit_vs_units_csv():
         canonical_lower = key.lower()
 
         if canonical_lower not in csv_units:
-            not_in_csv.append(
-                f"  '{key}': not found in units_metric.csv"
-            )
+            not_in_csv.append(f"  '{key}': not found in units_metric.csv")
             continue
 
         expected = csv_units[canonical_lower]
-        actual   = _normalize_unit(values["unit"])
+        actual = _normalize_unit(values["unit"])
         approved_fpg_conversion = (
             key == "Fasting plasma glucose"
             and actual == "mg/dL"
@@ -393,18 +429,15 @@ def test_crit_04b_critical_thresholds_unit_vs_units_csv():
             continue
         if actual != expected:
             mismatches.append(
-                f"  '{key}': unit='{values['unit']}' (normalized='{actual}') "
-                f"!= units_metric.csv='{expected}'"
+                f"  '{key}': unit='{values['unit']}' (normalized='{actual}') != units_metric.csv='{expected}'"
             )
 
     errors = not_in_csv + mismatches
-    assert not errors, (
-        "Unit issues between critical_thresholds.json and units_metric.csv:\n"
-        + "\n".join(errors)
-    )
+    assert not errors, "Unit issues between critical_thresholds.json and units_metric.csv:\n" + "\n".join(errors)
 
 
 # ── CRIT-05: FINAL PRODUCTION SCHEMA ────────────────────────────────────────
+
 
 def test_crit_05_production_uses_final_operator_schema_not_legacy_compatibility():
     """Patch C production must never depend on LEGACY_OPERATOR_DEFAULT."""
@@ -422,6 +455,7 @@ def test_crit_05_production_uses_final_operator_schema_not_legacy_compatibility(
 
 
 # ── CRIT-06: FINAL_ARUP_SCHEMA_VALIDATION samples ──────────────────────────
+
 
 @pytest.mark.parametrize(
     ("record", "expected_valid"),
@@ -487,6 +521,7 @@ def test_crit_06_final_active_record_with_provenance_is_valid():
 
 
 # CRIT-07: PATCH C PRODUCTION ARUP REV.46 HARD GATES
+
 
 def test_crit_07a_production_execution_matrix_is_exact():
     critical = _load_critical()

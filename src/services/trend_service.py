@@ -237,15 +237,9 @@ def _latest_critical_state(
 def _observed_direction(points: list[TrendPoint]) -> ObservedDirection | None:
     if len(points) < MIN_TREND_POINTS:
         return None
-    if all(
-        points[index].canonical_value > points[index - 1].canonical_value
-        for index in range(1, len(points))
-    ):
+    if all(points[index].canonical_value > points[index - 1].canonical_value for index in range(1, len(points))):
         return "increasing"
-    if all(
-        points[index].canonical_value < points[index - 1].canonical_value
-        for index in range(1, len(points))
-    ):
+    if all(points[index].canonical_value < points[index - 1].canonical_value for index in range(1, len(points))):
         return "decreasing"
     return None
 
@@ -266,9 +260,7 @@ def get_patient_trend_analytes(db: Session, *, username: str) -> list[TrendAnaly
             unit = ""
             available = False
         else:
-            available = len(
-                _apply_max_gap_policy(analyte_points, _max_gap_days_for(analyte))
-            ) >= MIN_TREND_POINTS
+            available = len(_apply_max_gap_policy(analyte_points, _max_gap_days_for(analyte))) >= MIN_TREND_POINTS
         section = analyte_section(analyte)
         summaries.append(
             TrendAnalyteSummary(
@@ -439,6 +431,7 @@ def get_patient_trend(
         critical_high=critical_high,
         **section_fields,
     )
+
 
 def get_patient_section_trends(
     db: Session,

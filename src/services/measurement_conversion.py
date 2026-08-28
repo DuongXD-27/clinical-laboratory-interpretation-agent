@@ -159,5 +159,3 @@ def classify_lipid_band(
         return "very_high"
 
     raise ValueError(f"unknown lipid analyte: {analyte_canonical}")
-
-

@@ -91,9 +91,7 @@ class RequestTiming:
 
         metric = _metric_name(name)
         with self._lock:
-            self.metrics[metric] = round(
-                self.metrics.get(metric, 0.0) + max(0.0, duration_ms), 3
-            )
+            self.metrics[metric] = round(self.metrics.get(metric, 0.0) + max(0.0, duration_ms), 3)
             self.counters[metric] = self.counters.get(metric, 0) + 1
 
     def add_event(
@@ -124,7 +122,7 @@ class RequestTiming:
     def server_timing_header(self) -> str:
         with self._lock:
             metrics = list(self.metrics.items())
-        return ", ".join(f'{name};dur={duration:.3f}' for name, duration in metrics)
+        return ", ".join(f"{name};dur={duration:.3f}" for name, duration in metrics)
 
     def _llm_summary(self, events: list[TimingEvent]) -> dict[str, object]:
         """Gom moi loi goi LLM thanh cac con so phang: so luot, ms, loi, token, tien.
@@ -199,9 +197,7 @@ class RequestTiming:
         return {
             "llm_call_count": len(calls),
             "llm_ms": round(sum(call.duration_ms for call in calls), 3),
-            "llm_error_count": sum(
-                1 for call in calls if call.attributes.get("outcome") == "error"
-            ),
+            "llm_error_count": sum(1 for call in calls if call.attributes.get("outcome") == "error"),
             "llm_input_tokens": input_tokens,
             "llm_output_tokens": output_tokens,
             "llm_cost_usd": round(cost_total, 6) if priced_any else None,
@@ -225,12 +221,8 @@ class RequestTiming:
         raw_type = str(error_events[-1].attributes.get("exception_type", "")) if error_events else ""
 
         return {
-            "guardrail_fallback_count": sum(
-                1 for event in events if event.name == GUARDRAIL_FALLBACK_EVENT
-            ),
-            "guardrail_rewrite_count": sum(
-                1 for event in events if event.name == GUARDRAIL_REWRITE_EVENT
-            ),
+            "guardrail_fallback_count": sum(1 for event in events if event.name == GUARDRAIL_FALLBACK_EVENT),
+            "guardrail_rewrite_count": sum(1 for event in events if event.name == GUARDRAIL_REWRITE_EVENT),
             "error_raw_type": raw_type or None,
             "error_type": error_taxonomy.classify_exception(raw_type) if raw_type else None,
         }

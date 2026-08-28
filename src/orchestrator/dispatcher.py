@@ -224,9 +224,7 @@ async def _dispatch_explain_current(context: DispatchContext) -> WorkflowResult:
                             status=str(status),
                             reference_low=reference_low,
                             reference_high=reference_high,
-                            has_two_sided_reference_range=(
-                                reference_low is not None and reference_high is not None
-                            ),
+                            has_two_sided_reference_range=(reference_low is not None and reference_high is not None),
                             critical_status=canonical_critical_side(getattr(indicator, "critical_status", None)),
                             approved_critical_message=approved_critical_message,
                         ),
@@ -308,14 +306,15 @@ async def _dispatch_questions(context: DispatchContext) -> WorkflowResult:
 async def _dispatch_unsupported(_: DispatchContext) -> WorkflowResult:
     return _blocked(ReasonCode.UNKNOWN_INTENT)
 
+
 async def _dispatch_safe_general(_: DispatchContext) -> WorkflowResult:
     return WorkflowResult(
         status=ResponseStatus.SUCCESS,
         data=ExplanationDataPayload(
             explanation="Chào bạn. Tôi có thể giúp bạn xem và hiểu các kết quả xét nghiệm đã có, xem xu hướng, hoặc chuẩn bị câu hỏi để trao đổi với bác sĩ.",
-            sources=[]
+            sources=[],
         ),
-        workflow_selected="safe_general"
+        workflow_selected="safe_general",
     )
 
 
@@ -443,9 +442,7 @@ async def _dispatch_app_help(context: DispatchContext) -> WorkflowResult:
 # verbatim when already present in the stored metadata).
 # ---------------------------------------------------------------------------
 
-NO_STORED_SOURCE_MESSAGE = (
-    "Hiện tôi không có nguồn tham chiếu đã được lưu cho phần giải thích này."
-)
+NO_STORED_SOURCE_MESSAGE = "Hiện tôi không có nguồn tham chiếu đã được lưu cho phần giải thích này."
 
 _NAMED_SOURCE_PROBES: tuple[tuple[str, str], ...] = (
     ("who", "WHO"),
@@ -494,10 +491,7 @@ def _compose_provenance_explanation(message: str | None, sources: list[str]) -> 
         key, label = probe
         present = any(_source_mentions(source, key) for source in sources)
         if present:
-            lines = [
-                f"Có. {label} nằm trong các nguồn tham chiếu đã được duyệt "
-                "cho phần giải thích này:"
-            ]
+            lines = [f"Có. {label} nằm trong các nguồn tham chiếu đã được duyệt cho phần giải thích này:"]
         elif not sources:
             return (
                 "Hiện tôi không có nguồn tham chiếu nào được lưu cho phần giải thích "
@@ -518,9 +512,7 @@ def _compose_provenance_explanation(message: str | None, sources: list[str]) -> 
     return "\n".join(lines)
 
 
-def _approved_sources_for_context(
-    report: object, current_analyte: str | None
-) -> list[str]:
+def _approved_sources_for_context(report: object, current_analyte: str | None) -> list[str]:
     """Stored approved sources bound to the CURRENT context only.
 
     With an active analyte: only that analyte's sources. Without one: every
@@ -571,6 +563,7 @@ async def dispatch_provenance_followup(context: DispatchContext) -> WorkflowResu
         ),
         workflow_selected="source_provenance",
     )
+
 
 WORKFLOW_DISPATCH: Mapping[IntentEnum, WorkflowHandler] = {
     IntentEnum.ANALYZE_REPORT: _dispatch_analyze_report,

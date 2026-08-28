@@ -172,23 +172,30 @@ async def test_agent_calls_indicator_and_medical_kb_for_explanation(monkeypatch)
     class FakeRetriever:
         def retrieve(self, **kwargs):
             retrieval_args.update(kwargs)
-            return [{
-                "indicator_name": "WBC",
-                "text": "Approved text",
-                "source_title": "WHO",
-                "source_url": "https://example.test/wbc",
-                "score": 0.91,
-            }]
+            return [
+                {
+                    "indicator_name": "WBC",
+                    "text": "Approved text",
+                    "source_title": "WHO",
+                    "source_url": "https://example.test/wbc",
+                    "score": 0.91,
+                }
+            ]
 
     monkeypatch.setattr(AgentToolbox, "get_indicator", lambda self, analyte, report_ref=None: indicator)
     monkeypatch.setattr("src.orchestrator.agent_tools.get_medical_knowledge_retriever", lambda: FakeRetriever())
     llm = ScriptedToolCallingLlm(
         [
-            AIMessage(content="", tool_calls=[
-                _call("get_indicator", {"analyte": "WBC"}, "c1"),
-                _call("retrieve_medical_evidence", {"query": "Giải thích WBC", "status": "HIGH"}, "c2"),
-            ]),
-            AIMessage(content="WBC đang được hệ thống đánh dấu cao. Tài liệu được phê duyệt cung cấp thông tin giáo dục tổng quan; đây không phải kết luận về nguyên nhân của riêng bạn."),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    _call("get_indicator", {"analyte": "WBC"}, "c1"),
+                    _call("retrieve_medical_evidence", {"query": "Giải thích WBC", "status": "HIGH"}, "c2"),
+                ],
+            ),
+            AIMessage(
+                content="WBC đang được hệ thống đánh dấu cao. Tài liệu được phê duyệt cung cấp thông tin giáo dục tổng quan; đây không phải kết luận về nguyên nhân của riêng bạn."
+            ),
         ]
     )
     monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
@@ -214,17 +221,40 @@ async def test_agent_calls_indicator_and_medical_kb_for_explanation(monkeypatch)
 @pytest.mark.asyncio
 async def test_agent_followup_uses_previous_wbc_value(monkeypatch):
     actor = SimpleNamespace(role="patient", user_id=7, username="patient")
-    previous = {"report_ref": "20", "test_date": "2026-07-01", "analyte": "WBC", "value": 11.0, "unit": "10^9/L", "status": "HIGH", "critical_status": "NOT_CRITICAL", "reference": {"low": 4.0, "high": 10.0, "display": "4.0–10.0 10^9/L"}}
+    previous = {
+        "report_ref": "20",
+        "test_date": "2026-07-01",
+        "analyte": "WBC",
+        "value": 11.0,
+        "unit": "10^9/L",
+        "status": "HIGH",
+        "critical_status": "NOT_CRITICAL",
+        "reference": {"low": 4.0, "high": 10.0, "display": "4.0–10.0 10^9/L"},
+    }
     current = {**previous, "report_ref": "21", "value": 15.0}
-    history = {"analyte": "WBC", "canonical_analyte": "WBC", "current": {"report_ref": "21", "index": 1}, "previous": {"report_ref": "20", "index": 0}, "measurements": [previous, current]}
+    history = {
+        "analyte": "WBC",
+        "canonical_analyte": "WBC",
+        "current": {"report_ref": "21", "index": 1},
+        "previous": {"report_ref": "20", "index": 0},
+        "measurements": [previous, current],
+    }
     monkeypatch.setattr(AgentToolbox, "get_indicator_history", lambda self, analyte, limit=5: history)
-    llm = ScriptedToolCallingLlm([
-        AIMessage(content="", tool_calls=[_call("get_indicator_history", {"analyte": "WBC", "limit": 5}, "c1")]),
-        AIMessage(content="Lần trước, WBC được ghi nhận là 11.0 10^9/L vào ngày 01/07/2026."),
-    ])
+    llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(content="", tool_calls=[_call("get_indicator_history", {"analyte": "WBC", "limit": 5}, "c1")]),
+            AIMessage(content="Lần trước, WBC được ghi nhận là 11.0 10^9/L vào ngày 01/07/2026."),
+        ]
+    )
     monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
 
-    result = await run_agent_v2(message="So với lần trước thì sao?", current_user=actor, db=object(), current_report_ref="21", current_analyte="WBC")
+    result = await run_agent_v2(
+        message="So với lần trước thì sao?",
+        current_user=actor,
+        db=object(),
+        current_report_ref="21",
+        current_analyte="WBC",
+    )
 
     assert result.workflow_selected == "get_indicator_history"
     assert result.current_report_ref == "21"
@@ -235,14 +265,33 @@ async def test_agent_followup_uses_previous_wbc_value(monkeypatch):
 @pytest.mark.asyncio
 async def test_agent_fails_closed_without_approved_evidence(monkeypatch):
     actor = SimpleNamespace(role="patient", user_id=7, username="patient")
-    monkeypatch.setattr(AgentToolbox, "retrieve_medical_evidence", lambda *args, **kwargs: {"evidence": [], "sufficient": False})
-    llm = ScriptedToolCallingLlm([
-        AIMessage(content="", tool_calls=[_call("retrieve_medical_evidence", {"query": "WBC cao nói chung có ý nghĩa gì?", "analyte": "WBC", "status": "HIGH"}, "c1")]),
-        AIMessage(content="Nội dung không có căn cứ và không được phép hiển thị."),
-    ])
+    monkeypatch.setattr(
+        AgentToolbox, "retrieve_medical_evidence", lambda *args, **kwargs: {"evidence": [], "sufficient": False}
+    )
+    llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    _call(
+                        "retrieve_medical_evidence",
+                        {"query": "WBC cao nói chung có ý nghĩa gì?", "analyte": "WBC", "status": "HIGH"},
+                        "c1",
+                    )
+                ],
+            ),
+            AIMessage(content="Nội dung không có căn cứ và không được phép hiển thị."),
+        ]
+    )
     monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
 
-    result = await run_agent_v2(message="WBC cao nói chung có ý nghĩa gì?", current_user=actor, db=object(), current_report_ref=None, current_analyte=None)
+    result = await run_agent_v2(
+        message="WBC cao nói chung có ý nghĩa gì?",
+        current_user=actor,
+        db=object(),
+        current_report_ref=None,
+        current_analyte=None,
+    )
 
     assert "chưa có đủ bằng chứng y khoa" in result.response.message
     assert "không có căn cứ" not in result.response.message
@@ -284,7 +333,9 @@ async def test_treatment_safety_blocks_before_agent_v2(monkeypatch):
         raise AssertionError("Agent V2 must not run before the treatment gate")
 
     monkeypatch.setattr("src.orchestrator.agent_v2.run_agent_v2", must_not_run)
-    result = await handle_message(OrchestratorRequest(message="Tôi nên uống thuốc gì để hạ WBC?"), current_user=actor, db=object())
+    result = await handle_message(
+        OrchestratorRequest(message="Tôi nên uống thuốc gì để hạ WBC?"), current_user=actor, db=object()
+    )
 
     assert result.status == ResponseStatus.BLOCKED
     assert result.reason_code is not None
@@ -336,29 +387,61 @@ async def test_causal_followup_uses_trend_and_rag_without_personal_cause(monkeyp
     evidence = {
         "sufficient": True,
         "reason_code": None,
-        "evidence": [{"evidence_id": "ev_wbc_1", "text": "Nhiều bối cảnh y khoa tổng quát được mô tả.", "source_url": "https://example.test/approved"}],
+        "evidence": [
+            {
+                "evidence_id": "ev_wbc_1",
+                "text": "Nhiều bối cảnh y khoa tổng quát được mô tả.",
+                "source_url": "https://example.test/approved",
+            }
+        ],
     }
     monkeypatch.setattr(AgentToolbox, "get_indicator", lambda self, analyte, report_ref=None: indicator)
     monkeypatch.setattr(AgentToolbox, "get_indicator_trend", lambda self, analyte, window="latest5": trend)
-    monkeypatch.setattr(AgentToolbox, "retrieve_medical_evidence", lambda self, query, analyte=None, status=None: evidence)
-    first_turn_llm = ScriptedToolCallingLlm([
-        AIMessage(content="", tool_calls=[
-            _call("get_indicator", {"analyte": "WBC"}, "t1c1"),
-            _call("retrieve_medical_evidence", {"query": "Giải thích WBC", "analyte": "WBC", "status": "HIGH"}, "t1c2"),
-        ]),
-        AIMessage(content="WBC đang được đánh dấu cao. Tài liệu được phê duyệt cung cấp thông tin giáo dục tổng quát; kết quả này không tự xác lập chẩn đoán."),
-    ])
-    second_turn_llm = ScriptedToolCallingLlm([
-        AIMessage(content="", tool_calls=[
-            _call("get_indicator_trend", {"analyte": "WBC", "window": "latest5"}, "c1"),
-            _call("retrieve_medical_evidence", {"query": "Tại sao WBC tăng?", "analyte": "WBC", "status": "HIGH"}, "c2"),
-        ]),
-        AIMessage(content="Tài liệu được phê duyệt mô tả nhiều bối cảnh y khoa tổng quát có thể đi kèm WBC tăng. Không thể xác định nguyên nhân riêng của bạn chỉ từ kết quả xét nghiệm; cần trao đổi với bác sĩ để đánh giá thêm."),
-    ])
+    monkeypatch.setattr(
+        AgentToolbox, "retrieve_medical_evidence", lambda self, query, analyte=None, status=None: evidence
+    )
+    first_turn_llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    _call("get_indicator", {"analyte": "WBC"}, "t1c1"),
+                    _call(
+                        "retrieve_medical_evidence",
+                        {"query": "Giải thích WBC", "analyte": "WBC", "status": "HIGH"},
+                        "t1c2",
+                    ),
+                ],
+            ),
+            AIMessage(
+                content="WBC đang được đánh dấu cao. Tài liệu được phê duyệt cung cấp thông tin giáo dục tổng quát; kết quả này không tự xác lập chẩn đoán."
+            ),
+        ]
+    )
+    second_turn_llm = ScriptedToolCallingLlm(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    _call("get_indicator_trend", {"analyte": "WBC", "window": "latest5"}, "c1"),
+                    _call(
+                        "retrieve_medical_evidence",
+                        {"query": "Tại sao WBC tăng?", "analyte": "WBC", "status": "HIGH"},
+                        "c2",
+                    ),
+                ],
+            ),
+            AIMessage(
+                content="Tài liệu được phê duyệt mô tả nhiều bối cảnh y khoa tổng quát có thể đi kèm WBC tăng. Không thể xác định nguyên nhân riêng của bạn chỉ từ kết quả xét nghiệm; cần trao đổi với bác sĩ để đánh giá thêm."
+            ),
+        ]
+    )
     models = iter([first_turn_llm, second_turn_llm])
     monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: next(models))
 
-    first_turn = await run_agent_v2(message="Giải thích WBC của tôi", current_user=actor, db=object(), current_report_ref="3", current_analyte=None)
+    first_turn = await run_agent_v2(
+        message="Giải thích WBC của tôi", current_user=actor, db=object(), current_report_ref="3", current_analyte=None
+    )
     result = await run_agent_v2(
         message="Tại sao lại tăng vậy?",
         current_user=actor,
@@ -401,7 +484,13 @@ async def test_numeric_grounding_audit_warns_without_blocking(monkeypatch, caplo
     monkeypatch.setattr("src.orchestrator.agent_v2.get_llm", lambda: llm)
 
     with caplog.at_level("WARNING", logger="src.orchestrator.agent_v2"):
-        result = await run_agent_v2(message="Cho tôi biết kết quả", current_user=actor, db=object(), current_report_ref=None, current_analyte=None)
+        result = await run_agent_v2(
+            message="Cho tôi biết kết quả",
+            current_user=actor,
+            db=object(),
+            current_report_ref=None,
+            current_analyte=None,
+        )
 
     assert result.response.status == ResponseStatus.SUCCESS
     assert any(record.message == "agent_v2_numeric_grounding_warning" for record in caplog.records)

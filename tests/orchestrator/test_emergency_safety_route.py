@@ -123,6 +123,7 @@ def _build_setup(monkeypatch, analyte: str | None = "HGB"):
 # 1. Gate-level positive tests for emergency / urgent symptom inputs
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -162,6 +163,7 @@ def test_gate_positive_emergency_symptoms(case_id: str, message: str) -> None:
 # 2. Gate-level negative controls: Educational / Non-personal queries NOT blocked
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -189,6 +191,7 @@ def test_gate_negative_controls_not_emergency(case_id: str, message: str) -> Non
 # ==============================================================================
 # 3. End-to-end: Active HGB context hijack regression test
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_active_hgb_context_emergency_safety_precedence(monkeypatch) -> None:
@@ -226,6 +229,7 @@ async def test_e2e_active_hgb_context_emergency_safety_precedence(monkeypatch) -
 # ==============================================================================
 # 4. LLM & Router Bypass Test
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_emergency_bypasses_router_llm_and_dispatcher(monkeypatch) -> None:
@@ -272,6 +276,7 @@ async def test_emergency_bypasses_router_llm_and_dispatcher(monkeypatch) -> None
 # ==============================================================================
 # 5. Non-emergency & Existing Safety Gates Regression
 # ==============================================================================
+
 
 def test_existing_safety_gates_unaffected() -> None:
     """Existing diagnosis, cause, and treatment safety gates remain functional."""

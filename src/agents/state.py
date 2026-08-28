@@ -7,7 +7,6 @@ from src.models.ocr_schemas import OCRIndicatorDraft
 IndicatorStatus = Literal["unknown", "normal", "low", "high", "critical_low", "critical_high"]
 
 
-
 class IndicatorInput(TypedDict, total=False):
     """Một chỉ số thô lấy từ phiếu xét nghiệm (JSON mock hoặc OCR)."""
 

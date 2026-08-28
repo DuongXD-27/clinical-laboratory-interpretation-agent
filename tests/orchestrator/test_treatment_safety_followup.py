@@ -129,6 +129,7 @@ def no_context_setup(monkeypatch):
 # Layer 1 gate-level: context-free positives need a medical anchor
 # ==============================================================================
 
+
 @pytest.mark.parametrize(
     "case_id,message",
     [
@@ -148,6 +149,7 @@ def test_layer1_context_free_treatment_positives(case_id: str, message: str) -> 
 # ==============================================================================
 # Layer 1 gate-level: broad action forms WITHOUT a medical anchor pass through
 # ==============================================================================
+
 
 @pytest.mark.parametrize(
     "case_id,message",
@@ -209,6 +211,7 @@ def test_layer2_domain_questions_not_elevated(case_id: str, message: str) -> Non
 # E2E: TRQ-011 exact golden message is blocked as treatment (context-free)
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_e2e_trq011_exact_message_blocked_as_treatment(active_hba1c_setup) -> None:
     user, runtime, db, store = active_hba1c_setup
@@ -231,6 +234,7 @@ async def test_e2e_trq011_exact_message_blocked_as_treatment(active_hba1c_setup)
 # E2E: contextual follow-up elevates with active WBC context
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_e2e_contextual_followup_blocked_with_wbc_context(active_wbc_setup) -> None:
     user, runtime, db, store = active_wbc_setup
@@ -250,6 +254,7 @@ async def test_e2e_contextual_followup_blocked_with_wbc_context(active_wbc_setup
 # ==============================================================================
 # E2E: the bare follow-up WITHOUT active context is never treatment-blocked
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_bare_followup_without_context_not_treatment(no_context_setup, monkeypatch) -> None:
@@ -276,6 +281,7 @@ async def test_e2e_bare_followup_without_context_not_treatment(no_context_setup,
 # ==============================================================================
 # E2E: treatment safety interruption preserves valid analyte context
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_e2e_treatment_interruption_preserves_hba1c_context(active_hba1c_setup) -> None:

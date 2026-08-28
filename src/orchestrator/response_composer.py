@@ -73,9 +73,7 @@ def _compose_trend_message(data: TrendDataPayload) -> str:
         latest.assessment.casefold(),
         latest.assessment.upper(),
     )
-    lines.append(
-        f"Giá trị gần nhất là {latest_measurement} và được đánh dấu {latest_assessment}."
-    )
+    lines.append(f"Giá trị gần nhất là {latest_measurement} và được đánh dấu {latest_assessment}.")
 
     if trend.critical_alert is not None:
         lines.append(f"\n⚠️ CẢNH BÁO: {trend.critical_alert.message}")
@@ -103,14 +101,20 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
                 critical_names.add(ind.analyte_canonical)
 
     critical_indicators = [
-        ind for ind in data.indicators
-        if ind.name in critical_names or (ind.analyte_canonical and ind.analyte_canonical in critical_names)
-        or getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None)
+        ind
+        for ind in data.indicators
+        if ind.name in critical_names
+        or (ind.analyte_canonical and ind.analyte_canonical in critical_names)
+        or getattr(ind, "is_critical", False)
+        or getattr(ind, "critical_status", None)
     ]
-    critical_ind_names = {ind.name for ind in critical_indicators} | {ind.analyte_canonical for ind in critical_indicators if ind.analyte_canonical}
+    critical_ind_names = {ind.name for ind in critical_indicators} | {
+        ind.analyte_canonical for ind in critical_indicators if ind.analyte_canonical
+    }
 
     abnormal_indicators = [
-        ind for ind in data.indicators
+        ind
+        for ind in data.indicators
         if str(ind.status).casefold() in {"high", "low"}
         and ind.name not in critical_ind_names
         and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
@@ -119,14 +123,16 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
     ]
 
     unknown_indicators = [
-        ind for ind in data.indicators
+        ind
+        for ind in data.indicators
         if str(ind.status).casefold() == "unknown"
         and ind.name not in critical_ind_names
         and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
     ]
 
     normal_count = sum(
-        1 for ind in data.indicators
+        1
+        for ind in data.indicators
         if str(ind.status).casefold() == "normal"
         and ind.name not in critical_ind_names
         and (not ind.analyte_canonical or ind.analyte_canonical not in critical_ind_names)
@@ -172,7 +178,11 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
             for ind in abnormal_indicators:
                 name = ind.analyte_canonical or ind.name
                 status_str = "CAO" if str(ind.status).casefold() == "high" else "THẤP"
-                ref_str = f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})" if ind.reference_low is not None and ind.reference_high is not None else ""
+                ref_str = (
+                    f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})"
+                    if ind.reference_low is not None and ind.reference_high is not None
+                    else ""
+                )
                 lines.append(f"- {name}: {ind.value} {ind.unit}{ref_str} [{status_str}]")
         if unknown_indicators:
             lines.append("\n### Chỉ số chưa xác định khoảng tham chiếu:")
@@ -180,13 +190,17 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
                 name = ind.analyte_canonical or ind.name
                 lines.append(f"- {name}: {ind.value} {ind.unit}")
         if normal_count > 0:
-            lines.append(f"\n### Chỉ số trong khoảng bình thường:\n- Có {normal_count} chỉ số đạt mức tham chiếu chuẩn.")
+            lines.append(
+                f"\n### Chỉ số trong khoảng bình thường:\n- Có {normal_count} chỉ số đạt mức tham chiếu chuẩn."
+            )
         if not critical_indicators and not abnormal_indicators and not unknown_indicators and normal_count > 0:
             lines = ["Tất cả các chỉ số xét nghiệm đã phân tích đều nằm trong khoảng tham chiếu thông thường."]
         if abnormal_indicators or critical_indicators:
             first_notable = (critical_indicators + abnormal_indicators)[0]
             name = first_notable.analyte_canonical or first_notable.name
-            lines.append(f"\n### Hướng dẫn tiếp theo:\nBạn có thể hỏi thêm về chỉ số cụ thể (ví dụ: 'Giải thích kỹ hơn {name}') để chuẩn bị trao đổi cùng bác sĩ.")
+            lines.append(
+                f"\n### Hướng dẫn tiếp theo:\nBạn có thể hỏi thêm về chỉ số cụ thể (ví dụ: 'Giải thích kỹ hơn {name}') để chuẩn bị trao đổi cùng bác sĩ."
+            )
         return "\n".join(lines)
 
     lines = ["Dưới đây là tổng hợp kết quả xét nghiệm của bạn:"]
@@ -206,7 +220,11 @@ def _format_whole_report_deterministic_summary(data: AnalysisDataPayload, respon
         for ind in abnormal_indicators:
             name = ind.analyte_canonical or ind.name
             status_str = "CAO" if str(ind.status).casefold() == "high" else "THẤP"
-            ref_str = f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})" if ind.reference_low is not None and ind.reference_high is not None else ""
+            ref_str = (
+                f" (tham chiếu: {ind.reference_low} - {ind.reference_high} {ind.unit})"
+                if ind.reference_low is not None and ind.reference_high is not None
+                else ""
+            )
             lines.append(f"- {name}: {ind.value} {ind.unit}{ref_str} [{status_str}]")
 
     if unknown_indicators:
@@ -260,15 +278,19 @@ def _compose_explanation_message(data: ExplanationDataPayload, response_style: s
         f"Kết quả {facts.analyte_name} của bạn:",
     ]
     if data.presentation_mode == "status_first":
-        fact_lines.extend((
-            f"- Trạng thái: {status_label}",
-            f"- Giá trị: {facts.value} {facts.unit}",
-        ))
+        fact_lines.extend(
+            (
+                f"- Trạng thái: {status_label}",
+                f"- Giá trị: {facts.value} {facts.unit}",
+            )
+        )
     else:
-        fact_lines.extend((
-            f"- Giá trị: {facts.value} {facts.unit}",
-            f"- Trạng thái: {status_label}",
-        ))
+        fact_lines.extend(
+            (
+                f"- Giá trị: {facts.value} {facts.unit}",
+                f"- Trạng thái: {status_label}",
+            )
+        )
     if facts.has_two_sided_reference_range:
         fact_lines.append(f"- Khoảng tham chiếu: {facts.reference_low} - {facts.reference_high} {facts.unit}")
     if facts.approved_critical_message:
@@ -353,9 +375,11 @@ def deterministic_message_for(
         return _safety_refusal_message(reason_code)
     if reason_code == ReasonCode.OUT_OF_SCOPE:
         from src.orchestrator.service import OUT_OF_SCOPE_MESSAGE
+
         return OUT_OF_SCOPE_MESSAGE
     if reason_code == ReasonCode.SENSITIVE_SYSTEM_REQUEST:
         from src.orchestrator.service import SENSITIVE_SYSTEM_MESSAGE
+
         return SENSITIVE_SYSTEM_MESSAGE
     if reason_code == ReasonCode.UNSUPPORTED_ANALYTE:
         return "Chỉ số này chưa nằm trong phạm vi hỗ trợ an toàn của hệ thống."
@@ -368,11 +392,7 @@ def deterministic_message_for(
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.VIEW_HISTORY:
         return "Đây là phiếu xét nghiệm gần nhất trong lịch sử của bạn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.ANALYZE_TREND:
-        if (
-            isinstance(data, TrendDataPayload)
-            and data.trend.trend_available
-            and len(data.trend.points) >= 3
-        ):
+        if isinstance(data, TrendDataPayload) and data.trend.trend_available and len(data.trend.points) >= 3:
             return _compose_trend_message(data)
         return "Đây là xu hướng của chỉ số đã chọn."
     if status == ResponseStatus.SUCCESS and intent == IntentEnum.GET_DOCTOR_QUESTIONS:
@@ -519,7 +539,9 @@ def _payload_summary(data: DataPayload) -> str:
         abnormal_list = [
             f"{ind.analyte_canonical or ind.name}: {ind.value} {ind.unit} ({ind.status.upper()}, ref: {ind.reference_low}-{ind.reference_high})"
             for ind in data.indicators
-            if str(ind.status).casefold() in {"high", "low"} and ind.name not in critical_names and not getattr(ind, "is_critical", False)
+            if str(ind.status).casefold() in {"high", "low"}
+            and ind.name not in critical_names
+            and not getattr(ind, "is_critical", False)
         ]
         unknown_list = [
             f"{ind.analyte_canonical or ind.name}: {ind.value} {ind.unit}"
@@ -527,8 +549,7 @@ def _payload_summary(data: DataPayload) -> str:
             if str(ind.status).casefold() == "unknown" and ind.name not in critical_names
         ]
         normal_count = sum(
-            1 for ind in data.indicators
-            if str(ind.status).casefold() == "normal" and ind.name not in critical_names
+            1 for ind in data.indicators if str(ind.status).casefold() == "normal" and ind.name not in critical_names
         )
         return (
             f"Payload: whole report analysis. Total indicators: {len(data.indicators)}. "
@@ -595,7 +616,7 @@ def _composer_prompt(
         f"""\
         You write one short patient-facing message in Vietnamese.
 
-        STYLE PROFILE: {style_entry['name']} ({response_style})
+        STYLE PROFILE: {style_entry["name"]} ({response_style})
         {style_rules}
 
         PATIENT GROUNDING CONSTRAINTS (MANDATORY):
@@ -725,8 +746,18 @@ def _validate_patient_grounding(message: str, user_message: str | None = None) -
     if match_symptom:
         matched_phrase = match_symptom.group(0)
         symptom_keywords = (
-            "kho tho", "met moi", "chong mat", "dau nguc", "hoa mat",
-            "buon non", "sot", "co giat", "ngat", "dau dau", "tuc nguc", "danh trong nguc",
+            "kho tho",
+            "met moi",
+            "chong mat",
+            "dau nguc",
+            "hoa mat",
+            "buon non",
+            "sot",
+            "co giat",
+            "ngat",
+            "dau dau",
+            "tuc nguc",
+            "danh trong nguc",
         )
         matched_tokens = [t for t in symptom_keywords if t in matched_phrase]
         if not all(sym in normalized_user for sym in matched_tokens):
@@ -780,13 +811,15 @@ def _message_contradicts_canonical_data(message: str, data: DataPayload) -> bool
             1 for ind in data.indicators if getattr(ind, "is_critical", False) or getattr(ind, "critical_status", None)
         )
         abnormal_count = sum(
-            1 for ind in data.indicators
+            1
+            for ind in data.indicators
             if str(ind.status).casefold() in {"high", "low"}
             and not getattr(ind, "is_critical", False)
             and not getattr(ind, "critical_status", None)
         )
         normal_count = sum(
-            1 for ind in data.indicators
+            1
+            for ind in data.indicators
             if str(ind.status).casefold() == "normal" and not getattr(ind, "is_critical", False)
         )
         total = len(data.indicators)
@@ -796,8 +829,16 @@ def _message_contradicts_canonical_data(message: str, data: DataPayload) -> bool
                 return True
 
         if total > 0 and normal_count == 0 and (abnormal_count > 0 or critical_count > 0):
-            if "tat ca binh thuong" in normalized or "hoan toan binh thuong" in normalized or (
-                "binh thuong" in normalized and not any(term in normalized for term in ("cao", "thap", "nguy kich", "bat thuong", "ngoai", "ngoai khoang"))
+            if (
+                "tat ca binh thuong" in normalized
+                or "hoan toan binh thuong" in normalized
+                or (
+                    "binh thuong" in normalized
+                    and not any(
+                        term in normalized
+                        for term in ("cao", "thap", "nguy kich", "bat thuong", "ngoai", "ngoai khoang")
+                    )
+                )
             ):
                 return True
 
@@ -808,7 +849,9 @@ def _message_contradicts_canonical_data(message: str, data: DataPayload) -> bool
     return False
 
 
-def _guardrail_blocked_response(intent: IntentEnum, message: str = "Nội dung phản hồi không vượt qua kiểm duyệt an toàn.") -> OrchestratorResponse:
+def _guardrail_blocked_response(
+    intent: IntentEnum, message: str = "Nội dung phản hồi không vượt qua kiểm duyệt an toàn."
+) -> OrchestratorResponse:
     return OrchestratorResponse(
         intent=intent,
         status=ResponseStatus.BLOCKED,

@@ -70,9 +70,7 @@ def _seed(test_db, rows):
 
 
 @pytest.mark.asyncio
-async def test_percentiles_expose_the_ai_latency_that_average_hides(
-    client, test_db, admin_headers_factory
-):
+async def test_percentiles_expose_the_ai_latency_that_average_hides(client, test_db, admin_headers_factory):
     """Đúng hình dạng dữ liệu production: 1200 API nhanh + 27 AI chậm."""
 
     rows = [("/api/v1/history", "GET", 50.0, 200, 0) for _ in range(1200)]
@@ -104,9 +102,7 @@ async def test_percentiles_expose_the_ai_latency_that_average_hides(
 
 
 @pytest.mark.asyncio
-async def test_preflight_requests_do_not_dilute_the_percentiles(
-    client, test_db, admin_headers_factory
-):
+async def test_preflight_requests_do_not_dilute_the_percentiles(client, test_db, admin_headers_factory):
     rows = [("/api/v1/analyze", "POST", 4000.0 + i, 200, 1) for i in range(20)]
     rows += [("/api/v1/analyze", "OPTIONS", 0.0, 200, 0) for _ in range(500)]
     _seed(test_db, rows)
@@ -233,9 +229,7 @@ async def test_unauthenticated_cannot_read_operational_latency(client):
 
 
 @pytest.mark.asyncio
-async def test_latency_is_not_swallowed_by_the_request_id_route(
-    client, test_db, admin_headers_factory
-):
+async def test_latency_is_not_swallowed_by_the_request_id_route(client, test_db, admin_headers_factory):
     """`/traces/latency` không được bị khớp thành `/traces/{request_id}`.
 
     FastAPI khớp route theo thứ tự khai báo. Đặt sai thứ tự thì "latency" trở

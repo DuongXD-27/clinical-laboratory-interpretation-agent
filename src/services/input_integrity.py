@@ -94,13 +94,9 @@ class PlausibilityRepository:
             with config_path.open(encoding="utf-8") as handle:
                 payload = json.load(handle)
         except FileNotFoundError as exc:
-            raise InputIntegrityConfigurationError(
-                f"missing input-integrity config: {config_path}"
-            ) from exc
+            raise InputIntegrityConfigurationError(f"missing input-integrity config: {config_path}") from exc
         except json.JSONDecodeError as exc:
-            raise InputIntegrityConfigurationError(
-                f"invalid input-integrity JSON: {config_path}"
-            ) from exc
+            raise InputIntegrityConfigurationError(f"invalid input-integrity JSON: {config_path}") from exc
         return cls.from_dict(payload)
 
     @classmethod
@@ -114,9 +110,7 @@ class PlausibilityRepository:
                 raise InputIntegrityConfigurationError(f"rule {index} must be an object")
             missing = cls.REQUIRED_RULE_FIELDS - set(raw_rule)
             if missing:
-                raise InputIntegrityConfigurationError(
-                    f"rule {index} missing fields: {', '.join(sorted(missing))}"
-                )
+                raise InputIntegrityConfigurationError(f"rule {index} missing fields: {', '.join(sorted(missing))}")
             if raw_rule["status"] != "ACTIVE":
                 continue
             rules.append(cls._parse_active_rule(raw_rule, index=index))
@@ -127,9 +121,7 @@ class PlausibilityRepository:
         def required_text(field: str) -> str:
             value = raw.get(field)
             if not isinstance(value, str) or not value.strip():
-                raise InputIntegrityConfigurationError(
-                    f"active rule {index} requires non-empty {field}"
-                )
+                raise InputIntegrityConfigurationError(f"active rule {index} requires non-empty {field}")
             return value.strip()
 
         lower = cls._optional_decimal(raw.get("lower_bound"), index=index, field="lower_bound")
@@ -170,9 +162,7 @@ class PlausibilityRepository:
         try:
             parsed = Decimal(str(value))
         except (InvalidOperation, ValueError) as exc:
-            raise InputIntegrityConfigurationError(
-                f"active rule {index} has non-numeric {field}"
-            ) from exc
+            raise InputIntegrityConfigurationError(f"active rule {index} has non-numeric {field}") from exc
         if not parsed.is_finite():
             raise InputIntegrityConfigurationError(f"active rule {index} has non-finite {field}")
         return parsed
@@ -187,8 +177,7 @@ class PlausibilityRepository:
 
 class InputIntegrityEvaluator:
     REVIEW_MESSAGE = (
-        "Giá trị này cần được kiểm tra lại trước khi phân tích. "
-        "Có thể đã có lỗi khi nhập giá trị hoặc đơn vị."
+        "Giá trị này cần được kiểm tra lại trước khi phân tích. Có thể đã có lỗi khi nhập giá trị hoặc đơn vị."
     )
 
     def __init__(self, repository: PlausibilityRepository):

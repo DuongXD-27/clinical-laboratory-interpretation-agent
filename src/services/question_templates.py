@@ -123,20 +123,14 @@ def load_question_templates() -> QuestionTemplateLibrary:
             payload = json.load(file)
 
         unknown = str(payload["unknown_indicator"]).strip()
-        generic = {
-            str(status): str(text).strip()
-            for status, text in payload["generic"].items()
-            if str(text).strip()
-        }
+        generic = {str(status): str(text).strip() for status, text in payload["generic"].items() if str(text).strip()}
 
         if not unknown or not generic:
             raise ValueError("unknown_indicator và generic không được rỗng")
 
         analytes = {
             str(analyte_id): {
-                str(status): str(text).strip()
-                for status, text in per_status.items()
-                if str(text).strip()
+                str(status): str(text).strip() for status, text in per_status.items() if str(text).strip()
             }
             for analyte_id, per_status in payload.get("analytes", {}).items()
         }
@@ -300,11 +294,7 @@ def generate_questions(
         questions.append(
             GeneratedQuestion(
                 text=_render(template, indicator),
-                priority=(
-                    PRIORITY_CRITICAL
-                    if is_critical or status in _CRITICAL_STATUSES
-                    else PRIORITY_ABNORMAL
-                ),
+                priority=(PRIORITY_CRITICAL if is_critical or status in _CRITICAL_STATUSES else PRIORITY_ABNORMAL),
                 display_order=order,
                 analyte_id=indicator.get("analyte_id") or None,
                 indicator_name=str(indicator.get("name") or "") or None,

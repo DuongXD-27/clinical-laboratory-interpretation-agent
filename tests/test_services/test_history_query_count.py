@@ -125,8 +125,7 @@ def test_history_list_query_count_does_not_grow_with_report_count(test_db, count
         assert total == 12
 
     assert large.count == small.count, (
-        f"số truy vấn tăng theo số phiếu: {small.count} -> {large.count}. "
-        "Có hàm map đang tự truy vấn cho từng dòng."
+        f"số truy vấn tăng theo số phiếu: {small.count} -> {large.count}. Có hàm map đang tự truy vấn cho từng dòng."
     )
 
 

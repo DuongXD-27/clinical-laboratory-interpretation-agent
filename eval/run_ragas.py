@@ -32,7 +32,17 @@ METRIC_TRANSPORT_LIBRARY = "openai-python"
 RUN_ID = "RAGAS-V2-BASELINE-001"
 CONCURRENCY = 1
 CASE_ID_PATTERN = re.compile(r"^RAGAS-V2-\d{3}$")
-APPROVED_ANALYTES = {"WBC", "RBC", "Fasting plasma glucose", "Creatinine", "HGB", "HbA1c", "LDL-C", "HDL-C", "Potassium"}
+APPROVED_ANALYTES = {
+    "WBC",
+    "RBC",
+    "Fasting plasma glucose",
+    "Creatinine",
+    "HGB",
+    "HbA1c",
+    "LDL-C",
+    "HDL-C",
+    "Potassium",
+}
 PENDING_ANALYTES: set[str] = set()
 REQUIRED_FIELDS = {
     "case_id",
@@ -386,9 +396,7 @@ def select_credential(environ: Any | None = None) -> CredentialInfo:
 
 def validate_live_config(config: LiveRunConfig) -> None:
     if not config.confirm_key_rotated:
-        raise SecurityGateError(
-            "Human key-rotation confirmation is required before live evaluation."
-        )
+        raise SecurityGateError("Human key-rotation confirmation is required before live evaluation.")
     if config.provider != DEFAULT_PROVIDER:
         raise SecurityGateError("Only provider google is allowed for TIP-004B.")
     if config.model != DEFAULT_MODEL:
@@ -511,7 +519,9 @@ def hallucination_proxy(faithfulness: float | None) -> float | None:
     return 1.0 - faithfulness
 
 
-async def score_case(case: dict[str, object], faithfulness_metric: Any, context_precision_metric: Any) -> dict[str, Any]:
+async def score_case(
+    case: dict[str, object], faithfulness_metric: Any, context_precision_metric: Any
+) -> dict[str, Any]:
     start = time.perf_counter()
     contexts = list(case["retrieved_contexts"])
     if not contexts:
@@ -941,7 +951,9 @@ def print_summary(summary: ValidationSummary, dataset_constructed: bool, metrics
     print(f"PII check: {'PASS' if summary.pii_check_pass and not summary.contains_real_patient_data else 'FAIL'}")
     print(f"RAGAS dataset construction: {'PASS' if dataset_constructed else 'FAIL'}")
     print(f"Faithfulness API available: {'PASS' if metrics.get('Faithfulness') == 'Faithfulness' else 'FAIL'}")
-    print(f"ContextPrecision API available: {'PASS' if metrics.get('ContextPrecision') == 'ContextPrecision' else 'FAIL'}")
+    print(
+        f"ContextPrecision API available: {'PASS' if metrics.get('ContextPrecision') == 'ContextPrecision' else 'FAIL'}"
+    )
     print("Live evaluation executed: NO")
 
 

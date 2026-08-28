@@ -113,9 +113,7 @@ def test_extracts_usage_from_message_usage_metadata():
         usage_metadata={"input_tokens": 90, "output_tokens": 12},
         response_metadata={"model_name": "gemini-2.0-flash"},
     )
-    response = SimpleNamespace(
-        llm_output={}, generations=[[SimpleNamespace(message=message)]]
-    )
+    response = SimpleNamespace(llm_output={}, generations=[[SimpleNamespace(message=message)]])
     assert _extract_token_usage(response) == (90, 12, "gemini-2.0-flash")
 
 
@@ -209,9 +207,7 @@ def test_errored_call_is_counted_but_not_charged():
 
     timing = RequestTiming()
     timing.add_event("llm-call", 10.0, outcome="error", input_tokens=0, output_tokens=0, model="")
-    timing.add_event(
-        "llm-call", 20.0, outcome="ok", input_tokens=1000, output_tokens=100, model="gpt-4o-mini"
-    )
+    timing.add_event("llm-call", 20.0, outcome="ok", input_tokens=1000, output_tokens=100, model="gpt-4o-mini")
     timing.finish()
     fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
 
@@ -222,12 +218,8 @@ def test_errored_call_is_counted_but_not_charged():
 
 def test_unpriced_calls_are_counted_so_cost_is_not_silently_understated():
     timing = RequestTiming()
-    timing.add_event(
-        "llm-call", 5.0, outcome="ok", input_tokens=1000, output_tokens=100, model="gpt-4o-mini"
-    )
-    timing.add_event(
-        "llm-call", 5.0, outcome="ok", input_tokens=9000, output_tokens=900, model="model-la"
-    )
+    timing.add_event("llm-call", 5.0, outcome="ok", input_tokens=1000, output_tokens=100, model="gpt-4o-mini")
+    timing.add_event("llm-call", 5.0, outcome="ok", input_tokens=9000, output_tokens=900, model="model-la")
     timing.finish()
     fields = timing.as_log_fields(method="POST", path="/api/v1/analyze", status_code=200)
 
@@ -332,6 +324,4 @@ def test_callback_survives_bind_tools_so_agent_calls_are_counted():
     inner = getattr(bound, "bound", None)
     assert inner is not None, "bind_tools phải giữ model bên trong"
     inner_callbacks = list(getattr(inner, "callbacks", None) or [])
-    assert any(cb is callback for cb in inner_callbacks), (
-        f"callback đếm bị mất sau bind_tools: {inner_callbacks}"
-    )
+    assert any(cb is callback for cb in inner_callbacks), f"callback đếm bị mất sau bind_tools: {inner_callbacks}"

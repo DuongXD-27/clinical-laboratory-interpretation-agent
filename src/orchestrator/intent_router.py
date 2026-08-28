@@ -73,21 +73,10 @@ def _is_trend_request(message: str, normalized: str) -> bool:
         return True
 
     has_explicit_analyte = extract_explicit_analyte(message) is not None
-    has_temporal_context = any(
-        term in normalized
-        for term in ("dao nay", "gan day", "thoi gian gan day")
-    )
-    asks_how_it_is_changing = any(
-        term in normalized
-        for term in ("ra sao", "the nao")
-    )
+    has_temporal_context = any(term in normalized for term in ("dao nay", "gan day", "thoi gian gan day"))
+    asks_how_it_is_changing = any(term in normalized for term in ("ra sao", "the nao"))
     names_current_result = "ket qua" in normalized
-    return (
-        has_explicit_analyte
-        and has_temporal_context
-        and asks_how_it_is_changing
-        and not names_current_result
-    )
+    return has_explicit_analyte and has_temporal_context and asks_how_it_is_changing and not names_current_result
 
 
 def _is_explicit_current_result_request(message: str, normalized: str) -> bool:
@@ -108,8 +97,6 @@ def _is_explicit_current_result_request(message: str, normalized: str) -> bool:
     )
 
 
-
-
 def _deterministic_route(
     message: str,
     session: OrchestratorSessionContext | None = None,
@@ -126,14 +113,29 @@ def _deterministic_route(
     # navigation cue AND an app-feature cue together so genuine medical
     # questions ("tại sao WBC cao?", no feature cue) are never caught here.
     app_help_explicit_patterns = (
-        "huong dan su dung", "huong dan dung", "huong dan toi su dung",
-        "huong dan toi tai phieu", "huong dan tai phieu", "huong dan dung ocr",
-        "huong dan toi dung ocr", "huong dan xem ket qua", "huong dan xem lich su",
-        "huong dan xem xu huong", "cach su dung", "cach dung ung dung",
-        "tai phieu xet nghiem o dau", "tai phieu o dau", "khong tai duoc phieu",
-        "chuc nang ocr", "ocr dung de lam gi", "ocr cua ung dung",
-        "tai sao phai xac nhan ocr", "vi sao phai xac nhan ocr",
-        "sua ho so o dau", "sua thong tin ca nhan o dau", "chinh sua ho so o dau",
+        "huong dan su dung",
+        "huong dan dung",
+        "huong dan toi su dung",
+        "huong dan toi tai phieu",
+        "huong dan tai phieu",
+        "huong dan dung ocr",
+        "huong dan toi dung ocr",
+        "huong dan xem ket qua",
+        "huong dan xem lich su",
+        "huong dan xem xu huong",
+        "cach su dung",
+        "cach dung ung dung",
+        "tai phieu xet nghiem o dau",
+        "tai phieu o dau",
+        "khong tai duoc phieu",
+        "chuc nang ocr",
+        "ocr dung de lam gi",
+        "ocr cua ung dung",
+        "tai sao phai xac nhan ocr",
+        "vi sao phai xac nhan ocr",
+        "sua ho so o dau",
+        "sua thong tin ca nhan o dau",
+        "chinh sua ho so o dau",
         "xem canh bao khan cap o dau",
         # Explicitly required by phan-cong-vu.txt's own example question
         # list — "cảnh báo khẩn cấp nghĩa là gì?" asks what the app's alert
@@ -141,30 +143,58 @@ def _deterministic_route(
         # alone is a generic EXPLAIN_CURRENT_RESULT marker (matches medical
         # "WBC nghĩa là gì?" too) so it needs the full phrase listed here
         # rather than relying on the generic nav-cue+feature-cue combo.
-        "canh bao khan cap nghia la gi", "canh bao nguy kich nghia la gi",
+        "canh bao khan cap nghia la gi",
+        "canh bao nguy kich nghia la gi",
     )
     app_help_nav_cues = (
-        "o dau", "lam sao", "huong dan", "cach ", "tai sao", "vi sao",
-        "sao khong", "khong duoc", "co can phai",
+        "o dau",
+        "lam sao",
+        "huong dan",
+        "cach ",
+        "tai sao",
+        "vi sao",
+        "sao khong",
+        "khong duoc",
+        "co can phai",
         # "làm sao" is not the only common phrasing for "how" — found via
         # manual testing that "làm thế nào"/"làm như nào" fell through this
         # branch entirely and got misrouted to ANALYZE_REPORT (treated as
         # "start a new upload now" instead of "explain how to upload").
-        "lam the nao", "the nao de", "nhu the nao", "lam nhu the nao",
-        "bang cach nao", "cach nao de",
+        "lam the nao",
+        "the nao de",
+        "nhu the nao",
+        "lam nhu the nao",
+        "bang cach nao",
+        "cach nao de",
         # Colloquial contraction dropping "thế" ("làm như nào" instead of
         # "làm như thế nào") — common in casual chat typing.
-        "nhu nao", "lam nhu nao",
+        "nhu nao",
+        "lam nhu nao",
     )
     app_help_feature_cues = (
-        "tai phieu", "tai anh", "upload", "tai len phieu",
-        "lich su", "xu huong", "trend",
-        "xac nhan ocr", "ocr",
-        "ho so", "thong tin ca nhan", "profile", "tai khoan",
-        "canh bao khan cap", "canh bao nguy kich",
-        "chuc nang", "tinh nang cua ung dung",
-        "cau hoi bac si", "cau hoi cho bac si", "hoi bac si", "gui cau hoi",
-        "bac si review", "yeu cau bac si",
+        "tai phieu",
+        "tai anh",
+        "upload",
+        "tai len phieu",
+        "lich su",
+        "xu huong",
+        "trend",
+        "xac nhan ocr",
+        "ocr",
+        "ho so",
+        "thong tin ca nhan",
+        "profile",
+        "tai khoan",
+        "canh bao khan cap",
+        "canh bao nguy kich",
+        "chuc nang",
+        "tinh nang cua ung dung",
+        "cau hoi bac si",
+        "cau hoi cho bac si",
+        "hoi bac si",
+        "gui cau hoi",
+        "bac si review",
+        "yeu cau bac si",
     )
     is_app_help = any(term in normalized for term in app_help_explicit_patterns) or (
         any(term in normalized for term in app_help_nav_cues)
@@ -174,7 +204,9 @@ def _deterministic_route(
         return RouteDecision(intent=IntentEnum.APP_HELP, route_confidence=0.95)
 
     # 1. VIEW_HISTORY
-    if any(term in normalized for term in ("lich su", "history", "lan truoc", "thang truoc", "xem lai", "lan truoc nua")):
+    if any(
+        term in normalized for term in ("lich su", "history", "lan truoc", "thang truoc", "xem lai", "lan truoc nua")
+    ):
         return RouteDecision(intent=IntentEnum.VIEW_HISTORY, route_confidence=0.95)
 
     # 2. ANALYZE_TREND: explicit longitudinal semantics take precedence over
@@ -189,10 +221,25 @@ def _deterministic_route(
     # 4. SAFE_GENERAL (Greetings and general capability questions — specific
     # "how do I use feature X" questions are routed to APP_HELP above)
     safe_general_patterns = (
-        "chao ban", "chao em", "chao bac", "chao anh", "chao chi", "xin chao",
-        "hello", "cam on", "thank", "ban lam duoc gi", "tro ly nay giup gi",
-        "bat dau tu dau", "ban la ai", "giup toi lam gi", "giup gi", "co the giup",
-        "lam duoc gi", "ban giup duoc gi", "ban co the lam gi",
+        "chao ban",
+        "chao em",
+        "chao bac",
+        "chao anh",
+        "chao chi",
+        "xin chao",
+        "hello",
+        "cam on",
+        "thank",
+        "ban lam duoc gi",
+        "tro ly nay giup gi",
+        "bat dau tu dau",
+        "ban la ai",
+        "giup toi lam gi",
+        "giup gi",
+        "co the giup",
+        "lam duoc gi",
+        "ban giup duoc gi",
+        "ban co the lam gi",
     )
     if any(term in normalized for term in safe_general_patterns) or "hi" in normalized.split():
         return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
@@ -203,33 +250,69 @@ def _deterministic_route(
         or (session.conversation_state and session.conversation_state.pending_question == "ocr-review")
     )
     explicit_new_ingestion_markers = (
-        "phan tich", "analyze", "tai anh", "gui anh", "anh nay", "anh xet nghiem",
-        "doc giup toi phieu", "doc phieu", "doc anh",
-        "cai xet nghiem", "cai xet nghiem nay",
-        "toi co phieu moi", "vua nhan phieu", "moi nhan phieu", "moi nhan ket qua",
-        "nhan ket qua moi", "nhap ket qua", "nhap thu cong"
+        "phan tich",
+        "analyze",
+        "tai anh",
+        "gui anh",
+        "anh nay",
+        "anh xet nghiem",
+        "doc giup toi phieu",
+        "doc phieu",
+        "doc anh",
+        "cai xet nghiem",
+        "cai xet nghiem nay",
+        "toi co phieu moi",
+        "vua nhan phieu",
+        "moi nhan phieu",
+        "moi nhan ket qua",
+        "nhan ket qua moi",
+        "nhap ket qua",
+        "nhap thu cong",
     )
     is_explicit_new_ingestion = any(term in normalized for term in explicit_new_ingestion_markers)
 
     # Existing report review & summary cues
     existing_report_cues = (
-        "phieu nay the nao", "phieu nay sao", "phieu nay sao roi",
-        "tom tat phieu nay", "tom tat phieu", "tom tat ket qua",
-        "co gi dang chu y trong phieu nay", "co gi can chu y trong phieu nay",
-        "nhin chung ca phieu", "xem tong the phieu", "xem tong quan phieu",
-        "xem phieu nay", "ket qua nay the nao",
-        "ket qua gan nhat", "ket qua moi nhat",
-        "ket qua cua em", "ket qua cua toi", "ket qua cua minh",
-        "co gi dang chu y", "co gi can chu y", "nhin chung ca phieu cua em thi sao",
-        "co gi bat thuong", "xem tong the ket qua", "xem tong quan ket qua",
-        "xem tong quan", "tong the phieu nay"
-        "xem tong the ket qua", "xem tong quan ket qua", "tong the phieu nay",
-        "xem tong quan", "tong quan", "xem tong the", "tong the"
+        "phieu nay the nao",
+        "phieu nay sao",
+        "phieu nay sao roi",
+        "tom tat phieu nay",
+        "tom tat phieu",
+        "tom tat ket qua",
+        "co gi dang chu y trong phieu nay",
+        "co gi can chu y trong phieu nay",
+        "nhin chung ca phieu",
+        "xem tong the phieu",
+        "xem tong quan phieu",
+        "xem phieu nay",
+        "ket qua nay the nao",
+        "ket qua gan nhat",
+        "ket qua moi nhat",
+        "ket qua cua em",
+        "ket qua cua toi",
+        "ket qua cua minh",
+        "co gi dang chu y",
+        "co gi can chu y",
+        "nhin chung ca phieu cua em thi sao",
+        "co gi bat thuong",
+        "xem tong the ket qua",
+        "xem tong quan ket qua",
+        "xem tong quan",
+        "tong the phieu nayxem tong the ket qua",
+        "xem tong quan ket qua",
+        "tong the phieu nay",
+        "xem tong quan",
+        "tong quan",
+        "xem tong the",
+        "tong the",
     )
     is_existing_report_overview = any(term in normalized for term in existing_report_cues)
 
     # When active OCR review or explicit new ingestion is present, prioritize ANALYZE_REPORT
-    if is_explicit_new_ingestion or (has_active_ingestion and any(term in normalized for term in ("phieu nay", "anh nay", "phieu xet nghiem", "xem phieu"))):
+    if is_explicit_new_ingestion or (
+        has_active_ingestion
+        and any(term in normalized for term in ("phieu nay", "anh nay", "phieu xet nghiem", "xem phieu"))
+    ):
         return RouteDecision(intent=IntentEnum.ANALYZE_REPORT, route_confidence=0.9)
 
     # If it's an existing report overview, route to EXPLAIN_CURRENT_RESULT
@@ -243,19 +326,36 @@ def _deterministic_route(
         normalized.startswith("con ") or normalized.startswith("the con ") or "con " in normalized
     )
     from src.orchestrator.medical_context import _is_referential_analyte, _normalize_no_accents
+
     is_referential = _is_referential_analyte(_normalize_no_accents(message))
     is_explicit_current_result = _is_explicit_current_result_request(message, normalized)
     is_lab_value = contains_lab_value(message)
-    has_explain_marker = any(term in normalized for term in explain_markers) or any(term in original_lower for term in ("nghĩa là gì", "ý nghĩa", "màu đỏ"))
+    has_explain_marker = any(term in normalized for term in explain_markers) or any(
+        term in original_lower for term in ("nghĩa là gì", "ý nghĩa", "màu đỏ")
+    )
 
-    if is_explicit_current_result or is_lab_value or is_analyte_switch or has_explain_marker or has_explicit_analyte or is_referential:
+    if (
+        is_explicit_current_result
+        or is_lab_value
+        or is_analyte_switch
+        or has_explain_marker
+        or has_explicit_analyte
+        or is_referential
+    ):
         return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
 
     # Generic report queries (e.g. 'phiếu gần nhất', 'kết quả của tôi')
     generic_report_queries = (
-        "phieu gan nhat", "ket qua gan nhat", "ket qua moi nhat",
-        "ket qua cua toi", "ket qua cua em", "ket qua cua minh",
-        "doc ket qua", "xem ket qua", "doc phieu", "xem phieu",
+        "phieu gan nhat",
+        "ket qua gan nhat",
+        "ket qua moi nhat",
+        "ket qua cua toi",
+        "ket qua cua em",
+        "ket qua cua minh",
+        "doc ket qua",
+        "xem ket qua",
+        "doc phieu",
+        "xem phieu",
     )
     if any(term in normalized for term in generic_report_queries):
         return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
@@ -272,28 +372,67 @@ def _deterministic_route(
     # 7. Context-aware Vague Patient Expressions (Only active when patient has accessible medical data/session)
     if has_medical_context:
         vague_result_patterns = (
-            "xem giup em", "xem giup toi", "xem giup minh",
-            "coi giup em", "coi giup toi", "coi dum em", "coi dum minh",
-            "em hoi lo", "toi hoi lo", "lo lang", "co sao khong",
-            "co van de gi khong", "co can chu y", "dang chu y",
-            "co bat thuong khong", "co gi bat thuong", "chi so nao bat thuong", "bat thuong khong",
-            "chi so nay nghia la gi", "ket qua nay nghia la gi",
-            "ket qua gan nhat", "ket qua gan day", "ket qua cua em the nao",
-            "ket qua the nao", "ket qua the nao roi", "xem ket qua giup em",
-            "xem ket qua", "xem tong the", "tong the ket qua", "khong hieu ket qua",
-            "khong hieu ket qua nay", "em khong hieu ket qua",
-            "phieu nay", "phieu nay the nao", "ket qua nay",
-            "xem tong quan", "tong quan", "tong quan giup",
+            "xem giup em",
+            "xem giup toi",
+            "xem giup minh",
+            "coi giup em",
+            "coi giup toi",
+            "coi dum em",
+            "coi dum minh",
+            "em hoi lo",
+            "toi hoi lo",
+            "lo lang",
+            "co sao khong",
+            "co van de gi khong",
+            "co can chu y",
+            "dang chu y",
+            "co bat thuong khong",
+            "co gi bat thuong",
+            "chi so nao bat thuong",
+            "bat thuong khong",
+            "chi so nay nghia la gi",
+            "ket qua nay nghia la gi",
+            "ket qua gan nhat",
+            "ket qua gan day",
+            "ket qua cua em the nao",
+            "ket qua the nao",
+            "ket qua the nao roi",
+            "xem ket qua giup em",
+            "xem ket qua",
+            "xem tong the",
+            "tong the ket qua",
+            "khong hieu ket qua",
+            "khong hieu ket qua nay",
+            "em khong hieu ket qua",
+            "phieu nay",
+            "phieu nay the nao",
+            "ket qua nay",
+            "xem tong quan",
+            "tong quan",
+            "tong quan giup",
         )
         if any(term in normalized for term in vague_result_patterns):
             return RouteDecision(intent=IntentEnum.EXPLAIN_CURRENT_RESULT, route_confidence=0.9)
 
     # 7. SAFE_GENERAL (Greetings and Capability Requests)
-    if any(term in normalized for term in (
-        "chao ban", "chao em", "xin chao", "hello", "cam on",
-        "ban lam duoc gi", "ban co the giup", "giup toi lam gi",
-        "tro ly nay giup gi", "bat dau tu dau"
-    )) or "hi" in normalized.split():
+    if (
+        any(
+            term in normalized
+            for term in (
+                "chao ban",
+                "chao em",
+                "xin chao",
+                "hello",
+                "cam on",
+                "ban lam duoc gi",
+                "ban co the giup",
+                "giup toi lam gi",
+                "tro ly nay giup gi",
+                "bat dau tu dau",
+            )
+        )
+        or "hi" in normalized.split()
+    ):
         return RouteDecision(intent=IntentEnum.SAFE_GENERAL, route_confidence=1.0)
 
     return None
@@ -310,7 +449,12 @@ def _deterministic_follow_up_route(message: str, session: OrchestratorSessionCon
     # Follow-up with an explicit analyte
     if session.last_intent in {IntentEnum.EXPLAIN_CURRENT_RESULT, IntentEnum.ANALYZE_TREND}:
         if explicit_analyte is not None:
-            if active_pending or normalized.startswith("con ") or normalized.startswith("the con ") or len(normalized.split()) <= 3:
+            if (
+                active_pending
+                or normalized.startswith("con ")
+                or normalized.startswith("the con ")
+                or len(normalized.split()) <= 3
+            ):
                 return RouteDecision(intent=session.last_intent, route_confidence=1.0)
 
     # Follow-up with an explicit report reference
@@ -372,6 +516,7 @@ async def route_intent(
     except Exception:
         from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
         from src.orchestrator.service import _is_unclear_input
+
         if sensitive_system_gate(message) is not None:
             reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
         elif _is_unclear_input(message):
@@ -392,6 +537,7 @@ async def route_intent(
         if parsed_intent == IntentEnum.UNSUPPORTED_OR_UNSAFE:
             from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
             from src.orchestrator.service import _is_unclear_input
+
             if sensitive_system_gate(message) is not None:
                 reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
             elif _is_unclear_input(message):
@@ -409,6 +555,7 @@ async def route_intent(
     except ValueError:
         from src.orchestrator.gates import out_of_scope_gate, sensitive_system_gate
         from src.orchestrator.service import _is_unclear_input
+
         if sensitive_system_gate(message) is not None:
             reason = ReasonCode.SENSITIVE_SYSTEM_REQUEST
         elif _is_unclear_input(message):

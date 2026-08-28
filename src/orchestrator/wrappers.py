@@ -154,9 +154,7 @@ def _mapping_matches_analyte(indicator: Mapping[str, Any], analyte: str | None) 
 
 def _question_indicator_map(report: LabReport) -> dict[int, object]:
     return {
-        indicator.id: indicator
-        for indicator in report.indicators
-        if isinstance(getattr(indicator, "id", None), int)
+        indicator.id: indicator for indicator in report.indicators if isinstance(getattr(indicator, "id", None), int)
     }
 
 
@@ -210,7 +208,9 @@ def _report_indicator_mappings(
     return mapped
 
 
-def get_my_history(current_user: object, db: object, filters: Mapping[str, object] | None = None) -> HistorySummaryPayload:
+def get_my_history(
+    current_user: object, db: object, filters: Mapping[str, object] | None = None
+) -> HistorySummaryPayload:
     _, actor_key = _require_patient(current_user)
     from_date, to_date = _history_filters(filters)
     try:
