@@ -21,14 +21,9 @@ interface PatientTopbarProps {
   onLogout: () => void;
 }
 
-function pageTitle(pathname: string) {
-  if (pathname.startsWith("/patient/analysis")) return "Phân tích xét nghiệm";
-  if (pathname.startsWith("/patient/reports/") || pathname.startsWith("/patient/history/")) return "Kết quả xét nghiệm";
-  if (pathname.startsWith("/patient/history")) return "Lịch sử kết quả";
-  if (pathname.startsWith("/patient/trends")) return "Xu hướng chỉ số";
-  if (pathname.startsWith("/patient/profile")) return "Thông tin cá nhân";
-  return "Tổng quan";
-}
+import { getPatientPageTitle } from "@/lib/patientRoutes.mjs";
+
+const pageTitle = getPatientPageTitle;
 
 export default function PatientTopbar({ pathname, isGuest, username, onLogout }: PatientTopbarProps) {
   const [open, setOpen] = useState(false);

@@ -209,7 +209,11 @@ def _is_unclear_input(message: str) -> bool:
         return True
     vowels = set("aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ")
     for token in lower_tokens:
-        if not token.isdigit() and len(token) >= 3 and not any(character in vowels for character in token):
+        if (
+            not any(c.isdigit() for c in token)
+            and len(token) >= 3
+            and not any(character in vowels for character in token)
+        ):
             return True
         if token in {"asdf", "asdfg", "asdfgh", "qwerty", "zxcv", "zxcvb", "qwer", "hjkl"}:
             return True

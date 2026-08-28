@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FilePlus } from "lucide-react";
+import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
 
 export default function PatientDashboardEmpty() {
   return (
@@ -11,7 +12,7 @@ export default function PatientDashboardEmpty() {
       <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
         Phân tích phiếu xét nghiệm đầu tiên để bắt đầu theo dõi sức khỏe và xem lịch sử chỉ số của bạn.
       </p>
-      <Link href="/patient/analysis" className="inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-[var(--brand-strong)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)]/80 rounded-lg transition-colors">
+      <Link href={PATIENT_ROUTES.ANALYSIS} className="inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-[var(--brand-strong)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)]/80 rounded-lg transition-colors">
         Phân tích xét nghiệm
       </Link>
     </section>
