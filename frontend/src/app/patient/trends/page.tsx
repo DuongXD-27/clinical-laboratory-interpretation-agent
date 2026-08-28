@@ -7,6 +7,7 @@ import TrendChart from "@/components/TrendChart";
 import TrendDoctorReviewPanel from "@/components/patient/TrendDoctorReviewPanel";
 import TrendHeatmap from "@/components/TrendHeatmap";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
+import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
 import {
   canRenderTrendChart,
   defaultTrendAnalyte,
@@ -356,7 +357,7 @@ export default function PatientTrendsPage() {
           ) : analytes.length === 0 ? (
             <div className="empty-metrics mt-5">
               <p className="font-medium text-slate-700">Bạn chưa có dữ liệu xét nghiệm để theo dõi xu hướng.</p>
-              <Link href="/patient/analysis" className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
+              <Link href={PATIENT_ROUTES.ANALYSIS} className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
             </div>
           ) : (
             <>

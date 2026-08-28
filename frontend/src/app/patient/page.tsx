@@ -12,6 +12,7 @@ import NeedsAttention from "@/components/patient/dashboard/NeedsAttention";
 import RecentReports, { type DashboardReport } from "@/components/patient/dashboard/RecentReports";
 import Link from "next/link";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
 
 type DashboardSummary = {
   total_reports: number;
@@ -118,7 +119,7 @@ export default function PatientDashboardPage() {
                 Kết quả phân tích không được lưu sau khi thoát phiên. Bạn vẫn có thể nhập tay hoặc tải ảnh phiếu xét nghiệm để trải nghiệm.
               </p>
             </div>
-            <Link href="/patient/analysis" className="shrink-0 inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-[var(--brand-strong)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)]/80 rounded-lg transition-colors">
+            <Link href={PATIENT_ROUTES.ANALYSIS} className="shrink-0 inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-[var(--brand-strong)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)]/80 rounded-lg transition-colors">
               Bắt đầu phân tích
             </Link>
           </div>
@@ -148,7 +149,7 @@ export default function PatientDashboardPage() {
           {dashboard.newly_verified_count > 0 && (
             <div className="bg-[var(--status-success-bg)] text-[var(--status-success-fg)] px-4 py-3 rounded-lg border border-[var(--status-success-fg)]/20 text-sm flex items-center gap-2" role="status">
               Bác sĩ đã kiểm chứng {dashboard.newly_verified_count} phiếu xét nghiệm của bạn.
-              <Link href="/patient/history" className="font-semibold hover:underline ml-1">
+              <Link href={PATIENT_ROUTES.HISTORY} className="font-semibold hover:underline ml-1">
                 Xem lại
               </Link>
             </div>

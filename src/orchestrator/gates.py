@@ -262,6 +262,41 @@ def _is_ambiguous_treatment_followup(normalized: str) -> bool:
     return continuation_signal
 
 
+_EDUCATIONAL_DEFINITIONAL_SUFFIXES = (
+    "la gi",
+    "nghia la gi",
+    "la sao",
+    "la nhu the nao",
+    "co y nghia gi",
+    "la gi vay",
+    "co vai tro gi",
+    "dong vai tro gi",
+)
+_EDUCATIONAL_REFERENCE_MARKERS = (
+    "tai lieu noi",
+    "sach y hoc",
+    "sach bao",
+    "bai viet noi",
+    "tim hieu ve",
+    "nguyen nhan gay",
+    "nguyen nhan cua",
+    "co che gay",
+    "co che cua",
+    "giai thich ve trieu chung",
+    "dinh nghia",
+    "the nao la",
+    "co phai dau hieu",
+    "dau hieu cua",
+    "trieu chung cua",
+    "bieu hien cua",
+    "co phai bieu hien",
+    "dau hieu benh",
+    "bieu hien benh",
+    "bieu hien cho thay",
+    "co phai la trieu chung",
+    "la dau hieu cua",
+)
+
 _DIET_SUPPLEMENT_VERBS = (
     "an",
     "uong",
@@ -305,23 +340,85 @@ _DIET_FOOD_ITEMS = (
     "la cay",
 )
 _HEALTH_TARGET_GOALS = (
+    "nhieu mau",
+    "thieu mau",
     "tang mau",
     "bo mau",
     "tang hgb",
+    "tang hemoglobin",
+    "tang hong cau",
+    "tang rbc",
+    "tang wbc",
+    "tang bach cau",
+    "tang tieu cau",
+    "tang plt",
     "ha men gan",
+    "giam men gan",
     "ha duong huyet",
+    "giam duong huyet",
     "ha duong",
     "giam duong",
     "giam cholesterol",
+    "ha cholesterol",
     "giam mo mau",
-    "tang tieu cau",
-    "tang bach cau",
+    "ha mo mau",
     "giam axit uric",
     "giam acid uric",
+    "ha axit uric",
     "tang suc de khang",
     "tot cho mau",
     "tot cho gan",
     "tot cho than",
+    "tri thieu mau",
+    "chua thieu mau",
+)
+
+_INTERVENTION_ACTION_FRAMES = (
+    "an gi cho",
+    "uong gi cho",
+    "dung gi cho",
+    "an gi de",
+    "uong gi de",
+    "dung gi de",
+    "an gi giup",
+    "uong gi giup",
+    "an gi bo",
+    "uong gi bo",
+    "an gi ha",
+    "uong gi ha",
+    "an gi tang",
+    "uong gi tang",
+    "an gi giam",
+    "uong gi giam",
+    "nen an gi",
+    "nen uong gi",
+    "kieng an gi",
+    "kieng gi",
+    "nen kieng gi",
+    "nen kieng an gi",
+    "nen bo sung gi",
+    "bo sung gi",
+    "an kieng the nao",
+)
+
+_SUPPLEMENT_HOW_TO_PATTERN = re.compile(
+    r"\b(?:bo sung|uong|dung)\s+(?:sat|canxi|vitamin(?:\s+[a-z0-9]+)?|kem|khoang chat|tpcn|thao duoc|thuoc nam|thuoc bac)\s+(?:the nao|ra sao|nhu the nao|sao|the nao cho dung|sao cho dung)\b"
+)
+
+_CONDITION_DIET_PATTERN = re.compile(
+    r"\b(?:thieu mau|tieu duong|men gan cao|mo mau cao|axit uric cao|acid uric cao|hong cau thap|bach cau thap|tieu cau thap|hb thap|hgb thap)\s+(?:thi|nen|can)?\s*(?:an gi|uong gi|bo sung gi|kieng gi|kieng an gi|an uong the nao)\b"
+)
+
+_SHOULD_TAKE_SUPPLEMENT_PATTERN = re.compile(
+    r"\b(?:co nen|nen|co the)\s+(?:uong|dung|bo sung)\s+(?:sat|canxi|vitamin(?:\s+[a-z0-9]+)?|kem|thuoc nam|thuoc bac|tpcn)\b.*\b(?:khong|ko|duoc khong|duoc ko|chu|a|nha)\b"
+)
+
+_FOOD_SOURCE_EDUCATIONAL_PATTERN = re.compile(
+    r"\b(?:thuc pham|thuc an|mon an|nguon thuc pham|nhung thuc pham)\s+(?:nao\s+)?(?:co\s+)?(?:chua|co|giau)\s+(?:sat|canxi|vitamin(?:\s+[a-z0-9]+)?|kem|dam|protein|khoang chat)\b"
+)
+
+_ELEMENT_IN_FOOD_PATTERN = re.compile(
+    r"\b(?:sat|canxi|vitamin(?:\s+[a-z0-9]+)?|kem)\s+co\s+(?:trong\s+)?(?:thuc pham|thuc an|dau|mon an|nhung dau)\b"
 )
 
 
@@ -336,6 +433,15 @@ def _matches_personal_medical_advice_form(normalized: str, original_lower: str) 
     for suf in _EDUCATIONAL_DEFINITIONAL_SUFFIXES:
         if normalized.endswith(f" {suf}") or normalized == suf:
             return False
+        if f" {suf} " in normalized:
+            return False
+
+    # Pure educational food source queries are safe
+    if _FOOD_SOURCE_EDUCATIONAL_PATTERN.search(normalized) or _ELEMENT_IN_FOOD_PATTERN.search(normalized):
+        if not any(f in normalized for f in _INTERVENTION_ACTION_FRAMES) and not _CONDITION_DIET_PATTERN.search(
+            normalized
+        ):
+            return False
 
     # Pharmaceutical prescription / medication questions belong to TREATMENT_REQUEST
     if any(
@@ -348,6 +454,9 @@ def _matches_personal_medical_advice_form(normalized: str, original_lower: str) 
             "mua thuoc gi",
             "uong thuoc tay",
             "dung thuoc tay",
+            "thuoc gi de",
+            "thuoc gi tri",
+            "thuoc gi chua",
         )
     ):
         return False
@@ -373,63 +482,49 @@ def _matches_personal_medical_advice_form(normalized: str, original_lower: str) 
     ):
         return False
 
-    has_pronoun = _TREATMENT_PRONOUN_RE.search(normalized) is not None
-    has_advice_indicator = (
-        has_pronoun
-        or any(token in normalized for token in ("nen", "co nen", "phai", "duoc khong", "co duoc khong", "co the"))
-        or any(
-            frame in normalized
-            for frame in (
-                "an gi de",
-                "uong gi de",
-                "lam sao de",
-                "lam gi de",
-                "an gi bo",
-                "uong gi bo",
-                "kieng an gi",
-                "an gi ha",
-                "uong gi ha",
-                "kieng gi",
+    # Structured pattern matches for diet/supplement advice
+    if _SUPPLEMENT_HOW_TO_PATTERN.search(normalized):
+        return True
+    if _CONDITION_DIET_PATTERN.search(normalized):
+        return True
+    if _SHOULD_TAKE_SUPPLEMENT_PATTERN.search(normalized):
+        return True
+
+    # Action frames for diet / supplement intervention
+    if any(frame in normalized for frame in _INTERVENTION_ACTION_FRAMES):
+        has_health_goal = any(
+            _contains_phrase_norm(normalized, goal) or goal in normalized for goal in _HEALTH_TARGET_GOALS
+        )
+        has_food_item = any(_contains_phrase_norm(normalized, item) for item in _DIET_FOOD_ITEMS)
+        has_analyte = any(
+            a in normalized
+            for a in (
+                "hgb",
+                "hb",
+                "rbc",
+                "wbc",
+                "plt",
+                "glucose",
+                "sat",
+                "ferritin",
+                "men gan",
+                "ast",
+                "alt",
+                "cholesterol",
+                "acid uric",
+                "axit uric",
             )
         )
-    )
-    if not has_advice_indicator:
-        return False
+        if has_health_goal or has_food_item or has_analyte:
+            return True
+        return True
 
+    # General combination of diet verb/food + health goal / analyte
     has_diet_verb = any(_contains_phrase_norm(normalized, v) for v in _DIET_SUPPLEMENT_VERBS)
-    has_food_item = any(_contains_phrase_norm(normalized, item) for item in _DIET_FOOD_ITEMS)
-    has_health_goal = any(_contains_phrase_norm(normalized, goal) for goal in _HEALTH_TARGET_GOALS)
-
-    from src.orchestrator.message_context import extract_explicit_analyte
-
-    has_explicit_analyte = extract_explicit_analyte(original_lower) is not None
-
-    if (has_diet_verb or has_food_item) and (has_health_goal or has_explicit_analyte):
-        return True
-
-    if has_food_item and (has_advice_indicator or has_diet_verb):
-        return True
-
-    if any(
-        q in normalized
-        for q in (
-            "an gi de",
-            "uong gi de",
-            "an gi bo mau",
-            "an gi tang mau",
-            "kieng an gi",
-            "nen kieng an gi",
-            "nen kieng gi",
-            "nen an gi",
-            "nen uong gi",
-            "bo sung sat",
-            "bo sung vitamin",
-            "uong thuoc nam",
-            "dung thuoc nam",
-            "uong thuoc bac",
-            "dung thuoc bac",
-        )
-    ):
+    has_health_goal = any(
+        _contains_phrase_norm(normalized, goal) or goal in normalized for goal in _HEALTH_TARGET_GOALS
+    )
+    if has_diet_verb and has_health_goal:
         return True
 
     return False
@@ -575,6 +670,12 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
         "cách điều trị",
         "dùng thuốc gì",
         "mua thuốc gì",
+        "thuốc gì để",
+        "thuốc gì trị",
+        "thuốc gì chữa",
+        "uống gì để tăng",
+        "uống gì để hạ",
+        "uống gì để giảm",
     )
     if any(_contains_phrase_raw(original_lower, phrase) for phrase in treatment_raw):
         return ReasonCode.TREATMENT_REQUEST
@@ -593,6 +694,12 @@ def medical_safety_gate(message: str) -> ReasonCode | None:
         "cach dieu tri",
         "dung thuoc gi",
         "mua thuoc gi",
+        "thuoc gi de",
+        "thuoc gi tri",
+        "thuoc gi chua",
+        "uong gi de tang",
+        "uong gi de ha",
+        "uong gi de giam",
     )
     if any(_contains_phrase_norm(normalized, phrase) for phrase in treatment_norm):
         return ReasonCode.TREATMENT_REQUEST
@@ -712,6 +819,16 @@ def sensitive_system_gate(message: str) -> ReasonCode | None:
                 return ReasonCode.SENSITIVE_SYSTEM_REQUEST
 
     return None
+
+
+_ROMANCE_RELATIONSHIP_PATTERN = re.compile(
+    r"\b(?:co\s+)?(?:yeu|thich|thuong|crush)\s+[a-z0-9\s]+\s+(?:khong|ko|chu|a|nha)\b|"
+    r"\b(?:to tinh|hen ho|nguoi yeu|ban gai|ban trai|chia tay|ket hon|lay vo|lay chong|ngoai tinh|ghen tuong|tam su tinh cam)\b"
+)
+
+_FORTUNE_WEATHER_PATTERN = re.compile(
+    r"\b(?:thoi tiet|du bao thoi tiet|troi hom nay|nhiet do hom nay|gia vang|chung khoan|ty gia|gia bitcoin|crypto|boi toan|xem boi|cung hoang dao|tu vi|phong thuy|xo so|so so|lo de|so xo)\b"
+)
 
 
 def out_of_scope_gate(message: str) -> ReasonCode | None:
@@ -838,6 +955,14 @@ def out_of_scope_gate(message: str) -> ReasonCode | None:
         "huong dan tap gym",
     )
     if any(cue in normalized for cue in unrelated_guidance):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Personal relationships, romance, love, dating & gossip
+    if _ROMANCE_RELATIONSHIP_PATTERN.search(normalized):
+        return ReasonCode.OUT_OF_SCOPE
+
+    # Fortune telling, horoscopes, lottery, weather & general non-health daily topics
+    if _FORTUNE_WEATHER_PATTERN.search(normalized):
         return ReasonCode.OUT_OF_SCOPE
 
     return None

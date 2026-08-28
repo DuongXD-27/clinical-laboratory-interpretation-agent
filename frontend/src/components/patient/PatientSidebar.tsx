@@ -4,21 +4,22 @@ import Link from "next/link";
 import { LayoutDashboard, FileSearch, History, TrendingUp, UserRound, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const patientNavigation = [
-  { href: "/patient", label: "Tổng quan", icon: LayoutDashboard, exact: true, patientOnly: false },
-  { href: "/patient/analysis", label: "Phân tích xét nghiệm", icon: FileSearch, exact: false, patientOnly: false },
-  { href: "/patient/history", label: "Lịch sử kết quả", icon: History, exact: false, patientOnly: true },
-  { href: "/patient/trends", label: "Xu hướng chỉ số", icon: TrendingUp, exact: false, patientOnly: true },
-  { href: "/patient/profile", label: "Thông tin cá nhân", icon: UserRound, exact: false, patientOnly: true },
-];
+import { CANONICAL_PATIENT_NAV_ITEMS, isNavActive } from "@/lib/patientRoutes.mjs";
 
-export function isNavActive(pathname: string, item: (typeof patientNavigation)[number]) {
-  if (item.exact) return pathname === item.href;
-  if (item.href === "/patient/history") {
-    return pathname.startsWith(item.href) || pathname.startsWith("/patient/reports/");
-  }
-  return pathname.startsWith(item.href);
-}
+const NAV_ICONS = {
+  dashboard: LayoutDashboard,
+  analysis: FileSearch,
+  history: History,
+  trends: TrendingUp,
+  profile: UserRound,
+} as const;
+
+export const patientNavigation = CANONICAL_PATIENT_NAV_ITEMS.map((item) => ({
+  ...item,
+  icon: NAV_ICONS[item.iconKey as keyof typeof NAV_ICONS] ?? FileSearch,
+}));
+
+export { isNavActive };
 
 interface PatientSidebarProps {
   pathname: string;
