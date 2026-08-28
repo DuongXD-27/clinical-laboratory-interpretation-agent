@@ -261,6 +261,18 @@ async def test_cp_05_end_to_end_new_chat_asks_which_indicator(db_session, monkey
         response = await handle_message(
             OrchestratorRequest(message="Giải thích kỹ hơn chỉ số này"),
             current_user=user,
+            # DB THẬT, không phải `object()`.
+            #
+            # Bản đầu tôi truyền `object()` vì lúc đó `handle_message` không chạm
+            # DB trên đường này — phần y khoa đã được monkeypatch. Sau đó ai đó
+            # thêm `_immediately_previous_reason_code()`: orchestrator giờ đọc
+            # transcript để biết mã lý do của lượt trước, một tính năng hợp lý,
+            # và nó cần DB.
+            #
+            # Test đỏ đúng. Cái giả của tôi giả quá mức: nó khoá `handle_message`
+            # vào một giả định về việc hàm đó chạm gì, chứ không vào hành vi mà
+            # test muốn kiểm. Truyền session thật thì test chỉ còn khẳng định
+            # đúng thứ nó nên khẳng định — New Chat không thừa hưởng WBC.
             db=db_session,
             runtime=runtime,
         )

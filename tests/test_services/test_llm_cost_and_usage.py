@@ -298,3 +298,40 @@ def test_cost_per_call_divides_by_llm_calls_not_requests():
 
     groups = summarise_by_group([_row(0.004, calls=4)])
     assert groups[GROUP_AI]["cost_per_call_usd"] == pytest.approx(0.001)
+
+
+def test_callback_survives_bind_tools_so_agent_calls_are_counted():
+    """`bind_tools` không được làm mất callback đếm.
+
+    `orchestrator/agent_v2.py` do người khác thêm ở PR #92 dùng
+    `get_llm().bind_tools(tools)` — chỗ gọi LLM thứ BẢY. Nó được đếm mà không ai
+    phải sửa gì, và đó chính là lý do việc đếm nằm ở `get_llm()` chứ không rải
+    theo node: đếm theo node thì hôm nay đã lại thiếu một chỗ.
+
+    Kiểm cấu trúc chứ không gọi mạng: khẳng định callback bên trong là **cùng
+    một đối tượng**, không phải bản copy — copy thì event sẽ đi vào một chỗ khác
+    và không ai phát hiện.
+    """
+
+    from langchain_core.tools import tool
+    from langchain_openai import ChatOpenAI
+
+    @tool
+    def cong_cu_thu(x: str) -> str:
+        """Công cụ chỉ dùng trong test."""
+        return x
+
+    callback = LlmUsageCallback()
+    model = ChatOpenAI(
+        model="gpt-4o-mini",
+        api_key="sk-khong-dung-that",
+        callbacks=[callback],
+    )
+    bound = model.bind_tools([cong_cu_thu])
+
+    inner = getattr(bound, "bound", None)
+    assert inner is not None, "bind_tools phải giữ model bên trong"
+    inner_callbacks = list(getattr(inner, "callbacks", None) or [])
+    assert any(cb is callback for cb in inner_callbacks), (
+        f"callback đếm bị mất sau bind_tools: {inner_callbacks}"
+    )

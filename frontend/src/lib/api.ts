@@ -28,7 +28,7 @@ import type {
   LabReportListResponse,
   ReportQuestion,
 } from "@/types/history";
-import type { LatencyGroups, SpanTree } from "@/types/admin";
+import type { LatencyGroups, SloReport, SpanTree, Timeseries } from "@/types/admin";
 import type {
   OrchestratorResponse,
   OrchestratorStreamEvent,
@@ -534,6 +534,22 @@ export async function fetchTracingStatus(): Promise<TracingStatus> {
  * Endpoint riêng chứ không thay `fetchTraceSummary`: bản frontend đã deploy vẫn
  * đọc `/traces/summary`, và đổi hợp đồng của nó là làm hỏng màn hình đang chạy.
  */
+export async function fetchTraceTimeseries(windowHours = 24): Promise<Timeseries> {
+  const response = await authFetch(`/api/v1/admin/traces/timeseries?window_hours=${windowHours}`);
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Không tải được chuỗi thời gian"));
+  return response.json();
+}
+
+export async function fetchTraceSlo(windowHours = 24): Promise<SloReport> {
+  const response = await authFetch(`/api/v1/admin/traces/slo?window_hours=${windowHours}`);
+  if (response.status === 401) throw new UnauthorizedError();
+  if (response.status === 403) throw new ForbiddenError(await readErrorDetail(response, ""));
+  if (!response.ok) throw new Error(await readErrorDetail(response, "Không tải được SLO"));
+  return response.json();
+}
+
 export async function fetchTraceSpans(requestId: string): Promise<SpanTree> {
   const response = await authFetch(
     `/api/v1/admin/traces/${encodeURIComponent(requestId)}/spans`,
