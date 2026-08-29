@@ -20,8 +20,18 @@ class IndicatorAssessment(TypedDict, total=False):
 
     name: str
     analyte_id: str
+    analyte_canonical: str | None
     value: float
     unit: str
+    raw_value: float
+    raw_unit: str
+    canonical_value: float
+    canonical_unit: str
+    comparison_value: float
+    comparison_unit: str
+    conversion_applied: bool
+    conversion_rule: str | None
+    conversion_authority: str | None
     reference_low: float | None
     reference_high: float | None
     status: IndicatorStatus
@@ -35,7 +45,12 @@ class IndicatorAssessment(TypedDict, total=False):
     is_abnormal: bool
     is_critical: bool
     rule_type: str | None
+    rule_id: str | None
     band_id: str | None
+    band_label: str | None
+    band_lower: float | None
+    band_upper: float | None
+    lower_operator: str | None
     upper_operator: str | None
     evaluation_reason: str | None
     input_integrity_status: Literal["VALID", "NEED_REVIEW"]
@@ -47,12 +62,16 @@ class IndicatorAssessment(TypedDict, total=False):
     explanation_sources: list[dict]
     reference_range_source: dict | None
     critical_threshold_source: dict | None
+    classification_provenance: dict | None
+    retrieved_evidence: list[dict]
+    artifact_provenance: dict
 
 
 class RetrievedChunk(TypedDict, total=False):
     """Một đoạn tài liệu giáo dục y khoa lấy từ RAG cho một chỉ số."""
 
     indicator_name: str
+    chunk_id: str
     text: str
     source: str
     sources: list[str]

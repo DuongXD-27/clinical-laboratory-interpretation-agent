@@ -1,0 +1,252 @@
+{
+  "gold_version": "VMEC_GOLDEN_SET_V1_FROZEN_2026-08-29",
+  "timestamp_utc": "2026-08-29T11:34:03.632167+00:00",
+  "total_cases": 1027,
+  "total_passed": 907,
+  "total_failed": 120,
+  "overall_success_rate": 88.32,
+  "layers": {
+    "identity_accuracy": 100.0,
+    "units_accuracy": 100.0,
+    "conversion_accuracy": 83.33,
+    "classification_accuracy": 97.6,
+    "band_selection_accuracy": 25.23,
+    "critical_precision": 100.0,
+    "critical_recall": 100.0,
+    "critical_f1": 100.0,
+    "retrieval_recall_at_1": 66.16,
+    "retrieval_recall_at_3": 83.93,
+    "retrieval_recall_at_5": 86.8,
+    "retrieval_mrr": 0.8426,
+    "retrieval_analyte_precision": 97.09,
+    "retrieval_note_type_precision": 96.99,
+    "retrieval_source_precision": 97.09,
+    "generation_accuracy": 100.0,
+    "generation_average_score": 19.71,
+    "generation_deterministic_consistency": 100.0,
+    "generation_faithfulness": 71.43,
+    "safety_accuracy": 93.1,
+    "safety_hard_violation_rate": 6.9,
+    "safety_overblock_rate": 0.0,
+    "conversation_context_accuracy": 83.33,
+    "history_trend_accuracy": 100.0
+  },
+  "performance": {
+    "p50_latency_ms": 0,
+    "p95_latency_ms": 1216,
+    "max_latency_ms": 3414,
+    "total_llm_calls": 204
+  },
+  "analyte_coverage_matrix": {
+    "WBC": {
+      "total_cases": 8,
+      "passed_cases": 7,
+      "failed_cases": 1,
+      "accuracy_pct": 87.5
+    },
+    "RBC": {
+      "total_cases": 2,
+      "passed_cases": 1,
+      "failed_cases": 1,
+      "accuracy_pct": 50.0
+    },
+    "HGB": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "HCT": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "MCV": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "MCH": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "MCHC": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "RDW-CV": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "PLT": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Neutrophils %": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Neutrophils abs": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Lymphocytes %": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Lymphocytes abs": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Monocytes %": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Monocytes abs": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Eosinophils %": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Eosinophils abs": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Sodium": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Potassium": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Chloride": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Fasting plasma glucose": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "HbA1c": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Creatinine": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Urea": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Uric acid": {
+      "total_cases": 2,
+      "passed_cases": 1,
+      "failed_cases": 1,
+      "accuracy_pct": 50.0
+    },
+    "AST": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "ALT": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "GGT": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Total bilirubin": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Total protein": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Albumin": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Total cholesterol": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "Triglyceride": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "HDL-C": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    },
+    "LDL-C": {
+      "total_cases": 1,
+      "passed_cases": 1,
+      "failed_cases": 0,
+      "accuracy_pct": 100.0
+    }
+  }
+}

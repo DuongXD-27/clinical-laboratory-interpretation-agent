@@ -18,6 +18,7 @@ class MedicalCitation:
     section_or_context: str | None
     analyte: str
     note_type: str
+    publication_date: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -56,6 +57,7 @@ class MedicalCitationRepository:
                         section_or_context=str(source.get("section") or "").strip() or None,
                         analyte=analyte,
                         note_type=note_type,
+                        publication_date=str(source.get("publication_date") or "").strip() or None,
                     )
                     self._by_url_and_analyte.setdefault((citation.url, analyte.casefold()), []).append(citation)
                     self._by_id_and_analyte.setdefault((citation.source_id, analyte.casefold()), []).append(citation)
@@ -87,12 +89,12 @@ class MedicalCitationRepository:
 
     def resolve_many(self, *, analyte: str, sources: list[str]) -> list[MedicalCitation]:
         citations: list[MedicalCitation] = []
-        seen: set[tuple[str, str]] = set()
+        seen: set[str] = set()
         for source in sources:
             citation = self.resolve(analyte=analyte, url=str(source))
             if citation is None:
                 continue
-            key = (citation.source_id, citation.note_type)
+            key = citation.source_id or f"{citation.url.strip().casefold()}|{citation.organization.strip().casefold()}|{citation.title.strip().casefold()}"
             if key not in seen:
                 seen.add(key)
                 citations.append(citation)

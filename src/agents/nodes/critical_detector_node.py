@@ -268,7 +268,11 @@ async def detect_critical_values_node(state: AgentState) -> dict:
         thresholds = CRITICAL_THRESHOLDS[canonical_key]
         threshold_unit = thresholds.get("unit", "")
         source_url = str(thresholds.get("source_url") or "").strip()
-        if source_url:
+        # Inactive registry rows retain document provenance for governance, but
+        # they did not supply a threshold used for this result. Do not expose
+        # their document as patient/result threshold authority.
+        has_active_threshold = thresholds.get("low") is not None or thresholds.get("high") is not None
+        if source_url and has_active_threshold:
             new_ind["critical_threshold_source"] = {
                 "source_id": str(thresholds.get("source_id") or ""),
                 "title": str(thresholds.get("source_title") or ""),

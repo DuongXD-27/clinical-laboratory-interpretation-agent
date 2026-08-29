@@ -39,6 +39,16 @@ class ReferenceLookupResult:
 
 
 @dataclass(frozen=True)
+class ClinicalBandMatch:
+    """Specific clinical band selected by the existing deterministic evaluator."""
+
+    band_key: str
+    rule: dict[str, Any]
+    lower_operator: str | None
+    upper_operator: str | None
+
+
+@dataclass(frozen=True)
 class AgeRange:
     min_age: Decimal
     max_age: Decimal | None
@@ -465,6 +475,31 @@ class ReferenceRepository:
           baseline rows, segment/band count mismatch), or any failure -> None
           (fail closed; caller keeps current behaviour, no band_note retrieval).
         """
+        match = self.resolve_band_match(
+            analyte=analyte,
+            value=value,
+            unit=unit,
+            patient_gender=patient_gender,
+            patient_age=patient_age,
+        )
+        return match.band_key if match is not None else None
+
+    def resolve_band_match(
+        self,
+        *,
+        analyte: str,
+        value: float,
+        unit: str,
+        patient_gender: str | None = None,
+        patient_age: int | float | None = None,
+    ) -> ClinicalBandMatch | None:
+        """Return the selected band and its exact rule row for audit/presentation.
+
+        This is the structured counterpart of :meth:`resolve_band`. It preserves
+        the evaluator's established boundary behavior and only exposes the row
+        that was already used to select the band; it does not introduce a second
+        classification algorithm.
+        """
         canonical = self.resolve_analyte(analyte)
         if canonical is None:
             return None
@@ -505,7 +540,7 @@ class ReferenceRepository:
         if semantic not in {"low", "normal", "high"}:
             return None
 
-        segments: list[tuple[float, float]] = []
+        segments: list[tuple[float, float, dict[str, Any]]] = []
         for segment_rule in self._rules_by_analyte.get(canonical, ()):
             if self._norm_text(segment_rule.get("reference_type")) not in {"CDL", "BAND"}:
                 continue
@@ -515,9 +550,10 @@ class ReferenceRepository:
                 (
                     float("-inf") if segment_lower is None else float(segment_lower),
                     float("inf") if segment_upper is None else float(segment_upper),
+                    segment_rule,
                 )
             )
-        segments.sort()
+        segments.sort(key=lambda item: (item[0], item[1]))
         if len(segments) != len(bands):
             return None
 
@@ -525,7 +561,7 @@ class ReferenceRepository:
         baseline_upper = float("inf") if upper is None else float(upper)
         baseline_matches = [
             index
-            for index, (segment_lower, segment_upper) in enumerate(segments)
+            for index, (segment_lower, segment_upper, _segment_rule) in enumerate(segments)
             if segment_lower == baseline_lower and segment_upper == baseline_upper
         ]
         if len(baseline_matches) != 1:
@@ -533,7 +569,7 @@ class ReferenceRepository:
         baseline_index = baseline_matches[0]
 
         def contains(index: int) -> bool:
-            segment_lower, segment_upper = segments[index]
+            segment_lower, segment_upper, _segment_rule = segments[index]
             return segment_lower <= numeric <= segment_upper
 
         if semantic == "normal":
@@ -548,7 +584,16 @@ class ReferenceRepository:
             if not candidates:
                 return None
             chosen_index = min(candidates)
-        return bands[chosen_index]
+        segment_lower, segment_upper, selected_rule = segments[chosen_index]
+        return ClinicalBandMatch(
+            band_key=bands[chosen_index],
+            rule=deepcopy(selected_rule),
+            # These operators describe the evaluator above, whose `contains`
+            # comparison is inclusive on every present side. They do not mutate
+            # or backfill the authoritative medical rule artifact.
+            lower_operator=">=" if segment_lower != float("-inf") else None,
+            upper_operator="<=" if segment_upper != float("inf") else None,
+        )
 
     def resolve_analyte(self, analyte: str) -> str | None:
         return self.resolve_analyte_result(analyte).canonical_name

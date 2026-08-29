@@ -130,6 +130,61 @@ export function renderReferenceRange(indicator) {
   return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";
 }
 
+function formatClinicalNumber(value) {
+  if (value === null || value === undefined || value === "") return "";
+  return String(value).replace(".", ",");
+}
+
+function formatBound(operator, value, unit) {
+  if (value === null || value === undefined) return "";
+  const displayOperator = operator === ">=" ? "≥" : operator === "<=" ? "≤" : operator || "";
+  return `${displayOperator ? `${displayOperator} ` : ""}${formatClinicalNumber(value)}${unit ? ` ${unit}` : ""}`;
+}
+
+export function indicatorDisplayLabel(indicator) {
+  if ((indicator.rule_type === "BAND" || indicator.rule_type === "CDL") && (indicator.band_label || indicator.band_id)) {
+    return indicator.band_label || indicatorStatusText(indicator.band_id);
+  }
+  return indicatorStatusText(indicator.status, indicator.critical_status);
+}
+
+export function referencePresentation(indicator) {
+  const status = String(indicator.status || "").toUpperCase();
+  if (status === "UNKNOWN" || status === "HOLD") {
+    return { primary: "Chưa xác định khoảng tham chiếu", secondary: null };
+  }
+
+  if (indicator.rule_type === "BAND" || indicator.rule_type === "CDL") {
+    const label = indicator.band_label || indicatorStatusText(indicator.band_id || indicator.status);
+    const lower = formatBound(indicator.lower_operator, indicator.band_lower, indicator.unit);
+    const upper = formatBound(indicator.upper_operator, indicator.band_upper, indicator.unit);
+    const threshold = lower && upper ? `${lower} đến ${upper}` : lower || upper || null;
+    return {
+      primary: `Mức phân loại: ${label}`,
+      secondary: threshold
+        ? `${indicator.rule_type === "BAND" ? "Ngưỡng mức này" : "Ngưỡng phân loại"}: ${threshold}`
+        : null,
+    };
+  }
+
+  if (indicator.rule_type === "ONE_SIDED_LIMIT") {
+    const threshold = indicator.reference_high !== null && indicator.reference_high !== undefined
+      ? formatBound(indicator.upper_operator, indicator.reference_high, indicator.unit)
+      : formatBound(indicator.lower_operator, indicator.reference_low, indicator.unit);
+    return { primary: threshold ? `Ngưỡng tham chiếu: ${threshold}` : null, secondary: null };
+  }
+
+  if (indicator.reference_low !== null && indicator.reference_low !== undefined
+      && indicator.reference_high !== null && indicator.reference_high !== undefined) {
+    return {
+      primary: `Khoảng tham chiếu: ${formatClinicalNumber(indicator.reference_low)}–${formatClinicalNumber(indicator.reference_high)} ${indicator.unit}`,
+      secondary: null,
+    };
+  }
+
+  return { primary: "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.", secondary: null };
+}
+
 export function formatClinicalAssessment(value) {
   if (!value) return "Chưa rõ";
   const normalized = String(value).trim().toUpperCase();

@@ -1,0 +1,95 @@
+{
+  "gold_version": "VMEC_GOLDEN_SET_V1_FROZEN_2026-08-29",
+  "created_at_utc": "2026-08-29T11:10:51Z",
+  "phase": "A_GOLDEN_SET_FROZEN",
+  "freeze_state": "IMMUTABLE_PRE_PHASE_B",
+  "frozen_at_utc": "2026-08-29T11:10:51Z",
+  "production_executed": false,
+  "scores_calculated": false,
+  "case_counts": {
+    "deterministic": 579,
+    "retrieval": 206,
+    "generation": 140,
+    "safety": 58,
+    "conversation": 24,
+    "history_trend": 20
+  },
+  "review_counts": {
+    "AUTO_DERIVED": 633,
+    "HUMAN_APPROVED": 270,
+    "MEDICAL_APPROVED": 124,
+    "MEDICAL_REVIEW_REQUIRED": 0
+  },
+  "review_decision_count": 21,
+  "review_decision_counts": {
+    "MEDICAL": 5,
+    "HUMAN": 14,
+    "GOVERNANCE": 2
+  },
+  "unresolved_decision_ids": [],
+  "decision_mapping_integrity": {
+    "multiply_mapped_case_ids": [],
+    "max_decisions_per_case": 1,
+    "unresolved_cases_without_decision": []
+  },
+  "individually_reviewed_case_ids": [],
+  "total_cases": 1027,
+  "case_file_hashes": {
+    "eval/full_system_v1/cases/deterministic_cases.jsonl": "582ca0419cd2877fad0aa3e2c240417eb1aa9f02822ede7c0912b0108bbb904f",
+    "eval/full_system_v1/cases/retrieval_cases.jsonl": "96bc6a4ddaea7e1d9ffded451cd924eb8f76dff61f3e03b3864ad5ae2d5b896e",
+    "eval/full_system_v1/cases/generation_cases.jsonl": "b9e5997f7e7a02c645786f9ada171052430832b517662a7e2e117d18be133eaf",
+    "eval/full_system_v1/cases/safety_cases.jsonl": "926db6c08b5885faae249d2c21c56970adc6abba280674315e1e7a3e13e14fab",
+    "eval/full_system_v1/cases/conversation_cases.jsonl": "814b44727b9f169602e4d57007426acd3e795ea4158178fb305f7d69207faaa3",
+    "eval/full_system_v1/cases/history_trend_cases.jsonl": "ba57a196aed0c6b5788632cb1f15cba20f3229bd0f24e628a63a606805487ba5"
+  },
+  "review_decisions_hash": "5cc0b58e9b1a1a4ff33425113da23672abbc044fd931842955b1a420a930fb78",
+  "builder_hash": "2a79888ef0c6ebea5b33825288a61f808c3c78e82d8c7366a00a97b76aaf2c92",
+  "artifact_hashes": {
+    "ARCHITECTURE.md": "56cc808eb96ab01f40c8c5523aaf257a9f6bde20b99a876d02ffc2151f6147fb",
+    "data/reference/analyte_catalog.json": "6491433c9d0c27039e8fb77ec49e0577cb55aa791f8b6ee6f7322f0e5718d08f",
+    "data/reference/critical_thresholds.json": "8defb8a687efe60a350deb5a038679688e082425af831f93b0e43709ea2fda3b",
+    "data/reference/explanations.json": "5397a9777eec2057e34648b3912e68a8bd00e8da5f5568c10f3e37a2d27a6944",
+    "data/reference/medical_kb_manifest.json": "74fb1323fee4a6f1ad3160852441b9abe0f0ed765d20a6ddb3fb2645d3cee3d2",
+    "data/reference/reference_checker_config.json": "272ddd94c0d8194ec7707295a2e78f5fe1dea6ab40b7fcaaa22d3ffbf0b572a7",
+    "data/reference/reference_ranges.json": "dbb62e68953710800f51cd3d5f3fb5420fae2b2b593ee58a9bc8753d1b209fa8",
+    "data/reference/source/adult_outpatient_laboratory_reference_map.csv": "16613a768804c531ebddaf3db1ec9fb90dc47f5ddd5c84ebbcb69c9be263b6c3",
+    "data/reference/units_metric.csv": "b804be55153cc1087759ab7e71428a61a85c28a06da4e7c886fda2269a4a7411",
+    "docs/adr/adr-002-measurement.md": "85ca83c241f6ef6b705504d98cd1c293281500ef5ecd51e03b41d65457bcfed1",
+    "docs/adr/adr-004-guardrail.md": "8be7222901811b15cd1cdda7ff37c8125f7f25c79aee32019e2e93b3496ea15f",
+    "docs/adr/adr-009-vmec-v1-critical-threshold-authority.md": "09477619de9ae3c758b5c4a31e9677999e9f6f3bacb2e43d96cda0337bbb979f",
+    "docs/adr/adr-010-trend-interpretation-safety-contract.md": "cc4836e4939d3edf883a7c57ae381328e9132914a80647e4312e339c4da0e008",
+    "docs/audit/VMEC05_CURRENT_9_BUSINESS_CORRECTNESS.md": "e16094ffc1332c72df68fc232496382bb8d10514e744e7bdf6042517065f5c7e"
+  },
+  "non_file_contract_identities": [
+    "VMEC-05 Full System Evaluation V1"
+  ],
+  "corpus_manifest": {
+    "schema_version": 4,
+    "corpus_version": "medical-kb-v4",
+    "collection_name": "medical_kb_v4",
+    "corpus_sha256": "5397a9777eec2057e34648b3912e68a8bd00e8da5f5568c10f3e37a2d27a6944",
+    "source_corpus_sha256": "5397a9777eec2057e34648b3912e68a8bd00e8da5f5568c10f3e37a2d27a6944",
+    "chunk_count": 199,
+    "source_record_count": 77,
+    "analyte_count": 35,
+    "chunk_builder_version": "corpus_builder",
+    "embedding_provider": "openai",
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimension": 1536,
+    "build_timestamp": "2026-08-18T00:15:00+07:00",
+    "release_validator_result": "PASS"
+  },
+  "builder_independence": {
+    "imports_src": false,
+    "uses_production_outputs": false,
+    "uses_runtime_as_gold": false
+  },
+  "phase_b_started": false,
+  "unresolved_case_ids": [],
+  "post_phase_b_expectation_mutation_prohibited": true,
+  "allowed_frozen_case_statuses": [
+    "AUTO_DERIVED",
+    "HUMAN_APPROVED",
+    "MEDICAL_APPROVED"
+  ]
+}

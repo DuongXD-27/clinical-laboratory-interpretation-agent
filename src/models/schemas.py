@@ -168,6 +168,39 @@ class CitationSchema(BaseModel):
     section_or_context: str | None = None
     analyte: str
     note_type: str
+    publication_date: str | None = None
+
+
+class ClassificationProvenanceSchema(BaseModel):
+    rule_id: str
+    reference_type: str
+    analyte: str
+    source_id: str | None = None
+    source_title: str | None = None
+    source_organization: str | None = None
+    source_url: str | None = None
+    source_date: str | None = None
+    source_revision: str | None = None
+    source_section: str | None = None
+    reference_config_version: str
+    reference_config_sha256: str
+    reference_rules_sha256: str
+
+
+class RetrievedEvidenceSchema(BaseModel):
+    chunk_id: str
+    source_id: str
+    note_type: str
+    section: str | None = None
+
+
+class ArtifactProvenanceSchema(BaseModel):
+    reference_config_version: str
+    reference_config_sha256: str
+    reference_rules_sha256: str
+    corpus_version: str
+    corpus_sha256: str
+    corpus_schema_version: int | None = None
 
 
 class IndicatorResultSchema(BaseModel):
@@ -190,6 +223,11 @@ class IndicatorResultSchema(BaseModel):
     raw_unit: str | None = None
     canonical_value: float | None = None
     canonical_unit: str | None = None
+    comparison_value: float | None = None
+    comparison_unit: str | None = None
+    conversion_applied: bool = False
+    conversion_rule: str | None = None
+    conversion_authority: str | None = None
     reference_low: float | None = None
     reference_high: float | None = None
 
@@ -205,7 +243,12 @@ class IndicatorResultSchema(BaseModel):
     )
 
     rule_type: str | None = None
+    rule_id: str | None = None
     band_id: str | None = None
+    band_label: str | None = None
+    band_lower: float | None = None
+    band_upper: float | None = None
+    lower_operator: str | None = None
     upper_operator: str | None = None
     evaluation_reason: str | None = None
     input_integrity_status: Literal["VALID", "NEED_REVIEW"] | None = None
@@ -217,6 +260,9 @@ class IndicatorResultSchema(BaseModel):
     explanation_sources: list[CitationSchema] = Field(default_factory=list)
     reference_range_source: CitationSchema | None = None
     critical_threshold_source: CitationSchema | None = None
+    classification_provenance: ClassificationProvenanceSchema | None = None
+    retrieved_evidence: list[RetrievedEvidenceSchema] = Field(default_factory=list)
+    artifact_provenance: ArtifactProvenanceSchema | None = None
 
     review_outcome: ReviewOutcome = "pending"
     doctor_note: str | None = None

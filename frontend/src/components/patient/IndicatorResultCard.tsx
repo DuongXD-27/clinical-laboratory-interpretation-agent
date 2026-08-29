@@ -3,7 +3,7 @@
 import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
 import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import ClinicalIndicatorCard from "@/components/common/ClinicalIndicatorCard";
-import { indicatorStatusText, reportTone } from "@/lib/patientUi.mjs";
+import { indicatorDisplayLabel, referencePresentation, reportTone } from "@/lib/patientUi.mjs";
 import type { IndicatorResult } from "@/types/analysis";
 import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 
@@ -13,38 +13,6 @@ function getIndicatorCriticalText(critical_status?: string | null) {
   if (critNormalized === "CRITICAL_HIGH") return "Giá trị khẩn cấp – cao";
   if (critNormalized === "CRITICAL_LOW") return "Giá trị khẩn cấp – thấp";
   return "Giá trị khẩn cấp";
-}
-
-function renderSafeReferenceRange(indicator: IndicatorResult) {
-  const status = String(indicator.status).toUpperCase();
-  if (status === "UNKNOWN" || status === "HOLD") {
-    return "Chưa xác định khoảng tham chiếu";
-  }
-  
-  if (indicator.rule_type) {
-    if (indicator.rule_type === "CDL" || indicator.rule_type === "BAND") {
-      return "Phân loại theo quy tắc lâm sàng";
-    }
-    if (indicator.rule_type === "ONE_SIDED_LIMIT") {
-      if (indicator.upper_operator && indicator.reference_high !== null && indicator.reference_high !== undefined) {
-        return `Ngưỡng: ${indicator.upper_operator} ${indicator.reference_high} ${indicator.unit}`;
-      }
-      if (indicator.reference_low !== null && indicator.reference_low !== undefined) {
-        return `Giới hạn dưới tham chiếu: ${indicator.reference_low} ${indicator.unit}`;
-      }
-      return null;
-    }
-    if (indicator.reference_low !== null || indicator.reference_high !== null) {
-      return `Khoảng tham chiếu hệ thống: ${indicator.reference_low ?? "-"} – ${indicator.reference_high ?? "-"}`;
-    }
-    return null;
-  }
-
-  if (indicator.reference_low !== null && indicator.reference_high !== null) {
-    return `Khoảng tham chiếu hệ thống: ${indicator.reference_low} – ${indicator.reference_high}`;
-  }
-
-  return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";
 }
 
 type Props = {
@@ -59,7 +27,7 @@ export default function IndicatorResultCard({ indicator }: Props) {
   
   const explanationCitations = indicator.explanation_sources ?? indicator.citations ?? [];
   const hasAISection = !!(indicator.explanation || indicator.doctor_note || explanationCitations.length > 0 || (indicator.sources && indicator.sources.length > 0));
-  const safeReference = renderSafeReferenceRange(indicator);
+  const reference = referencePresentation(indicator);
 
   return (
     <ClinicalIndicatorCard
@@ -77,10 +45,15 @@ export default function IndicatorResultCard({ indicator }: Props) {
           <span>{indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc."}</span>
         </div>
       ) : undefined}
-      reference={safeReference}
+      reference={reference.primary ? (
+        <div className="flex flex-col gap-1">
+          <span>{reference.primary}</span>
+          {reference.secondary ? <span>{reference.secondary}</span> : null}
+        </div>
+      ) : undefined}
       status={(
         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-          {tone !== "critical" && <StatusIndicator state={tone as StatusState} label={indicatorStatusText(indicator.status)} />}
+          {tone !== "critical" && <StatusIndicator state={tone as StatusState} label={indicatorDisplayLabel(indicator)} />}
           {(tone === "critical" || indicator.is_critical || !!indicator.critical_status) && (
             <StatusIndicator state="critical" label={getIndicatorCriticalText(indicator.critical_status)} />
           )}

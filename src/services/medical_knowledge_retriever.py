@@ -113,6 +113,7 @@ class ChromaMedicalKnowledgeRetriever:
         *,
         analyte_id: str,
         score: float,
+        chunk_id: str = "",
     ) -> RetrievedChunk:
         raw_sources = metadata.get("sources", "[]")
         try:
@@ -122,6 +123,7 @@ class ChromaMedicalKnowledgeRetriever:
         sources = [str(source) for source in sources if str(source)]
         return {
             "indicator_name": str(metadata.get("indicator", analyte_id)),
+            "chunk_id": str(chunk_id or metadata.get("chunk_id") or ""),
             "text": str(text),
             "source": str(sources[0]) if sources else "",
             "sources": sources,
@@ -193,6 +195,7 @@ class ChromaMedicalKnowledgeRetriever:
         documents = result.get("documents") or []
         metadatas = result.get("metadatas") or []
         embeddings = result.get("embeddings") or []
+        ids = result.get("ids") or []
         chunks: list[RetrievedChunk] = []
         for index, text in enumerate(documents):
             metadata = metadatas[index] if index < len(metadatas) else {}
@@ -231,6 +234,7 @@ class ChromaMedicalKnowledgeRetriever:
                         chunk_embedding=None if exact_deterministic_band else chunk_embedding,
                         query_embedding=query_embedding,
                     ),
+                    chunk_id=str(ids[index]) if index < len(ids) else "",
                 )
             )
         return chunks
@@ -264,6 +268,7 @@ class ChromaMedicalKnowledgeRetriever:
         documents = (result.get("documents") or [[]])[0]
         metadatas = (result.get("metadatas") or [[]])[0]
         distances = (result.get("distances") or [[]])[0]
+        ids = (result.get("ids") or [[]])[0]
         chunks: list[RetrievedChunk] = []
         for index, text in enumerate(documents):
             metadata = metadatas[index] if index < len(metadatas) else {}
@@ -286,6 +291,7 @@ class ChromaMedicalKnowledgeRetriever:
                     metadata,
                     analyte_id=analyte_id,
                     score=score,
+                    chunk_id=str(ids[index]) if index < len(ids) else "",
                 )
             )
         return chunks

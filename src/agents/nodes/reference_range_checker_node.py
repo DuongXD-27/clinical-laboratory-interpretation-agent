@@ -3,7 +3,9 @@ from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 
 from src.agents.state import AgentState, IndicatorAssessment
+from src.services.analysis_provenance import artifact_provenance, classification_provenance
 from src.services.analyte_catalog import AnalyteCatalogError, get_analyte_catalog
+from src.services.analyte_resolver import CLINICAL_BAND_LABELS_VI
 from src.services.measurement_conversion import validate_numeric_measurement
 from src.services.reference_repository import ReferenceRepository, ReferenceRepositoryError
 
@@ -20,6 +22,8 @@ def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
         "name": name,
         "value": val,
         "unit": unit,
+        "raw_value": val,
+        "raw_unit": unit,
         "reference_low": None,
         "reference_high": None,
         "status": "unknown",
@@ -28,9 +32,20 @@ def _unknown_assessment(name: str, val, unit: str) -> IndicatorAssessment:
         "explanation": "",
         "sources": [],
         "rule_type": None,
+        "rule_id": None,
         "band_id": None,
+        "band_label": None,
+        "band_lower": None,
+        "band_upper": None,
+        "lower_operator": None,
         "upper_operator": None,
         "evaluation_reason": None,
+        "conversion_applied": False,
+        "conversion_rule": None,
+        "conversion_authority": None,
+        "classification_provenance": None,
+        "retrieved_evidence": [],
+        "artifact_provenance": artifact_provenance(),
     }
 
 
@@ -187,29 +202,85 @@ async def reference_range_checker_node(state: AgentState) -> dict:
         definition = catalog.resolve(result.canonical_analyte or name) if catalog is not None else None
         if definition is not None:
             assessment["analyte_id"] = definition.analyte_id
+        comparison_unit = result.comparison_unit or repository.normalize_unit(unit)
+        conversion_applied = result.comparison_value is not None
+        assessment["analyte_canonical"] = result.canonical_analyte
+        assessment["canonical_value"] = _json_number_or_none(classification_value)
+        assessment["canonical_unit"] = comparison_unit
+        assessment["comparison_value"] = _json_number_or_none(classification_value)
+        assessment["comparison_unit"] = comparison_unit
+        assessment["conversion_applied"] = conversion_applied
+        assessment["conversion_rule"] = (
+            f"{str(result.canonical_analyte or name).casefold().replace(' ', '_')}_mg_dl_to_mmol_l"
+            if conversion_applied
+            else None
+        )
+        assessment["conversion_authority"] = (
+            "VMEC approved runtime measurement conversion registry" if conversion_applied else None
+        )
         assessment["reference_low"] = _json_number_or_none(lower)
         assessment["reference_high"] = _json_number_or_none(upper)
         assessment["status"] = status
         assessment["is_abnormal"] = status in {"low", "high"}
         assessment["explanation"] = definition.curated_explanation if definition else ""
-        assessment["sources"] = _sources_from_catalog_or_rule(
-            definition.sources if definition else (),
-            result.rule,
-        )
+        # Backward-compatible field, populated only from the explanation
+        # catalog. Numeric-rule provenance lives exclusively in
+        # `classification_provenance` / `reference_range_source`.
+        assessment["sources"] = list(definition.sources) if definition else []
         assessment["rule_type"] = ref_type
-        assessment["band_id"] = result.rule.get("band_id")
-        assessment["upper_operator"] = upper_op
-        source_url = str(result.rule.get("source_url") or "").strip()
+        fact_rule = result.rule
+        if str(ref_type or "").upper() in {"BAND", "CDL"}:
+            band_match = repository.resolve_band_match(
+                analyte=result.canonical_analyte or name,
+                value=float(classification_value),
+                unit=comparison_unit,
+                patient_gender=patient_gender,
+                patient_age=patient_age,
+            )
+            if band_match is not None:
+                fact_rule = band_match.rule
+                band_lower = _parse_rule_bound(band_match.rule.get("range_lower"))
+                band_upper = _parse_rule_bound(band_match.rule.get("range_upper"))
+                assessment["band_id"] = band_match.band_key
+                assessment["band_label"] = CLINICAL_BAND_LABELS_VI.get(
+                    band_match.band_key,
+                    band_match.band_key.replace("_", " ").capitalize(),
+                )
+                assessment["band_lower"] = _json_number_or_none(band_lower)
+                assessment["band_upper"] = _json_number_or_none(band_upper)
+                assessment["lower_operator"] = band_match.lower_operator
+                assessment["upper_operator"] = band_match.upper_operator
+        assessment["rule_id"] = str(fact_rule.get("rule_id") or "") or None
+        if not assessment.get("band_id"):
+            assessment["upper_operator"] = upper_op
+        assessment["classification_provenance"] = classification_provenance(
+            fact_rule,
+            str(result.canonical_analyte or name),
+        )
+        source_url = str(fact_rule.get("source_url") or "").strip()
         if source_url:
             assessment["reference_range_source"] = {
-                "source_id": str(result.rule.get("rule_id") or ""),
-                "title": str(result.rule.get("source_title") or ""),
-                "organization": str(result.rule.get("source_organization") or ""),
+                "source_id": str(fact_rule.get("source_id") or fact_rule.get("rule_id") or ""),
+                "title": str(fact_rule.get("source_title") or ""),
+                "organization": str(fact_rule.get("source_organization") or ""),
                 "url": source_url,
-                "section_or_context": str(result.rule.get("source_section") or "").strip() or None,
+                "section_or_context": str(fact_rule.get("source_section") or "").strip() or None,
                 "analyte": str(result.canonical_analyte or name),
                 "note_type": "reference_range",
             }
+
+        logger.debug(
+            "reference_classification",
+            extra={
+                "analyte_id": assessment.get("analyte_id"),
+                "rule_id": assessment.get("rule_id"),
+                "rule_type": ref_type,
+                "band_key": assessment.get("band_id"),
+                "generic_status": status,
+                "classification_source": source_url or None,
+                "conversion_applied": conversion_applied,
+            },
+        )
 
         indicators.append(assessment)
 

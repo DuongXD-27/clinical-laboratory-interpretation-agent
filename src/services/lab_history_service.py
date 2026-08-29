@@ -131,6 +131,9 @@ def _canonical_result_rows(
     repository: ReferenceRepository,
 ) -> list[dict]:
     rows: list[dict] = []
+    def dump(value):
+        return value.model_dump(mode="json") if hasattr(value, "model_dump") else value
+
     for index, indicator in enumerate(analysis.indicators):
         raw_input = request.indicators[index] if index < len(request.indicators) else None
         raw_name = raw_input.name if raw_input is not None else indicator.name
@@ -157,8 +160,29 @@ def _canonical_result_rows(
                 "reference_high": indicator.reference_high,
                 "status": indicator.status,
                 "critical_status": indicator.critical_status,
+                "rule_type": indicator.rule_type,
+                "band_id": indicator.band_id,
+                "upper_operator": indicator.upper_operator,
+                "evaluation_reason": indicator.evaluation_reason,
                 "explanation": indicator.explanation or "",
                 "sources": indicator.sources or [],
+                "analysis_provenance": {
+                    "schema_version": 1,
+                    "comparison_value": indicator.comparison_value,
+                    "comparison_unit": indicator.comparison_unit,
+                    "conversion_applied": indicator.conversion_applied,
+                    "conversion_rule": indicator.conversion_rule,
+                    "conversion_authority": indicator.conversion_authority,
+                    "rule_id": indicator.rule_id,
+                    "band_label": indicator.band_label,
+                    "band_lower": indicator.band_lower,
+                    "band_upper": indicator.band_upper,
+                    "lower_operator": indicator.lower_operator,
+                    "classification_provenance": dump(indicator.classification_provenance),
+                    "retrieved_evidence": [dump(item) for item in indicator.retrieved_evidence],
+                    "explanation_sources": [dump(item) for item in indicator.explanation_sources],
+                    "artifact_provenance": dump(indicator.artifact_provenance),
+                },
             }
         )
     return rows
