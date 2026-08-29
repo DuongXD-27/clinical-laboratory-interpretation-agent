@@ -60,11 +60,36 @@ async def input_integrity_node(state: AgentState) -> dict:
             )
         return {"input_integrity_results": blocked_results}
 
+    raw_indicators = state.get("raw_indicators", [])
+    resolved_analytes: list[str | None] = [
+        reference_repository.resolve_analyte(str(ind.get("name", "")).strip())
+        for ind in raw_indicators
+    ]
+    analyte_occurrences: dict[str, list[int]] = {}
+    for idx, analyte in enumerate(resolved_analytes):
+        if analyte:
+            analyte_occurrences.setdefault(analyte, []).append(idx)
+
+    conflicting_analytes: set[str] = set()
+    for analyte, indices in analyte_occurrences.items():
+        if len(indices) > 1:
+            distinct_pairs = set()
+            for idx in indices:
+                ind = raw_indicators[idx]
+                val = ind.get("value")
+                unit = reference_repository.normalize_unit(str(ind.get("unit", "")).strip())
+                try:
+                    num = float(validate_numeric_measurement(val))
+                    distinct_pairs.add((num, unit))
+                except (TypeError, ValueError):
+                    distinct_pairs.add((str(val), unit))
+            if len(distinct_pairs) > 1:
+                conflicting_analytes.add(analyte)
+
     results: list[dict] = []
-    for index, indicator in enumerate(state.get("raw_indicators", [])):
-        raw_name = str(indicator.get("name", "")).strip()
+    for index, indicator in enumerate(raw_indicators):
         raw_unit = str(indicator.get("unit", "")).strip()
-        canonical_analyte = reference_repository.resolve_analyte(raw_name)
+        canonical_analyte = resolved_analytes[index]
         if canonical_analyte is None:
             continue
 
@@ -77,6 +102,26 @@ async def input_integrity_node(state: AgentState) -> dict:
         try:
             numeric_value = validate_numeric_measurement(indicator.get("value"))
         except (TypeError, ValueError):
+            continue
+
+        if canonical_analyte in conflicting_analytes:
+            logger.warning(
+                "input_integrity analyte=%s reason_code=AMBIGUOUS_DUPLICATE_ANALYTE result=NEED_REVIEW",
+                canonical_analyte,
+            )
+            results.append(
+                {
+                    "index": index,
+                    "status": "NEED_REVIEW",
+                    "reason_code": "AMBIGUOUS_DUPLICATE_ANALYTE",
+                    "message": "Phát hiện nhiều kết quả cho cùng một chỉ số xét nghiệm trong cùng một lần nhập. Vui lòng kiểm tra lại phiếu xét nghiệm để xác nhận giá trị chính xác.",
+                    "rule_id": None,
+                    "source_id": None,
+                    "observed_value": float(numeric_value),
+                    "canonical_analyte": canonical_analyte,
+                    "canonical_unit": canonical_unit,
+                }
+            )
             continue
 
         result = evaluator.evaluate(

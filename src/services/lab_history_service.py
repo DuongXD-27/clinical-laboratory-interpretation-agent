@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
@@ -18,6 +19,8 @@ from src.models.db import (
 from src.models.schemas import AnalyzeRequest, AnalyzeResponse, SaveReportRequest
 from src.services.patient_service import get_patient_by_username
 from src.services.reference_repository import ReferenceRepository
+
+logger = logging.getLogger(__name__)
 
 
 class LabHistoryError(ValueError):
@@ -103,7 +106,14 @@ def generate_report_fingerprint(
             "canonical_value": _number_key(item["canonical_value"]),
             "canonical_unit": item["canonical_unit"],
         }
-        for item in sorted(results, key=lambda row: row["analyte_canonical"])
+        for item in sorted(
+            results,
+            key=lambda row: (
+                str(row.get("analyte_canonical") or ""),
+                _number_key(row.get("canonical_value")),
+                str(row.get("canonical_unit") or ""),
+            ),
+        )
     ]
     payload = {
         "patient_id": patient_id,
@@ -209,7 +219,20 @@ def save_analyzed_report(
         guardrail_passed=analysis.guardrail_passed,
         disclaimer=analysis.disclaimer or "",
     )
+    seen_exact_entries: set[tuple[str, str, str]] = set()
     for row in result_rows:
+        canonical_name = row.get("analyte_canonical")
+        canonical_val_str = _number_key(row.get("canonical_value"))
+        canonical_unit_str = str(row.get("canonical_unit") or "")
+        exact_key = (str(canonical_name or ""), canonical_val_str, canonical_unit_str)
+        if canonical_name and exact_key in seen_exact_entries:
+            logger.info(
+                "save_analyzed_report_exact_duplicate_collapsed",
+                extra={"analyte_canonical": canonical_name, "value": canonical_val_str, "patient_id": patient.id},
+            )
+            continue
+        if canonical_name:
+            seen_exact_entries.add(exact_key)
         report.indicators.append(ReportIndicator(**row))
     for alert in analysis.critical_alerts:
         report.critical_alerts.append(
