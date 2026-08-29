@@ -3,6 +3,7 @@ import { formatDate } from "@/lib/patientUi.mjs";
 import type { DoctorQueueItem } from "@/types/doctor";
 import type { DoctorQueueTab } from "@/lib/api";
 import ReasonChip from "./ReasonChip";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type Props = {
   item: DoctorQueueItem;
@@ -19,7 +20,7 @@ function waitText(value: string | null) {
   return `chờ ${Math.floor(hours / 24)} ngày`;
 }
 
-import { AlertOctagon, CheckCircle2, ChevronRight } from "lucide-react";
+import { AlertOctagon, ChevronRight } from "lucide-react";
 
 export default function QueueRow({ item, activeTab }: Props) {
   const criticalFlag = item.flags.find((flag) => flag.code === "CRITICAL_VALUE");
@@ -43,6 +44,7 @@ export default function QueueRow({ item, activeTab }: Props) {
     <Link
       href={`/doctor/reports/${item.report_id}?tab=${activeTab}`}
       className="doctor-worklist-row group"
+      data-severity={item.severity_level}
       aria-label={`Mở phiếu của ${item.patient_name}, ${queueState}`}
     >
       <div className="doctor-worklist-row__identity">
@@ -86,11 +88,10 @@ export default function QueueRow({ item, activeTab }: Props) {
 
       <div className="doctor-worklist-row__workflow">
         <div className="doctor-worklist-row__state-line">
-          <span className={`doctor-worklist-state doctor-worklist-state--${isVerified ? "verified" : isCritical ? "critical" : "neutral"}`}>
-            {isVerified && <CheckCircle2 aria-hidden="true" />}
-            {isCritical && <AlertOctagon aria-hidden="true" />}
-            {queueState}
-          </span>
+          <StatusIndicator
+            state={isVerified ? "verified" : isCritical ? "critical" : item.severity_level === "abnormal" ? "abnormal" : "pending"}
+            label={queueState}
+          />
           <span className="doctor-worklist-row__progress-copy">
             {item.findings_reviewed}/{item.findings_total} đã xử lý
           </span>

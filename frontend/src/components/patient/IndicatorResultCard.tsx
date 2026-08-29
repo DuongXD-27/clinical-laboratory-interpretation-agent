@@ -4,6 +4,7 @@ import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
 import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import { indicatorStatusText, reportTone } from "@/lib/patientUi.mjs";
 import type { IndicatorResult } from "@/types/analysis";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 
 function getIndicatorCriticalText(critical_status?: string | null) {
   if (!critical_status) return "Giá trị khẩn cấp";
@@ -77,9 +78,9 @@ export default function IndicatorResultCard({ indicator }: Props) {
       </div>
 
       {String(indicator.input_integrity_status || "").toUpperCase() === "NEED_REVIEW" && (
-        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
-          <strong>Cần kiểm tra dữ liệu đầu vào.</strong>{" "}
-          {indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc."}
+        <div className="input-review-callout mt-3" role="status">
+          <StatusIndicator state="input-review" size="md" />
+          <span>{indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc."}</span>
         </div>
       )}
       
@@ -89,9 +90,9 @@ export default function IndicatorResultCard({ indicator }: Props) {
           {safeReference}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-          <span className={`status-badge status-${tone}`}>{indicatorStatusText(indicator.status)}</span>
-          {(indicator.is_critical || !!indicator.critical_status) && (
-            <span className="status-badge status-critical">{getIndicatorCriticalText(indicator.critical_status)}</span>
+          {tone !== "critical" && <StatusIndicator state={tone as StatusState} label={indicatorStatusText(indicator.status)} />}
+          {(tone === "critical" || indicator.is_critical || !!indicator.critical_status) && (
+            <StatusIndicator state="critical" label={getIndicatorCriticalText(indicator.critical_status)} />
           )}
         </div>
       </div>

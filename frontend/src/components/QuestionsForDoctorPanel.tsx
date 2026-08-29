@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import type { ReportQuestion } from "@/types/history";
 import { Check, Send } from "lucide-react";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type Props = {
   /** Câu hỏi lấy trực tiếp từ kết quả phân tích, dùng khi phiếu không được lưu. */
@@ -136,7 +137,7 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-600">
+        <p role="alert" className="mt-3 text-sm text-[var(--status-critical-fg)]">
           {error}
         </p>
       )}
@@ -159,7 +160,8 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
             {row.answer && (
               // Câu trả lời do bác sĩ viết — tách bạch và không dán khuyến cáo
               // tự động, vì đây là ý kiến chuyên môn của người có thẩm quyền.
-              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+              <div className="status-review-note mt-3">
+                <StatusIndicator state="answered" />
                 <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{row.answer}</p>
                 <p className="mt-2 text-xs text-slate-500">
                   Bác sĩ {row.answeredBy || ""} trả lời

@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
+import StatusIndicator from "@/components/common/StatusIndicator";
 import IndicatorResultCard from "./patient/IndicatorResultCard";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
@@ -366,6 +367,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                       type="button"
                       onClick={() => void toggleDetail(item.id)}
                       className="history-row"
+                      data-severity={severity}
                       aria-expanded={expandedId === item.id}
                     >
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -404,7 +406,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                       {detailLoading && <p className="py-4 text-sm text-slate-500 px-6">Đang mở phiếu...</p>}
 
                       {actionError && (
-                        <p className="mt-4 text-sm text-red-600 px-6">{actionError}</p>
+                        <p className="mt-4 px-6 text-sm text-[var(--status-critical-fg)]">{actionError}</p>
                       )}
 
                       {detail && (
@@ -448,9 +450,10 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                               thể chứa đúng thứ hệ thống bị cấm. Trộn hai nguồn
                               vào một khối thì bệnh nhân không biết ai đang nói
                               với mình. */}
-                          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4">
-                            <h3 className="text-sm font-semibold text-emerald-900">
+                          <div className="rounded-xl border border-white/70 bg-white/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+                            <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
                               Ghi chú của bác sĩ
+                              <StatusIndicator state={detail.reviewed_by_doctor ? "processed" : "pending"} label={detail.reviewed_by_doctor ? "Đã xem phiếu" : "Chưa có review"} />
                             </h3>
 
                             {detail.doctor_notes.length === 0 ? (
@@ -464,7 +467,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                                 {detail.doctor_notes.map((note) => (
                                   <li
                                     key={note.id}
-                                    className="rounded-lg border border-emerald-200 bg-white p-3"
+                                    className="rounded-lg border border-white/75 bg-white/70 p-3"
                                   >
                                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
                                       {note.note_text}
@@ -484,7 +487,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                               // dòng minh bạch trách nhiệm: nếu ghi chú có sai
                               // sót, ranh giới giữa lỗi hệ thống và lỗi bác sĩ
                               // phải rõ.
-                              <p className="mt-3 text-xs text-emerald-800/80">
+                              <p className="mt-3 text-xs text-slate-600">
                                 Nội dung trong khối này do bác sĩ trực tiếp viết và tự chịu trách
                                 nhiệm, không do hệ thống sinh ra và không qua bộ kiểm duyệt nội dung
                                 tự động.
@@ -573,7 +576,8 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                                       )}
 
                                       {question.answer_text ? (
-                                        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+                                        <div className="status-review-note mt-3">
+                                          <StatusIndicator state="answered" />
                                           <p className="text-sm whitespace-pre-wrap">
                                             {question.answer_text}
                                           </p>

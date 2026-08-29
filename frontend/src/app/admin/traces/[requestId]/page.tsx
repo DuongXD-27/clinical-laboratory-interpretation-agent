@@ -12,7 +12,7 @@ import {
   fetchTraceSpans,
 } from "@/lib/api";
 import { splitTimings, timingLabel } from "@/lib/serverTiming.mjs";
-import { Badge } from "@/components/ui/badge";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -32,10 +32,10 @@ function formatMoment(iso: string): string {
   return parsed.toLocaleString("vi-VN", { hour12: false });
 }
 
-function statusVariant(status: number): "success" | "warning" | "destructive" {
-  if (status >= 500) return "destructive";
-  if (status >= 400) return "warning";
-  return "success";
+function statusState(status: number): StatusState {
+  if (status >= 500) return "system-error";
+  if (status >= 400) return "system-warning";
+  return "system-ok";
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -128,9 +128,7 @@ export default function AdminTraceDetailPage() {
                 <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Kết quả
                 </span>
-                <Badge variant={statusVariant(trace.status_code)} className="mt-1.5 tabular-nums">
-                  {trace.status_code}
-                </Badge>
+                <StatusIndicator state={statusState(trace.status_code)} label={String(trace.status_code)} className="mt-1.5 tabular-nums" />
               </div>
               <Stat label="Thời lượng" value={formatMs(trace.duration_ms)} hint="toàn bộ request" />
               <Stat

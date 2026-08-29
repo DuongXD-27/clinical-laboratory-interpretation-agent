@@ -9,6 +9,7 @@ import {
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { TrendResponse, TrendReviewPatientState } from "@/types/analysis";
 import TrendReviewHistoryPanel from "./TrendReviewHistoryPanel";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type Props = {
   trend: TrendResponse;
@@ -146,15 +147,20 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
       </div>
 
       {pending && (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Đang chờ review từ bác sĩ, gửi lúc {formatMoment(pending.requested_at)}.
+        <div className="status-review-note mt-4">
+          <StatusIndicator state="pending" label="Đang chờ bác sĩ review" />
+          <span>Gửi lúc {formatMoment(pending.requested_at)}.</span>
         </div>
       )}
 
       {latest?.doctor_comment && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+        <div className="status-review-note mt-4">
+          <StatusIndicator
+            state={latest.doctor_assessment === "corrected" ? "corrected" : latest.doctor_assessment === "needs_follow_up" ? "reviewing" : "completed"}
+            label={assessmentText(latest.doctor_assessment)}
+          />
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-800">{latest.doctor_comment}</p>
-          <p className="mt-2 text-xs text-emerald-800">
+          <p className="text-xs text-slate-600">
             {latest.reviewed_by_username || "Bác sĩ"}
             {latest.reviewed_at ? ` · ${formatMoment(latest.reviewed_at)}` : ""}
           </p>

@@ -6,6 +6,7 @@ import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import { reportTone, sortIndicatorsBySeverity } from "@/lib/patientUi.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import StatusIndicator from "@/components/common/StatusIndicator";
 type Props = {
   result: AnalysisResult;
   criticalAcknowledged: boolean;
@@ -70,9 +71,9 @@ export default function AnalysisResultView({
       {showCriticalBanner && (
         <div className="critical-banner" role="alert">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-100">Cần chú ý ngay</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/80">Cần chú ý ngay</p>
             <h2 className="mt-1 text-xl font-bold">Cảnh báo sức khỏe nghiêm trọng</h2>
-            <div className="mt-2 space-y-1 text-sm leading-6 text-red-50">
+            <div className="mt-2 space-y-1 text-sm leading-6 text-white/90">
               {result.critical_alerts.map((alert, index) => <p key={index}>{alert.message}</p>)}
             </div>
           </div>
@@ -88,30 +89,26 @@ export default function AnalysisResultView({
         {(result.indicators?.length ?? 0) > 0 && (
           <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Tổng quan tình trạng chỉ số">
             {toneCounts.critical > 0 && (
-              <div className="flex items-center gap-1.5 font-medium text-[var(--status-critical-fg)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--status-critical-border)]" aria-hidden="true" />
-                <dt>Nguy kịch</dt>
+              <div className="flex items-center gap-1.5">
+                <dt><StatusIndicator state="critical" label="Nguy kịch" level="inline" /></dt>
                 <dd className="font-bold">{toneCounts.critical}</dd>
               </div>
             )}
             {toneCounts.abnormal > 0 && (
-              <div className="flex items-center gap-1.5 font-medium text-[var(--status-abnormal-fg)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--status-abnormal-border)]" aria-hidden="true" />
-                <dt>Cần lưu ý</dt>
+              <div className="flex items-center gap-1.5">
+                <dt><StatusIndicator state="abnormal" label="Cần lưu ý" level="inline" /></dt>
                 <dd className="font-bold">{toneCounts.abnormal}</dd>
               </div>
             )}
             {toneCounts.unknown > 0 && (
-              <div className="flex items-center gap-1.5 font-medium text-[var(--status-unknown-fg)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--status-unknown-border)]" aria-hidden="true" />
-                <dt>Chưa đánh giá được</dt>
+              <div className="flex items-center gap-1.5">
+                <dt><StatusIndicator state="unknown" label="Chưa đánh giá được" /></dt>
                 <dd className="font-bold">{toneCounts.unknown}</dd>
               </div>
             )}
             {toneCounts.normal > 0 && (
-              <div className="flex items-center gap-1.5 font-medium text-[var(--status-normal-fg)]">
-                <span className="w-2 h-2 rounded-full bg-[var(--status-normal-border)]" aria-hidden="true" />
-                <dt>Bình thường</dt>
+              <div className="flex items-center gap-1.5">
+                <dt><StatusIndicator state="normal" /></dt>
                 <dd className="font-bold">{toneCounts.normal}</dd>
               </div>
             )}

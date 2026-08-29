@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type Props = {
   id: string;
@@ -67,10 +68,9 @@ export default function MetricInput({
       </div>
 
       {attentionMessage && (
-        <p className="mt-3 flex items-start gap-2 text-sm font-medium text-amber-800" role="note">
-          <span aria-hidden="true">!</span>
-          {attentionMessage}
-        </p>
+        <div className="mt-3" role="note">
+          <StatusIndicator state="ocr-review" label={attentionMessage} />
+        </div>
       )}
 
       <div className={`mt-4 grid min-w-0 gap-3 ${onUnitChange ? "sm:grid-cols-[minmax(0,1fr)_minmax(6.5rem,8rem)]" : ""}`}>

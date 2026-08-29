@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Activity, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Activity, AlertTriangle } from "lucide-react";
 import { formatDate } from "@/lib/patientUi.mjs";
 import type { LabReportDetail } from "@/types/history";
 import type { DashboardReport } from "./RecentReports";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 interface LatestReportSummaryProps {
   report?: LabReportDetail;
@@ -66,29 +67,20 @@ export default function LatestReportSummary({ report, basicReport, detailError }
             ) : (
               <>
                 {criticalCount > 0 && (
-                  <div className="flex items-center justify-between text-[var(--status-critical-fg)] font-medium">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Cần chú ý khẩn cấp</span>
-                    </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <StatusIndicator state="critical" label="Cần chú ý khẩn cấp" level="inline" />
                     <span>{criticalCount}</span>
                   </div>
                 )}
                 {attentionCount > 0 && (
-                  <div className="flex items-center justify-between text-[var(--status-warning-fg)] font-medium">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>Cần lưu ý</span>
-                    </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <StatusIndicator state="abnormal" label="Cần lưu ý" level="inline" />
                     <span>{attentionCount}</span>
                   </div>
                 )}
                 {normalCount > 0 && (
-                  <div className="flex items-center justify-between text-[var(--status-success-fg)] font-medium">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Trong khoảng</span>
-                    </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <StatusIndicator state="normal" label="Trong khoảng" />
                     <span>{normalCount}</span>
                   </div>
                 )}

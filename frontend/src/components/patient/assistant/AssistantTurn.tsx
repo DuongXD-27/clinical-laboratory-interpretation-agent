@@ -5,6 +5,7 @@ import { AlertTriangle, ExternalLink, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Message, MessageContent, MessageHeader } from "@/components/ui/message";
 import { sanitizeSuggestedAction } from "@/lib/assistantActions.mjs";
 import { tokenizeInlineMarkdown } from "@/lib/inlineMarkdown.mjs";
@@ -61,6 +62,12 @@ function statusLabel(status: OrchestratorResponse["status"]) {
   if (status === "blocked") return "Giới hạn an toàn";
   if (status === "error") return "Chưa hoàn tất";
   return null;
+}
+
+function statusState(status: OrchestratorResponse["status"]): StatusState {
+  if (status === "needs_input") return "input-review";
+  if (status === "blocked") return "system-warning";
+  return "system-error";
 }
 
 function StructuredMedicalPayload({ data }: { data: OrchestratorPayload }) {
@@ -237,7 +244,7 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
               <div className="assistant-completed-response">
                 <p className="assistant-prose"><InlineMarkdownText text={response.message} /></p>
                 {statusLabel(response.status) ? (
-                  <span className="assistant-response-status" data-status={response.status}>{statusLabel(response.status)}</span>
+                  <StatusIndicator state={statusState(response.status)} label={statusLabel(response.status)} />
                 ) : null}
                 <StructuredMedicalPayload data={response.data} />
                 <CriticalAlerts alerts={authoritativeCriticalAlerts(response.data) as CriticalAlert[]} />

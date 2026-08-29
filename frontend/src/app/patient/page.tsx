@@ -12,6 +12,7 @@ import NeedsAttention from "@/components/patient/dashboard/NeedsAttention";
 import RecentReports, { type DashboardReport } from "@/components/patient/dashboard/RecentReports";
 import Link from "next/link";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import StatusIndicator from "@/components/common/StatusIndicator";
 import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
 
 type DashboardSummary = {
@@ -147,8 +148,9 @@ export default function PatientDashboardPage() {
         <div className="space-y-8">
           
           {dashboard.newly_verified_count > 0 && (
-            <div className="bg-[var(--status-success-bg)] text-[var(--status-success-fg)] px-4 py-3 rounded-lg border border-[var(--status-success-fg)]/20 text-sm flex items-center gap-2" role="status">
-              Bác sĩ đã kiểm chứng {dashboard.newly_verified_count} phiếu xét nghiệm của bạn.
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-white/70 bg-white/45 px-4 py-3 text-sm text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]" role="status">
+              <StatusIndicator state="verified" label="Đã kiểm chứng" />
+              <span>Bác sĩ đã kiểm chứng {dashboard.newly_verified_count} phiếu xét nghiệm của bạn.</span>
               <Link href={PATIENT_ROUTES.HISTORY} className="font-semibold hover:underline ml-1">
                 Xem lại
               </Link>
