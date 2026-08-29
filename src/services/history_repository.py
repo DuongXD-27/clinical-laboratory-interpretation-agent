@@ -195,20 +195,20 @@ def save_report(
     source được derive từ ocr_source_filename.
     """
 
-    report_indicators: list[ReportIndicator] = []
     repository = _reference_repository()
     configuration_service = _indicator_configuration_service()
     catalog_entries: dict[str, IndicatorCatalog] = {}
+    seen_exact_entries: set[tuple[str, str, str]] = set()
+    fingerprint_results: list[dict] = []
+    snapshots: list[tuple[IndicatorResultSchema, dict[str, object]]] = []
+
+    from src.services.lab_history_service import _number_key
 
     for index, indicator in enumerate(response.indicators):
         raw_input = request.indicators[index] if index < len(request.indicators) else None
         raw_name = raw_input.name if raw_input is not None else indicator.name
         raw_value = raw_input.value if raw_input is not None else indicator.value
         raw_unit = raw_input.unit if raw_input is not None else indicator.unit
-        ocr_confidence, ocr_raw_text = _find_ocr_metadata(
-            indicator.name,
-            ocr_drafts,
-        )
         canonical_snapshot = _canonical_indicator_snapshot(
             repository=repository,
             indicator=indicator,
@@ -216,10 +216,61 @@ def save_report(
             raw_value=raw_value,
             raw_unit=raw_unit,
         )
+        canonical_name = canonical_snapshot["analyte_canonical"]
+        canonical_val_str = _number_key(canonical_snapshot["canonical_value"])
+        canonical_unit_str = str(canonical_snapshot["canonical_unit"] or "")
+
+        # Collapse only EXACT duplicate entries (identical canonical analyte, value, and unit).
+        # Conflicting candidates (different values) MUST BOTH be preserved as non-authoritative pending candidates.
+        exact_key = (str(canonical_name or ""), canonical_val_str, canonical_unit_str)
+        if canonical_name and exact_key in seen_exact_entries:
+            logger.info(
+                "save_report_exact_duplicate_collapsed",
+                extra={"analyte_canonical": canonical_name, "value": canonical_val_str, "patient_id": patient_id},
+            )
+            continue
+        if canonical_name:
+            seen_exact_entries.add(exact_key)
+            fingerprint_results.append(
+                {
+                    "analyte_canonical": canonical_name,
+                    "canonical_value": canonical_snapshot["canonical_value"],
+                    "canonical_unit": canonical_snapshot["canonical_unit"],
+                }
+            )
+        snapshots.append((indicator, canonical_snapshot))
+
+    from src.services.lab_history_service import generate_report_fingerprint
+
+    report_fingerprint: str | None = None
+    if request.test_date and fingerprint_results:
+        report_fingerprint = generate_report_fingerprint(
+            patient_id=patient_id,
+            test_date=request.test_date,
+            results=fingerprint_results,
+        )
+        existing_report = (
+            db.query(LabReport)
+            .filter(
+                LabReport.patient_id == patient_id,
+                LabReport.report_fingerprint == report_fingerprint,
+            )
+            .first()
+        )
+        if existing_report is not None:
+            return existing_report
+
+    report_indicators: list[ReportIndicator] = []
+    for indicator, canonical_snapshot in snapshots:
+        canonical_name = canonical_snapshot["analyte_canonical"]
+        ocr_confidence, ocr_raw_text = _find_ocr_metadata(
+            indicator.name,
+            ocr_drafts,
+        )
         catalog_entry = _catalog_entry_for_snapshot(
             db,
             configuration_service=configuration_service,
-            canonical_name=canonical_snapshot["analyte_canonical"],
+            canonical_name=canonical_name,
             canonical_unit=canonical_snapshot["canonical_unit"],
             cache=catalog_entries,
         )
@@ -285,6 +336,7 @@ def save_report(
         indicators=report_indicators,
         critical_alerts=critical_alerts,
         out_of_scope_entries=out_of_scope_entries,
+        report_fingerprint=report_fingerprint,
     )
 
     db.add(report)
@@ -301,6 +353,81 @@ def save_report(
         _attach_questions(db, report, questions)
 
     return report
+
+
+def update_report_indicator(
+    db: Session,
+    report_id: int,
+    *,
+    analyte_canonical: str,
+    value: float,
+    unit: str,
+    raw_value: float | None = None,
+    raw_unit: str | None = None,
+    status: str | None = None,
+    doctor_note: str | None = None,
+    reviewed_by_doctor_id: int | None = None,
+) -> ReportIndicator | None:
+    """Cập nhật một chỉ số đã có trong phiếu (confirmed correction) thay vì chèn thêm dòng mới.
+
+    Nếu phiếu có nhiều candidate pending cho analyte này (ambiguous duplicate),
+    candidate được chọn trở thành authoritative ('corrected'), các candidate còn lại
+    được đánh dấu review_outcome='skipped' (superseded/non-authoritative) để bảo toàn audit trail.
+    """
+    matching_indicators = (
+        db.query(ReportIndicator)
+        .filter(
+            ReportIndicator.report_id == report_id,
+            ReportIndicator.analyte_canonical == analyte_canonical,
+        )
+        .all()
+    )
+    if not matching_indicators:
+        return None
+
+    # Tìm indicator khớp giá trị nếu có, hoặc chọn indicator đầu tiên để update
+    selected = None
+    for ind in matching_indicators:
+        if ind.value == value:
+            selected = ind
+            break
+    if selected is None:
+        selected = matching_indicators[0]
+
+    selected.value = value
+    selected.unit = unit
+    selected.canonical_value = value
+    selected.canonical_unit = unit
+    if raw_value is not None:
+        selected.raw_value = raw_value
+    if raw_unit is not None:
+        selected.raw_unit = raw_unit
+    if status is not None:
+        selected.status = status
+    selected.review_outcome = "corrected"
+    if doctor_note is not None:
+        selected.doctor_note = doctor_note
+    if reviewed_by_doctor_id is not None:
+        selected.reviewed_by_doctor_id = reviewed_by_doctor_id
+        selected.reviewed_at = _utcnow()
+
+    # Đánh dấu các candidate còn lại là skipped để bảo toàn audit mà không thành duplicate active
+    for ind in matching_indicators:
+        if ind.id != selected.id:
+            ind.review_outcome = "skipped"
+            if doctor_note is not None and not ind.doctor_note:
+                ind.doctor_note = f"Superseded by authoritative correction (id={selected.id})"
+            if reviewed_by_doctor_id is not None and not ind.reviewed_by_doctor_id:
+                ind.reviewed_by_doctor_id = reviewed_by_doctor_id
+                ind.reviewed_at = _utcnow()
+
+    try:
+        db.commit()
+        db.refresh(selected)
+        return selected
+    except Exception:
+        db.rollback()
+        raise
 
 
 def _attach_questions(

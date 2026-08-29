@@ -65,6 +65,7 @@ def _is_valid_point(report: LabReport, indicator: ReportIndicator) -> bool:
         and indicator.canonical_value is not None
         and isinstance(indicator.canonical_value, int | float)
         and bool(indicator.canonical_unit)
+        and indicator.review_outcome != "skipped"
     )
 
 
@@ -247,27 +248,35 @@ def _observed_direction(points: list[TrendPoint]) -> ObservedDirection | None:
 def get_patient_trend_analytes(db: Session, *, username: str) -> list[TrendAnalyteSummary]:
     patient = get_patient_by_username(db, username)
     rows = _query_candidate_rows(db, patient_id=patient.id)
-    points = _build_points(rows)
-    grouped: dict[str, list[TrendPoint]] = defaultdict(list)
-    for point in points:
-        grouped[point.analyte_canonical].append(point)
+
+    grouped_rows: dict[str, list[tuple[LabReport, ReportIndicator]]] = defaultdict(list)
+    for report, indicator in rows:
+        if not _is_valid_point(report, indicator):
+            continue
+        grouped_rows[str(indicator.analyte_canonical)].append((report, indicator))
 
     summaries: list[TrendAnalyteSummary] = []
-    for analyte, analyte_points in grouped.items():
+    for analyte, analyte_rows in grouped_rows.items():
         try:
+            analyte_points = _build_points(analyte_rows, analyte_canonical=analyte)
             unit = _assert_unit_consistency(analyte_points)
-        except TrendDataQualityError:
+            available = len(_apply_max_gap_policy(analyte_points, _max_gap_days_for(analyte))) >= MIN_TREND_POINTS
+            count = len(analyte_points)
+        except TrendDataQualityError as exc:
+            logger.warning(
+                "trend_analyte_data_quality_error",
+                extra={"username": username, "analyte": analyte, "reason": str(exc)},
+            )
             unit = ""
             available = False
-        else:
-            available = len(_apply_max_gap_policy(analyte_points, _max_gap_days_for(analyte))) >= MIN_TREND_POINTS
+            count = 0
         section = analyte_section(analyte)
         summaries.append(
             TrendAnalyteSummary(
                 analyte_canonical=analyte,
                 display_name=analyte,
                 canonical_unit=unit,
-                result_count=len(analyte_points),
+                result_count=count,
                 trend_available=available,
                 section=section,
                 section_label=section_label(section),

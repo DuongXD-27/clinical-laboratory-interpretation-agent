@@ -409,6 +409,90 @@ async def test_unit_inconsistency_fails_safe_without_chart_points(isolated_clien
 
 
 @pytest.mark.asyncio
+async def test_duplicate_indicator_in_one_report_does_not_poison_other_analyte_trends(isolated_client):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    # Clean 3-point series for WBC and LDL-C
+    for date_text, wbc_val, ldl_val in [
+        ("2026-08-01", 7.0, 2.1),
+        ("2026-08-02", 8.0, 2.2),
+        ("2026-08-03", 9.0, 2.3),
+    ]:
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [
+                {"name": "WBC", "value": wbc_val, "unit": "10^9/L"},
+                {"name": "LDL-C", "value": ldl_val, "unit": "mmol/L"},
+            ],
+        )
+
+    # Report with duplicate indicators for Total bilirubin
+    with session_local() as session:
+        patient = session.query(db_module.User).filter_by(username="benhnhan").one()
+        report = db_module.LabReport(patient_id=patient.id, test_date=datetime.date(2026, 8, 4))
+        report.indicators.extend(
+            [
+                db_module.ReportIndicator(
+                    analyte_raw="Total bilirubin",
+                    analyte_canonical="Total bilirubin",
+                    raw_value=30.0,
+                    raw_unit="umol/L",
+                    canonical_value=30.0,
+                    canonical_unit="umol/L",
+                    name="Total bilirubin",
+                    value=30.0,
+                    unit="umol/L",
+                    status="normal",
+                ),
+                db_module.ReportIndicator(
+                    analyte_raw="Total bilirubin",
+                    analyte_canonical="Total bilirubin",
+                    raw_value=300.0,
+                    raw_unit="umol/L",
+                    canonical_value=300.0,
+                    canonical_unit="umol/L",
+                    name="Total bilirubin",
+                    value=300.0,
+                    unit="umol/L",
+                    status="critical_high",
+                ),
+            ]
+        )
+        session.add(report)
+        session.commit()
+
+    # 1. Catalog endpoint must return 200 with isolated data quality handling
+    catalog_resp = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
+    assert catalog_resp.status_code == 200, catalog_resp.text
+    analytes = {item["analyte_canonical"]: item for item in catalog_resp.json()["analytes"]}
+
+    assert analytes["WBC"]["trend_available"] is True
+    assert analytes["WBC"]["result_count"] == 3
+    assert analytes["LDL-C"]["trend_available"] is True
+    assert analytes["LDL-C"]["result_count"] == 3
+    assert analytes["Total bilirubin"]["trend_available"] is False
+    assert analytes["Total bilirubin"]["result_count"] == 0
+
+    # 2. Detailed trend endpoint for corrupt analyte returns controlled DATA_QUALITY_ERROR, not 500
+    corrupt_trend_resp = await client.get(_trend_url("Total bilirubin"), headers=headers)
+    assert corrupt_trend_resp.status_code == 200, corrupt_trend_resp.text
+    corrupt_payload = corrupt_trend_resp.json()
+    assert corrupt_payload["trend_available"] is False
+    assert corrupt_payload["reason"] == "DATA_QUALITY_ERROR"
+    assert corrupt_payload["points"] == []
+
+    # 3. Detailed trend endpoint for clean analyte returns successful points
+    clean_trend_resp = await client.get(_trend_url("WBC"), headers=headers)
+    assert clean_trend_resp.status_code == 200, clean_trend_resp.text
+    clean_payload = clean_trend_resp.json()
+    assert clean_payload["trend_available"] is True
+    assert len(clean_payload["points"]) == 3
+
+
+@pytest.mark.asyncio
 async def test_trend_explanation_generated_with_mocked_llm(isolated_client, monkeypatch):
     client, session_local = isolated_client
     headers = await _auth_headers(client)
@@ -1191,3 +1275,436 @@ def test_trend_data_payload_serializes_current_detector_facts_unchanged():
         "unit": "G/L",
         "message": "Approved deterministic warning.",
     }
+
+
+# ==============================================================================
+# Comprehensive Regression Suite: Duplicates Prevention & Trends Isolation
+# ==============================================================================
+
+
+@pytest.mark.asyncio
+async def test_scenario_1_trend_isolation(isolated_client):
+    """Test 1 — Trend isolation: One corrupt analyte + clean WBC/LDL-C."""
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    for date_text, wbc_val, ldl_val in [
+        ("2026-08-01", 7.0, 2.1),
+        ("2026-08-02", 8.0, 2.2),
+        ("2026-08-03", 9.0, 2.3),
+    ]:
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [
+                {"name": "WBC", "value": wbc_val, "unit": "10^9/L"},
+                {"name": "LDL-C", "value": ldl_val, "unit": "mmol/L"},
+            ],
+        )
+
+    # Add a report containing duplicate indicators for Total bilirubin
+    with session_local() as session:
+        patient = session.query(db_module.User).filter_by(username="benhnhan").one()
+        report = db_module.LabReport(patient_id=patient.id, test_date=datetime.date(2026, 8, 4))
+        report.indicators.extend(
+            [
+                db_module.ReportIndicator(
+                    analyte_raw="Total bilirubin",
+                    analyte_canonical="Total bilirubin",
+                    raw_value=30.0,
+                    raw_unit="umol/L",
+                    canonical_value=30.0,
+                    canonical_unit="umol/L",
+                    name="Total bilirubin",
+                    value=30.0,
+                    unit="umol/L",
+                    status="normal",
+                ),
+                db_module.ReportIndicator(
+                    analyte_raw="Total bilirubin",
+                    analyte_canonical="Total bilirubin",
+                    raw_value=300.0,
+                    raw_unit="umol/L",
+                    canonical_value=300.0,
+                    canonical_unit="umol/L",
+                    name="Total bilirubin",
+                    value=300.0,
+                    unit="umol/L",
+                    status="critical_high",
+                ),
+            ]
+        )
+        session.add(report)
+        session.commit()
+
+    # Catalog returns 200 with clean analytes available and corrupt analyte unavailable
+    catalog_resp = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
+    assert catalog_resp.status_code == 200
+    analytes = {item["analyte_canonical"]: item for item in catalog_resp.json()["analytes"]}
+    assert analytes["WBC"]["trend_available"] is True
+    assert analytes["WBC"]["result_count"] == 3
+    assert analytes["LDL-C"]["trend_available"] is True
+    assert analytes["LDL-C"]["result_count"] == 3
+    assert analytes["Total bilirubin"]["trend_available"] is False
+    assert analytes["Total bilirubin"]["result_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_scenario_2_normal_insert(isolated_client):
+    """Test 2 — Normal insert: No existing (report_id, analyte) -> exactly one result created."""
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    payload = {
+        "patient_age": 35,
+        "patient_gender": "female",
+        "test_date": "2026-08-10",
+        "language": "vi",
+        "indicators": [
+            {"name": "Fasting plasma glucose", "value": 5.2, "unit": "mmol/L"},
+            {"name": "HbA1c", "value": 5.4, "unit": "%"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=headers)
+    assert resp.status_code == 200
+
+    with session_local() as session:
+        patient = session.query(db_module.User).filter_by(username="benhnhan").one()
+        reports = session.query(db_module.LabReport).filter_by(patient_id=patient.id).all()
+        assert len(reports) == 1
+        indicators = reports[0].indicators
+        assert len(indicators) == 2
+        analytes = [i.analyte_canonical for i in indicators]
+        assert "Fasting plasma glucose" in analytes
+        assert "HbA1c" in analytes
+
+
+@pytest.mark.asyncio
+async def test_scenario_3_confirmed_correction(isolated_client):
+    """Test 3 — Confirmed correction: Existing result + explicit user correction."""
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    # 1. Initial report with Total bilirubin = 15.0
+    payload = {
+        "patient_age": 30,
+        "patient_gender": "male",
+        "test_date": "2026-08-12",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 15.0, "unit": "umol/L"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=headers)
+    assert resp.status_code == 200
+    report_id = resp.json()["saved_report_id"]
+
+    with session_local() as session:
+        inds = session.query(db_module.ReportIndicator).filter_by(report_id=report_id).all()
+        assert len(inds) == 1
+        assert inds[0].value == 15.0
+
+    # 2. Confirmed correction: update Total bilirubin to 17.0
+    from src.services.history_repository import update_report_indicator
+
+    with session_local() as session:
+        updated = update_report_indicator(
+            session,
+            report_id,
+            analyte_canonical="Total bilirubin",
+            value=17.0,
+            unit="umol/L",
+            raw_value=17.0,
+            raw_unit="umol/L",
+            status="normal",
+            doctor_note="Đính chính kết quả theo mẫu xét nghiệm lại",
+        )
+        assert updated is not None
+        assert updated.value == 17.0
+        assert updated.review_outcome == "corrected"
+
+    # Exactly ONE active result remains in the database
+    with session_local() as session:
+        inds = session.query(db_module.ReportIndicator).filter_by(report_id=report_id).all()
+        assert len(inds) == 1
+        assert inds[0].value == 17.0
+        assert inds[0].review_outcome == "corrected"
+
+
+@pytest.mark.asyncio
+async def test_t1_t2_t9_conflicting_duplicate_preservation_and_doctor_reload(isolated_client):
+    """T1, T2, T9 — Conflicting duplicate preservation, no first-wins, and doctor reload."""
+    client, session_local = isolated_client
+    patient_headers = await _auth_headers(client, username="benhnhan", password="benhnhan123")
+    doctor_headers = await _auth_headers(client, username="bacsi", password="bacsi123")
+
+    payload = {
+        "patient_age": 40,
+        "patient_gender": "female",
+        "test_date": "2026-08-14",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 30.0, "unit": "umol/L"},
+            {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=patient_headers)
+    assert resp.status_code == 200
+    report_id = resp.json()["saved_report_id"]
+
+    # 1. API response flags both as NEED_REVIEW (T1)
+    indicators = resp.json()["indicators"]
+    assert len(indicators) == 2
+    for ind in indicators:
+        assert ind["status"] == "unknown"
+        assert ind["evaluation_reason"] == "AMBIGUOUS_DUPLICATE_ANALYTE"
+
+    # 2. Database persists BOTH candidates as non-authoritative pending rows (T1, T2 - no first-wins)
+    with session_local() as session:
+        inds = (
+            session.query(db_module.ReportIndicator)
+            .filter_by(report_id=report_id, analyte_canonical="Total bilirubin")
+            .all()
+        )
+        assert len(inds) == 2
+        values = sorted([i.value for i in inds])
+        assert values == [30.0, 300.0]
+        for i in inds:
+            assert i.status == "unknown"
+            assert i.evaluation_reason == "AMBIGUOUS_DUPLICATE_ANALYTE"
+            assert i.review_outcome == "pending"
+
+    # 3. Simulate DB reload / fresh session: doctor reopens the report (T9)
+    doc_resp = await client.get(f"/api/v1/doctor/reports/{report_id}", headers=doctor_headers)
+    assert doc_resp.status_code == 200
+    doc_report = doc_resp.json()
+    doc_findings = doc_report["findings"]
+    bili_findings = [f for f in doc_findings if f["metric_name"] == "Total bilirubin"]
+    assert len(bili_findings) == 2
+    doc_values = sorted([f["value"] for f in bili_findings])
+    assert doc_values == [30.0, 300.0]
+
+
+@pytest.mark.asyncio
+async def test_t3_no_last_wins_reversed_order(isolated_client):
+    """T3 — No last-wins: Reversed input [300, 30] preserves both candidates identically."""
+    client, session_local = isolated_client
+    patient_headers = await _auth_headers(client)
+
+    payload = {
+        "patient_age": 40,
+        "patient_gender": "female",
+        "test_date": "2026-08-15",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
+            {"name": "Total bilirubin", "value": 30.0, "unit": "umol/L"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=patient_headers)
+    assert resp.status_code == 200
+    report_id = resp.json()["saved_report_id"]
+
+    with session_local() as session:
+        inds = (
+            session.query(db_module.ReportIndicator)
+            .filter_by(report_id=report_id, analyte_canonical="Total bilirubin")
+            .all()
+        )
+        assert len(inds) == 2
+        values = sorted([i.value for i in inds])
+        assert values == [30.0, 300.0]
+
+
+@pytest.mark.asyncio
+async def test_t4_analysis_blocked_for_unresolved_candidates(isolated_client):
+    """T4 — Analysis blocked: No reference/critical classification or trend points for unresolved candidates."""
+    client, session_local = isolated_client
+    patient_headers = await _auth_headers(client)
+
+    payload = {
+        "patient_age": 40,
+        "patient_gender": "female",
+        "test_date": "2026-08-16",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 30.0, "unit": "umol/L"},
+            {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=patient_headers)
+    assert resp.status_code == 200
+    for ind in resp.json()["indicators"]:
+        assert ind["status"] == "unknown"
+        assert ind["critical_status"] is None
+        assert "AMBIGUOUS_DUPLICATE_ANALYTE" in ind["evaluation_reason"]
+
+    # Trend catalog isolates the ambiguous analyte
+    catalog_resp = await client.get("/api/v1/patient/me/trends/analytes", headers=patient_headers)
+    assert catalog_resp.status_code == 200
+    analytes = {item["analyte_canonical"]: item for item in catalog_resp.json()["analytes"]}
+    assert analytes["Total bilirubin"]["trend_available"] is False
+    assert analytes["Total bilirubin"]["result_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_t5_explicit_resolution_supersedes_rejected_candidate(isolated_client):
+    """T5 — Explicit resolution: Doctor selects 300 -> exactly 1 authoritative result, other skipped."""
+    client, session_local = isolated_client
+    patient_headers = await _auth_headers(client)
+
+    payload = {
+        "patient_age": 40,
+        "patient_gender": "female",
+        "test_date": "2026-08-17",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 30.0, "unit": "umol/L"},
+            {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
+        ],
+    }
+    resp = await client.post("/api/v1/analyze", json=payload, headers=patient_headers)
+    assert resp.status_code == 200
+    report_id = resp.json()["saved_report_id"]
+
+    # Explicit resolution by doctor
+    from src.services.history_repository import update_report_indicator
+
+    with session_local() as session:
+        updated = update_report_indicator(
+            session,
+            report_id,
+            analyte_canonical="Total bilirubin",
+            value=300.0,
+            unit="umol/L",
+            status="critical_high",
+            doctor_note="Xác nhận giá trị 300 umol/L theo kết quả phòng xét nghiệm",
+            reviewed_by_doctor_id=2,
+        )
+        assert updated is not None
+        assert updated.value == 300.0
+        assert updated.review_outcome == "corrected"
+
+    # Verify DB: 300 is corrected, 30 is skipped (audit preserved)
+    with session_local() as session:
+        inds = (
+            session.query(db_module.ReportIndicator)
+            .filter_by(report_id=report_id, analyte_canonical="Total bilirubin")
+            .all()
+        )
+        assert len(inds) == 2
+        by_val = {i.value: i for i in inds}
+        assert by_val[300.0].review_outcome == "corrected"
+        assert by_val[300.0].status == "critical_high"
+        assert by_val[30.0].review_outcome == "skipped"
+
+
+def test_t6_fingerprint_fidelity():
+    """T6 — Fingerprint fidelity: [30, 300] vs [30, 500] produce distinct fingerprints."""
+    import datetime
+
+    from src.services.lab_history_service import generate_report_fingerprint
+
+    date_val = datetime.date(2026, 8, 18)
+
+    fp_1 = generate_report_fingerprint(
+        patient_id=1,
+        test_date=date_val,
+        results=[
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 30.0, "canonical_unit": "umol/L"},
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 300.0, "canonical_unit": "umol/L"},
+        ],
+    )
+    fp_2 = generate_report_fingerprint(
+        patient_id=1,
+        test_date=date_val,
+        results=[
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 30.0, "canonical_unit": "umol/L"},
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 500.0, "canonical_unit": "umol/L"},
+        ],
+    )
+    fp_1_reversed = generate_report_fingerprint(
+        patient_id=1,
+        test_date=date_val,
+        results=[
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 300.0, "canonical_unit": "umol/L"},
+            {"analyte_canonical": "Total bilirubin", "canonical_value": 30.0, "canonical_unit": "umol/L"},
+        ],
+    )
+
+    # Different conflicting datasets yield different fingerprints
+    assert fp_1 != fp_2
+    # Order-independent sorting produces identical fingerprint
+    assert fp_1 == fp_1_reversed
+
+
+@pytest.mark.asyncio
+async def test_t7_retry_idempotency_ambiguous_payload(isolated_client):
+    """T7 — Retry idempotency: Submitting identical ambiguous payload twice does not create duplicate reports."""
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    payload = {
+        "patient_age": 45,
+        "patient_gender": "male",
+        "test_date": "2026-08-19",
+        "language": "vi",
+        "indicators": [
+            {"name": "Total bilirubin", "value": 30.0, "unit": "umol/L"},
+            {"name": "Total bilirubin", "value": 300.0, "unit": "umol/L"},
+        ],
+    }
+    resp1 = await client.post("/api/v1/analyze", json=payload, headers=headers)
+    assert resp1.status_code == 200
+    report_id_1 = resp1.json()["saved_report_id"]
+
+    resp2 = await client.post("/api/v1/analyze", json=payload, headers=headers)
+    assert resp2.status_code == 200
+    report_id_2 = resp2.json()["saved_report_id"]
+
+    assert report_id_1 == report_id_2
+
+    with session_local() as session:
+        reports = session.query(db_module.LabReport).filter_by(id=report_id_1).all()
+        assert len(reports) == 1
+        # Exactly 2 candidate rows (30 and 300), no duplicated 4 rows
+        assert len(reports[0].indicators) == 2
+
+
+@pytest.mark.asyncio
+async def test_scenario_6_clean_trends_regression(isolated_client):
+    """Test 6 — Clean Trends regression: Clean dataset behavior remains unchanged."""
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+
+    # 3 sequential clean reports for AST and ALT
+    for date_text, ast_val, alt_val in [
+        ("2026-08-01", 25.0, 22.0),
+        ("2026-08-05", 28.0, 24.0),
+        ("2026-08-10", 30.0, 26.0),
+    ]:
+        _save(
+            session_local,
+            "benhnhan",
+            date_text,
+            [
+                {"name": "AST", "value": ast_val, "unit": "U/L"},
+                {"name": "ALT", "value": alt_val, "unit": "U/L"},
+            ],
+        )
+
+    catalog_resp = await client.get("/api/v1/patient/me/trends/analytes", headers=headers)
+    assert catalog_resp.status_code == 200
+    analytes = {item["analyte_canonical"]: item for item in catalog_resp.json()["analytes"]}
+    assert analytes["AST"]["trend_available"] is True
+    assert analytes["AST"]["result_count"] == 3
+    assert analytes["ALT"]["trend_available"] is True
+    assert analytes["ALT"]["result_count"] == 3
+
+    trend_resp = await client.get(_trend_url("AST"), headers=headers)
+    assert trend_resp.status_code == 200
+    trend_data = trend_resp.json()
+    assert trend_data["trend_available"] is True
+    assert len(trend_data["points"]) == 3
+    assert trend_data["canonical_unit"] == "U/L"
