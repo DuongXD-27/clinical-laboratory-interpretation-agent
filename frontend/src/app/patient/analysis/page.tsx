@@ -11,6 +11,7 @@ import { buildManualIndicators, MANUAL_ANALYTES, manualAnalyteAttentionMessage }
 import type { AnalysisResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import LocalizedDateInput from "@/components/common/LocalizedDateInput";
 
 function metricInputId(name: string) {
   return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -278,7 +279,7 @@ export default function PatientAnalysisPage() {
                       </select>
                     </label>
                     <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-date">Ngày xét nghiệm
-                      <input id="manual-date" type="date" value={manualMeta.date} onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground" />
+                      <LocalizedDateInput id="manual-date" ariaLabel="Ngày xét nghiệm" value={manualMeta.date} onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow" />
                     </label>
                   </div>
                 </div>

@@ -30,7 +30,7 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
   const visibleNavigation = patientNavigation.filter((item) => !item.patientOnly || !isGuest);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-xl border-b border-[var(--glass-border)] shadow-[0_4px_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] shrink-0 relative">
+    <header className="role-topbar">
       {/* Subtle background refraction / edge highlight */}
       <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
       

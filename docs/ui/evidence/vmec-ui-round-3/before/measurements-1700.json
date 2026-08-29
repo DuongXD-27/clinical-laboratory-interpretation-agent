@@ -1,0 +1,539 @@
+[
+  {
+    "name": "patient-history-detail",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "document": {
+      "width": 1685,
+      "height": 3654,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": null,
+      "mode": null,
+      "range": null,
+      "analyte": null,
+      "heading": null,
+      "alignment": null,
+      "surfaceToHeading": null,
+      "segments": []
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": {
+        "selector": ".result-card h3, .clinical-card__title",
+        "sample": "WBC",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "lineHeight": "25.5px",
+        "letterSpacing": "normal"
+      },
+      "doctorCardTitle": null,
+      "patientBody": {
+        "selector": ".result-card-ai__explanation, .clinical-card__explanation",
+        "sample": "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt tro",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "22.4px",
+        "letterSpacing": "normal"
+      },
+      "doctorBody": null,
+      "patientMetadata": {
+        "selector": ".result-card__reference, .clinical-card__reference",
+        "sample": "Khoảng tham chiếu hệ thống: 4.72 – 11.3",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "21px",
+        "letterSpacing": "normal"
+      },
+      "doctorMetadata": null,
+      "patientStatus": {
+        "selector": ".result-card .status-indicator",
+        "sample": "Cao",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "doctorStatus": null,
+      "patientButton": {
+        "selector": ".result-card button",
+        "sample": "Xem thêm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "13px",
+        "fontWeight": "650",
+        "lineHeight": "19.5px",
+        "letterSpacing": "normal"
+      },
+      "doctorButton": null
+    }
+  },
+  {
+    "name": "patient-trends",
+    "url": "http://127.0.0.1:3000/patient/trends",
+    "document": {
+      "width": 1685,
+      "height": 1457,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": {
+        "x": 331.5,
+        "y": 239.9,
+        "width": 1294,
+        "height": 197,
+        "right": 1625.5,
+        "bottom": 436.9
+      },
+      "mode": {
+        "x": 348.5,
+        "y": 272.4,
+        "width": 384,
+        "height": 58,
+        "right": 732.5,
+        "bottom": 330.4
+      },
+      "range": {
+        "x": 748.5,
+        "y": 256.9,
+        "width": 238.3,
+        "height": 73.5,
+        "right": 986.8,
+        "bottom": 330.4
+      },
+      "analyte": {
+        "x": 348.5,
+        "y": 373.9,
+        "width": 384,
+        "height": 46,
+        "right": 732.5,
+        "bottom": 419.9
+      },
+      "heading": {
+        "x": 331.5,
+        "y": 504.9,
+        "width": 1294,
+        "height": 28,
+        "right": 1625.5,
+        "bottom": 532.9
+      },
+      "alignment": 117,
+      "surfaceToHeading": 68,
+      "segments": [
+        {
+          "className": "trend-filter-tabs",
+          "width": 238.3,
+          "height": 46,
+          "items": [
+            {
+              "text": "5 kết quả gần nhất",
+              "x": 753.5,
+              "width": 114.1
+            },
+            {
+              "text": "3 tháng gần nhất",
+              "x": 867.6,
+              "width": 114.1
+            }
+          ]
+        }
+      ]
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": null,
+      "patientBody": null,
+      "doctorBody": null,
+      "patientMetadata": null,
+      "doctorMetadata": null,
+      "patientStatus": null,
+      "doctorStatus": null,
+      "patientButton": null,
+      "doctorButton": null
+    }
+  },
+  {
+    "name": "patient-trends-group",
+    "url": "http://127.0.0.1:3000/patient/trends?mode=group",
+    "document": {
+      "width": 1685,
+      "height": 1246,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": {
+        "x": 331.5,
+        "y": 239.9,
+        "width": 1294,
+        "height": 259,
+        "right": 1625.5,
+        "bottom": 498.9
+      },
+      "mode": {
+        "x": 348.5,
+        "y": 272.4,
+        "width": 384,
+        "height": 58,
+        "right": 732.5,
+        "bottom": 330.4
+      },
+      "range": {
+        "x": 748.5,
+        "y": 256.9,
+        "width": 238.3,
+        "height": 73.5,
+        "right": 986.8,
+        "bottom": 330.4
+      },
+      "analyte": null,
+      "heading": {
+        "x": 348.5,
+        "y": 567.9,
+        "width": 384,
+        "height": 53.5,
+        "right": 732.5,
+        "bottom": 621.4
+      },
+      "alignment": null,
+      "surfaceToHeading": 69,
+      "segments": [
+        {
+          "className": "trend-filter-tabs",
+          "width": 238.3,
+          "height": 46,
+          "items": [
+            {
+              "text": "5 kết quả gần nhất",
+              "x": 753.5,
+              "width": 114.1
+            },
+            {
+              "text": "3 tháng gần nhất",
+              "x": 867.6,
+              "width": 114.1
+            }
+          ]
+        },
+        {
+          "className": "trend-filter-tabs",
+          "width": 197.5,
+          "height": 46,
+          "items": [
+            {
+              "text": "Biểu đồ đường",
+              "x": 353.5,
+              "width": 93.8
+            },
+            {
+              "text": "Ma trận nhiệt",
+              "x": 447.3,
+              "width": 93.8
+            }
+          ]
+        }
+      ]
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": null,
+      "patientBody": null,
+      "doctorBody": null,
+      "patientMetadata": null,
+      "doctorMetadata": null,
+      "patientStatus": null,
+      "doctorStatus": null,
+      "patientButton": null,
+      "doctorButton": null
+    }
+  },
+  {
+    "name": "patient-regression",
+    "url": "http://127.0.0.1:3000/patient",
+    "document": {
+      "width": 1685,
+      "height": 1362,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": null,
+      "mode": null,
+      "range": null,
+      "analyte": null,
+      "heading": null,
+      "alignment": null,
+      "surfaceToHeading": null,
+      "segments": []
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": null,
+      "patientBody": null,
+      "doctorBody": null,
+      "patientMetadata": null,
+      "doctorMetadata": null,
+      "patientStatus": null,
+      "doctorStatus": null,
+      "patientButton": null,
+      "doctorButton": null
+    }
+  },
+  {
+    "name": "analysis-regression",
+    "url": "http://127.0.0.1:3000/patient/analysis",
+    "document": {
+      "width": 1685,
+      "height": 1119,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": null,
+      "mode": null,
+      "range": null,
+      "analyte": null,
+      "heading": null,
+      "alignment": null,
+      "surfaceToHeading": null,
+      "segments": []
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": null,
+      "patientBody": null,
+      "doctorBody": null,
+      "patientMetadata": null,
+      "doctorMetadata": null,
+      "patientStatus": null,
+      "doctorStatus": null,
+      "patientButton": null,
+      "doctorButton": null
+    }
+  },
+  {
+    "name": "doctor-report",
+    "url": "http://127.0.0.1:3000/doctor/reports/11?tab=pending",
+    "document": {
+      "width": 1685,
+      "height": 1994,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": null,
+      "mode": null,
+      "range": null,
+      "analyte": null,
+      "heading": null,
+      "alignment": null,
+      "surfaceToHeading": null,
+      "segments": []
+    },
+    "doctor": {
+      "grid": {
+        "x": 331.5,
+        "y": 397.9,
+        "width": 1294,
+        "height": 1532.4,
+        "right": 1625.5,
+        "bottom": 1930.4
+      },
+      "gridColumns": "849.328px 424.656px",
+      "findingList": {
+        "x": 331.5,
+        "y": 397.9,
+        "width": 849.3,
+        "height": 1532.4,
+        "right": 1180.8,
+        "bottom": 1930.4
+      },
+      "contextRail": {
+        "x": 1200.8,
+        "y": 397.9,
+        "width": 424.7,
+        "height": 719.4,
+        "right": 1625.5,
+        "bottom": 1117.3
+      },
+      "toolbar": {
+        "x": 331.5,
+        "y": 293.9,
+        "width": 1294,
+        "height": 72,
+        "right": 1625.5,
+        "bottom": 365.9
+      },
+      "finding": {
+        "x": 331.5,
+        "y": 397.9,
+        "width": 849.3,
+        "height": 390,
+        "right": 1180.8,
+        "bottom": 788
+      },
+      "toolbarToFinding": 32,
+      "columns": 1,
+      "cardHeights": [
+        390,
+        385.5,
+        336,
+        360.8
+      ],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": {
+        "selector": ".finding-card h2, .doctor-finding-list .clinical-card__title",
+        "sample": "Fasting plasma glucose",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "patientBody": null,
+      "doctorBody": {
+        "selector": ".finding-card__ai > p:last-child, .doctor-finding-list .clinical-card__explanation",
+        "sample": "Phát hiện nội dung có thể chứa yếu tố suy đoán nguyên nhân hoặc chẩn đoá",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24.75px",
+        "letterSpacing": "normal"
+      },
+      "patientMetadata": null,
+      "doctorMetadata": {
+        "selector": ".finding-card__ref, .doctor-finding-list .clinical-card__reference",
+        "sample": "Khoảng tham chiếu 4.1 - 6.1",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "lineHeight": "19.5px",
+        "letterSpacing": "normal"
+      },
+      "patientStatus": null,
+      "doctorStatus": {
+        "selector": ".finding-card .status-indicator",
+        "sample": "Giá trị khẩn cấp",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "patientButton": null,
+      "doctorButton": {
+        "selector": ".finding-card button",
+        "sample": "Đồng ý",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "lineHeight": "18px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "doctor-regression",
+    "url": "http://127.0.0.1:3000/doctor",
+    "document": {
+      "width": 1700,
+      "height": 1000,
+      "overflowX": 0
+    },
+    "trend": {
+      "surface": null,
+      "mode": null,
+      "range": null,
+      "analyte": null,
+      "heading": null,
+      "alignment": null,
+      "surfaceToHeading": null,
+      "segments": []
+    },
+    "doctor": {
+      "grid": null,
+      "gridColumns": null,
+      "findingList": null,
+      "contextRail": null,
+      "toolbar": null,
+      "finding": null,
+      "toolbarToFinding": null,
+      "columns": 1,
+      "cardHeights": [],
+      "disclosures": []
+    },
+    "typography": {
+      "patientCardTitle": null,
+      "doctorCardTitle": null,
+      "patientBody": null,
+      "doctorBody": null,
+      "patientMetadata": null,
+      "doctorMetadata": null,
+      "patientStatus": null,
+      "doctorStatus": null,
+      "patientButton": null,
+      "doctorButton": null
+    }
+  }
+]

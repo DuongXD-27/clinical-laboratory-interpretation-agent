@@ -1,0 +1,62 @@
+[
+  {
+    "name": "patient",
+    "path": "/patient",
+    "title": "Xin chào, benhnhan",
+    "horizontalOverflow": 0,
+    "pageHeight": 1466,
+    "heroVisible": true,
+    "sidebarVisible": false,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 672,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "history",
+    "path": "/patient/history",
+    "title": "Lịch sử xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 1853,
+    "heroVisible": true,
+    "sidebarVisible": false,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 672,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "trends",
+    "path": "/patient/trends",
+    "title": "Xu hướng chỉ số",
+    "horizontalOverflow": 0,
+    "pageHeight": 1533,
+    "heroVisible": true,
+    "sidebarVisible": false,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 672,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "doctor",
+    "path": "/doctor",
+    "title": "Hàng đợi đánh giá",
+    "horizontalOverflow": 0,
+    "pageHeight": 1154,
+    "heroVisible": false,
+    "sidebarVisible": false,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 672,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "patient",
+    "path": "/patient",
+    "title": "Xin chào, benhnhan",
+    "horizontalOverflow": 0,
+    "pageHeight": 1400,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 641,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "history",
+    "path": "/patient/history",
+    "title": "Lịch sử xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 2087,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 641,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "analysis",
+    "path": "/patient/analysis",
+    "title": "Nhập kết quả xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 1111,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 641,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  },
+  {
+    "name": "doctor-report",
+    "path": "/doctor/reports/11?tab=pending",
+    "title": "Duong",
+    "horizontalOverflow": 0,
+    "pageHeight": 2546,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 641,
+      "leftGutter": 48,
+      "rightGutter": 48
+    }
+  }
+]

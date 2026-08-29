@@ -15,6 +15,7 @@ import {
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import LocalizedDateInput from "@/components/common/LocalizedDateInput";
 import IndicatorResultCard from "./patient/IndicatorResultCard";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
@@ -264,7 +265,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
             : "Mỗi lần bạn phân tích một phiếu, kết quả được lưu lại ở đây."}
         </p>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="filter-toolbar mt-4">
           {mode === "doctor" && (
             <label className="space-y-1 text-sm text-slate-700">
               <span className="font-medium">Tên bệnh nhân</span>
@@ -279,9 +280,9 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
           )}
           <label className="space-y-1 text-sm text-slate-700">
             <span className="font-medium">Từ ngày</span>
-            <input
-              aria-label="Lọc lịch sử từ ngày"
-              type="date"
+            <LocalizedDateInput
+              id="history-from-date"
+              ariaLabel="Lọc lịch sử từ ngày"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
               className="w-full h-10 px-3 text-sm patient-control-clinical"
@@ -289,20 +290,20 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
           </label>
           <label className="space-y-1 text-sm text-slate-700">
             <span className="font-medium">Đến ngày</span>
-            <input
-              aria-label="Lọc lịch sử đến ngày"
-              type="date"
+            <LocalizedDateInput
+              id="history-to-date"
+              ariaLabel="Lọc lịch sử đến ngày"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
               className="w-full h-10 px-3 text-sm patient-control-clinical"
             />
           </label>
-          <div className="flex items-end gap-2">
+          <div className="filter-toolbar__actions">
             <button
               type="button"
               onClick={applyFilters}
               disabled={loading}
-              className="flex-1 patient-btn-secondary disabled:opacity-50"
+              className="patient-btn-secondary disabled:opacity-50"
             >
               {loading ? "Đang tải..." : "Lọc"}
             </button>
@@ -370,9 +371,9 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                       data-severity={severity}
                       aria-expanded={expandedId === item.id}
                     >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="text-lg font-semibold text-slate-950">
+                    <div className="history-row__layout">
+                      <div className="history-row__zone history-row__identity">
+                        <div className="history-row__title">
                           Phiếu ngày {formatDate(item.test_date)}
                           {mode === "doctor" && (
                             <span className="ml-2 text-sm font-normal text-slate-500">
@@ -380,15 +381,17 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                             </span>
                           )}
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.indicator_count} chỉ số · {item.abnormal_count} bất thường ·{" "}
-                          {item.source === "ocr" ? "nhập từ ảnh" : "nhập tay"} · tạo lúc {formatMoment(item.created_at)}
-                        </div>
+                        <p className="history-row__metadata">
+                          {item.source === "ocr" ? "Nhập từ ảnh" : "Nhập tay"} · tạo lúc {formatMoment(item.created_at)}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="history-row__zone history-row__summary">
+                        <p>{item.indicator_count} chỉ số · {item.abnormal_count} bất thường</p>
                         <SeverityBadge level={severity} />
+                      </div>
+                      <div className="history-row__zone history-row__workflow">
                         <VerificationBadge status={item.verification_status} />
-                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors ml-1">
+                        <span className="history-row__action">
                           {mode === "patient" ? "Mở nhanh" : "Xem chi tiết"}
                           {expandedId === item.id ? (
                             <ChevronDown className="w-3.5 h-3.5" />
@@ -427,14 +430,16 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                           {/* ---- Khối 1: nội dung do hệ thống sinh ---- */}
                           <div className="space-y-4">
                             {groupBySection(detail.indicators).map((group) => (
-                              <div key={group.label} className="space-y-3">
+                              <div key={group.label} className="indicator-group">
                                 <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
-                                {group.items.map((indicator, index) => (
-                                  <IndicatorResultCard
-                                    key={index}
-                                    indicator={indicator as unknown as import("@/types/analysis").IndicatorResult}
-                                  />
-                                ))}
+                                <div className="indicator-card-grid">
+                                  {group.items.map((indicator, index) => (
+                                    <IndicatorResultCard
+                                      key={index}
+                                      indicator={indicator as unknown as import("@/types/analysis").IndicatorResult}
+                                    />
+                                  ))}
+                                </div>
                               </div>
                             ))}
 
@@ -453,7 +458,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                           <div className="rounded-xl border border-white/70 bg-white/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                             <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
                               Ghi chú của bác sĩ
-                              <StatusIndicator state={detail.reviewed_by_doctor ? "processed" : "pending"} label={detail.reviewed_by_doctor ? "Đã xem phiếu" : "Chưa có review"} />
+                              <StatusIndicator state={detail.reviewed_by_doctor ? "processed" : "pending"} label={detail.reviewed_by_doctor ? "Đã xem phiếu" : "Chưa được đánh giá"} />
                             </h3>
 
                             {detail.doctor_notes.length === 0 ? (

@@ -10,7 +10,7 @@ import {
   submitDoctorTrendReview,
   UnauthorizedError,
 } from "@/lib/api";
-import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
+import { formatDate, formatMoment, formatClinicalAssessment, formatPatientDemographics } from "@/lib/patientUi.mjs";
 import type {
   DoctorTrendReviewDetail,
   TrendPoint,
@@ -29,16 +29,9 @@ const ASSESSMENT_OPTIONS: { value: TrendReviewAssessment; label: string }[] = [
   { value: "needs_follow_up", label: "Cần theo dõi hoặc trao đổi thêm" },
 ];
 
-function genderText(value: string | null) {
-  if (value === "male") return "Nam";
-  if (value === "female") return "Nữ";
-  if (value === "other") return "Khác";
-  return "Chưa có";
-}
-
 function statusText(review: TrendReview) {
   if (review.status === "PENDING") return "Đang chờ";
-  if (review.status === "REVIEWED") return "Đã review";
+  if (review.status === "REVIEWED") return "Đã đánh giá";
   if (review.status === "CANCELLED") return "Đã huỷ";
   return "Từ chối";
 }
@@ -54,7 +47,7 @@ function assessmentText(value: TrendReviewAssessment | null | undefined) {
   if (value === "confirmed") return "Bác sĩ xác nhận xu hướng";
   if (value === "corrected") return "Bác sĩ đã đính chính";
   if (value === "needs_follow_up") return "Cần theo dõi/trao đổi thêm";
-  return "Đã được bác sĩ review";
+  return "Đã được bác sĩ đánh giá";
 }
 
 export default function DoctorTrendReviewDetailPage() {
@@ -84,7 +77,7 @@ export default function DoctorTrendReviewDetailPage() {
           router.replace("/");
           return;
         }
-        setError(caught instanceof Error ? caught.message : "Không mở được yêu cầu review xu hướng.");
+        setError(caught instanceof Error ? caught.message : "Không mở được yêu cầu đánh giá xu hướng.");
       } finally {
         setLoading(false);
       }
@@ -104,14 +97,14 @@ export default function DoctorTrendReviewDetailPage() {
     try {
       const updated = await submitDoctorTrendReview(review.id, assessment, comment);
       setDetail((current) => current ? { ...current, review: updated } : current);
-      setToast("Đã lưu review xu hướng.");
+      setToast("Đã lưu đánh giá xu hướng.");
     } catch (caught) {
       if (caught instanceof UnauthorizedError) {
         clearSession();
         router.replace("/");
         return;
       }
-      setError(caught instanceof Error ? caught.message : "Không lưu được review xu hướng.");
+      setError(caught instanceof Error ? caught.message : "Không lưu được đánh giá xu hướng.");
     } finally {
       setSaving(false);
     }
@@ -120,8 +113,8 @@ export default function DoctorTrendReviewDetailPage() {
   if (loading) {
     return (
       <div className="doctor-page doctor-detail-page">
-        <DoctorPageHeader eyebrow="Review xu hướng" title="Đang tải yêu cầu" />
-        <section className="doctor-detail-skeleton" aria-label="Đang tải yêu cầu review xu hướng">
+        <DoctorPageHeader eyebrow="Đánh giá xu hướng" title="Đang tải yêu cầu" />
+        <section className="doctor-detail-skeleton" aria-label="Đang tải yêu cầu đánh giá xu hướng">
           <div className="skeleton-card" />
           <div className="skeleton-card" />
         </section>
@@ -132,10 +125,10 @@ export default function DoctorTrendReviewDetailPage() {
   if (error || !detail || !review) {
     return (
       <div className="doctor-page doctor-detail-page">
-        <DoctorPageHeader eyebrow="Review xu hướng" title="Không mở được yêu cầu" />
+        <DoctorPageHeader eyebrow="Đánh giá xu hướng" title="Không mở được yêu cầu" />
         <section className="doctor-state-card doctor-state-card--error">
           <div className="doctor-error-state" role="alert">
-            <p>{error || "Không tìm thấy yêu cầu review xu hướng."}</p>
+            <p>{error || "Không tìm thấy yêu cầu đánh giá xu hướng."}</p>
             <Link href="/doctor/trend-reviews">Quay lại danh sách</Link>
           </div>
         </section>
@@ -143,140 +136,158 @@ export default function DoctorTrendReviewDetailPage() {
     );
   }
 
+  const patientDemographics = formatPatientDemographics(detail.patient.gender, detail.patient.age);
+
   return (
     <div className="doctor-page doctor-detail-page">
       {toast && <div className="doctor-toast" role="status">{toast}</div>}
       <DoctorPageHeader
-        eyebrow={`Review xu hướng · Yêu cầu #${review.id}`}
-        title={detail.patient.name}
-        description={`${genderText(detail.patient.gender)} · ${detail.patient.age ?? "-"} tuổi · ${review.display_name}`}
+        eyebrow="ĐÁNH GIÁ XU HƯỚNG"
+        title={`Đánh giá xu hướng ${review.display_name}`}
+        description={
+          <div className="doctor-trend-hero-meta">
+            <p className="doctor-trend-hero-meta__primary">
+              {detail.patient.name} · {patientDemographics} · Yêu cầu #{review.id}
+            </p>
+            <p className="doctor-trend-hero-meta__secondary">
+              Gửi lúc {formatMoment(review.requested_at)}
+            </p>
+          </div>
+        }
         actions={<StatusIndicator state={statusState(review)} label={statusText(review)} />}
         backHref="/doctor/trend-reviews"
-        backLabel="Danh sách review xu hướng"
+        backLabel="Danh sách đánh giá xu hướng"
       />
 
       {review.status === "REVIEWED" && (
         <div className="doctor-verified-banner">
           <CheckCircle2 aria-hidden="true" />
-          Đã review bởi {review.reviewed_by_username || "bác sĩ"}
+          Đã đánh giá bởi {review.reviewed_by_username || "bác sĩ"}
           {review.reviewed_at ? ` lúc ${formatMoment(review.reviewed_at)}` : ""}.
         </div>
       )}
 
       {error && <div className="doctor-error-state" role="alert">{error}</div>}
 
-      <div className="doctor-report-grid">
-          <section className="doctor-finding-list" aria-label="Chi tiết review xu hướng">
-            <article className="finding-card finding-card--normal">
-              <div className="finding-card__header">
-                <div>
-                  <h2><LineChart aria-hidden="true" /> {review.display_name}</h2>
-                  <p className="finding-card__ref">
-                    {review.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"} · {review.canonical_unit}
-                  </p>
-                </div>
-                <span className="doctor-card-meta">
-                  Gửi lúc {formatMoment(review.requested_at)}
-                </span>
+      <div className="doctor-trend-review-grid">
+        <section className="doctor-trend-primary-col" aria-label="Chi tiết đánh giá xu hướng">
+          <article className="finding-card finding-card--normal trend-chart-card">
+            <div className="finding-card__header">
+              <div>
+                <h2><LineChart aria-hidden="true" /> {review.display_name}</h2>
+                <p className="finding-card__ref">
+                  {review.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"} · {review.canonical_unit}
+                </p>
               </div>
+              <span className="doctor-card-meta">
+                {points.length} mốc xét nghiệm
+              </span>
+            </div>
 
-              <div className="mt-5">
-                <TrendChart
-                  analyte={review.display_name}
-                  unit={review.canonical_unit}
-                  points={points}
-                  referenceLow={review.trend_snapshot.reference_low}
-                  referenceHigh={review.trend_snapshot.reference_high}
-                  criticalLow={review.trend_snapshot.critical_low}
-                  criticalHigh={review.trend_snapshot.critical_high}
-                />
-              </div>
+            <div className="mt-5">
+              <TrendChart
+                analyte={review.display_name}
+                unit={review.canonical_unit}
+                points={points}
+                referenceLow={review.trend_snapshot.reference_low}
+                referenceHigh={review.trend_snapshot.reference_high}
+                criticalLow={review.trend_snapshot.critical_low}
+                criticalHigh={review.trend_snapshot.critical_high}
+              />
+            </div>
 
-              <div className="finding-card__ai">
-                <p className="finding-card__label"><Sparkles aria-hidden="true" /> Nhận xét xu hướng của AI</p>
-                <p>{review.llm_explanation_snapshot}</p>
-              </div>
-            </article>
+            <div className="finding-card__ai mt-6">
+              <p className="doctor-ai-label"><Sparkles aria-hidden="true" /> Nhận xét xu hướng của AI</p>
+              <p className="finding-card__explanation text-[var(--foreground-secondary)] leading-relaxed">
+                {review.llm_explanation_snapshot}
+              </p>
+            </div>
+          </article>
 
-            <article className="finding-card finding-card--normal">
-              <div className="finding-card__header">
-                <div>
-                  <h2>Dữ liệu các mốc xét nghiệm</h2>
-                  <p className="finding-card__ref">{points.length} mốc được snapshotted khi bệnh nhân gửi yêu cầu.</p>
-                </div>
+          <article className="finding-card finding-card--normal trend-data-card mt-6">
+            <div className="finding-card__header">
+              <div>
+                <h2>Dữ liệu các mốc xét nghiệm</h2>
+                <p className="finding-card__ref">{points.length} mốc được ghi nhận khi bệnh nhân gửi yêu cầu.</p>
               </div>
-              <div className="doctor-table-wrap">
-                <table className="doctor-data-table">
-                  <thead>
-                    <tr>
-                      <th>Ngày xét nghiệm</th>
-                      <th>Giá trị</th>
-                      <th>Đơn vị</th>
-                      <th>Đánh giá</th>
-                      <th>Phiếu</th>
+            </div>
+            <div className="doctor-table-wrap">
+              <table className="doctor-data-table">
+                <thead>
+                  <tr>
+                    <th>Ngày xét nghiệm</th>
+                    <th>Giá trị</th>
+                    <th>Đơn vị</th>
+                    <th>Đánh giá</th>
+                    <th>Phiếu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {points.map((point: TrendPoint) => (
+                    <tr key={`${point.report_id}-${point.test_date}`}>
+                      <td>{formatDate(point.test_date)}</td>
+                      <td><strong>{point.value}</strong></td>
+                      <td>{review.canonical_unit}</td>
+                      <td>
+                        <span className={`status-badge status-badge--${String(point.assessment).toLowerCase()}`}>
+                          {formatClinicalAssessment(point.assessment)}
+                        </span>
+                      </td>
+                      <td>
+                        <Link href={`/doctor/reports/${point.report_id}`} className="doctor-table-link">
+                          #{point.report_id}
+                        </Link>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {points.map((point: TrendPoint) => (
-                      <tr key={`${point.report_id}-${point.test_date}`}>
-                        <td>{formatDate(point.test_date)}</td>
-                        <td><strong>{point.value}</strong></td>
-                        <td>{review.canonical_unit}</td>
-                        <td>{point.assessment}</td>
-                        <td>
-                          <Link href={`/doctor/reports/${point.report_id}`}>
-                            #{point.report_id}
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <aside className="doctor-report-sidebar" aria-label="Thông tin bổ sung và nhận xét">
+          <section className="doctor-side-card">
+            <h2>Thông tin yêu cầu</h2>
+            <dl className="doctor-metadata-list">
+              <div>
+                <dt>Bệnh nhân</dt>
+                <dd>{detail.patient.name}</dd>
               </div>
-            </article>
+              <div>
+                <dt>Mã bệnh nhân</dt>
+                <dd>#{detail.patient.id}</dd>
+              </div>
+              <div>
+                <dt>Giới tính / Tuổi</dt>
+                <dd>{patientDemographics}</dd>
+              </div>
+              <div>
+                <dt>Chỉ số</dt>
+                <dd>{review.display_name}</dd>
+              </div>
+              <div>
+                <dt>Phạm vi dữ liệu</dt>
+                <dd>{review.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"}</dd>
+              </div>
+              <div>
+                <dt>Trạng thái</dt>
+                <dd>{statusText(review)}</dd>
+              </div>
+            </dl>
           </section>
 
-          <aside className="doctor-report-sidebar">
-            <section className="doctor-side-card">
-              <h2>Thông tin yêu cầu</h2>
-              <dl>
-                <div>
-                  <dt>Bệnh nhân</dt>
-                  <dd>{detail.patient.name}</dd>
-                </div>
-                <div>
-                  <dt>Mã bệnh nhân</dt>
-                  <dd>#{detail.patient.id}</dd>
-                </div>
-                <div>
-                  <dt>Giới tính</dt>
-                  <dd>{genderText(detail.patient.gender)}</dd>
-                </div>
-                <div>
-                  <dt>Tuổi</dt>
-                  <dd>{detail.patient.age ?? "-"}</dd>
-                </div>
-                <div>
-                  <dt>Chỉ số</dt>
-                  <dd>{review.display_name}</dd>
-                </div>
-                <div>
-                  <dt>Trạng thái</dt>
-                  <dd>{statusText(review)}</dd>
-                </div>
-              </dl>
-            </section>
-
-            <section className="doctor-side-card">
-              <h2>Nhận xét chuyên môn</h2>
-              {readOnly && review.doctor_comment ? (
-                <div className="doctor-question-answer">
-                  <p>{review.doctor_comment}</p>
-                  <span>{assessmentText(review.doctor_assessment)}</span>
-                </div>
-              ) : (
-                <div className="doctor-question-editor">
-                  <label className="finding-card__label" htmlFor="trend-review-assessment">
+          <section className="doctor-side-card">
+            <h2>Nhận xét chuyên môn</h2>
+            {readOnly && review.doctor_comment ? (
+              <div className="doctor-question-answer">
+                <p className="doctor-comment-text">{review.doctor_comment}</p>
+                <span className="doctor-assessment-badge">{assessmentText(review.doctor_assessment)}</span>
+              </div>
+            ) : (
+              <div className="doctor-question-editor">
+                <div className="doctor-form-field">
+                  <label className="doctor-form-label" htmlFor="trend-review-assessment">
                     Đánh giá xu hướng
                   </label>
                   <select
@@ -290,7 +301,10 @@ export default function DoctorTrendReviewDetailPage() {
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </select>
-                  <label className="finding-card__label mt-2" htmlFor="trend-review-comment">
+                </div>
+
+                <div className="doctor-form-field">
+                  <label className="doctor-form-label" htmlFor="trend-review-comment">
                     Nhận xét của bác sĩ
                   </label>
                   <Textarea
@@ -298,25 +312,35 @@ export default function DoctorTrendReviewDetailPage() {
                     value={comment}
                     disabled={saving}
                     maxLength={8000}
+                    rows={5}
+                    placeholder="Nhập nhận xét chuyên môn về diễn tiến chỉ số..."
                     onChange={(event) => setComment(event.target.value)}
                   />
-                  <div className="finding-card__correction-actions">
-                    <span className={comment.trim() ? "is-ready" : ""}>
-                      {comment.trim() ? "Sẵn sàng gửi" : "Cần nhập nhận xét"}
-                    </span>
-                    <Button
-                      type="button"
-                      disabled={!canSubmit}
-                      onClick={() => void handleSubmit()}
-                    >
-                      <Send data-icon="inline-start" aria-hidden="true" />
-                      {saving ? "Đang gửi..." : "Gửi review"}
-                    </Button>
-                  </div>
+                  {comment.trim().length === 0 ? (
+                    <p className="doctor-field-hint" role="status">
+                      Cần nhập nhận xét trước khi gửi đánh giá
+                    </p>
+                  ) : (
+                    <p className="doctor-field-hint doctor-field-hint--ready" role="status">
+                      Sẵn sàng gửi ({comment.trim().length} ký tự)
+                    </p>
+                  )}
                 </div>
-              )}
-            </section>
-          </aside>
+
+                <div className="doctor-form-actions">
+                  <Button
+                    type="button"
+                    disabled={!canSubmit}
+                    onClick={() => void handleSubmit()}
+                  >
+                    <Send data-icon="inline-start" aria-hidden="true" />
+                    {saving ? "Đang gửi..." : "Gửi đánh giá"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        </aside>
       </div>
     </div>
   );

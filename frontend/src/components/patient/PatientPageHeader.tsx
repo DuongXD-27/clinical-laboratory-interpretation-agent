@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PageHero } from "@/components/common/LayoutPrimitives";
 
 type Props = {
   eyebrow: string;
@@ -17,14 +18,5 @@ export default function PatientPageHeader({
   className = "",
   titleId,
 }: Props) {
-  return (
-    <header className={`patient-route-heading ${className}`.trim()}>
-      <div className="min-w-0">
-        <span className="patient-route-eyebrow">{eyebrow}</span>
-        <h1 id={titleId}>{title}</h1>
-        {description ? <p>{description}</p> : null}
-      </div>
-      {actions ? <div className="patient-route-actions">{actions}</div> : null}
-    </header>
-  );
+  return <PageHero eyebrow={eyebrow} title={title} description={description} actions={actions} titleId={titleId} className={className} />;
 }

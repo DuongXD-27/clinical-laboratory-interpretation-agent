@@ -9,6 +9,7 @@ import DoctorReviewProgressBar from "@/components/doctor/DoctorReviewProgressBar
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
+import ClinicalConfirmDialog from "@/components/common/ClinicalConfirmDialog";
 import { CheckCircle2 } from "lucide-react";
 import {
   clearSession,
@@ -17,16 +18,9 @@ import {
   reviewDoctorFinding,
   UnauthorizedError,
 } from "@/lib/api";
-import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
+import { formatDate, formatMoment, formatPatientDemographics } from "@/lib/patientUi.mjs";
 import type { DoctorFinding, DoctorReportDetail } from "@/types/doctor";
 import type { ReportQuestion } from "@/types/history";
-
-function genderText(value: string | null) {
-  if (value === "male") return "Nam";
-  if (value === "female") return "Nữ";
-  if (value === "other") return "Khác";
-  return "Khác";
-}
 
 export default function DoctorReportPage() {
   const params = useParams<{ reportId: string }>();
@@ -36,6 +30,7 @@ export default function DoctorReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completeBusy, setCompleteBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [backTab, setBackTab] = useState("pending");
 
@@ -101,10 +96,6 @@ export default function DoctorReportPage() {
 
   async function handleComplete() {
     if (!detail) return;
-    const confirmed = window.confirm(
-      "Xác nhận hoàn tất kiểm chứng phiếu này? Bệnh nhân sẽ thấy phiếu đã được bác sĩ kiểm chứng.",
-    );
-    if (!confirmed) return;
     setCompleteBusy(true);
     setError(null);
     try {
@@ -164,7 +155,7 @@ export default function DoctorReportPage() {
         title={detail.patient.name}
         description={
           <p>
-            {genderText(detail.patient.gender)} · {detail.patient.age ?? "-"} tuổi · Xét nghiệm{" "}
+            {formatPatientDemographics(detail.patient.gender, detail.patient.age)} · Xét nghiệm{" "}
             {formatDate(detail.report.test_date)} · {detail.report.input_method === "ocr" ? "OCR" : "nhập tay"}
           </p>
         }
@@ -183,6 +174,14 @@ export default function DoctorReportPage() {
 
       {error && <div className="doctor-error-state" role="alert">{error}</div>}
 
+      <DoctorReviewProgressBar
+        reviewed={progress.reviewed}
+        total={progress.total}
+        busy={completeBusy}
+        readOnly={readOnly}
+        onComplete={() => setConfirmOpen(true)}
+      />
+
       <div className="doctor-report-grid">
         <section className="doctor-finding-list" aria-label="Danh sách luận điểm">
           {detail.findings.map((finding: DoctorFinding) => (
@@ -197,12 +196,17 @@ export default function DoctorReportPage() {
         </section>
         <DoctorReportSidebar detail={detail} readOnly={readOnly} onQuestionUpdated={updateQuestion} />
       </div>
-      <DoctorReviewProgressBar
-        reviewed={progress.reviewed}
-        total={progress.total}
-        busy={completeBusy}
-        readOnly={readOnly}
-        onComplete={() => void handleComplete()}
+
+      <ClinicalConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Hoàn tất kiểm chứng"
+        description="Sau khi hoàn tất, bệnh nhân sẽ thấy phiếu này đã được bác sĩ kiểm chứng."
+        confirmLabel="Hoàn tất kiểm chứng"
+        cancelLabel="Quay lại"
+        tone="neutral"
+        loading={completeBusy}
+        onConfirm={handleComplete}
       />
     </div>
   );

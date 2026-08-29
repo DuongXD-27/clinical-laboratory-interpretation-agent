@@ -32,7 +32,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
   const visibleNavigation = patientNavigation.filter((item) => !item.patientOnly || !isGuest);
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-xl border-r border-[var(--glass-border)] shadow-[4px_0_24px_rgba(0,0,0,0.02),inset_0_1px_1px_rgba(255,255,255,0.7)] sticky top-0 h-dvh z-40 relative">
+    <aside className="role-sidebar hidden lg:flex">
       {/* Subtle background refraction / edge highlight */}
       <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
       {/* Brand */}

@@ -1,0 +1,91 @@
+{
+  "dialog": {
+    "found": true,
+    "width": 384,
+    "height": 195.5,
+    "buttons": [
+      "Quay lại",
+      "Hoàn tất kiểm chứng",
+      "Close"
+    ],
+    "hasNativeChrome": false
+  },
+  "trend": {
+    "h1Text": "Đánh giá xu hướng Creatinine",
+    "metaPrimaryText": "Duong · Nam · Yêu cầu #1",
+    "heroBox": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1309,
+      "height": 186.609375
+    },
+    "gridBox": {
+      "x": 331.5,
+      "y": 429.609375,
+      "width": 1309,
+      "height": 1001.75
+    },
+    "primaryBox": {
+      "x": 331.5,
+      "y": 429.609375,
+      "width": 925,
+      "height": 1001.75
+    },
+    "railBox": {
+      "x": 1280.5,
+      "y": 429.609375,
+      "width": 360,
+      "height": 509.5
+    },
+    "chartCardBox": {
+      "x": 331.5,
+      "y": 429.609375,
+      "width": 925,
+      "height": 633.25
+    },
+    "dataCardBox": {
+      "x": 331.5,
+      "y": 1086.859375,
+      "width": 925,
+      "height": 344.5
+    },
+    "gap": 24,
+    "tableRows": [
+      [
+        "04/08/2026",
+        "92",
+        "umol/L",
+        "Bình thường",
+        "#10"
+      ],
+      [
+        "05/08/2026",
+        "80",
+        "umol/L",
+        "Bình thường",
+        "#11"
+      ],
+      [
+        "11/08/2026",
+        "75",
+        "umol/L",
+        "Bình thường",
+        "#9"
+      ],
+      [
+        "11/08/2026",
+        "75",
+        "umol/L",
+        "Bình thường",
+        "#12"
+      ],
+      [
+        "20/08/2026",
+        "92",
+        "umol/L",
+        "Bình thường",
+        "#1722"
+      ]
+    ]
+  }
+}

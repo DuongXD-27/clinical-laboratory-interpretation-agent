@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
+import ClinicalIndicatorCard from "@/components/common/ClinicalIndicatorCard";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { DoctorFinding, ReviewFlag } from "@/types/doctor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, CircleMinus, PencilLine, Sparkles } from "lucide-react";
+import { Check, CircleMinus, PencilLine } from "lucide-react";
 import StatusIndicator from "@/components/common/StatusIndicator";
 import ReasonChip from "./ReasonChip";
 
@@ -51,120 +52,118 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
   }
 
   return (
-    <article
+    <ClinicalIndicatorCard
+      tone={finding.classification}
+      headingLevel="h2"
       className={`finding-card finding-card--${finding.classification}${flags.length > 0 ? " finding-card--flagged" : ""}${isReviewed ? " finding-card--reviewed" : ""}`}
-    >
-      <div className="finding-card__header">
-        <div className="finding-card__metric">
-          <h2>{finding.metric_name}</h2>
-          <div className="finding-card__measurement">
-            <p className="finding-card__value">{finding.value}</p>
-            <span>{finding.unit}</span>
-          </div>
-          <p className="finding-card__ref"><span>Khoảng tham chiếu</span> {finding.reference_range}</p>
-        </div>
-        <SeverityBadge level={finding.classification} />
-      </div>
-
-      {flags.length > 0 && (
+      title={finding.metric_name}
+      value={finding.value}
+      unit={finding.unit}
+      reference={<><span className="clinical-card__reference-label">Khoảng tham chiếu</span> {finding.reference_range}</>}
+      status={<SeverityBadge level={finding.classification} />}
+      reason={flags.length > 0 ? (
         <div className="finding-card__flags" role="status">
           {flags.map((flag, index) => (
             <ReasonChip key={`${flag.code}-${index}`} flag={flag} level="inline" />
           ))}
         </div>
-      )}
-
-      <div className="finding-card__ai">
-        <p className="finding-card__label"><Sparkles aria-hidden="true" /> Giải thích của AI</p>
-        <p>{finding.ai_text}</p>
-      </div>
-
-      {finding.review_outcome === "corrected" && finding.doctor_note && (
+      ) : undefined}
+      explanationText={finding.ai_text}
+      interpretationExtra={finding.review_outcome === "corrected" && finding.doctor_note ? (
         <DoctorNoteBlock
           note={finding.doctor_note}
           doctorName={finding.reviewed_by}
           reviewedAt={finding.reviewed_at}
         />
-      )}
-
-      {isReviewed && !editing && (
-        <div className={`finding-card__outcome finding-card__outcome--${finding.review_outcome}`}>
-          <StatusIndicator
-            state={finding.review_outcome === "skipped" ? "skipped" : finding.review_outcome === "corrected" ? "corrected" : "processed"}
-            label={outcomeText(finding.review_outcome)}
-          />
-          <span>
-            {finding.reviewed_by ? ` · ${finding.reviewed_by}` : ""}
-            {finding.reviewed_at ? ` · ${formatMoment(finding.reviewed_at)}` : ""}
-          </span>
-          {!readOnly && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
-              <PencilLine data-icon="inline-start" aria-hidden="true" /> Sửa lại
-            </Button>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <div className="finding-card__error" role="alert">
-          {error}
-          <Button type="button" variant="ghost" size="xs" onClick={() => setError(null)}>Đóng</Button>
-        </div>
-      )}
-
-      {!readOnly && (!isReviewed || editing) && (
-        editing ? (
-          <div className="finding-card__correction">
-            <Textarea
-              ref={textareaRef}
-              value={note}
-              minLength={10}
-              maxLength={4000}
-              placeholder="Nội dung đính chính cho bệnh nhân..."
-              onChange={(event) => setNote(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setEditing(false);
-                if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && note.trim().length >= 10) {
-                  void save("corrected", note.trim());
-                }
-              }}
-            />
-            <div className="finding-card__correction-actions">
-              <span className={note.trim().length >= 10 ? "is-ready" : ""}>
-                {note.trim().length} / tối thiểu 10
-              </span>
-              <Button
-                type="button"
-                disabled={saving !== null || note.trim().length < 10}
-                onClick={() => void save("corrected", note.trim())}
-              >
-                {saving === "corrected" ? "Đang lưu..." : "Lưu"}
-              </Button>
-              <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => setEditing(false)}>
-                Huỷ
-              </Button>
+      ) : undefined}
+      actionFooter={(
+        <>
+          {isReviewed && !editing ? (
+            <div className={`finding-card__outcome finding-card__outcome--${finding.review_outcome}`}>
+              <div className="finding-card__outcome-content">
+                <div className="finding-card__outcome-primary">
+                  <StatusIndicator
+                    state={finding.review_outcome === "skipped" ? "skipped" : finding.review_outcome === "corrected" ? "corrected" : "processed"}
+                    label={outcomeText(finding.review_outcome)}
+                  />
+                </div>
+                <div className="finding-card__outcome-secondary">
+                  <span>{finding.reviewed_by || "Bác sĩ"}</span>
+                  {finding.reviewed_at ? <span> · {formatMoment(finding.reviewed_at)}</span> : null}
+                </div>
+              </div>
+              {!readOnly ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="finding-card__edit-btn"
+                  onClick={() => setEditing(true)}
+                >
+                  <PencilLine data-icon="inline-start" aria-hidden="true" /> Sửa lại
+                </Button>
+              ) : null}
             </div>
-          </div>
-        ) : (
-          <div className="finding-card__actions">
-            <Button
-              type="button"
-              disabled={saving !== null}
-              onClick={() => void save("agreed")}
-            >
-              <Check data-icon="inline-start" aria-hidden="true" />
-              {saving === "agreed" ? "Đang lưu..." : "Đồng ý"}
-            </Button>
-            <Button type="button" variant="outline" disabled={saving !== null} onClick={() => setEditing(true)}>
-              <PencilLine data-icon="inline-start" aria-hidden="true" /> Đính chính
-            </Button>
-            <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => void save("skipped")}>
-              <CircleMinus data-icon="inline-start" aria-hidden="true" />
-              {saving === "skipped" ? "Đang lưu..." : "Bỏ qua"}
-            </Button>
-          </div>
-        )
+          ) : null}
+
+          {error ? (
+            <div className="finding-card__error" role="alert">
+              {error}
+              <Button type="button" variant="ghost" size="xs" onClick={() => setError(null)}>Đóng</Button>
+            </div>
+          ) : null}
+
+          {!readOnly && (!isReviewed || editing) ? (
+            editing ? (
+              <div className="finding-card__correction">
+                <Textarea
+                  ref={textareaRef}
+                  value={note}
+                  minLength={10}
+                  maxLength={4000}
+                  placeholder="Nội dung đính chính cho bệnh nhân..."
+                  onChange={(event) => setNote(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setEditing(false);
+                    if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && note.trim().length >= 10) {
+                      void save("corrected", note.trim());
+                    }
+                  }}
+                />
+                <div className="finding-card__correction-actions">
+                  <span className={note.trim().length >= 10 ? "is-ready" : ""}>
+                    {note.trim().length} / tối thiểu 10
+                  </span>
+                  <Button
+                    type="button"
+                    disabled={saving !== null || note.trim().length < 10}
+                    onClick={() => void save("corrected", note.trim())}
+                  >
+                    {saving === "corrected" ? "Đang lưu..." : "Lưu"}
+                  </Button>
+                  <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => setEditing(false)}>
+                    Huỷ
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="finding-card__actions">
+                <Button type="button" disabled={saving !== null} onClick={() => void save("agreed")}>
+                  <Check data-icon="inline-start" aria-hidden="true" />
+                  {saving === "agreed" ? "Đang lưu..." : "Đồng ý"}
+                </Button>
+                <Button type="button" variant="outline" disabled={saving !== null} onClick={() => setEditing(true)}>
+                  <PencilLine data-icon="inline-start" aria-hidden="true" /> Đính chính
+                </Button>
+                <Button type="button" variant="ghost" disabled={saving !== null} onClick={() => void save("skipped")}>
+                  <CircleMinus data-icon="inline-start" aria-hidden="true" />
+                  {saving === "skipped" ? "Đang lưu..." : "Bỏ qua"}
+                </Button>
+              </div>
+            )
+          ) : null}
+        </>
       )}
-    </article>
+    />
   );
 }

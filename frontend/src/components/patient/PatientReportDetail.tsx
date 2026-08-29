@@ -7,6 +7,7 @@ import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
+import ClinicalConfirmDialog from "@/components/common/ClinicalConfirmDialog";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatDate, reportTone } from "@/lib/patientUi.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
@@ -41,6 +42,7 @@ export default function PatientReportDetail() {
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function PatientReportDetail() {
       setError(null);
       try {
         const response = await authFetch(`/api/v1/patient/me/lab-reports/${params.reportId}`);
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
           clearSession();
           router.replace("/login");
           return;
@@ -70,7 +72,6 @@ export default function PatientReportDetail() {
   }, [params.reportId, router]);
 
   async function deleteReport() {
-    if (!window.confirm("Bạn có chắc muốn xóa kết quả xét nghiệm này?")) return;
     setDeleting(true);
     setError(null);
     try {
@@ -84,7 +85,11 @@ export default function PatientReportDetail() {
   }
 
   if (loading) {
-    return <section className="patient-card p-5 sm:p-7"><div className="loading-message" role="status">Đang tải phiếu xét nghiệm...</div></section>;
+    return (
+      <section className="patient-card p-5 sm:p-7">
+        <div className="loading-message" role="status">Đang tải phiếu xét nghiệm...</div>
+      </section>
+    );
   }
 
   if (error || !report) {
@@ -113,7 +118,12 @@ export default function PatientReportDetail() {
               <ArrowLeft aria-hidden="true" />
               Quay lại lịch sử
             </Link>
-            <button type="button" onClick={deleteReport} disabled={deleting} className="patient-btn-danger">
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={deleting}
+              className="patient-btn-danger"
+            >
               <Trash2 aria-hidden="true" />
               {deleting ? "Đang xóa..." : "Xóa phiếu"}
             </button>
@@ -153,7 +163,7 @@ export default function PatientReportDetail() {
           {indicatorGroups.map((group) => (
             <div key={group.label}>
               <h4 className="indicator-group-title text-sm font-semibold text-slate-800">{group.label}</h4>
-              <div className="mt-2 grid gap-2.5 lg:grid-cols-2">
+              <div className="indicator-card-grid mt-2">
                 {group.items.map((indicator, index) => (
                   <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
                 ))}
@@ -187,6 +197,18 @@ export default function PatientReportDetail() {
           clearSession();
           router.replace("/login");
         }}
+      />
+
+      <ClinicalConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Xóa kết quả xét nghiệm"
+        description="Bạn có chắc muốn xóa kết quả xét nghiệm này khỏi lịch sử của bạn? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa kết quả"
+        cancelLabel="Quay lại"
+        tone="critical"
+        loading={deleting}
+        onConfirm={deleteReport}
       />
     </div>
   );

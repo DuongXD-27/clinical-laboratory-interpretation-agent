@@ -18,7 +18,7 @@ export default function DoctorReviewProgressBar({ reviewed, total, busy, readOnl
   const pct = total > 0 ? Math.round((reviewed / total) * 100) : 0;
 
   return (
-    <div className="review-progress-bar" aria-live="polite">
+    <div className="review-progress-bar review-progress-toolbar" aria-live="polite">
       <div className="review-progress-bar__left">
         <div className="review-progress-bar__track" aria-hidden="true">
           <span style={{ width: `${pct}%` }} />
