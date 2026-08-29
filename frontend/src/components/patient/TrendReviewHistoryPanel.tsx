@@ -20,7 +20,7 @@ function assessmentText(value: string | null | undefined) {
   if (value === "confirmed") return "Bác sĩ xác nhận xu hướng";
   if (value === "corrected") return "Bác sĩ đã đính chính";
   if (value === "needs_follow_up") return "Cần theo dõi/trao đổi thêm";
-  return "Đã được bác sĩ review";
+  return "Đã được bác sĩ đánh giá";
 }
 
 export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose }: Props) {
@@ -39,7 +39,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
         onUnauthorized();
         return;
       }
-      setError(caught instanceof Error ? caught.message : "Không tải được lịch sử review xu hướng.");
+      setError(caught instanceof Error ? caught.message : "Không tải được lịch sử đánh giá xu hướng.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h3 id="trend-review-history-title" className="text-sm font-semibold text-slate-800">
-            Lịch sử review xu hướng
+            Lịch sử đánh giá xu hướng
           </h3>
           <p className="mt-1 text-sm text-slate-600">
             Các nhận xét đã lưu cho những phiên bản biểu đồ trước đây của {trend.display_name}.
@@ -68,7 +68,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
 
       {loading && (
         <div className="mt-4 rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-600" role="status">
-          Đang tải lịch sử review...
+          Đang tải lịch sử đánh giá...
         </div>
       )}
 
@@ -81,7 +81,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
 
       {!error && !loading && items.length === 0 && (
         <div className="mt-4 rounded-xl border border-slate-200 bg-white/60 px-4 py-3 text-sm text-slate-600">
-          Chưa có lịch sử review cho chỉ số này.
+          Chưa có lịch sử đánh giá cho chỉ số này.
         </div>
       )}
 
@@ -119,7 +119,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
 
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
-                    Snapshot biểu đồ đã được review
+                    Bản chụp biểu đồ đã được đánh giá
                   </p>
                   <TrendChart
                     analyte={review.trend_snapshot.display_name}

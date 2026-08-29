@@ -1,0 +1,152 @@
+[
+  {
+    "name": "patient",
+    "path": "/patient",
+    "title": "Xin chào, benhnhan",
+    "horizontalOverflow": 0,
+    "pageHeight": 1359,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "history",
+    "path": "/patient/history",
+    "title": "Lịch sử xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 1762,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "history-detail",
+    "path": "/patient/history",
+    "title": "Lịch sử xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 3650,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "analysis",
+    "path": "/patient/analysis",
+    "title": "Nhập kết quả xét nghiệm",
+    "horizontalOverflow": 0,
+    "pageHeight": 1116,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "trends",
+    "path": "/patient/trends",
+    "title": "Xu hướng chỉ số",
+    "horizontalOverflow": 0,
+    "pageHeight": 1451,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "trends-group",
+    "path": "/patient/trends?mode=group",
+    "title": "Xu hướng chỉ số",
+    "horizontalOverflow": 0,
+    "pageHeight": 1238,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "doctor",
+    "path": "/doctor",
+    "title": "Hàng đợi đánh giá",
+    "horizontalOverflow": 0,
+    "pageHeight": 900,
+    "heroVisible": false,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1067,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "doctor-report",
+    "path": "/doctor/reports/11?tab=pending",
+    "title": "Duong",
+    "horizontalOverflow": 0,
+    "pageHeight": 1991,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "doctor-trend-reviews",
+    "path": "/doctor/trend-reviews",
+    "title": "Đánh giá biểu đồ xu hướng",
+    "horizontalOverflow": 0,
+    "pageHeight": 900,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1067,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  },
+  {
+    "name": "doctor-trend-review-detail",
+    "path": "/doctor/trend-reviews/1",
+    "title": "Duong",
+    "horizontalOverflow": 0,
+    "pageHeight": 1353,
+    "heroVisible": true,
+    "sidebarVisible": true,
+    "menuVisible": false,
+    "workspace": {
+      "contentWidth": 1052,
+      "leftGutter": 50,
+      "rightGutter": 50
+    }
+  }
+]

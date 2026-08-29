@@ -21,7 +21,7 @@ interface DoctorTopbarProps {
 }
 
 function pageTitle(pathname: string) {
-  if (pathname.startsWith("/doctor/trend-reviews")) return "Đánh giá biểu đồ xu hướng";
+  if (pathname.startsWith("/doctor/trend-reviews")) return "Đánh giá xu hướng";
   if (pathname.startsWith("/doctor/reports/")) return "Chi tiết kết quả";
   return "Hàng đợi đánh giá";
 }
@@ -30,7 +30,7 @@ export default function DoctorTopbar({ pathname, username, onLogout }: DoctorTop
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="doctor-topbar">
+    <header className="role-topbar doctor-topbar">
       <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
       <div className="relative z-10 flex items-center gap-3">
         {/* Mobile Hamburger Menu */}

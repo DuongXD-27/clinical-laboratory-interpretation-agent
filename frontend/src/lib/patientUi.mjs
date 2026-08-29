@@ -129,3 +129,35 @@ export function renderReferenceRange(indicator) {
 
   return "Chi tiết quy tắc tham chiếu không được lưu ở phiên bản này.";
 }
+
+export function formatClinicalAssessment(value) {
+  if (!value) return "Chưa rõ";
+  const normalized = String(value).trim().toUpperCase();
+  const map = {
+    NORMAL: "Bình thường",
+    HIGH: "Cao",
+    LOW: "Thấp",
+    CRITICAL: "Giá trị khẩn cấp",
+    CRITICAL_HIGH: "Nguy kịch – cao",
+    CRITICAL_LOW: "Nguy kịch – thấp",
+    ABNORMAL: "Bất thường",
+    UNKNOWN: "Chưa thể đánh giá",
+    HOLD: "Chưa thể đánh giá",
+    PENDING: "Đang chờ",
+    REVIEWED: "Đã đánh giá",
+    APPROVED: "Đã duyệt",
+    REJECTED: "Đã từ chối",
+    CANCELLED: "Đã huỷ",
+    OPTIMAL: "Tối ưu",
+    DESIRABLE: "Mong muốn",
+  };
+  return map[normalized] ?? indicatorStatusText(normalized);
+}
+
+export function formatPatientDemographics(gender, age) {
+  const g = gender === "male" ? "Nam" : gender === "female" ? "Nữ" : gender === "other" ? "Khác" : "Chưa có";
+  if (age !== null && age !== undefined && age !== "" && age !== "-" && Number.isFinite(Number(age))) {
+    return `${g} · ${age} tuổi`;
+  }
+  return g;
+}

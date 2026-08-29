@@ -7,6 +7,7 @@ import { reportTone, sortIndicatorsBySeverity } from "@/lib/patientUi.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import { FileText, RotateCcw } from "lucide-react";
 type Props = {
   result: AnalysisResult;
   criticalAcknowledged: boolean;
@@ -56,16 +57,18 @@ export default function AnalysisResultView({
         titleId="result-title"
         description={`Hệ thống đã phân tích ${result.indicators?.length ?? 0} chỉ số trong phiếu xét nghiệm.`}
         className="analysis-result-heading"
-        actions={<div className="flex flex-wrap gap-2">
+        actions={<>
           {reportId && (
             <Link href={`/patient/reports/${reportId}`} className="secondary-button">
+              <FileText aria-hidden="true" />
               Mở trang chi tiết
             </Link>
           )}
           <button type="button" onClick={onNewAnalysis} className="primary-button">
+            <RotateCcw aria-hidden="true" />
             Phân tích phiếu khác
           </button>
-        </div>}
+        </>}
       />
 
       {showCriticalBanner && (
@@ -83,7 +86,7 @@ export default function AnalysisResultView({
         </div>
       )}
 
-      <div className="patient-card p-5 sm:p-7">
+      <div className="analysis-result-summary">
         {result.summary && <div className="summary-box">{result.summary}</div>}
 
         {(result.indicators?.length ?? 0) > 0 && (
@@ -144,18 +147,19 @@ export default function AnalysisResultView({
           </div>
         )}
 
-        <div className="mt-6 grid gap-3">
-          {orderedIndicators.map((indicator, index) => (
-            <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
-          ))}
-        </div>
+      </div>
 
-        <div className="disclaimer-box mt-6" role="note" aria-label="Lưu ý y khoa">
-          <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
-          <p className="mt-1">
-            {result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}
-          </p>
-        </div>
+      <div className="indicator-card-grid analysis-indicator-grid">
+        {orderedIndicators.map((indicator, index) => (
+          <IndicatorResultCard key={`${indicator.name}-${index}`} indicator={indicator} />
+        ))}
+      </div>
+
+      <div className="disclaimer-box" role="note" aria-label="Lưu ý y khoa">
+        <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
+        <p className="mt-1">
+          {result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}
+        </p>
       </div>
 
       {!showCriticalBanner && (

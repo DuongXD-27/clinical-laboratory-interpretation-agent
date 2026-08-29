@@ -1,0 +1,513 @@
+[
+  {
+    "route": "patient",
+    "url": "http://127.0.0.1:3000/patient",
+    "items": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "sample": "Tổng quan sức khỏe",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "sample": "Xin chào, benhnhan",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "sample": "Theo dõi và xem lại kết quả xét nghiệm của bạn.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": ".history-panel-header h2, main section h2, .doctor-worklist-page h2, .doctor-side-card h2",
+        "sample": "Kết quả gần nhất",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": null,
+      "body": {
+        "selector": ".history-panel-header > p, .summary-box, .finding-card__ai > p:last-child, .doctor-worklist-row__reason, .type-page-description",
+        "sample": "Theo dõi và xem lại kết quả xét nghiệm của bạn.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "metadata": {
+        "selector": ".history-row__metadata, .text-xs, .doctor-worklist-row__metadata",
+        "sample": "Không gian bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "sample": "6 cần lưu ý",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": null,
+      "input": null,
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "sample": "Tổng quan",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbarContext": {
+        "selector": ".role-topbar .text-xs",
+        "sample": "Khu vực bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "16px",
+        "letterSpacing": "0.6px"
+      },
+      "topbarTitle": {
+        "selector": ".role-topbar .font-semibold",
+        "sample": "Tổng quan",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "route": "patient-history",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "items": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "sample": "Hồ sơ xét nghiệm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "sample": "Lịch sử xét nghiệm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "sample": "Theo dõi và tìm lại các phiếu xét nghiệm đã lưu.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": ".history-panel-header h2, main section h2, .doctor-worklist-page h2, .doctor-side-card h2",
+        "sample": "Lịch sử xét nghiệm của tôi",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".history-row__title, .clinical-indicator-card h3, .finding-card h2, .doctor-worklist-row strong, .metric-card h3",
+        "sample": "Phiếu ngày 28/08/2026",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "19px",
+        "fontWeight": "680",
+        "lineHeight": "25.65px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": ".history-panel-header > p, .summary-box, .finding-card__ai > p:last-child, .doctor-worklist-row__reason, .type-page-description",
+        "sample": "Theo dõi và tìm lại các phiếu xét nghiệm đã lưu.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "metadata": {
+        "selector": ".history-row__metadata, .text-xs, .doctor-worklist-row__metadata",
+        "sample": "Không gian bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "sample": "Bất thường",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main .primary-button, main .secondary-button",
+        "sample": "Lọc",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "14px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input, main select, main textarea",
+        "sample": "",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "sample": "Tổng quan",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbarContext": {
+        "selector": ".role-topbar .text-xs",
+        "sample": "Khu vực bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "16px",
+        "letterSpacing": "0.6px"
+      },
+      "topbarTitle": {
+        "selector": ".role-topbar .font-semibold",
+        "sample": "Lịch sử kết quả",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "route": "patient-analysis",
+    "url": "http://127.0.0.1:3000/patient/analysis",
+    "items": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "sample": "Phân tích xét nghiệm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "sample": "Nhập kết quả xét nghiệm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "sample": "Tải phiếu xét nghiệm hoặc nhập các chỉ số để hệ thống giải thích kết quả.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": null,
+      "cardTitle": null,
+      "body": {
+        "selector": ".history-panel-header > p, .summary-box, .finding-card__ai > p:last-child, .doctor-worklist-row__reason, .type-page-description",
+        "sample": "Tải phiếu xét nghiệm hoặc nhập các chỉ số để hệ thống giải thích kết quả.",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "metadata": {
+        "selector": ".history-row__metadata, .text-xs, .doctor-worklist-row__metadata",
+        "sample": "Không gian bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": null,
+      "button": {
+        "selector": "main button, main .primary-button, main .secondary-button",
+        "sample": "Nhập tay",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input, main select, main textarea",
+        "sample": "",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "sample": "Tổng quan",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbarContext": {
+        "selector": ".role-topbar .text-xs",
+        "sample": "Khu vực bệnh nhân",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "16px",
+        "letterSpacing": "0.6px"
+      },
+      "topbarTitle": {
+        "selector": ".role-topbar .font-semibold",
+        "sample": "Phân tích xét nghiệm",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "route": "doctor",
+    "url": "http://127.0.0.1:3000/doctor",
+    "items": {
+      "eyebrow": null,
+      "pageTitle": null,
+      "description": null,
+      "sectionHeading": {
+        "selector": ".history-panel-header h2, main section h2, .doctor-worklist-page h2, .doctor-side-card h2",
+        "sample": "Danh sách phiếu cần đánh giá",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": null,
+      "body": null,
+      "metadata": {
+        "selector": ".history-row__metadata, .text-xs, .doctor-worklist-row__metadata",
+        "sample": "Không gian bác sĩ",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": null,
+      "button": {
+        "selector": "main button, main .primary-button, main .secondary-button",
+        "sample": "Tất cả đang chờ",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "13px",
+        "fontWeight": "650",
+        "lineHeight": "19.5px",
+        "letterSpacing": "normal"
+      },
+      "input": null,
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "sample": "Hàng đợi đánh giá",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbarContext": {
+        "selector": ".role-topbar .text-xs",
+        "sample": "Khu vực bác sĩ",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "16px",
+        "letterSpacing": "0.6px"
+      },
+      "topbarTitle": {
+        "selector": ".role-topbar .font-semibold",
+        "sample": "Hàng đợi đánh giá",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "route": "doctor-report",
+    "url": "http://127.0.0.1:3000/doctor/reports/11?tab=pending",
+    "items": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "sample": "Kiểm chứng báo cáo · Phiếu #11",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "sample": "Duong",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "sample": "Nam · 35 tuổi · Xét nghiệm 05/08/2026 · OCR",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": ".history-panel-header h2, main section h2, .doctor-worklist-page h2, .doctor-side-card h2",
+        "sample": "Fasting plasma glucose",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".history-row__title, .clinical-indicator-card h3, .finding-card h2, .doctor-worklist-row strong, .metric-card h3",
+        "sample": "Fasting plasma glucose",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": ".history-panel-header > p, .summary-box, .finding-card__ai > p:last-child, .doctor-worklist-row__reason, .type-page-description",
+        "sample": "Nam · 35 tuổi · Xét nghiệm 05/08/2026 · OCR",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "metadata": {
+        "selector": ".history-row__metadata, .text-xs, .doctor-worklist-row__metadata",
+        "sample": "Không gian bác sĩ",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "sample": "Giá trị khẩn cấp",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main .primary-button, main .secondary-button",
+        "sample": "Hoàn tất kiểm chứngHoàn tất",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "lineHeight": "18px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input, main select, main textarea",
+        "sample": "",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "lineHeight": "19.5px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "sample": "Hàng đợi đánh giá",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbarContext": {
+        "selector": ".role-topbar .text-xs",
+        "sample": "Khu vực bác sĩ",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "lineHeight": "16px",
+        "letterSpacing": "0.6px"
+      },
+      "topbarTitle": {
+        "selector": ".role-topbar .font-semibold",
+        "sample": "Chi tiết kết quả",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      }
+    }
+  }
+]

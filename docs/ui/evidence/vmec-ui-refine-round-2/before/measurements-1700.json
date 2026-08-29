@@ -1,0 +1,894 @@
+[
+  {
+    "name": "patient",
+    "url": "http://127.0.0.1:3000/patient",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 1088
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 1000,
+      "right": 256,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 256,
+      "y": 0,
+      "width": 1429,
+      "height": 1087.9,
+      "right": 1685,
+      "bottom": 1087.9
+    },
+    "main": {
+      "x": 256,
+      "y": 64,
+      "width": 1429,
+      "height": 1023.9,
+      "right": 1685,
+      "bottom": 1087.9
+    },
+    "rail": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1152,
+      "height": 887.9,
+      "right": 1447.9,
+      "bottom": 983.9
+    },
+    "workspace": {
+      "width": 1429,
+      "contentWidth": 1152,
+      "leftGutter": 39.9,
+      "rightGutter": 237.1
+    },
+    "hero": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1152,
+      "height": 107.9,
+      "right": 1447.9,
+      "bottom": 203.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": null,
+    "indicatorCards": [],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "history",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 1681
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 1000,
+      "right": 256,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 256,
+      "y": 0,
+      "width": 1429,
+      "height": 1680.9,
+      "right": 1685,
+      "bottom": 1680.9
+    },
+    "main": {
+      "x": 256,
+      "y": 64,
+      "width": 1429,
+      "height": 1616.9,
+      "right": 1685,
+      "bottom": 1680.9
+    },
+    "rail": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1221.1,
+      "height": 1480.9,
+      "right": 1517,
+      "bottom": 1576.9
+    },
+    "workspace": {
+      "width": 1429,
+      "contentWidth": 1221.1,
+      "leftGutter": 39.9,
+      "rightGutter": 168
+    },
+    "hero": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1221.1,
+      "height": 107.9,
+      "right": 1517,
+      "bottom": 203.9
+    },
+    "filter": {
+      "x": 295.9,
+      "y": 307.9,
+      "width": 1221.1,
+      "height": 94,
+      "right": 1517,
+      "bottom": 401.9
+    },
+    "firstHistoryRow": {
+      "x": 295.9,
+      "y": 465.9,
+      "width": 1221.1,
+      "height": 90,
+      "right": 1517,
+      "bottom": 555.9
+    },
+    "historyZones": [],
+    "indicatorGrid": null,
+    "indicatorCards": [],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "14px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "history-detail",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 2428
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 1000,
+      "right": 256,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 256,
+      "y": 0,
+      "width": 1429,
+      "height": 2428.2,
+      "right": 1685,
+      "bottom": 2428.2
+    },
+    "main": {
+      "x": 256,
+      "y": 64,
+      "width": 1429,
+      "height": 2364.2,
+      "right": 1685,
+      "bottom": 2428.2
+    },
+    "rail": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1221.1,
+      "height": 2228.2,
+      "right": 1517,
+      "bottom": 2324.2
+    },
+    "workspace": {
+      "width": 1429,
+      "contentWidth": 1221.1,
+      "leftGutter": 39.9,
+      "rightGutter": 168
+    },
+    "hero": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1221.1,
+      "height": 107.9,
+      "right": 1517,
+      "bottom": 203.9
+    },
+    "filter": {
+      "x": 295.9,
+      "y": 307.9,
+      "width": 1221.1,
+      "height": 94,
+      "right": 1517,
+      "bottom": 401.9
+    },
+    "firstHistoryRow": {
+      "x": 295.9,
+      "y": 465.9,
+      "width": 1221.1,
+      "height": 90,
+      "right": 1517,
+      "bottom": 555.9
+    },
+    "historyZones": [],
+    "indicatorGrid": {
+      "x": 295.9,
+      "y": 660.6,
+      "width": 1221.1,
+      "height": 444.6,
+      "right": 1517,
+      "bottom": 1105.2
+    },
+    "indicatorCards": [
+      {
+        "height": 445,
+        "scrollHeight": 443
+      },
+      {
+        "height": 445,
+        "scrollHeight": 443
+      }
+    ],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "14px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "analysisReady": true,
+    "name": "analysis",
+    "url": "http://127.0.0.1:3000/patient/analysis",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 2430
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 1000,
+      "right": 256,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 256,
+      "y": 0,
+      "width": 1429,
+      "height": 2429.6,
+      "right": 1685,
+      "bottom": 2429.6
+    },
+    "main": {
+      "x": 256,
+      "y": 64,
+      "width": 1429,
+      "height": 2365.6,
+      "right": 1685,
+      "bottom": 2429.6
+    },
+    "rail": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1221.1,
+      "height": 2229.6,
+      "right": 1517,
+      "bottom": 2325.6
+    },
+    "workspace": {
+      "width": 1429,
+      "contentWidth": 1221.1,
+      "leftGutter": 39.9,
+      "rightGutter": 168
+    },
+    "hero": {
+      "x": 295.9,
+      "y": 118,
+      "width": 1221.1,
+      "height": 107.9,
+      "right": 1517,
+      "bottom": 225.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": {
+      "x": 324.9,
+      "y": 319.3,
+      "width": 1163.1,
+      "height": 1310.9,
+      "right": 1488,
+      "bottom": 1630.3
+    },
+    "indicatorCards": [
+      {
+        "height": 474,
+        "scrollHeight": 472
+      },
+      {
+        "height": 474,
+        "scrollHeight": 472
+      },
+      {
+        "height": 388,
+        "scrollHeight": 386
+      },
+      {
+        "height": 388,
+        "scrollHeight": 386
+      },
+      {
+        "height": 409,
+        "scrollHeight": 407
+      },
+      {
+        "height": 409,
+        "scrollHeight": 407
+      }
+    ],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "22px",
+        "fontWeight": "720",
+        "lineHeight": "33px",
+        "letterSpacing": "-0.55px"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "lineHeight": "25.5px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "13px",
+        "fontWeight": "650",
+        "lineHeight": "19.5px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "doctor-report",
+    "url": "http://127.0.0.1:3000/doctor/reports/11?tab=pending",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 2058
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 1000,
+      "right": 256,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 256,
+      "y": 0,
+      "width": 1429,
+      "height": 2058.4,
+      "right": 1685,
+      "bottom": 2058.4
+    },
+    "main": {
+      "x": 256,
+      "y": 64,
+      "width": 1429,
+      "height": 1994.4,
+      "right": 1685,
+      "bottom": 2058.4
+    },
+    "rail": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1280,
+      "height": 1898.4,
+      "right": 1575.9,
+      "bottom": 1994.4
+    },
+    "workspace": {
+      "width": 1429,
+      "contentWidth": 1280,
+      "leftGutter": 39.9,
+      "rightGutter": 109.1
+    },
+    "hero": {
+      "x": 295.9,
+      "y": 96,
+      "width": 1280,
+      "height": 165.9,
+      "right": 1575.9,
+      "bottom": 261.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": null,
+    "indicatorCards": [
+      {
+        "height": 386,
+        "scrollHeight": 384
+      },
+      {
+        "height": 386,
+        "scrollHeight": 384
+      },
+      {
+        "height": 336,
+        "scrollHeight": 334
+      },
+      {
+        "height": 361,
+        "scrollHeight": 359
+      }
+    ],
+    "doctorGap": 96,
+    "doctorNav": [
+      {
+        "text": "Hàng đợi đánh giá",
+        "width": 223,
+        "height": 36,
+        "lineHeight": "20px",
+        "whiteSpace": "normal"
+      },
+      {
+        "text": "Đánh giá biểu đồ xu hướng",
+        "width": 223,
+        "height": 56,
+        "lineHeight": "20px",
+        "whiteSpace": "normal"
+      }
+    ],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "lineHeight": "18px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  }
+]

@@ -21,16 +21,16 @@ function assessmentText(value: string | null | undefined) {
   if (value === "confirmed") return "Bác sĩ xác nhận xu hướng";
   if (value === "corrected") return "Bác sĩ đã đính chính";
   if (value === "needs_follow_up") return "Cần theo dõi/trao đổi thêm";
-  return "Đã được bác sĩ review";
+  return "Đã được bác sĩ đánh giá";
 }
 
 function requestReason(state: TrendReviewPatientState | null, hasExplanation: boolean) {
-  if (!hasExplanation) return "Cần tạo giải thích xu hướng trước khi gửi bác sĩ review.";
+  if (!hasExplanation) return "Cần tạo giải thích xu hướng trước khi gửi bác sĩ đánh giá.";
   if (!state) return "";
-  if (state.reason === "PENDING_EXISTS") return "Yêu cầu review đang chờ bác sĩ xử lý.";
-  if (state.reason === "LATEST_REVIEW_STILL_CURRENT") return "Review mới nhất vẫn khớp dữ liệu xu hướng hiện tại.";
-  if (state.reason === "CURRENT_TREND_CHANGED") return "Biểu đồ hiện tại đã thay đổi từ lần bác sĩ review gần nhất.";
-  if (state.reason === "TREND_UNAVAILABLE") return "Xu hướng này chưa đủ dữ liệu để gửi review.";
+  if (state.reason === "PENDING_EXISTS") return "Yêu cầu đánh giá đang chờ bác sĩ xử lý.";
+  if (state.reason === "LATEST_REVIEW_STILL_CURRENT") return "Đánh giá mới nhất vẫn khớp dữ liệu xu hướng hiện tại.";
+  if (state.reason === "CURRENT_TREND_CHANGED") return "Biểu đồ hiện tại đã thay đổi từ lần bác sĩ đánh giá gần nhất.";
+  if (state.reason === "TREND_UNAVAILABLE") return "Xu hướng này chưa đủ dữ liệu để gửi đánh giá.";
   return "";
 }
 
@@ -51,7 +51,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
         onUnauthorized();
         return;
       }
-      setError(caught instanceof Error ? caught.message : "Không tải được trạng thái review.");
+      setError(caught instanceof Error ? caught.message : "Không tải được trạng thái đánh giá.");
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
         onUnauthorized();
         return;
       }
-      setError(caught instanceof Error ? caught.message : "Không gửi được yêu cầu review.");
+      setError(caught instanceof Error ? caught.message : "Không gửi được yêu cầu đánh giá.");
     } finally {
       setSending(false);
     }
@@ -105,11 +105,11 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h3 id="trend-doctor-review-title" className="text-sm font-semibold text-slate-800">
-            Đề nghị review của bác sĩ
+            Đề nghị bác sĩ đánh giá
           </h3>
           <p className="mt-1 text-sm text-slate-600">
             {loading
-              ? "Đang tải trạng thái review..."
+              ? "Đang tải trạng thái đánh giá..."
               : pending
                 ? "Yêu cầu đã được gửi tới bác sĩ."
                 : latest
@@ -126,7 +126,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
               className="patient-btn-secondary shrink-0"
               onClick={() => setShowHistory((value) => !value)}
             >
-              {showHistory ? "Ẩn lịch sử review" : "Xem lịch sử review"}
+              {showHistory ? "Ẩn lịch sử đánh giá" : "Xem lịch sử đánh giá"}
             </button>
           )}
           {!pending && (
@@ -139,7 +139,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
               {sending
                 ? "Đang gửi..."
                 : hasHistory
-                  ? "Gửi yêu cầu review lại"
+                  ? "Gửi yêu cầu đánh giá lại"
                   : "Gửi yêu cầu tới bác sĩ"}
             </button>
           )}
@@ -148,7 +148,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
 
       {pending && (
         <div className="status-review-note mt-4">
-          <StatusIndicator state="pending" label="Đang chờ bác sĩ review" />
+          <StatusIndicator state="pending" label="Đang chờ bác sĩ đánh giá" />
           <span>Gửi lúc {formatMoment(pending.requested_at)}.</span>
         </div>
       )}

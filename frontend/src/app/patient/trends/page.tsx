@@ -26,6 +26,7 @@ import type {
 } from "@/types/analysis";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import SegmentedControl from "@/components/common/SegmentedControl";
 
 const TREND_DISCLAIMER =
   "Biểu đồ và phần giải thích xu hướng chỉ hỗ trợ theo dõi dữ liệu xét nghiệm theo thời gian, không phải chẩn đoán và không thay thế đánh giá của bác sĩ.";
@@ -33,17 +34,6 @@ const TREND_DISCLAIMER =
 const FILTERS: { value: TrendFilter; label: string }[] = [
   { value: "latest5", label: "5 kết quả gần nhất" },
   { value: "three_months", label: "3 tháng gần nhất" },
-];
-
-const CHART_COLORS = [
-  "#1769e0",
-  "#dc2626",
-  "#16a34a",
-  "#ea580c",
-  "#9333ea",
-  "#0891b2",
-  "#db2777",
-  "#65a30d",
 ];
 
 export default function PatientTrendsPage() {
@@ -187,18 +177,6 @@ export default function PatientTrendsPage() {
   );
   const trendEscalated = Boolean(trend?.critical_status || trend?.approaching_critical);
 
-  // Group trends by canonical_unit for hybrid rendering (same unit → 1 chart)
-  const unitGroups = useMemo(() => {
-    if (!groupTrends) return [];
-    const map = new Map<string, TrendResponse[]>();
-    for (const trend of groupTrends) {
-      const key = trend.canonical_unit;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(trend);
-    }
-    return Array.from(map.entries()).map(([unit, trends]) => ({ unit, trends }));
-  }, [groupTrends]);
-
   useEffect(() => {
     if (groupSections.length === 0) return;
     if (!groupSections.some((group) => group.key === selectedSection)) {
@@ -341,7 +319,7 @@ export default function PatientTrendsPage() {
   if (checkingAuth) return null;
 
   return (
-    <div className="patient-page-layout">
+    <div className="patient-page-layout patient-trends-page">
       <PatientPageHeader
         eyebrow="Theo dõi dài hạn"
         title="Xu hướng chỉ số"
@@ -362,80 +340,88 @@ export default function PatientTrendsPage() {
             </div>
           ) : (
             <>
-              <div className="patient-glass-focal p-1.5 inline-grid grid-cols-2 w-full max-w-sm mb-6" role="tablist" aria-label="Chế độ xem xu hướng">
-                <button
-                  type="button"
-                  role="tab"
-                  id="single-tab"
-                  aria-selected={viewMode === "single"}
-                  aria-controls="single-panel"
-                  tabIndex={viewMode === "single" ? 0 : -1}
-                  onClick={() => handleModeChange("single")}
-                  className={`flex items-center justify-center min-h-[38px] rounded-xl text-sm font-semibold transition-all duration-150 ${viewMode === "single" ? "bg-white text-[var(--brand-strong)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                >
-                  Từng chỉ số
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  id="group-tab"
-                  aria-selected={viewMode === "group"}
-                  aria-controls="group-panel"
-                  tabIndex={viewMode === "group" ? 0 : -1}
-                  onClick={() => handleModeChange("group")}
-                  className={`flex items-center justify-center min-h-[38px] rounded-xl text-sm font-semibold transition-all duration-150 ${viewMode === "group" ? "bg-white text-[var(--brand-strong)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                >
-                  Cả nhóm chức năng
-                </button>
-              </div>
+              <section className="trend-control-surface" aria-label="Điều khiển biểu đồ xu hướng">
+                <div className={`trend-control-grid ${viewMode === "single" ? "trend-control-grid--single" : "trend-control-grid--group-primary"}`}>
+                  <div className="trend-control-field-shell" data-trend-field="mode">
+                    <p className="trend-control-label">Chế độ xem</p>
+                    <SegmentedControl
+                      value={viewMode}
+                      options={[
+                        { value: "single", label: "Từng chỉ số", id: "single-tab", controls: "single-panel" },
+                        { value: "group", label: "Cả nhóm chức năng", id: "group-tab", controls: "group-panel" },
+                      ]}
+                      onValueChange={handleModeChange}
+                      ariaLabel="Chế độ xem xu hướng"
+                      semantics="tabs"
+                    />
+                  </div>
+                  <div className="trend-control-field-shell" data-trend-field="range">
+                    <p className="trend-control-label">Phạm vi dữ liệu</p>
+                    <SegmentedControl
+                      value={filter}
+                      options={FILTERS}
+                      onValueChange={setFilter}
+                      ariaLabel="Phạm vi dữ liệu xu hướng"
+                    />
+                  </div>
 
-              <div className="field-label mb-2">
-                Phạm vi dữ liệu
-                <div className="trend-filter-tabs mt-2" aria-label="Phạm vi dữ liệu xu hướng">
-                  {FILTERS.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      aria-pressed={filter === item.value}
-                      className={filter === item.value ? "active" : ""}
-                      onClick={() => setFilter(item.value)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+                  {viewMode === "single" ? (
+                    <label className="trend-control-field-shell" data-trend-field="analyte" htmlFor="trend-analyte">
+                      <span className="trend-control-label">Chỉ số</span>
+                      <select id="trend-analyte" className="patient-control-clinical trend-control-select" value={selectedAnalyte} onChange={(event) => handleAnalyteChange(event.target.value)} disabled={eligibleCount === 0}>
+                        {analyteGroups.map((group) => (
+                          <optgroup key={group.label} label={group.label}>
+                            {group.items.map((item) => (
+                              <option key={item.analyte_canonical} value={item.analyte_canonical} disabled={!item.trend_available}>
+                                {item.display_name}{item.trend_available ? "" : " (chưa đủ)"}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </label>
+                  ) : groupSections.length > 0 ? (
+                    <label className="trend-control-field-shell" data-trend-field="section" htmlFor="trend-section">
+                      <span className="trend-control-label">Nhóm chức năng</span>
+                      <select id="trend-section" className="patient-control-clinical trend-control-select" value={selectedSection} onChange={(event) => { setSelectedSection(event.target.value); setGroupExplanation(null); setGroupExplanationError(null); }}>
+                          {groupSections.map((group) => <option key={group.key} value={group.key}>{group.label} ({group.eligible} chỉ số đủ điểm)</option>)}
+                      </select>
+                    </label>
+                  ) : null}
                 </div>
-              </div>
+
+                {viewMode === "group" && groupSections.length > 0 ? (
+                  <div className="trend-control-grid trend-control-grid--group-secondary">
+                    <div className="trend-control-field-shell trend-control-participants" data-trend-field="participants">
+                      <p className="trend-control-label">Chỉ số tham gia</p>
+                      <div className="trend-participant-chips" aria-label="Chỉ số tham gia trong nhóm">
+                        {groupAnalyteItems.map((item) => <span key={item.analyte_canonical}>{item.display_name} · {item.canonical_unit}</span>)}
+                      </div>
+                    </div>
+                    <div className="trend-control-field-shell" data-trend-field="display">
+                      <p className="trend-control-label">Kiểu hiển thị</p>
+                      <div className="trend-display-actions">
+                        <SegmentedControl
+                          value={groupViewMode}
+                          options={[
+                            { value: "chart", label: "Biểu đồ đường" },
+                            { value: "heatmap", label: "Ma trận nhiệt" },
+                          ]}
+                          onValueChange={setGroupViewMode}
+                          ariaLabel="Kiểu hiển thị nhóm chức năng"
+                        />
+                        <button type="button" className="patient-btn-secondary" onClick={() => void loadGroupExplanation()} disabled={groupExplanationLoading || !selectedSection || Boolean(groupExplanation)}>
+                          {groupExplanationLoading ? "Đang tạo..." : "Giải thích cả nhóm"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
 
               <div id="single-panel" role="tabpanel" aria-labelledby="single-tab" className="min-w-0" hidden={viewMode !== "single"}>
                 {viewMode === "single" && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mt-2">
-                      <label className="field-label" htmlFor="trend-analyte">
-                        Chỉ số
-                        <select
-                          id="trend-analyte"
-                          className="patient-control-clinical w-full min-h-[46px] px-3 py-2 mt-2"
-                          value={selectedAnalyte}
-                          onChange={(event) => handleAnalyteChange(event.target.value)}
-                          disabled={eligibleCount === 0}
-                        >
-                          {analyteGroups.map((group) => (
-                            <optgroup key={group.label} label={group.label}>
-                              {group.items.map((item) => (
-                                <option
-                                  key={item.analyte_canonical}
-                                  value={item.analyte_canonical}
-                                  disabled={!item.trend_available}
-                                >
-                                  {item.display_name}{item.trend_available ? "" : " (chưa đủ)"}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
                     {eligibleCount === 0 ? (
                       <div className="patient-glass-clinical p-6 mt-6">
                         <p className="font-medium text-slate-700">Xu hướng chỉ được hiển thị đối với các chỉ số có từ 3 kết quả trở lên.</p>
@@ -458,7 +444,7 @@ export default function PatientTrendsPage() {
                         )}
                       </div>
                     ) : trend ? (
-                      <div className="mt-8 space-y-6">
+                      <div className="trend-result-stack">
                         {trendEscalated && (
                           <div className="mb-6 rounded-xl border border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] p-4 text-[var(--status-critical-fg)]" role="alert">
                             <strong className="block mb-1">Cần chú ý ngay</strong>
@@ -466,15 +452,15 @@ export default function PatientTrendsPage() {
                           </div>
                         )}
                         
-                        <div className="mb-2">
-                          <h3 className="text-xl font-bold text-slate-900">{trend.display_name}</h3>
-                          <p className="text-sm text-slate-500 mt-1">
+                        <div className="trend-result-heading">
+                          <h3>{trend.display_name}</h3>
+                          <p>
                             {trend.section_label ? `${trend.section_label} · ` : ""}
                             Đơn vị: {trend.canonical_unit} · {dedupeTrendPoints(trend.points).length} lần đo
                           </p>
                         </div>
 
-                        <div className="patient-glass-clinical p-4 sm:p-6">
+                        <div className="patient-glass-clinical trend-chart-card p-4 sm:p-6">
                           <TrendChart
                             analyte={trend.display_name}
                             unit={trend.canonical_unit}
@@ -549,72 +535,7 @@ export default function PatientTrendsPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end mt-2">
-                        <label className="field-label" htmlFor="trend-section">
-                          Nhóm chức năng
-                          <select
-                            id="trend-section"
-                            className="patient-control-clinical w-full min-h-[46px] px-3 py-2 mt-2"
-                            value={selectedSection}
-                            onChange={(event) => {
-                              setSelectedSection(event.target.value);
-                              setGroupExplanation(null);
-                              setGroupExplanationError(null);
-                            }}
-                          >
-                            {groupSections.map((group) => (
-                              <option key={group.key} value={group.key}>
-                                {group.label} ({group.eligible} chỉ số đủ điểm)
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-
-                      <div className="mt-8">
-                        <h3 className="text-sm font-semibold text-slate-800 mb-3">Chỉ số tham gia</h3>
-                        <div className="flex flex-wrap gap-2" aria-label="Chỉ số tham gia trong nhóm">
-                          {groupAnalyteItems.map((item) => (
-                            <span key={item.analyte_canonical} className="inline-flex items-center rounded-md bg-[rgba(255,255,255,0.7)] backdrop-blur-md px-2.5 py-1 text-sm font-medium text-slate-700 border border-[rgba(203,213,225,0.5)]">
-                              {item.display_name} · {item.canonical_unit}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs" role="tablist" aria-label="Kiểu hiển thị nhóm chức năng">
-                          <button
-                            type="button"
-                            role="tab"
-                            aria-selected={groupViewMode === "chart"}
-                            onClick={() => setGroupViewMode("chart")}
-                            className={`rounded-md px-3 py-1.5 font-medium transition-colors ${groupViewMode === "chart" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
-                          >
-                            Biểu đồ đường
-                          </button>
-                          <button
-                            type="button"
-                            role="tab"
-                            aria-selected={groupViewMode === "heatmap"}
-                            onClick={() => setGroupViewMode("heatmap")}
-                            className={`rounded-md px-3 py-1.5 font-medium transition-colors ${groupViewMode === "heatmap" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
-                          >
-                            Ma trận nhiệt
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="patient-btn-secondary"
-                          onClick={() => void loadGroupExplanation()}
-                          disabled={groupExplanationLoading || !selectedSection || Boolean(groupExplanation)}
-                        >
-                          {groupExplanationLoading ? "Đang tạo..." : "Giải thích cả nhóm"}
-                        </button>
-                      </div>
-
-                      <div className="mt-4 flex flex-col gap-4 w-full">
+                      <div className="trend-group-results">
 {/* Small Multiples Grid (Hybrid: same-unit analytes → 1 multi-line chart) */}
                         {groupViewMode === "heatmap" ? (
                           sectionHeatmapLoading ? (
@@ -638,106 +559,32 @@ export default function PatientTrendsPage() {
                           <div role="alert" className="patient-glass-clinical p-6 mt-6 text-[var(--status-critical-fg)]">
                             {groupTrendsError}
                           </div>
-                        ) : unitGroups.length > 0 ? (
-                          <>
-                            {/* Mobile Accordion — triggered when >5 unit-groups */}
-                            <div className="lg:hidden space-y-3">
-                              {unitGroups.map(({ unit, trends }, idx) => (
-                                <details key={unit} className="patient-glass-clinical p-4" open={idx < 2}>
-                                  <summary className="flex items-center justify-between cursor-pointer list-none select-none">
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-medium text-slate-900 truncate">{unit}</h4>
-                                      <p className="text-xs text-slate-500 truncate">
-                                        {trends.map((t) => t.display_name).join(", ")} · {trends.length} chỉ số
-                                      </p>
-                                    </div>
-                                    {trends.some((t) => t.critical_status || t.approaching_critical) && (
-                                      <span className="text-xs ml-2 text-[var(--status-critical-fg)]">Nguy kịch</span>
-                                    )}
-                                  </summary>
-                                  <div className="mt-3">
-                                    {trends.length === 1 ? (
-                                      <TrendChart
-                                        analyte={trends[0].display_name}
-                                        unit={unit}
-                                        points={trends[0].points}
-                                        height={320}
-                                        referenceLow={trends[0].reference_low}
-                                        referenceHigh={trends[0].reference_high}
-                                        criticalLow={trends[0].critical_low}
-                                        criticalHigh={trends[0].critical_high}
-                                      />
-                                    ) : (
-                                      <TrendChart
-                                        analytes={trends.map((t, i) => ({
-                                          analyte: t.display_name,
-                                          display_name: t.display_name,
-                                          unit,
-                                          points: t.points,
-                                          color: CHART_COLORS[i % CHART_COLORS.length],
-                                        }))}
-                                        height={320}
-                                      />
-                                    )}
+                        ) : groupTrends && groupTrends.length > 0 ? (
+                          <div className="trend-small-multiples">
+                            {groupTrends.map((item) => (
+                              <article key={item.analyte_canonical} className="patient-glass-clinical p-4 trend-chart-card">
+                                <div className="trend-mini-header mb-2">
+                                  <h4>{item.display_name}</h4>
+                                  <p>{item.canonical_unit}</p>
+                                </div>
+                                {(item.critical_status || item.approaching_critical) ? (
+                                  <div className="mb-2">
+                                    <StatusIndicator state={item.critical_status ? "critical" : "abnormal"} label={item.critical_status ? "Đã vượt ngưỡng nguy kịch" : "Đang tiến gần ngưỡng"} />
                                   </div>
-                                </details>
-                              ))}
-                            </div>
-
-                            {/* Desktop/Tablet Grid — same-unit analytes → 1 multi-line chart */}
-                            <div
-                              className="hidden lg:grid gap-4"
-                              style={{
-                                gridTemplateColumns: `repeat(${Math.min(unitGroups.length, 3)}, minmax(0, 1fr))`,
-                              }}
-                            >
-                              {unitGroups.map(({ unit, trends }) => {
-                                const anyCritical = trends.some((t) => t.critical_status);
-                                const anyApproaching = trends.some((t) => t.approaching_critical);
-                                return (
-                                  <div key={unit} className="patient-glass-clinical p-4">
-                                    <div className="trend-mini-header mb-2">
-                                      <h4 className="font-medium text-slate-900">{unit}</h4>
-                                      <p className="text-xs text-slate-500">
-                                        {trends.map((t) => t.display_name).join(", ")} · {trends.length} chỉ số
-                                      </p>
-                                    </div>
-                                    {(anyCritical || anyApproaching) && (
-                                      <div className="mb-2">
-                                        <StatusIndicator
-                                          state={anyCritical ? "critical" : "abnormal"}
-                                          label={anyCritical ? "Đã vượt ngưỡng nguy kịch" : "Đang tiến gần ngưỡng"}
-                                        />
-                                      </div>
-                                    )}
-                                    {trends.length === 1 ? (
-                                      <TrendChart
-                                        analyte={trends[0].display_name}
-                                        unit={unit}
-                                        points={trends[0].points}
-                                        height={320}
-                                        referenceLow={trends[0].reference_low}
-                                        referenceHigh={trends[0].reference_high}
-                                        criticalLow={trends[0].critical_low}
-                                        criticalHigh={trends[0].critical_high}
-                                      />
-                                    ) : (
-                                      <TrendChart
-                                        analytes={trends.map((t, i) => ({
-                                          analyte: t.display_name,
-                                          display_name: t.display_name,
-                                          unit,
-                                          points: t.points,
-                                          color: CHART_COLORS[i % CHART_COLORS.length],
-                                        }))}
-                                        height={320}
-                                      />
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </>
+                                ) : null}
+                                <TrendChart
+                                  analyte={item.display_name}
+                                  unit={item.canonical_unit}
+                                  points={item.points}
+                                  height={280}
+                                  referenceLow={item.reference_low}
+                                  referenceHigh={item.reference_high}
+                                  criticalLow={item.critical_low}
+                                  criticalHigh={item.critical_high}
+                                />
+                              </article>
+                            ))}
+                          </div>
                         ) : (
                           <div className="patient-glass-clinical p-6 mt-6 text-center text-slate-600">
                             Chưa có chỉ số nào đủ dữ liệu (≥3 lần) trong nhóm này để hiển thị biểu đồ.

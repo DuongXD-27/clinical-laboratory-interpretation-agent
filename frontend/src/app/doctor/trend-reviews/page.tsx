@@ -21,13 +21,13 @@ import { ArrowRight, CheckCircle2, Clock3, ListFilter } from "lucide-react";
 
 const FILTERS: { key: TrendReviewStatus | "all"; label: string }[] = [
   { key: "PENDING", label: "Đang chờ" },
-  { key: "REVIEWED", label: "Đã review" },
+  { key: "REVIEWED", label: "Đã đánh giá" },
   { key: "all", label: "Tất cả" },
 ];
 
 function statusText(value: TrendReviewStatus) {
   if (value === "PENDING") return "Đang chờ";
-  if (value === "REVIEWED") return "Đã review";
+  if (value === "REVIEWED") return "Đã đánh giá";
   if (value === "CANCELLED") return "Đã huỷ";
   return "Từ chối";
 }
@@ -72,7 +72,7 @@ export default function DoctorTrendReviewsPage() {
       }
       setItems([]);
       setTotal(0);
-      setError(caught instanceof Error ? caught.message : "Không tải được yêu cầu review xu hướng.");
+      setError(caught instanceof Error ? caught.message : "Không tải được yêu cầu đánh giá xu hướng.");
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function DoctorTrendReviewsPage() {
     <div className="doctor-page doctor-trend-page">
       <DoctorPageHeader
         eyebrow="Không gian bác sĩ"
-        title="Đánh giá biểu đồ xu hướng"
+        title="Đánh giá xu hướng"
         description="Kiểm chứng các nhận xét xu hướng do AI tạo trước khi phản hồi cho bệnh nhân."
       />
 
@@ -97,13 +97,13 @@ export default function DoctorTrendReviewsPage() {
         <div className="doctor-filter-heading"><ListFilter aria-hidden="true" /> Trạng thái yêu cầu</div>
 
         <Tabs value={status} onValueChange={(value) => setStatus(value as TrendReviewStatus | "all")} className="doctor-queue-tabs doctor-trend-tabs">
-          <TabsList aria-label="Lọc yêu cầu review xu hướng">
+          <TabsList aria-label="Lọc yêu cầu đánh giá xu hướng">
             {FILTERS.map((item) => <TabsTrigger key={item.key} value={item.key}>{item.label}</TabsTrigger>)}
           </TabsList>
         </Tabs>
 
         {loading && (
-          <div className="doctor-skeleton-stack" role="status" aria-label="Đang tải yêu cầu review xu hướng">
+          <div className="doctor-skeleton-stack" role="status" aria-label="Đang tải yêu cầu đánh giá xu hướng">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="doctor-queue-skeleton" />
             ))}
@@ -120,7 +120,7 @@ export default function DoctorTrendReviewsPage() {
         {!error && !loading && items.length === 0 && (
           <div className="doctor-state-card">
             <span className="doctor-state-card__icon" aria-hidden="true"><CheckCircle2 /></span>
-            <h2>Không có yêu cầu review xu hướng.</h2>
+            <h2>Không có yêu cầu đánh giá xu hướng.</h2>
             <p>
               {status === "PENDING" ? "Hiện chưa có yêu cầu nào đang chờ xử lý." : "Bộ lọc hiện tại đang rỗng."}
             </p>
@@ -128,7 +128,7 @@ export default function DoctorTrendReviewsPage() {
         )}
 
         {!error && !loading && items.length > 0 && (
-          <ul className="doctor-queue-cards" aria-label={`Danh sách ${total} yêu cầu review xu hướng`}>
+          <ul className="doctor-queue-cards" aria-label={`Danh sách ${total} yêu cầu đánh giá xu hướng`}>
             {items.map((item) => (
               <li key={item.id}>
                 <Link
@@ -148,7 +148,7 @@ export default function DoctorTrendReviewsPage() {
                   <div className="doctor-trend-card__status">
                     <StatusIndicator state={statusState(item.status)} label={statusText(item.status)} />
                     <span className="doctor-queue-card__action">
-                      Mở review <ArrowRight aria-hidden="true" />
+                      Mở đánh giá <ArrowRight aria-hidden="true" />
                     </span>
                   </div>
                 </Link>

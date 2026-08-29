@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { AppShell } from "@/components/common/LayoutPrimitives";
 import { clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import DoctorSidebar from "./DoctorSidebar";
 import DoctorTopbar from "./DoctorTopbar";
@@ -28,40 +29,23 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
 
   if (!session) {
     return (
-      <main className="flex items-center justify-center min-h-dvh bg-[var(--background)]">
+      <main className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
         <div className="text-muted-foreground animate-pulse" role="status">Đang mở khu vực bác sĩ...</div>
       </main>
     );
   }
 
   return (
-    <div className="doctor-app-shell relative">
-      <div className="doctor-atmosphere fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className="doctor-atmosphere__cyan" />
-        <div className="doctor-atmosphere__blue" />
-        <div className="doctor-atmosphere__violet" />
-      </div>
-      <a href="#doctor-main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-background p-4 rounded-md shadow-md">
-        Bỏ qua điều hướng
-      </a>
-
-      <DoctorSidebar 
-        pathname={pathname}
-        username={session.username}
-        onLogout={logout}
-      />
-
-      <div className="doctor-app-frame relative z-10">
-        <DoctorTopbar 
-          pathname={pathname}
-          username={session.username}
-          onLogout={logout}
-        />
-        
-        <main id="doctor-main-content" className="doctor-main-content" tabIndex={-1}>
-          {children}
-        </main>
-      </div>
-    </div>
+    <>
+      <a href="#doctor-main-content" className="skip-link">Bỏ qua điều hướng</a>
+      <AppShell
+        role="doctor"
+        tier="wide"
+        sidebar={<DoctorSidebar pathname={pathname} username={session.username} onLogout={logout} />}
+        topbar={<DoctorTopbar pathname={pathname} username={session.username} onLogout={logout} />}
+      >
+        {children}
+      </AppShell>
+    </>
   );
 }

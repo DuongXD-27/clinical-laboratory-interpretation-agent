@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export const doctorNavigation = [
   { href: "/doctor", label: "Hàng đợi đánh giá", icon: ListTodo },
-  { href: "/doctor/trend-reviews", label: "Đánh giá biểu đồ xu hướng", icon: TrendingUp },
+  { href: "/doctor/trend-reviews", label: "Đánh giá xu hướng", icon: TrendingUp },
 ];
 
 export function isNavActive(pathname: string, item: (typeof doctorNavigation)[number]) {
@@ -24,7 +24,7 @@ interface DoctorSidebarProps {
 
 export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSidebarProps) {
   return (
-    <aside className="doctor-navigation-rail">
+    <aside className="role-sidebar doctor-navigation-rail hidden lg:flex">
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
         <div className="flex flex-col">
@@ -44,7 +44,7 @@ export default function DoctorSidebar({ pathname, username, onLogout }: DoctorSi
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "group flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
+                "group flex items-center gap-2.5 px-2.5 py-2 rounded-2xl text-sm font-medium whitespace-nowrap transition-colors relative outline-none focus-visible:ring-2 focus-visible:ring-[var(--holo-cyan)]/60",
                 active 
                   ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" 
                   : "text-[var(--foreground-secondary)] hover:bg-[var(--surface-subtle)] hover:text-foreground"

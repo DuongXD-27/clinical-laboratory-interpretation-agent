@@ -1,0 +1,1283 @@
+[
+  {
+    "name": "patient",
+    "url": "http://127.0.0.1:3000/patient",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 1362
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 272,
+      "height": 1000,
+      "right": 272,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 272,
+      "y": 0,
+      "width": 1413,
+      "height": 1361.9,
+      "right": 1685,
+      "bottom": 1361.9
+    },
+    "main": {
+      "x": 272,
+      "y": 64,
+      "width": 1413,
+      "height": 1297.9,
+      "right": 1685,
+      "bottom": 1361.9
+    },
+    "rail": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 1161.9,
+      "right": 1625.5,
+      "bottom": 1257.9
+    },
+    "workspace": {
+      "width": 1413,
+      "contentWidth": 1294,
+      "leftGutter": 59.5,
+      "rightGutter": 59.5
+    },
+    "hero": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 107.9,
+      "right": 1625.5,
+      "bottom": 203.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": null,
+    "indicatorCards": [],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "history",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 1765
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 272,
+      "height": 1000,
+      "right": 272,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 272,
+      "y": 0,
+      "width": 1413,
+      "height": 1764.9,
+      "right": 1685,
+      "bottom": 1764.9
+    },
+    "main": {
+      "x": 272,
+      "y": 64,
+      "width": 1413,
+      "height": 1700.9,
+      "right": 1685,
+      "bottom": 1764.9
+    },
+    "rail": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 1564.9,
+      "right": 1625.5,
+      "bottom": 1660.9
+    },
+    "workspace": {
+      "width": 1413,
+      "contentWidth": 1294,
+      "leftGutter": 59.5,
+      "rightGutter": 59.5
+    },
+    "hero": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 107.9,
+      "right": 1625.5,
+      "bottom": 203.9
+    },
+    "filter": {
+      "x": 331.5,
+      "y": 307.9,
+      "width": 610,
+      "height": 98,
+      "right": 941.5,
+      "bottom": 405.9
+    },
+    "firstHistoryRow": {
+      "x": 331.5,
+      "y": 469.9,
+      "width": 1294,
+      "height": 98,
+      "right": 1625.5,
+      "bottom": 567.9
+    },
+    "historyZones": [
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 44
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 47
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 47
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      }
+    ],
+    "indicatorGrid": null,
+    "indicatorCards": [],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "14px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "history-detail",
+    "url": "http://127.0.0.1:3000/patient/history",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 3654
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 272,
+      "height": 1000,
+      "right": 272,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 272,
+      "y": 0,
+      "width": 1413,
+      "height": 3654.1,
+      "right": 1685,
+      "bottom": 3654.1
+    },
+    "main": {
+      "x": 272,
+      "y": 64,
+      "width": 1413,
+      "height": 3590.1,
+      "right": 1685,
+      "bottom": 3654.1
+    },
+    "rail": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 3454.1,
+      "right": 1625.5,
+      "bottom": 3550.1
+    },
+    "workspace": {
+      "width": 1413,
+      "contentWidth": 1294,
+      "leftGutter": 59.5,
+      "rightGutter": 59.5
+    },
+    "hero": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 107.9,
+      "right": 1625.5,
+      "bottom": 203.9
+    },
+    "filter": {
+      "x": 331.5,
+      "y": 307.9,
+      "width": 610,
+      "height": 98,
+      "right": 941.5,
+      "bottom": 405.9
+    },
+    "firstHistoryRow": {
+      "x": 331.5,
+      "y": 469.9,
+      "width": 1294,
+      "height": 98,
+      "right": 1625.5,
+      "bottom": 567.9
+    },
+    "historyZones": [
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 44
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 47
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 47
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      },
+      {
+        "className": "history-row__zone history-row__identity",
+        "x": 357,
+        "width": 582,
+        "height": 52
+      },
+      {
+        "className": "history-row__zone history-row__summary",
+        "x": 954,
+        "width": 327,
+        "height": 54
+      },
+      {
+        "className": "history-row__zone history-row__workflow",
+        "x": 1298,
+        "width": 303,
+        "height": 56
+      }
+    ],
+    "indicatorGrid": {
+      "x": 331.5,
+      "y": 672.6,
+      "width": 1294,
+      "height": 1222.4,
+      "right": 1625.5,
+      "bottom": 1895.1
+    },
+    "indicatorCards": [
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      }
+    ],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "18px",
+        "fontWeight": "600",
+        "lineHeight": "28px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "lineHeight": "25.5px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "14px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "analysisReady": true,
+    "disclosureAudit": {
+      "passed": true,
+      "initial": {
+        "count": 6,
+        "nativeButton": true,
+        "firstExpanded": "false",
+        "secondExpanded": "false",
+        "cardHeight": 394.140625,
+        "text": "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt trong hệ thống miễn dịch giúp cơ thể chống lại các tác nhân gây bệnh như vi khuẩn, virus, ký sinh trùng và các yếu tố gây viêm nhiễm. Nồng độ bạch cầu trong máu phản ánh tình trạng miễn dịch và phản ứng viêm của cơ thể. Kết quả WBC là 14.2 10^9/L. Giá trị này cao so với khoảng tham chiếu được hệ thống sử dụng. Chỉ số WBC (bạch cầu) là 14.2 10^9/L, cho thấy cơ thể có thể đang phản ứng với một tình trạng viêm hoặc nhiễm trùng. Một kết quả riêng lẻ không tự xác định bệnh, nguyên nhân hoặc triệu chứng."
+      },
+      "expanded": {
+        "firstExpanded": "true",
+        "secondExpanded": "false",
+        "focused": true,
+        "cardHeight": 438.921875,
+        "text": "Bạch cầu là một thành phần quan trọng của máu, đóng vai trò chủ chốt trong hệ thống miễn dịch giúp cơ thể chống lại các tác nhân gây bệnh như vi khuẩn, virus, ký sinh trùng và các yếu tố gây viêm nhiễm. Nồng độ bạch cầu trong máu phản ánh tình trạng miễn dịch và phản ứng viêm của cơ thể. Kết quả WBC là 14.2 10^9/L. Giá trị này cao so với khoảng tham chiếu được hệ thống sử dụng. Chỉ số WBC (bạch cầu) là 14.2 10^9/L, cho thấy cơ thể có thể đang phản ứng với một tình trạng viêm hoặc nhiễm trùng. Một kết quả riêng lẻ không tự xác định bệnh, nguyên nhân hoặc triệu chứng."
+      },
+      "collapsedAgain": "false"
+    },
+    "name": "analysis",
+    "url": "http://127.0.0.1:3000/patient/analysis",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 2373
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 272,
+      "height": 1000,
+      "right": 272,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 272,
+      "y": 0,
+      "width": 1413,
+      "height": 2373.1,
+      "right": 1685,
+      "bottom": 2373.1
+    },
+    "main": {
+      "x": 272,
+      "y": 64,
+      "width": 1413,
+      "height": 2309.1,
+      "right": 1685,
+      "bottom": 2373.1
+    },
+    "rail": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 2173.1,
+      "right": 1625.5,
+      "bottom": 2269.1
+    },
+    "workspace": {
+      "width": 1413,
+      "contentWidth": 1294,
+      "leftGutter": 59.5,
+      "rightGutter": 59.5
+    },
+    "hero": {
+      "x": 331.5,
+      "y": 118,
+      "width": 1294,
+      "height": 107.9,
+      "right": 1625.5,
+      "bottom": 225.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": {
+      "x": 331.5,
+      "y": 352.3,
+      "width": 1294,
+      "height": 1222.4,
+      "right": 1625.5,
+      "bottom": 1574.7
+    },
+    "indicatorCards": [
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      },
+      {
+        "height": 394,
+        "scrollHeight": 392
+      }
+    ],
+    "doctorGap": null,
+    "doctorNav": [],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "22px",
+        "fontWeight": "720",
+        "lineHeight": "33px",
+        "letterSpacing": "-0.55px"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "17px",
+        "fontWeight": "600",
+        "lineHeight": "25.5px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "650",
+        "lineHeight": "17.5px",
+        "letterSpacing": "normal"
+      },
+      "input": {
+        "selector": "main input",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  },
+  {
+    "name": "doctor-report",
+    "url": "http://127.0.0.1:3000/doctor/reports/11?tab=pending",
+    "viewport": {
+      "width": 1700,
+      "height": 1000
+    },
+    "document": {
+      "width": 1685,
+      "height": 1994
+    },
+    "sidebar": {
+      "x": 0,
+      "y": 0,
+      "width": 272,
+      "height": 1000,
+      "right": 272,
+      "bottom": 1000
+    },
+    "frame": {
+      "x": 272,
+      "y": 0,
+      "width": 1413,
+      "height": 1994.4,
+      "right": 1685,
+      "bottom": 1994.4
+    },
+    "main": {
+      "x": 272,
+      "y": 64,
+      "width": 1413,
+      "height": 1930.4,
+      "right": 1685,
+      "bottom": 1994.4
+    },
+    "rail": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 1834.4,
+      "right": 1625.5,
+      "bottom": 1930.4
+    },
+    "workspace": {
+      "width": 1413,
+      "contentWidth": 1294,
+      "leftGutter": 59.5,
+      "rightGutter": 59.5
+    },
+    "hero": {
+      "x": 331.5,
+      "y": 96,
+      "width": 1294,
+      "height": 165.9,
+      "right": 1625.5,
+      "bottom": 261.9
+    },
+    "filter": null,
+    "firstHistoryRow": null,
+    "historyZones": [],
+    "indicatorGrid": null,
+    "indicatorCards": [
+      {
+        "height": 390,
+        "scrollHeight": 388
+      },
+      {
+        "height": 386,
+        "scrollHeight": 384
+      },
+      {
+        "height": 336,
+        "scrollHeight": 334
+      },
+      {
+        "height": 361,
+        "scrollHeight": 359
+      }
+    ],
+    "doctorGap": 32,
+    "doctorNav": [
+      {
+        "text": "Hàng đợi đánh giá",
+        "width": 239,
+        "height": 44,
+        "lineHeight": "20px",
+        "whiteSpace": "nowrap"
+      },
+      {
+        "text": "Đánh giá biểu đồ xu hướng",
+        "width": 239,
+        "height": 44,
+        "lineHeight": "20px",
+        "whiteSpace": "nowrap"
+      }
+    ],
+    "typography": {
+      "eyebrow": {
+        "selector": ".type-eyebrow",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "pageTitle": {
+        "selector": ".type-page-title",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "42px",
+        "fontWeight": "740",
+        "lineHeight": "45.36px",
+        "letterSpacing": "-1.68px"
+      },
+      "description": {
+        "selector": ".type-page-description",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "26.4px",
+        "letterSpacing": "normal"
+      },
+      "sectionHeading": {
+        "selector": "h2",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "cardTitle": {
+        "selector": ".clinical-indicator-card h3, .finding-card h2, .history-row .text-lg",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "750",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      },
+      "body": {
+        "selector": "main p",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "750",
+        "lineHeight": "16.2px",
+        "letterSpacing": "1.2px"
+      },
+      "metadata": {
+        "selector": ".text-xs",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "16px",
+        "letterSpacing": "normal"
+      },
+      "status": {
+        "selector": ".status-indicator",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "620",
+        "lineHeight": "17.5px",
+        "letterSpacing": "-0.084px"
+      },
+      "button": {
+        "selector": "main button, main a.primary-button, main a.secondary-button",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "12px",
+        "fontWeight": "700",
+        "lineHeight": "18px",
+        "letterSpacing": "normal"
+      },
+      "sidebarNav": {
+        "selector": ".role-sidebar nav a",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "500",
+        "lineHeight": "20px",
+        "letterSpacing": "normal"
+      },
+      "topbar": {
+        "selector": ".role-topbar",
+        "fontFamily": "Arial, Helvetica, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal"
+      }
+    }
+  }
+]

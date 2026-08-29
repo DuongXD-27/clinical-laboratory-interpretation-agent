@@ -67,21 +67,18 @@ export default function LatestReportSummary({ report, basicReport, detailError }
             ) : (
               <>
                 {criticalCount > 0 && (
-                  <div className="flex items-center justify-between gap-4">
-                    <StatusIndicator state="critical" label="Cần chú ý khẩn cấp" level="inline" />
-                    <span>{criticalCount}</span>
+                  <div className="latest-report-status-cluster">
+                    <StatusIndicator state="critical" label={`${criticalCount} cần chú ý khẩn cấp`} level="inline" />
                   </div>
                 )}
                 {attentionCount > 0 && (
-                  <div className="flex items-center justify-between gap-4">
-                    <StatusIndicator state="abnormal" label="Cần lưu ý" level="inline" />
-                    <span>{attentionCount}</span>
+                  <div className="latest-report-status-cluster">
+                    <StatusIndicator state="abnormal" label={`${attentionCount} cần lưu ý`} level="inline" />
                   </div>
                 )}
                 {normalCount > 0 && (
-                  <div className="flex items-center justify-between gap-4">
-                    <StatusIndicator state="normal" label="Trong khoảng" />
-                    <span>{normalCount}</span>
+                  <div className="latest-report-status-cluster">
+                    <StatusIndicator state="normal" label={`${normalCount} trong khoảng`} />
                   </div>
                 )}
               </>
