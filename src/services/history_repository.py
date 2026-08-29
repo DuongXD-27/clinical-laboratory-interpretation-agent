@@ -62,6 +62,10 @@ logger = logging.getLogger(__name__)
 
 
 def _structured_explanation_sources(indicator: ReportIndicator) -> list[dict]:
+    snapshot = indicator.analysis_provenance if isinstance(indicator.analysis_provenance, dict) else {}
+    persisted = snapshot.get("explanation_sources")
+    if isinstance(persisted, list):
+        return [dict(item) for item in persisted if isinstance(item, dict)]
     return [
         citation.as_dict()
         for citation in get_medical_citation_repository().resolve_many(
@@ -69,6 +73,30 @@ def _structured_explanation_sources(indicator: ReportIndicator) -> list[dict]:
             sources=list(indicator.sources or []),
         )
     ]
+
+
+def _analysis_provenance_snapshot(indicator: IndicatorResultSchema) -> dict:
+    """Compact, versioned audit envelope persisted with one report finding."""
+    def dump(value):
+        return value.model_dump(mode="json") if hasattr(value, "model_dump") else value
+
+    return {
+        "schema_version": 1,
+        "comparison_value": indicator.comparison_value,
+        "comparison_unit": indicator.comparison_unit,
+        "conversion_applied": indicator.conversion_applied,
+        "conversion_rule": indicator.conversion_rule,
+        "conversion_authority": indicator.conversion_authority,
+        "rule_id": indicator.rule_id,
+        "band_label": indicator.band_label,
+        "band_lower": indicator.band_lower,
+        "band_upper": indicator.band_upper,
+        "lower_operator": indicator.lower_operator,
+        "classification_provenance": dump(indicator.classification_provenance),
+        "retrieved_evidence": [dump(item) for item in indicator.retrieved_evidence],
+        "explanation_sources": [dump(item) for item in indicator.explanation_sources],
+        "artifact_provenance": dump(indicator.artifact_provenance),
+    }
 
 
 def _normalize_indicator_name(name: str) -> str:
@@ -296,6 +324,7 @@ def save_report(
                 evaluation_reason=getattr(indicator, "evaluation_reason", None),
                 explanation=indicator.explanation or "",
                 sources=list(indicator.sources or []),
+                analysis_provenance=_analysis_provenance_snapshot(indicator),
                 catalog_entry=catalog_entry,
                 ocr_confidence=ocr_confidence,
                 ocr_raw_text=ocr_raw_text,
@@ -774,12 +803,22 @@ def to_detail(
                 raw_unit=indicator.raw_unit,
                 canonical_value=indicator.canonical_value,
                 canonical_unit=indicator.canonical_unit,
+                comparison_value=(indicator.analysis_provenance or {}).get("comparison_value"),
+                comparison_unit=(indicator.analysis_provenance or {}).get("comparison_unit"),
+                conversion_applied=bool((indicator.analysis_provenance or {}).get("conversion_applied", False)),
+                conversion_rule=(indicator.analysis_provenance or {}).get("conversion_rule"),
+                conversion_authority=(indicator.analysis_provenance or {}).get("conversion_authority"),
                 reference_low=indicator.reference_low,
                 reference_high=indicator.reference_high,
                 status=indicator.status,
                 critical_status=indicator.critical_status,
                 rule_type=indicator.rule_type,
+                rule_id=(indicator.analysis_provenance or {}).get("rule_id"),
                 band_id=indicator.band_id,
+                band_label=(indicator.analysis_provenance or {}).get("band_label"),
+                band_lower=(indicator.analysis_provenance or {}).get("band_lower"),
+                band_upper=(indicator.analysis_provenance or {}).get("band_upper"),
+                lower_operator=(indicator.analysis_provenance or {}).get("lower_operator"),
                 upper_operator=indicator.upper_operator,
                 evaluation_reason=indicator.evaluation_reason,
                 is_abnormal=indicator.is_abnormal,
@@ -793,6 +832,9 @@ def to_detail(
                 sources=list(indicator.sources or []),
                 citations=_structured_explanation_sources(indicator),
                 explanation_sources=_structured_explanation_sources(indicator),
+                classification_provenance=(indicator.analysis_provenance or {}).get("classification_provenance"),
+                retrieved_evidence=(indicator.analysis_provenance or {}).get("retrieved_evidence") or [],
+                artifact_provenance=(indicator.analysis_provenance or {}).get("artifact_provenance"),
             )
             for indicator in report.indicators
         ],

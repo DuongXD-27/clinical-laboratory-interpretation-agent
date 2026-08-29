@@ -68,9 +68,50 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
                 name="Triglyceride",
                 value=6.0,
                 unit="mmol/L",
-                status="very_high",
+                status="high",
                 rule_type="BAND",
+                rule_id="RRV2-0058",
                 band_id="very_high",
+                band_label="Rất cao",
+                band_lower=5.65,
+                lower_operator=">=",
+                comparison_value=6.0,
+                comparison_unit="mmol/L",
+                classification_provenance={
+                    "rule_id": "RRV2-0058",
+                    "reference_type": "BAND",
+                    "analyte": "Triglyceride",
+                    "source_url": "https://renal.testcatalog.org/show/LPSC1",
+                    "reference_config_version": "v2",
+                    "reference_config_sha256": "config-hash",
+                    "reference_rules_sha256": "rules-hash",
+                },
+                explanation_sources=[
+                    {
+                        "source_id": "SRC-NCEP-ATP3-TG",
+                        "title": "ATP III",
+                        "organization": "NHLBI",
+                        "url": "https://nhlbi.example",
+                        "analyte": "Triglyceride",
+                        "note_type": "band_note",
+                        "publication_date": "2002",
+                    }
+                ],
+                retrieved_evidence=[
+                    {
+                        "chunk_id": "triglyceride-band-note-very-high",
+                        "source_id": "SRC-NCEP-ATP3-TG",
+                        "note_type": "band_note",
+                    }
+                ],
+                artifact_provenance={
+                    "reference_config_version": "v2",
+                    "reference_config_sha256": "config-hash",
+                    "reference_rules_sha256": "rules-hash",
+                    "corpus_version": "medical-kb-v4",
+                    "corpus_sha256": "corpus-hash",
+                    "corpus_schema_version": 4,
+                },
                 is_abnormal=True,
                 is_critical=False,
                 explanation="",
@@ -147,6 +188,8 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
         tg_db = next(i for i in report.indicators if i.name == "Triglyceride")
         assert tg_db.rule_type == "BAND"
         assert tg_db.band_id == "very_high"
+        assert tg_db.analysis_provenance["rule_id"] == "RRV2-0058"
+        assert tg_db.analysis_provenance["artifact_provenance"]["corpus_version"] == "medical-kb-v4"
 
         hba1c_db = next(i for i in report.indicators if i.name == "HbA1c")
         assert hba1c_db.rule_type == "CDL"
@@ -164,6 +207,14 @@ def test_snapshot_persistence_for_35_analyte_contract(test_db, patient):
         ast_api = next(i for i in detail.indicators if i.name == "AST")
         assert ast_api.rule_type == "ONE_SIDED_LIMIT"
         assert ast_api.upper_operator == "<"
+
+        tg_api = next(i for i in detail.indicators if i.name == "Triglyceride")
+        assert tg_api.status == "high"
+        assert tg_api.band_label == "Rất cao"
+        assert tg_api.rule_id == "RRV2-0058"
+        assert tg_api.classification_provenance.source_url == "https://renal.testcatalog.org/show/LPSC1"
+        assert [source.source_id for source in tg_api.explanation_sources] == ["SRC-NCEP-ATP3-TG"]
+        assert tg_api.artifact_provenance.corpus_sha256 == "corpus-hash"
 
 
 def test_legacy_history_compatibility(test_db, patient):
@@ -201,3 +252,5 @@ def test_legacy_history_compatibility(test_db, patient):
         assert api_ind.evaluation_reason is None
         assert api_ind.reference_low == 0.0
         assert api_ind.reference_high == 20.0
+        assert api_ind.classification_provenance is None
+        assert api_ind.artifact_provenance is None

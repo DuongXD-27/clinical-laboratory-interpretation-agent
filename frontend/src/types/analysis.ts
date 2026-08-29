@@ -13,12 +13,38 @@ export type Citation = {
   section_or_context?: string | null;
   analyte?: string | null;
   note_type?: string | null;
+  publication_date?: string | null;
+};
+
+export type ClassificationProvenance = {
+  rule_id: string;
+  reference_type: string;
+  analyte: string;
+  source_id?: string | null;
+  source_title?: string | null;
+  source_organization?: string | null;
+  source_url?: string | null;
+  source_date?: string | null;
+  source_revision?: string | null;
+  source_section?: string | null;
+  reference_config_version: string;
+  reference_config_sha256: string;
+  reference_rules_sha256: string;
 };
 
 export type IndicatorResult = {
   name: string;
   value: number;
   unit: string;
+  raw_value?: number | null;
+  raw_unit?: string | null;
+  canonical_value?: number | null;
+  canonical_unit?: string | null;
+  comparison_value?: number | null;
+  comparison_unit?: string | null;
+  conversion_applied?: boolean;
+  conversion_rule?: string | null;
+  conversion_authority?: string | null;
   reference_low?: number | null;
   reference_high?: number | null;
   status: string;
@@ -42,9 +68,29 @@ export type IndicatorResult = {
   section?: string | null;
   section_label?: string | null;
   rule_type?: string | null;
+  rule_id?: string | null;
   band_id?: string | null;
+  band_label?: string | null;
+  band_lower?: number | null;
+  band_upper?: number | null;
+  lower_operator?: string | null;
   upper_operator?: string | null;
   evaluation_reason?: string | null;
+  classification_provenance?: ClassificationProvenance | null;
+  retrieved_evidence?: Array<{
+    chunk_id: string;
+    source_id: string;
+    note_type: string;
+    section?: string | null;
+  }>;
+  artifact_provenance?: {
+    reference_config_version: string;
+    reference_config_sha256: string;
+    reference_rules_sha256: string;
+    corpus_version: string;
+    corpus_sha256: string;
+    corpus_schema_version?: number | null;
+  } | null;
 };
 
 export type AnalysisResult = {

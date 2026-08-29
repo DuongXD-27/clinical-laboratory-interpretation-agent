@@ -94,6 +94,26 @@ FROZEN_CLINICAL_RULE_BANDS: dict[str, tuple[str, ...]] = {
     "hba1c": ("normal_glycemia", "prediabetes_high_risk", "diabetes_diagnostic_threshold"),
 }
 
+# Patient-facing Vietnamese labels for the frozen, deterministic band keys.
+# This is presentation vocabulary only: severity colors continue to use the
+# generic status and no threshold/classification is calculated from these labels.
+CLINICAL_BAND_LABELS_VI: dict[str, str] = {
+    "normal": "Bình thường",
+    "desirable": "Mong muốn",
+    "borderline_high": "Cao mức biên",
+    "high": "Cao",
+    "very_high": "Rất cao",
+    "low": "Thấp",
+    "intermediate": "Trung gian",
+    "optimal": "Tối ưu",
+    "near_optimal": "Gần tối ưu",
+    "impaired_fasting_glucose": "Rối loạn đường huyết lúc đói",
+    "provisional_diabetes": "Đạt ngưỡng xét nghiệm chẩn đoán đái tháo đường",
+    "normal_glycemia": "Đường huyết trong khoảng tham chiếu",
+    "prediabetes_high_risk": "Nguy cơ cao tiền đái tháo đường",
+    "diabetes_diagnostic_threshold": "Đạt ngưỡng xét nghiệm chẩn đoán đái tháo đường",
+}
+
 VALID_NOTE_TYPES: tuple[str, ...] = (
     "description",
     "high_note",

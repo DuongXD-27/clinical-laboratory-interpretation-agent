@@ -351,6 +351,9 @@ class ReportIndicator(Base):
 
     explanation = Column(Text, nullable=False, default="")
     sources = Column(JSON, nullable=False, default=list)
+    # Additive evidence/fact envelope. NULL on legacy rows; history adapters
+    # fall back to the pre-existing scalar columns and source URL list.
+    analysis_provenance = Column(JSON, nullable=True)
 
     # Metadata OCR בלבד; không lưu ảnh gốc.
     ocr_confidence = Column(Float, nullable=True)

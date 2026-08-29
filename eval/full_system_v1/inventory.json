@@ -1,0 +1,966 @@
+{
+  "gold_version": "VMEC_GOLDEN_SET_V1_FROZEN_2026-08-29",
+  "approved_analytes": 35,
+  "rule_counts": {
+    "BAND": 15,
+    "CDL": 6,
+    "ONE_SIDED_LIMIT": 5,
+    "RI": 41
+  },
+  "rag_source_records": 77,
+  "rag_chunks": 199,
+  "active_critical_analytes": [
+    "Sodium",
+    "Fasting plasma glucose",
+    "Total bilirubin",
+    "Potassium"
+  ],
+  "analytes": [
+    {
+      "analyte_id": "wbc",
+      "canonical_name": "WBC",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 5,
+      "rag_chunk_count": 13,
+      "rag_note_roles": [
+        "critical_high_note",
+        "critical_low_note",
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "rbc",
+      "canonical_name": "RBC",
+      "canonical_unit": "10^12/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 4,
+      "rag_chunk_count": 10,
+      "rag_note_roles": [
+        "critical_high_note",
+        "critical_low_note",
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "hgb",
+      "canonical_name": "HGB",
+      "canonical_unit": "g/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 4,
+      "rag_chunk_count": 10,
+      "rag_note_roles": [
+        "critical_high_note",
+        "critical_low_note",
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "hct",
+      "canonical_name": "HCT",
+      "canonical_unit": "L/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "mcv",
+      "canonical_name": "MCV",
+      "canonical_unit": "fL",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "mch",
+      "canonical_name": "MCH",
+      "canonical_unit": "pg",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "mchc",
+      "canonical_name": "MCHC",
+      "canonical_unit": "g/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "rdw_cv",
+      "canonical_name": "RDW-CV",
+      "canonical_unit": "%",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "plt",
+      "canonical_name": "PLT",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "neutrophils_%",
+      "canonical_name": "Neutrophils %",
+      "canonical_unit": "%",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "neutrophils_abs",
+      "canonical_name": "Neutrophils abs",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "lymphocytes_%",
+      "canonical_name": "Lymphocytes %",
+      "canonical_unit": "%",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "lymphocytes_abs",
+      "canonical_name": "Lymphocytes abs",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "monocytes_%",
+      "canonical_name": "Monocytes %",
+      "canonical_unit": "%",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "monocytes_abs",
+      "canonical_name": "Monocytes abs",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "eosinophils_%",
+      "canonical_name": "Eosinophils %",
+      "canonical_unit": "%",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "eosinophils_abs",
+      "canonical_name": "Eosinophils abs",
+      "canonical_unit": "10^9/L",
+      "group": "hematology",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "18–60"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "sodium",
+      "canonical_name": "Sodium",
+      "canonical_unit": "mmol/L",
+      "group": "electrolytes",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": true,
+      "critical_sides": [
+        "low",
+        "high"
+      ],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "low_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "chloride",
+      "canonical_name": "Chloride",
+      "canonical_unit": "mmol/L",
+      "group": "electrolytes",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "fasting_plasma_glucose",
+      "canonical_name": "Fasting plasma glucose",
+      "canonical_unit": "mmol/L",
+      "group": "glucose",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "CDL"
+      ],
+      "reference_rule_count": 3,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": true,
+      "critical_sides": [
+        "low",
+        "high"
+      ],
+      "rag_source_count": 5,
+      "rag_chunk_count": 11,
+      "rag_note_roles": [
+        "band_note",
+        "critical_high_note",
+        "critical_low_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "hba1c",
+      "canonical_name": "HbA1c",
+      "canonical_unit": "%",
+      "group": "glucose",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "CDL"
+      ],
+      "reference_rule_count": 3,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 7,
+      "rag_chunk_count": 11,
+      "rag_note_roles": [
+        "band_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "creatinine",
+      "canonical_name": "Creatinine",
+      "canonical_unit": "umol/L",
+      "group": "renal",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 5,
+      "rag_chunk_count": 8,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "urea",
+      "canonical_name": "Urea",
+      "canonical_unit": "mmol/L",
+      "group": "renal",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "uric_acid",
+      "canonical_name": "Uric acid",
+      "canonical_unit": "umol/L",
+      "group": "renal",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        ">=19"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "ast",
+      "canonical_name": "AST",
+      "canonical_unit": "U/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "ONE_SIDED_LIMIT"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "alt",
+      "canonical_name": "ALT",
+      "canonical_unit": "U/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "ONE_SIDED_LIMIT"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "ggt",
+      "canonical_name": "GGT",
+      "canonical_unit": "U/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "ONE_SIDED_LIMIT"
+      ],
+      "reference_rule_count": 2,
+      "sex_specific": true,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "total_bilirubin",
+      "canonical_name": "Total bilirubin",
+      "canonical_unit": "umol/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "ONE_SIDED_LIMIT"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": true,
+      "critical_sides": [
+        "high"
+      ],
+      "rag_source_count": 1,
+      "rag_chunk_count": 3,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "preanalytic_note"
+      ]
+    },
+    {
+      "analyte_id": "total_protein",
+      "canonical_name": "Total protein",
+      "canonical_unit": "g/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "albumin",
+      "canonical_name": "Albumin",
+      "canonical_unit": "g/L",
+      "group": "liver",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 4,
+      "rag_note_roles": [
+        "description",
+        "high_note",
+        "limitation_note",
+        "low_note"
+      ]
+    },
+    {
+      "analyte_id": "total_cholesterol",
+      "canonical_name": "Total cholesterol",
+      "canonical_unit": "mmol/L",
+      "group": "lipids",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "BAND"
+      ],
+      "reference_rule_count": 3,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": true,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 5,
+      "rag_note_roles": [
+        "band_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "triglyceride",
+      "canonical_name": "Triglyceride",
+      "canonical_unit": "mmol/L",
+      "group": "lipids",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "BAND"
+      ],
+      "reference_rule_count": 4,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": true,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 1,
+      "rag_chunk_count": 6,
+      "rag_note_roles": [
+        "band_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "ldl_c",
+      "canonical_name": "LDL-C",
+      "canonical_unit": "mmol/L",
+      "group": "lipids",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "BAND"
+      ],
+      "reference_rule_count": 5,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": true,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 9,
+      "rag_chunk_count": 15,
+      "rag_note_roles": [
+        "band_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "hdl_c",
+      "canonical_name": "HDL-C",
+      "canonical_unit": "mmol/L",
+      "group": "lipids",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "BAND"
+      ],
+      "reference_rule_count": 3,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": true,
+      "critical_rule_active": false,
+      "critical_sides": [],
+      "rag_source_count": 6,
+      "rag_chunk_count": 10,
+      "rag_note_roles": [
+        "band_note",
+        "description",
+        "limitation_note"
+      ]
+    },
+    {
+      "analyte_id": "potassium",
+      "canonical_name": "Potassium",
+      "canonical_unit": "mmol/L",
+      "group": "electrolytes",
+      "runtime_status": "APPROVED",
+      "supported_rule_types": [
+        "RI"
+      ],
+      "reference_rule_count": 1,
+      "sex_specific": false,
+      "age_scopes": [
+        "Adult"
+      ],
+      "conversion_contract": false,
+      "critical_rule_active": true,
+      "critical_sides": [
+        "low",
+        "high"
+      ],
+      "rag_source_count": 6,
+      "rag_chunk_count": 13,
+      "rag_note_roles": [
+        "critical_high_note",
+        "critical_low_note",
+        "description",
+        "high_note",
+        "low_note",
+        "preanalytic_note"
+      ]
+    }
+  ],
+  "runtime_contract_inventory": {
+    "analysis_path": [
+      "POST /api/v1/analyze",
+      "run_analysis",
+      "input_integrity",
+      "reference_range_checker",
+      "critical_detector",
+      "analyzer (RAG + optional LLM)",
+      "generate_questions",
+      "guardrail",
+      "AnalyzeResponse",
+      "history persistence for authenticated patient"
+    ],
+    "conversation_path": [
+      "POST /api/v1/orchestrator/message",
+      "admission/safety/context gates",
+      "canonical agent and approved wrappers",
+      "response guardrail",
+      "orchestrator schema"
+    ],
+    "authority_separation": {
+      "classification": "data/reference/reference_ranges.json",
+      "critical": "data/reference/critical_thresholds.json",
+      "explanation": "data/reference/explanations.json",
+      "identity_and_units": [
+        "data/reference/analyte_catalog.json",
+        "data/reference/reference_checker_config.json",
+        "data/reference/units_metric.csv"
+      ]
+    }
+  }
+}

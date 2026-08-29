@@ -1,0 +1,54 @@
+{
+  "manifest_version": "1.0",
+  "original_baseline": {
+    "path": "D:\\vin-ai\\project\\P-056\\eval\\full_system_v1\\results\\baseline_20260829_113401",
+    "total_passed": 907,
+    "total_failed": 120,
+    "overall_success_rate": 88.32,
+    "band_passed": 28,
+    "band_total": 111
+  },
+  "verified_baseline": {
+    "path": "D:\\vin-ai\\project\\P-056\\eval\\full_system_v1\\results\\verified_baseline_20260829_121010",
+    "total_passed": 978,
+    "total_failed": 49,
+    "overall_success_rate": 95.23,
+    "band_passed": 99,
+    "band_total": 111
+  },
+  "delta": {
+    "total_passed_delta": 71,
+    "total_failed_delta": -71,
+    "band_passed_delta": 71,
+    "delta_caused_solely_by_evaluator_fix": true,
+    "production_code_changed": false,
+    "golden_files_changed": false
+  },
+  "integrity_audit": {
+    "path": "C:\\Users\\duong\\.gemini\\antigravity-ide\\brain\\b9aebe26-dabd-4de3-85d3-28fe8ced78c5\\integrity_audit_report.md",
+    "original_estimated_evaluator_errors": 79,
+    "actual_evaluator_errors_resolved": 71,
+    "discrepancy_from_estimate": -8,
+    "discrepancy_explanation": "Original audit estimated 79 evaluator_projection_errors by checking if act_band_key != act_class. Actual count is 71 because some cases where act_band_key was a clinical label (e.g., 'intermediate') still did NOT match the golden expected label (e.g., 'optimal'). These are genuine production failures, not evaluator errors."
+  },
+  "evaluator_changes": [
+    {
+      "file": "eval/full_system_v1/eval_deterministic.py",
+      "change": "BAND section — class_ok now compares actual['clinical_band_key'] vs expected['classification'] instead of actual['classification'] (generic 3-state severity).",
+      "reason": "FC-002 EVALUATOR_PROJECTION_ERROR: the Frozen Golden 'classification' field contains the clinical band label, not the 3-state severity.",
+      "golden_hashes_before_after": "UNCHANGED (golden never modified)",
+      "production_git_diff": "NO CHANGES to src/ or data/ directories"
+    }
+  ],
+  "corrections_applied": [
+    "FC-002: evaluator field fix (class_ok compares clinical_band_key not generic_severity)",
+    "FC-001: safety failure type reclassified as FINAL_SAFETY_ESCAPE (not GATE_MISS_ONLY)",
+    "Retrieval target: corrected from 90% to 95% (frozen mandate)",
+    "Manual review count: corrected from 64 to 48 (machine-readable evidence only)",
+    "FC-003 wording: corrected from 'ONE_SIDED_LIMIT' to 'CDL/BAND standard range (upper_op=None)'"
+  ],
+  "golden_hash_before": "017472c5412822b2a3525a19a2f52250891c50e03c0665ec497e33eaff6c9b57",
+  "golden_hash_after": "017472c5412822b2a3525a19a2f52250891c50e03c0665ec497e33eaff6c9b57",
+  "golden_unchanged": true,
+  "timestamp_utc": "2026-08-29T12:13:53.071688+00:00"
+}

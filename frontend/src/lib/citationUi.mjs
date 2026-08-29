@@ -22,5 +22,32 @@ export function citationLabel(citation) {
 }
 
 export function citationContext(citation) {
-  return String(citation?.section_or_context || "").trim();
+  return [citation?.publication_date, citation?.section_or_context]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function uniqueCitations(citations = []) {
+  const seen = new Set();
+  return citations.filter((citation) => {
+    const sourceId = String(citation?.source_id || "").trim();
+    const fallback = [citation?.url, citation?.organization, citation?.title]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .join("|");
+    const key = sourceId || fallback;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function uniqueSourceUrls(sources = []) {
+  const seen = new Set();
+  return sources.filter((source) => {
+    const key = String(source || "").trim().toLowerCase().replace(/\/$/, "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

@@ -85,6 +85,7 @@ class CorpusChunk(BaseModel):
         # source_url when present, otherwise the source_id. Never fabricated.
         provenance = self.source_url or self.source_id
         return {
+            "chunk_id": str(self.chunk_id),
             "sources": json.dumps([provenance] if provenance else []),
             "indicator": str(self.indicator),
             "analyte_id": str(self.analyte_id),

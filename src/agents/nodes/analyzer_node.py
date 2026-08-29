@@ -17,6 +17,10 @@ from src.agents.state import AgentState, IndicatorExplanation, RetrievedChunk
 from src.config import get_settings
 from src.services.analyte_catalog import get_analyte_catalog
 from src.services.context_budget import build_bounded_context
+from src.services.explanation_grounding import (
+    evidence_has_numeric_conflict,
+    validate_generated_supplement,
+)
 from src.services.llm import get_llm
 from src.services.medical_citations import get_medical_citation_repository
 from src.services.medical_knowledge_retriever import (
@@ -66,7 +70,14 @@ def _deduplicate(values: list[str]) -> list[str]:
 
 
 def _known_sources(indicator: dict[str, Any], chunks: list[RetrievedChunk]) -> list[str]:
-    sources = [str(source) for source in indicator.get("sources", []) if str(source)]
+    # `indicator.sources` was historically overloaded with the numeric rule
+    # URL. Explanation provenance must be derived only from retrieved evidence
+    # (or the curated corpus fallback selected below).
+    sources: list[str] = (
+        [str(source) for source in indicator.get("sources", []) if str(source)]
+        if not indicator.get("classification_provenance")
+        else []
+    )
     for chunk in chunks:
         sources.extend(str(source) for source in chunk.get("sources", []) if str(source))
         if chunk.get("source"):
@@ -96,9 +107,12 @@ def _known_citations(
         if citation is not None:
             citations.append(citation)
     unique: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     for citation in citations:
-        key = (citation.source_id, citation.note_type)
+        key = citation.source_id or (
+            f"{citation.url.strip().casefold()}|"
+            f"{citation.organization.strip().casefold()}|{citation.title.strip().casefold()}"
+        )
         if key in seen:
             continue
         seen.add(key)
@@ -272,6 +286,7 @@ async def process_single_indicator(
         for chunk in safe_chunks
         if (filtered := filter_patient_education_text(str(chunk.get("text", ""))))
     ]
+    conflicting_evidence = evidence_has_numeric_conflict(safe_chunks)
     rag_context = build_bounded_context(
         safe_chunks,
         max_chars=get_settings().max_analyzer_context_chars,
@@ -281,7 +296,11 @@ async def process_single_indicator(
         analyte_id=analyte_id,
         curated_description=(definition.curated_explanation if definition is not None else ""),
     )
-    context = rag_context or safe_curated_explanation or safe_neutral_explanation
+    context = (
+        safe_curated_explanation or safe_neutral_explanation
+        if conflicting_evidence
+        else rag_context or safe_curated_explanation or safe_neutral_explanation
+    )
     fallback_explanation = (
         build_patient_explanation(
             analyte_id=analyte_id,
@@ -318,13 +337,16 @@ async def process_single_indicator(
         2. Không thay đổi trạng thái, khoảng tham chiếu, đơn vị hoặc mức critical.
         3. KHÔNG chẩn đoán, suy đoán nguyên nhân, kê đơn hay đề nghị điều trị.
         4. Chỉ dùng thông tin có trong context. Nếu context không đủ, giữ lời giải thích tối thiểu.
+        5. Không viết bất kỳ con số, ngưỡng hoặc khoảng giá trị nào; các dữ kiện số được hệ thống hiển thị riêng.
+        6. Giữ nguyên mức độ không chắc chắn. Ví dụ "có thể liên quan" không được đổi thành "do" hoặc "gây ra".
+        7. Không tổng hợp các nguồn mâu thuẫn thành một khẳng định chắc chắn.
 
         {GENERATION_SAFETY_CONTRACT}
         """
     )
 
     explanation_text = fallback_explanation
-    if structured_llm is not None and context and status.strip().lower() != "unknown":
+    if structured_llm is not None and context and status.strip().lower() != "unknown" and not conflicting_evidence:
         try:
             queue_started_at = time.perf_counter()
             async with llm_semaphore:
@@ -353,7 +375,16 @@ async def process_single_indicator(
                     analyte_id=analyte_id or "unknown",
                     outcome="success",
                 )
-            if result.explanation.strip():
+            generated_supplement, grounding_event = validate_generated_supplement(
+                result.explanation,
+                evidence_text=context,
+            )
+            if grounding_event:
+                logger.debug(
+                    "explanation_grounding_event",
+                    extra={"analyte_id": analyte_id or "unknown", "event": grounding_event},
+                )
+            if generated_supplement:
                 explanation_text = build_patient_explanation(
                     analyte_id=analyte_id,
                     name=name,
@@ -363,7 +394,7 @@ async def process_single_indicator(
                     critical_status=critical_status,
                     is_critical=is_critical,
                     curated_description=(definition.curated_explanation if definition is not None else raw_explanation),
-                    supplemental_text=result.explanation.strip(),
+                    supplemental_text=generated_supplement,
                 )
         except Exception as exc:
             logger.error("LLM explanation failed for %s; using curated fallback: %s", name, exc)
@@ -402,6 +433,25 @@ async def process_single_indicator(
     updated_indicator["sources"] = known_sources
     updated_indicator["citations"] = citations
     updated_indicator["explanation_sources"] = citations
+    updated_indicator["retrieved_evidence"] = [
+        {
+            "chunk_id": str(chunk.get("chunk_id") or ""),
+            "source_id": str(chunk.get("source_id") or ""),
+            "note_type": str(chunk.get("note_type") or ""),
+            "section": str(chunk.get("source_section") or "") or None,
+        }
+        for chunk in chunks
+    ]
+    logger.debug(
+        "analysis_evidence_summary",
+        extra={
+            "analyte_id": analyte_id or "unknown",
+            "retrieved_chunk_count": len(chunks),
+            "unique_citation_count": len(citations),
+            "explanation_source_ids": [citation.get("source_id") for citation in citations],
+            "grounding_conflict_suppressed": conflicting_evidence,
+        },
+    )
     return updated_indicator, explanation, safe_chunks
 
 
