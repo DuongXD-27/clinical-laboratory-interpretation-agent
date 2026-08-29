@@ -14,7 +14,7 @@ import {
   fetchTraces,
   fetchTracingStatus,
 } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,10 +69,10 @@ function formatDay(iso: string): string {
  * con số đoán bừa chỉ dạy người xem bỏ qua màu đỏ. Mã trạng thái thì không cần
  * đoán — 5xx là hỏng, 4xx là bị từ chối.
  */
-function statusVariant(status: number): "success" | "warning" | "destructive" {
-  if (status >= 500) return "destructive";
-  if (status >= 400) return "warning";
-  return "success";
+function statusState(status: number): StatusState {
+  if (status >= 500) return "system-error";
+  if (status >= 400) return "system-warning";
+  return "system-ok";
 }
 
 // `ReactNode` chu khong chi `string | number`: o "Trang thai SLO" can to mau
@@ -871,9 +871,7 @@ export default function AdminTracePage() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5">
-                        <Badge variant={statusVariant(trace.status_code)} className="tabular-nums">
-                          {trace.status_code}
-                        </Badge>
+                        <StatusIndicator state={statusState(trace.status_code)} label={String(trace.status_code)} className="tabular-nums" />
                       </td>
                       <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-right">
                         {/* Thanh nền sau cột thời lượng: quét mắt một cái là thấy

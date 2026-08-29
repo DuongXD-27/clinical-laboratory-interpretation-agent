@@ -8,6 +8,7 @@ import { getOcrIndicators, parseFiniteLabValue } from "@/lib/ocrReviewValidation
 import { friendlyOcrError } from "@/lib/ocrErrors.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import { ScanLine } from "lucide-react";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type UploadPolicy = {
   mode: "internal_only" | "demo_only" | "open_with_consent";
@@ -357,13 +358,13 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
               </div>
               <div className="w-px h-8 bg-[var(--border)]/60 hidden sm:block"></div>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-0.5">Cần hoàn tất</span>
-                <span className="text-amber-700 font-semibold text-lg">{includedRows.filter(r => !r.reviewed || (r.needs_review && !r.low_confidence_acknowledged) || parseFiniteLabValue(r.value) === null).length}</span>
+                <StatusIndicator state="ocr-review" label="Cần hoàn tất" level="inline" />
+                <span className="text-[var(--status-review-fg)] font-semibold text-lg">{includedRows.filter(r => !r.reviewed || (r.needs_review && !r.low_confidence_acknowledged) || parseFiniteLabValue(r.value) === null).length}</span>
               </div>
               <div className="w-px h-8 bg-[var(--border)]/60 hidden sm:block"></div>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider mb-0.5">Sẵn sàng</span>
-                <span className="text-emerald-700 font-semibold text-lg">{includedRows.filter(r => r.reviewed && (!r.needs_review || r.low_confidence_acknowledged) && parseFiniteLabValue(r.value) !== null).length}</span>
+                <StatusIndicator state="completed" label="Sẵn sàng" />
+                <span className="text-[var(--status-normal-fg)] font-semibold text-lg">{includedRows.filter(r => r.reviewed && (!r.needs_review || r.low_confidence_acknowledged) && parseFiniteLabValue(r.value) !== null).length}</span>
               </div>
             </div>
           </div>
@@ -403,10 +404,10 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
                   const index = rows.indexOf(row);
                   const isInvalid = parseFiniteLabValue(row.value) === null;
                   return (
-                    <div key={row.draft_id} className={`flex items-center justify-between gap-3 py-2.5 px-4 rounded-lg ${isInvalid ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-slate-100'} shadow-sm`}>
+                    <div key={row.draft_id} className={`flex items-center justify-between gap-3 py-2.5 px-4 rounded-lg ${isInvalid ? 'border border-white/70 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]' : 'bg-white border border-slate-100'} shadow-sm`}>
                       <div className="flex flex-col min-w-0">
                         <span className="truncate text-sm font-medium text-slate-700">{row.name}</span>
-                        {isInvalid && <span className="text-xs text-amber-700 font-medium mt-0.5">Giá trị OCR chưa hợp lệ - Cần sửa giá trị này trước khi tiếp tục.</span>}
+                        {isInvalid && <StatusIndicator state="ocr-review" label="Giá trị OCR chưa hợp lệ — cần sửa trước khi tiếp tục" />}
                       </div>
                       <button type="button" className="text-sm font-medium text-[var(--brand)] hover:text-[var(--brand-strong)] shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] rounded transition-colors" onClick={() => updateRow(index, { included: true, reviewed: false })}>
                         Đưa lại vào phân tích
@@ -472,8 +473,8 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
               {busyAction === "confirm" ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
             </button>
             {!readiness.ready && readiness.issues.length > 0 && !busy && (
-              <div className="mt-3 text-sm font-medium text-amber-700 text-center" role="status">
-                {readiness.issues[0]}
+              <div className="mt-3 flex justify-center" role="status">
+                <StatusIndicator state="ocr-review" label={readiness.issues[0]} />
               </div>
             )}
           </div>

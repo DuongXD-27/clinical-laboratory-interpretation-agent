@@ -8,7 +8,7 @@ import type { DoctorFinding, ReviewFlag } from "@/types/doctor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, CircleMinus, PencilLine, Sparkles } from "lucide-react";
-import ClinicalStatusChip from "@/components/common/ClinicalStatusChip";
+import StatusIndicator from "@/components/common/StatusIndicator";
 import ReasonChip from "./ReasonChip";
 
 type Props = {
@@ -69,7 +69,7 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
       {flags.length > 0 && (
         <div className="finding-card__flags" role="status">
           {flags.map((flag, index) => (
-            <ReasonChip key={`${flag.code}-${index}`} flag={flag} />
+            <ReasonChip key={`${flag.code}-${index}`} flag={flag} level="inline" />
           ))}
         </div>
       )}
@@ -89,12 +89,10 @@ export default function DoctorFindingCard({ finding, flags, readOnly, onReview }
 
       {isReviewed && !editing && (
         <div className={`finding-card__outcome finding-card__outcome--${finding.review_outcome}`}>
-          <ClinicalStatusChip
-            tone={finding.review_outcome === "skipped" ? "neutral" : "verified"}
-            icon={finding.review_outcome === "skipped" ? CircleMinus : Check}
-          >
-            {outcomeText(finding.review_outcome)}
-          </ClinicalStatusChip>
+          <StatusIndicator
+            state={finding.review_outcome === "skipped" ? "skipped" : finding.review_outcome === "corrected" ? "corrected" : "processed"}
+            label={outcomeText(finding.review_outcome)}
+          />
           <span>
             {finding.reviewed_by ? ` · ${finding.reviewed_by}` : ""}
             {finding.reviewed_at ? ` · ${formatMoment(finding.reviewed_at)}` : ""}

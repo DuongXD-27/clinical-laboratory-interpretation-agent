@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Search } from "lucide-react";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 export type MetricDefinition = {
   name: string;
@@ -109,9 +110,7 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
                               <span className="flex flex-wrap items-center gap-2">
                                 <strong>{metric.label}</strong>
                                 {statusLabel && (
-                                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                                    {statusLabel}
-                                  </span>
+                                  <StatusIndicator state={metric.runtimeStatus === "UNSUPPORTED" ? "unsupported" : "input-review"} label={statusLabel} />
                                 )}
                               </span>
                               <small>{metric.unit}</small>

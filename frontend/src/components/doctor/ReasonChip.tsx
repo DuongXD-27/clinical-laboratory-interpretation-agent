@@ -1,22 +1,17 @@
 import type { ReviewFlag } from "@/types/doctor";
-import { AlertOctagon, MessageCircleQuestion, ScanSearch } from "lucide-react";
-import ClinicalStatusChip, { type ClinicalStatusTone } from "@/components/common/ClinicalStatusChip";
+import StatusIndicator, { type StatusLevel, type StatusState } from "@/components/common/StatusIndicator";
 
 type Props = {
   flag: ReviewFlag;
+  level?: StatusLevel;
 };
 
-export default function ReasonChip({ flag }: Props) {
-  const config: Record<ReviewFlag["code"], { tone: ClinicalStatusTone; icon: typeof AlertOctagon }> = {
-    CRITICAL_VALUE: { tone: "critical", icon: AlertOctagon },
-    LOW_OCR_CONFIDENCE: { tone: "ocr", icon: ScanSearch },
-    PATIENT_HAS_QUESTIONS: { tone: "question", icon: MessageCircleQuestion },
+export default function ReasonChip({ flag, level }: Props) {
+  const config: Record<ReviewFlag["code"], StatusState> = {
+    CRITICAL_VALUE: "critical",
+    LOW_OCR_CONFIDENCE: "ocr-review",
+    PATIENT_HAS_QUESTIONS: "question",
   };
-  const { tone, icon } = config[flag.code];
 
-  return (
-    <ClinicalStatusChip tone={tone} icon={icon} className="reason-chip">
-      {flag.detail}
-    </ClinicalStatusChip>
-  );
+  return <StatusIndicator state={config[flag.code]} label={flag.detail} level={level} className="reason-chip" />;
 }

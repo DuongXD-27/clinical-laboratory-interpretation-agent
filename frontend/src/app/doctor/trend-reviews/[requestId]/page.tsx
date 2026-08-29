@@ -18,7 +18,7 @@ import type {
   TrendReviewAssessment,
 } from "@/types/analysis";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
-import ClinicalStatusChip, { type ClinicalStatusTone } from "@/components/common/ClinicalStatusChip";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, LineChart, Send, Sparkles } from "lucide-react";
@@ -43,10 +43,11 @@ function statusText(review: TrendReview) {
   return "Từ chối";
 }
 
-function statusTone(review: TrendReview): ClinicalStatusTone {
+function statusState(review: TrendReview): StatusState {
   if (review.status === "PENDING") return "pending";
-  if (review.status === "REVIEWED") return "verified";
-  return "neutral";
+  if (review.status === "REVIEWED") return "completed";
+  if (review.status === "CANCELLED") return "cancelled";
+  return "rejected";
 }
 
 function assessmentText(value: TrendReviewAssessment | null | undefined) {
@@ -149,7 +150,7 @@ export default function DoctorTrendReviewDetailPage() {
         eyebrow={`Review xu hướng · Yêu cầu #${review.id}`}
         title={detail.patient.name}
         description={`${genderText(detail.patient.gender)} · ${detail.patient.age ?? "-"} tuổi · ${review.display_name}`}
-        actions={<ClinicalStatusChip tone={statusTone(review)}>{statusText(review)}</ClinicalStatusChip>}
+        actions={<StatusIndicator state={statusState(review)} label={statusText(review)} />}
         backHref="/doctor/trend-reviews"
         backLabel="Danh sách review xu hướng"
       />

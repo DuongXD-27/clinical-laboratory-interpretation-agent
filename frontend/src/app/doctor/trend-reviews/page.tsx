@@ -13,7 +13,7 @@ import {
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { DoctorTrendReviewSummary, TrendReviewStatus } from "@/types/analysis";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
-import ClinicalStatusChip, { type ClinicalStatusTone } from "@/components/common/ClinicalStatusChip";
+import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,10 +32,11 @@ function statusText(value: TrendReviewStatus) {
   return "Từ chối";
 }
 
-function statusTone(value: TrendReviewStatus): ClinicalStatusTone {
+function statusState(value: TrendReviewStatus): StatusState {
   if (value === "PENDING") return "pending";
-  if (value === "REVIEWED") return "verified";
-  return "neutral";
+  if (value === "REVIEWED") return "completed";
+  if (value === "CANCELLED") return "cancelled";
+  return "rejected";
 }
 
 export default function DoctorTrendReviewsPage() {
@@ -145,7 +146,7 @@ export default function DoctorTrendReviewsPage() {
                     <div className="doctor-trend-card__time"><Clock3 aria-hidden="true" /> Gửi lúc {formatMoment(item.requested_at)}</div>
                   </div>
                   <div className="doctor-trend-card__status">
-                    <ClinicalStatusChip tone={statusTone(item.status)}>{statusText(item.status)}</ClinicalStatusChip>
+                    <StatusIndicator state={statusState(item.status)} label={statusText(item.status)} />
                     <span className="doctor-queue-card__action">
                       Mở review <ArrowRight aria-hidden="true" />
                     </span>

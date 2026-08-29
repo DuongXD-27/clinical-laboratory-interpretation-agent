@@ -25,6 +25,7 @@ import type {
   TrendResponse,
 } from "@/types/analysis";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 const TREND_DISCLAIMER =
   "Biểu đồ và phần giải thích xu hướng chỉ hỗ trợ theo dõi dữ liệu xét nghiệm theo thời gian, không phải chẩn đoán và không thay thế đánh giá của bác sĩ.";
@@ -448,7 +449,7 @@ export default function PatientTrendsPage() {
                         Đang tải dữ liệu xu hướng...
                       </div>
                     ) : trendError ? (
-                      <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">{trendError}</div>
+                      <div role="alert" className="patient-glass-clinical p-6 mt-6 text-[var(--status-critical-fg)]">{trendError}</div>
                     ) : trend && !canRenderTrendChart(trend) ? (
                       <div className="patient-glass-clinical p-6 mt-6">
                         <p className="font-medium text-slate-700">{trendReasonMessage(trend.reason)}</p>
@@ -459,7 +460,7 @@ export default function PatientTrendsPage() {
                     ) : trend ? (
                       <div className="mt-8 space-y-6">
                         {trendEscalated && (
-                          <div className="bg-red-50 text-red-800 p-4 rounded-xl border border-red-200 mb-6" role="alert">
+                          <div className="mb-6 rounded-xl border border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] p-4 text-[var(--status-critical-fg)]" role="alert">
                             <strong className="block mb-1">Cần chú ý ngay</strong>
                             Chỉ số này {trend.critical_status ? "đã đạt" : "đang tiến gần"} ngưỡng nguy kịch — vui lòng liên hệ bác sĩ sớm để được tư vấn kịp thời.
                           </div>
@@ -622,7 +623,7 @@ export default function PatientTrendsPage() {
                               Đang tải ma trận nhiệt...
                             </div>
                           ) : sectionHeatmapError ? (
-                            <div role="alert" className="patient-glass-clinical p-6 text-red-700">
+                            <div role="alert" className="patient-glass-clinical p-6 text-[var(--status-critical-fg)]">
                               {sectionHeatmapError}
                             </div>
                           ) : sectionHeatmap ? (
@@ -634,7 +635,7 @@ export default function PatientTrendsPage() {
                             Đang tải biểu đồ nhóm...
                           </div>
                         ) : groupTrendsError ? (
-                          <div role="alert" className="patient-glass-clinical p-6 mt-6 text-red-700">
+                          <div role="alert" className="patient-glass-clinical p-6 mt-6 text-[var(--status-critical-fg)]">
                             {groupTrendsError}
                           </div>
                         ) : unitGroups.length > 0 ? (
@@ -651,7 +652,7 @@ export default function PatientTrendsPage() {
                                       </p>
                                     </div>
                                     {trends.some((t) => t.critical_status || t.approaching_critical) && (
-                                      <span className="text-xs ml-2 text-red-600">⚠ Nguy kịch</span>
+                                      <span className="text-xs ml-2 text-[var(--status-critical-fg)]">Nguy kịch</span>
                                     )}
                                   </summary>
                                   <div className="mt-3">
@@ -702,8 +703,11 @@ export default function PatientTrendsPage() {
                                       </p>
                                     </div>
                                     {(anyCritical || anyApproaching) && (
-                                      <div className={`trend-critical-badge mb-2 text-xs ${anyCritical ? "" : "approaching"}`}>
-                                        {anyCritical ? "⚠ Đã vượt ngưỡng nguy kịch" : "⚠ Đang tiến gần ngưỡng"}
+                                      <div className="mb-2">
+                                        <StatusIndicator
+                                          state={anyCritical ? "critical" : "abnormal"}
+                                          label={anyCritical ? "Đã vượt ngưỡng nguy kịch" : "Đang tiến gần ngưỡng"}
+                                        />
                                       </div>
                                     )}
                                     {trends.length === 1 ? (

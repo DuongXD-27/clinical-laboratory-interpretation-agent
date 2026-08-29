@@ -11,6 +11,7 @@ import {
   Stethoscope,
   TrendingUp,
 } from "lucide-react";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 const features = [
   {
@@ -105,7 +106,7 @@ export default function LandingPage() {
               <p className="text-sm font-semibold text-muted-foreground">Chỉ số xét nghiệm</p>
               <h2 className="mt-1 text-2xl font-bold text-foreground">WBC</h2>
             </div>
-            <span className="status-badge status-abnormal">Cao</span>
+            <StatusIndicator state="abnormal" label="Cao" />
           </div>
           <p className="mt-5 text-4xl font-bold text-foreground">
             12.4 <span className="text-base font-medium text-muted-foreground">10^9/L</span>
@@ -118,7 +119,7 @@ export default function LandingPage() {
             <span>Khoảng tham chiếu</span>
             <span>10.0</span>
           </div>
-          <div className="mt-6 rounded-xl border border-[var(--status-abnormal-border)] bg-[var(--status-abnormal-bg)] p-4 text-sm leading-6 text-[var(--status-abnormal-fg)]">
+          <div className="relative mt-6 overflow-hidden rounded-xl border border-white/70 bg-white/40 p-4 pl-5 text-sm leading-6 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] before:absolute before:inset-y-3 before:left-0 before:w-0.5 before:rounded-r before:bg-[var(--status-abnormal-fg)]">
             <p className="font-semibold text-foreground">Giá trị cao hơn ngưỡng bình thường.</p>
             <p className="mt-1">Kết quả này có thể liên quan đến viêm, nhiễm trùng hoặc phản ứng của cơ thể.</p>
           </div>

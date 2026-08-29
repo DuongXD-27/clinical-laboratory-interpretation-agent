@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { AlertCircle, AlertTriangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { LabReportDetail } from "@/types/history";
 import type { IndicatorResult } from "@/types/analysis";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 interface NeedsAttentionProps {
   report: LabReportDetail;
@@ -33,14 +34,11 @@ export default function NeedsAttention({ report }: NeedsAttentionProps) {
         {criticalIndicators.map((indicator, idx) => (
           <article 
             key={`critical-${idx}`} 
-            className="bg-[var(--surface)] border border-[var(--status-critical-bg)] border-l-4 border-l-[var(--status-critical-fg)] rounded-xl p-4 shadow-sm flex flex-col"
+            className="bg-[var(--surface)] border border-[var(--border)] border-l-2 border-l-[var(--status-critical-fg)] rounded-xl p-4 shadow-sm flex flex-col"
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <h3 className="font-semibold text-foreground break-words">{indicator.name}</h3>
-              <div className="flex items-center gap-1 text-[var(--status-critical-fg)] bg-[var(--status-critical-bg)] px-2 py-0.5 rounded text-xs font-medium shrink-0">
-                <AlertCircle className="w-3 h-3" />
-                <span>Cần chú ý khẩn cấp</span>
-              </div>
+              <StatusIndicator state="critical" label="Cần chú ý khẩn cấp" />
             </div>
             <div className="mt-auto pt-2 flex items-baseline gap-1">
               <span className="text-2xl font-bold text-foreground">{indicator.value}</span>
@@ -56,10 +54,7 @@ export default function NeedsAttention({ report }: NeedsAttentionProps) {
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <h3 className="font-medium text-foreground break-words">{indicator.name}</h3>
-              <div className="flex items-center gap-1 text-[var(--status-warning-fg)] bg-[var(--status-warning-bg)] px-2 py-0.5 rounded text-xs font-medium shrink-0">
-                <AlertTriangle className="w-3 h-3" />
-                <span>Cần lưu ý</span>
-              </div>
+              <StatusIndicator state="abnormal" label="Cần lưu ý" />
             </div>
             <div className="mt-auto pt-2 flex items-baseline gap-1">
               <span className="text-xl font-semibold text-foreground">{indicator.value}</span>

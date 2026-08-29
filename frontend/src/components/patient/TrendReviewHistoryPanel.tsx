@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
 import type { TrendResponse, TrendReview } from "@/types/analysis";
+import StatusIndicator from "@/components/common/StatusIndicator";
 
 type Props = {
   trend: TrendResponse;
@@ -93,9 +94,11 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
               open={index === 0}
             >
               <summary className="flex cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <span className="font-semibold text-slate-800">
-                  {assessmentText(review.doctor_assessment)}
-                </span>
+                <StatusIndicator
+                  state={review.doctor_assessment === "corrected" ? "corrected" : review.doctor_assessment === "needs_follow_up" ? "reviewing" : "completed"}
+                  label={assessmentText(review.doctor_assessment)}
+                  size="md"
+                />
                 <span className="text-xs text-slate-500">
                   {review.reviewed_at ? formatMoment(review.reviewed_at) : formatMoment(review.requested_at)}
                 </span>
@@ -103,11 +106,11 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
 
               <div className="mt-4 grid gap-4">
                 {review.doctor_comment && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+                  <div className="status-review-note">
                     <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
                       {review.doctor_comment}
                     </p>
-                    <p className="mt-2 text-xs text-emerald-800">
+                    <p className="text-xs text-slate-600">
                       {review.reviewed_by_username || "Bác sĩ"}
                       {review.reviewed_at ? ` · ${formatMoment(review.reviewed_at)}` : ""}
                     </p>

@@ -11,9 +11,6 @@ const badgeVariants = cva(
       variant: {
         neutral: "bg-[var(--surface-subtle)] text-[var(--foreground-secondary)] border-[var(--border)]",
         brand: "bg-[var(--brand)] text-white border-transparent",
-        success: "bg-[var(--status-normal-bg)] text-[var(--status-normal-fg)] border-[var(--status-normal-border)]",
-        warning: "bg-[var(--status-abnormal-bg)] text-[var(--status-abnormal-fg)] border-[var(--status-abnormal-border)]",
-        destructive: "bg-[var(--status-critical-bg)] text-[var(--status-critical-fg)] border-[var(--status-critical-border)]",
         info: "bg-[var(--info)] text-white border-transparent",
       },
     },
