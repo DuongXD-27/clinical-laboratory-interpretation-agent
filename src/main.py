@@ -158,6 +158,58 @@ def _persist_trace(fields: dict, server_timing: str, user_role: str | None) -> N
         )
 
 
+async def _close_out_timing(request: Request, timing: RequestTiming, status_code: int) -> None:
+    """Chot dong ho, ghi mot dong log va mot dong trace.
+
+    Tach ra khoi middleware vi voi phan hoi dang stream no phai chay MUON hon —
+    sau khi than phan hoi da chay xong, chu khong phai luc gui header.
+    """
+
+    timing.finish()
+    fields = timing.as_log_fields(
+        method=request.method,
+        path=request.url.path,
+        status_code=status_code,
+    )
+    logger.info("request_timing", extra=fields)
+
+    # Cung mot dict di ca hai duong: dong log JSON va dong trong DB. Neu
+    # dung hai nguon so lieu khac nhau thi som muon chung se lech, va hai
+    # nguon noi khac nhau con te hon chi co mot nguon.
+    if settings.trace_persistence_enabled and trace_repository.should_persist(request.url.path):
+        # run_in_threadpool vi SessionLocal la SQLAlchemy dong bo: commit
+        # thang trong middleware async se chan event loop, ma DB lai nam
+        # ngoai mang (Neon o Frankfurt) nen do khong phai chi phi giay.
+        await run_in_threadpool(
+            _persist_trace,
+            fields,
+            timing.server_timing_header(),
+            getattr(request.state, "user_role", None),
+        )
+
+
+async def _traced_body(body_iterator, request: Request, timing: RequestTiming, status_code: int):
+    """Boc than phan hoi stream de chot so SAU khi no chay xong.
+
+    `finally` chu khong phai sau vong lap: nguoi dung dong tab giua chung thi
+    generator bi dong va vong lap khong bao gio ket thuc binh thuong. Bo mat
+    dong trace do la bo mat dung nhung luot bi huy — thu dang xem nhat.
+
+    Nuot `Exception` chu khong nuot `BaseException`: mot lop do luong khong duoc
+    lam hong cau tra loi cua benh nhan, nhung `CancelledError` phai di tiep de
+    huy request van huy duoc that.
+    """
+
+    try:
+        async for chunk in body_iterator:
+            yield chunk
+    finally:
+        try:
+            await _close_out_timing(request, timing, status_code)
+        except Exception:
+            logger.warning("trace_stream_finalise_failed", extra={"path": request.url.path}, exc_info=True)
+
+
 @app.middleware("http")
 async def request_timing_middleware(request: Request, call_next):
     """Measure complete HTTP time and correlate detailed stage timings.
@@ -165,6 +217,23 @@ async def request_timing_middleware(request: Request, call_next):
     The timer starts before FastAPI parses multipart/JSON bodies or resolves
     dependencies.  Route/service spans use the context variable installed here,
     so one structured log line contains the complete latency breakdown.
+
+    ## Phan hoi dang stream phai duoc doi rieng
+
+    `BaseHTTPMiddleware` tra ve ngay khi `call_next` co doi tuong response. Voi
+    `StreamingResponse` thi luc do than phan hoi CHUA chay dong nao — ma ca luot
+    orchestrator, tuc moi loi goi LLM, nam trong do. Chot so o day la chot truoc
+    khi cong viec that bat dau.
+
+    Do tren production 29/08, mot luot chat that:
+
+        POST /api/v1/orchestrator/message/stream  200  dur=30.985  llm_calls=0
+
+    31ms la thoi gian tra header. Hau qua: duong chat — duong ton tien nhat cua
+    san pham — hien ra tren `/admin` la 0 luot goi LLM va 0 dong chi phi, con
+    31ms thi lan vao mau tinh phan vi cua nhom AI va keo P95 xuong.
+
+    Nen voi stream, dong ho chot trong `_traced_body`, sau khi byte cuoi di ra.
     """
 
     timing = RequestTiming()
@@ -172,39 +241,49 @@ async def request_timing_middleware(request: Request, call_next):
     token = set_current_timing(timing)
     status_code = 500
     response = None
+    deferred = False
     try:
         response = await call_next(request)
         status_code = response.status_code
+
+        # Duoi `BaseHTTPMiddleware`, MOI phan hoi deu la `_StreamingResponse`,
+        # nen `hasattr(response, "body_iterator")` khong phan biet duoc gi —
+        # dung no thi ca cac request thuong cung mat header `Server-Timing`.
+        #
+        # Tin hieu dung nam o HTTP chu khong o kieu doi tuong: mot phan hoi
+        # thuong CO `content-length`, vi `call_next` tra ve nghia la route da
+        # chay xong va do dai da biet. Mot phan hoi stream thi KHONG co, vi luc
+        # gui header chua ai biet no dai bao nhieu — va do dung la luc than
+        # chua chay dong nao.
+        body_iterator = getattr(response, "body_iterator", None)
+        if body_iterator is not None and "content-length" not in response.headers:
+            deferred = True
+            # `Server-Timing` khong gan duoc cho stream: header da phai gui di
+            # khi chua do duoc gi. Gan mot chuoi rong hoac mot con so tam thi
+            # con te hon khong gan — no se chay thang vao cay span. Chuoi day du
+            # van duoc ghi vao DB o `_traced_body`, va do moi la thu man /admin
+            # doc; header nay chi phuc vu devtools cua trinh duyet.
+            response.headers["X-Request-ID"] = timing.request_id
+            response.body_iterator = _traced_body(body_iterator, request, timing, status_code)
+
         return response
     finally:
-        timing.finish()
-        if response is not None:
-            response.headers["X-Request-ID"] = timing.request_id
-            response.headers["Server-Timing"] = timing.server_timing_header()
-            origin = request.headers.get("origin")
-            if origin in _cors_origins:
-                response.headers["Timing-Allow-Origin"] = origin
-        fields = timing.as_log_fields(
-            method=request.method,
-            path=request.url.path,
-            status_code=status_code,
-        )
-        logger.info("request_timing", extra=fields)
+        if not deferred:
+            # Chot so TRUOC khi dung header: `server_timing_header()` doc bang
+            # `metrics`, ma `http-total` chi vao bang do o `timing.finish()`.
+            # Dao thu tu thi header ra chuoi rong — va rong thi khong ai nhin
+            # thay, no chi lang le bien mat khoi devtools.
+            await _close_out_timing(request, timing, status_code)
+            if response is not None:
+                response.headers["X-Request-ID"] = timing.request_id
+                response.headers["Server-Timing"] = timing.server_timing_header()
+                origin = request.headers.get("origin")
+                if origin in _cors_origins:
+                    response.headers["Timing-Allow-Origin"] = origin
 
-        # Cung mot dict di ca hai duong: dong log JSON va dong trong DB. Neu
-        # dung hai nguon so lieu khac nhau thi som muon chung se lech, va hai
-        # nguon noi khac nhau con te hon chi co mot nguon.
-        if settings.trace_persistence_enabled and trace_repository.should_persist(request.url.path):
-            # run_in_threadpool vi SessionLocal la SQLAlchemy dong bo: commit
-            # thang trong middleware async se chan event loop, ma DB lai nam
-            # ngoai mang (Neon o Frankfurt) nen do khong phai chi phi giay.
-            await run_in_threadpool(
-                _persist_trace,
-                fields,
-                timing.server_timing_header(),
-                getattr(request.state, "user_role", None),
-            )
-
+        # Reset ngay ca voi stream. Task chay route da COPY context luc duoc tao
+        # (khi bien nay con dat), nen `add_timing_event` trong than stream van
+        # thay dung doi tuong `timing` — no giu tham chieu, khong doc lai bien.
         reset_current_timing(token)
 
 
