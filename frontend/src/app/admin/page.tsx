@@ -20,6 +20,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import AdminCharts from "@/components/admin/AdminCharts";
 import { errorLabel } from "@/lib/chartPalette.mjs";
+import {
+  NOT_MEASURED,
+  countOrZero,
+  formatCount,
+  formatDuration,
+  formatMs,
+  formatPct,
+  formatUsd,
+  isMeasured,
+} from "@/lib/metricFormat.mjs";
 import { cn } from "@/lib/utils";
 import type {
   LatencyGroup,
@@ -38,11 +48,6 @@ const WINDOW_OPTIONS = [
 ];
 
 const PAGE_SIZE = 25;
-
-function formatMs(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(2)}s`;
-  return `${Math.round(value)}ms`;
-}
 
 function formatClock(iso: string): string {
   // Backend trả giờ UTC không kèm hậu tố Z; thiếu nó thì trình duyệt hiểu là
@@ -76,20 +81,20 @@ type KpiProps = { label: string; value: React.ReactNode; hint: string; alert?: b
 
 /** Một ô số liệu trong bảng phân vị. `null` hiện dấu gạch, không hiện 0. */
 function Cell({ value, suffix = "ms" }: { value: number | null; suffix?: string }) {
-  if (value === null) {
+  if (!isMeasured(value)) {
     // Dấu gạch, không phải "0ms". Trên màn hình vận hành, 0ms đọc như nhanh
     // tuyệt đối — nhầm nó với "chưa đo được" dẫn tới kết luận sai về một hệ
     // thống đang chết.
     return <span className="text-muted-foreground">—</span>;
   }
-  const shown = suffix === "ms" && value >= 1000 ? `${(value / 1000).toFixed(2)}s` : `${Math.round(value)}${suffix}`;
-  return <span>{shown}</span>;
+  return <span>{formatDuration(value, suffix)}</span>;
 }
 
 function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
+  const value = countOrZero(n);
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return String(value);
 }
 
 /** Chi phí LLM: token và tiền.
@@ -99,8 +104,11 @@ function formatTokens(n: number): string {
  *
  * Hai điều bảng này phải nói thật:
  *
- * 1. `cost_usd === null` hiện dấu gạch kèm lời giải thích, KHÔNG hiện "$0.00".
- *    `$0.00` đọc như miễn phí, dấu gạch đọc như không biết.
+ * 1. Chi phí chưa đo được thì hiện dấu gạch kèm lời giải thích, KHÔNG hiện
+ *    "$0.00" — `$0.00` đọc như miễn phí, dấu gạch đọc như không biết. Kiểm
+ *    tra qua `isMeasured` chứ không qua `=== null`: backend deploy tách rời
+ *    frontend nên một trường API chưa gửi về đây là `undefined`, và
+ *    `undefined` lọt qua `=== null` rồi hiện ra "NaNms". Xem `metricFormat.mjs`.
  * 2. `unpriced_call_count > 0` phải cảnh báo: con số chi phí đang báo thấp hơn
  *    thực tế vì có lượt gọi model chưa có trong bảng giá.
  */
@@ -132,30 +140,30 @@ function KpiRow({ latency, slo }: { latency: LatencyGroups; slo: SloReport }) {
     <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <Kpi
         label="Tần suất request"
-        value={ai.requests_per_min === null ? "—" : `${ai.requests_per_min}/phút`}
+        value={isMeasured(ai.requests_per_min) ? `${ai.requests_per_min}/phút` : NOT_MEASURED}
         hint="chỉ đường AI"
       />
       <Kpi
         label="P95 độ trễ"
-        value={p95 === null ? "—" : p95 >= 1000 ? `${(p95 / 1000).toFixed(2)}s` : `${Math.round(p95)}ms`}
+        value={formatMs(p95)}
         hint="SLO: dưới 8s"
-        alert={p95 !== null && p95 >= 8000}
+        alert={countOrZero(p95) >= 8000}
       />
       <Kpi
         label="Tỉ lệ lỗi"
-        value={errorRate === null ? "—" : `${errorRate}%`}
+        value={formatPct(errorRate)}
         hint="chỉ 5xx · SLO: dưới 0.5%"
-        alert={errorRate !== null && errorRate > 0.5}
+        alert={countOrZero(errorRate) > 0.5}
       />
       <Kpi
         label="Chi phí LLM"
-        value={ai.cost_usd === null ? "—" : `$${ai.cost_usd.toFixed(4)}`}
-        hint={ai.unpriced_call_count > 0 ? "đang báo THẤP hơn thực tế" : "ước lượng theo bảng giá"}
-        alert={ai.unpriced_call_count > 0}
+        value={formatUsd(ai.cost_usd)}
+        hint={countOrZero(ai.unpriced_call_count) > 0 ? "đang báo THẤP hơn thực tế" : "ước lượng theo bảng giá"}
+        alert={countOrZero(ai.unpriced_call_count) > 0}
       />
       <Kpi
         label="Không phải thay văn bản"
-        value={quality?.actual_pct === null || quality === null ? "—" : `${quality.actual_pct}%`}
+        value={formatPct(quality?.actual_pct)}
         hint="đo được — KHÔNG phải groundedness"
         alert={quality?.status === "BREACHED"}
       />
@@ -216,13 +224,13 @@ function SloPanel({ slo }: { slo: SloReport }) {
                     </td>
                     <td className="py-2.5 px-3 text-right text-muted-foreground">{item.target_pct}%</td>
                     <td className="py-2.5 px-3 text-right font-semibold">
-                      {item.actual_pct === null ? <span className="text-muted-foreground">—</span> : `${item.actual_pct}%`}
+                      {isMeasured(item.actual_pct) ? `${item.actual_pct}%` : <span className="text-muted-foreground">{NOT_MEASURED}</span>}
                     </td>
                     <td className={cn("py-2.5 px-3 text-right", over && "font-semibold text-[var(--status-critical-fg)]")}>
-                      {item.budget_used_pct === null ? "—" : `${item.budget_used_pct}%`}
+                      {formatPct(item.budget_used_pct)}
                     </td>
                     <td className="py-2.5 pl-3 text-right text-muted-foreground">
-                      {item.budget_remaining === null ? "—" : item.budget_remaining}
+                      {formatCount(item.budget_remaining)}
                     </td>
                   </tr>
                 );
@@ -261,8 +269,8 @@ function SloPanel({ slo }: { slo: SloReport }) {
 
 function CostPanel({ latency }: { latency: LatencyGroups }) {
   const ai = latency.ai;
-  const totalTokens = ai.input_tokens + ai.output_tokens;
-  const unpriced = ai.unpriced_call_count;
+  const totalTokens = countOrZero(ai.input_tokens) + countOrZero(ai.output_tokens);
+  const unpriced = countOrZero(ai.unpriced_call_count);
 
   return (
     <Card className="gap-0 py-4">
@@ -295,32 +303,30 @@ function CostPanel({ latency }: { latency: LatencyGroups }) {
           <div>
             <span className="block text-xs text-muted-foreground">Chi phí</span>
             <strong className="block text-lg font-semibold tabular-nums">
-              {ai.cost_usd === null ? (
-                <span className="text-muted-foreground">—</span>
+              {isMeasured(ai.cost_usd) ? (
+                formatUsd(ai.cost_usd)
               ) : (
-                `$${ai.cost_usd.toFixed(4)}`
+                <span className="text-muted-foreground">{NOT_MEASURED}</span>
               )}
             </strong>
           </div>
           <div>
             <span className="block text-xs text-muted-foreground">Mỗi lượt gọi</span>
             <strong className="block text-lg font-semibold tabular-nums">
-              {ai.cost_per_call_usd === null ? (
-                <span className="text-muted-foreground">—</span>
+              {isMeasured(ai.cost_per_call_usd) ? (
+                formatUsd(ai.cost_per_call_usd, 5)
               ) : (
-                `$${ai.cost_per_call_usd.toFixed(5)}`
+                <span className="text-muted-foreground">{NOT_MEASURED}</span>
               )}
             </strong>
           </div>
           <div>
             <span className="block text-xs text-muted-foreground">TTFT (P95)</span>
             <strong className="block text-lg font-semibold tabular-nums">
-              {ai.ttft_p95_ms === null ? (
-                <span className="text-muted-foreground">—</span>
-              ) : ai.ttft_p95_ms >= 1000 ? (
-                `${(ai.ttft_p95_ms / 1000).toFixed(2)}s`
+              {isMeasured(ai.ttft_p95_ms) ? (
+                formatMs(ai.ttft_p95_ms)
               ) : (
-                `${Math.round(ai.ttft_p95_ms)}ms`
+                <span className="text-muted-foreground">{NOT_MEASURED}</span>
               )}
             </strong>
           </div>
@@ -339,15 +345,15 @@ function CostPanel({ latency }: { latency: LatencyGroups }) {
 
         {/* Rủi ro thật của việc bật streaming: OpenAI chỉ trả usage khi được yêu
             cầu rõ. Thiếu nó thì token và chi phí âm thầm về 0. Nói ra ngay. */}
-        {ai.missing_usage_count > 0 ? (
+        {countOrZero(ai.missing_usage_count) > 0 ? (
           <p className="m-0 mt-3 rounded border border-[var(--status-critical-border)] bg-[var(--status-critical-bg)] px-3 py-2 text-xs leading-relaxed text-[var(--status-critical-fg)]">
-            {ai.missing_usage_count} lượt gọi thành công nhưng báo 0 token — gần như chắc chắn là lỗi
+            {countOrZero(ai.missing_usage_count)} lượt gọi thành công nhưng báo 0 token — gần như chắc chắn là lỗi
             đo lường, không phải sự thật. Nguyên nhân đã biết: bật streaming mà nhà cung cấp không trả
             usage. Con số chi phí ở trên <strong>không tin được</strong> cho tới khi hết cảnh báo này.
           </p>
         ) : null}
 
-        {ai.cost_usd === null && totalTokens > 0 ? (
+        {!isMeasured(ai.cost_usd) && totalTokens > 0 ? (
           <p className="m-0 mt-3 text-xs leading-relaxed text-muted-foreground">
             Đã đếm được {formatTokens(totalTokens)} token nhưng chưa có giá cho model đang dùng, nên
             không quy ra tiền được. Token thì đo được, giá thì phải khai trong{" "}
