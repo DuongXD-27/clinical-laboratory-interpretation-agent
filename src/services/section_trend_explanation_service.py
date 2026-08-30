@@ -24,10 +24,13 @@ from src.services.trend_explanation_service import (
     CONTACT_DOCTOR_NOTICE,
     TREND_EXPLANATION_FALLBACK,
     TrendExplanationUnavailableError,
+    build_point_reference_facts,
     _extract_text_content,
     _percent_change,
     critical_threshold_bounds,
+    format_point_reference_facts,
     matched_reference_bounds,
+    point_reference_extra_numbers,
     validate_section_explanation,
 )
 from src.services.trend_service import get_patient_trend, get_patient_trend_analytes
@@ -91,6 +94,12 @@ def _group_prompt(
                 "TUYỆT ĐỐI KHÔNG được nói giá trị 'trong khoảng tham chiếu' hay 'đã vượt ngưỡng'."
             )
 
+        point_reference_facts = fact["point_reference_facts"]
+        block += (
+            "\nPhân loại từng điểm so với khoảng tham chiếu đã khớp theo từng ngày:\n"
+            f"{format_point_reference_facts(point_reference_facts, trend.canonical_unit)}"
+        )
+
         pct_change, pct_direction = fact["pct_change"], fact["pct_direction"]
         if pct_change is not None and pct_direction is not None:
             change_phrase = (
@@ -134,12 +143,15 @@ def _group_prompt(
            hoặc "...đều nằm trong khoảng tham chiếu."
         3. Quan hệ trái chiều: "[A] tăng trong khi [B] giảm."
         4. Mức biến động của từng chỉ số giữa hai lần đo gần nhất, chỉ dùng số phần trăm đã cho của đúng chỉ số đó.
+        5. Các ngày đáng chú ý của từng chỉ số: ngày nằm dưới cận dưới, vượt cận trên, hoặc gần cận trên/dưới.
         Quy tắc bắt buộc:
         - Mọi số phải lấy từ block của đúng chỉ số mà câu đang nói đến; KHÔNG gộp số của hai chỉ số thành một phép tính.
         - Không kết luận tình trạng sức khỏe hay bệnh từ tổ hợp chỉ số. Không dùng: "sự kết hợp này cho thấy",
           "nhóm chỉ số này nghĩa là", "nguy cơ tim mạch", "hội chứng chuyển hóa".
         - Không chẩn đoán, không suy đoán nguyên nhân, không dự đoán giá trị tương lai.
         - Không khuyến nghị thuốc, điều trị, xét nghiệm thêm hoặc hành động y khoa.
+        - Có thể gọi các ngày vượt/dưới/gần cận là "điểm cần chú ý trên biểu đồ", nhưng không tự
+          suy ra bệnh, nguy cơ, nguyên nhân hoặc hướng xử trí.
         - Không tạo số, ngày hoặc đơn vị ngoài dữ liệu đã cung cấp.
         - Không thêm từ nối số đếm/khoảng thời gian tự đặt như "1 tháng", "1 ngày", "2 lần đo",
           "khoảng 3 tuần" — chỉ nói đến dữ liệu các lần đo, không đo khoảng cách thời gian.
@@ -223,19 +235,30 @@ async def explain_section_trend(
     extra_allowed: list[list[float | None]] = []
     for trend in trends:
         range_lower, range_upper = matched_reference_bounds(db, trend)
+        point_reference_facts = build_point_reference_facts(db, trend)
         pct_change, pct_direction = _percent_change(trend)
         critical_low, critical_high = critical_threshold_bounds(trend)
         facts.append(
             {
                 "range_lower": range_lower,
                 "range_upper": range_upper,
+                "point_reference_facts": point_reference_facts,
                 "pct_change": pct_change,
                 "pct_direction": pct_direction,
                 "critical_low": critical_low,
                 "critical_high": critical_high,
             }
         )
-        extra_allowed.append([range_lower, range_upper, pct_change, critical_low, critical_high])
+        extra_allowed.append(
+            [
+                range_lower,
+                range_upper,
+                pct_change,
+                critical_low,
+                critical_high,
+                *point_reference_extra_numbers(point_reference_facts),
+            ]
+        )
 
     prompt = _group_prompt(section, trends, facts=facts)
 

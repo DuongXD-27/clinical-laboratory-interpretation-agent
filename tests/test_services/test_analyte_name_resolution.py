@@ -5,6 +5,7 @@ import pytest
 
 from src.services.analyte_name_resolution import (
     AMBIGUOUS_LABELS,
+    OCR_RUNTIME_ALIAS_GROUPS,
     SAFE_RUNTIME_ALIASES,
     normalize_analyte_lookup_key,
 )
@@ -57,6 +58,45 @@ def test_every_catalog_alias_and_explicit_runtime_alias_resolves(repository):
 
     for alias, canonical in aliases:
         assert repository.resolve_analyte(alias) == canonical
+
+
+def test_ocr_runtime_alias_groups_cover_every_locked_approved_analyte(repository):
+    assert set(OCR_RUNTIME_ALIAS_GROUPS) == set(repository.approved_analytes)
+    assert all(8 <= len(aliases) <= 12 for aliases in OCR_RUNTIME_ALIAS_GROUPS.values())
+
+
+@pytest.mark.parametrize(
+    ("raw_name", "canonical"),
+    [
+        ("Số lượng bạch cầu (WBC)", "WBC"),
+        ("Bạch cầu(WBC)", "WBC"),
+        ("Tỷ lệ bạch cầu trung tính (NEUT%)", "Neutrophils %"),
+        ("Số lượng bạch cầu trung tính (NEUT#)", "Neutrophils abs"),
+        ("Tỷ lệ bạch cầu lympho (LYMPH%)", "Lymphocytes %"),
+        ("Số lượng bạch cầu lympho (LYMPH#)", "Lymphocytes abs"),
+        ("Tỷ lệ bạch cầu mono (MONO%)", "Monocytes %"),
+        ("Số lượng bạch cầu mono (MONO#)", "Monocytes abs"),
+        ("Tỷ lệ bạch cầu ái toan (EO%)", "Eosinophils %"),
+        ("Số lượng bạch cầu ái toan (EO#)", "Eosinophils abs"),
+        ("Số lượng hồng cầu (RBC)", "RBC"),
+        ("Nồng độ huyết sắc tố (HGB)", "HGB"),
+        ("Thể tích khối hồng cầu trong máu toàn phần (HCT)", "HCT"),
+        ("Thể tích trung bình hồng cầu (MCV)", "MCV"),
+        ("Lượng huyết sắc tố trung bình hồng cầu (MCH)", "MCH"),
+        ("Nồng độ huyết sắc tố trung bình hồng cầu (MCHC)", "MCHC"),
+        ("Độ phân bố hồng cầu (RDW-CV)", "RDW-CV"),
+        ("Số lượng tiểu cầu (PLT)", "PLT"),
+        ("Glucose máu lúc đói", "Fasting plasma glucose"),
+        ("Creatinin máu", "Creatinine"),
+        ("Cholesterol toàn phần (TC)", "Total cholesterol"),
+        ("Kali máu (K+)", "Potassium"),
+    ],
+)
+def test_ocr_observed_labels_resolve_to_canonical_names(raw_name, canonical, repository):
+    resolution = repository.resolve_analyte_result(raw_name)
+
+    assert resolution.status == "RESOLVED"
+    assert resolution.canonical_name == canonical
 
 
 def test_normalized_deterministic_aliases_have_no_collisions(repository):

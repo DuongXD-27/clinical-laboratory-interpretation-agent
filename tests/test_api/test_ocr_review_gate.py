@@ -29,6 +29,37 @@ def test_hgb_approved_ocr_aliases_are_supported(name):
         username="benhnhan",
     )
     assert drafts[0].supported is True
+    assert drafts[0].name == "HGB"
+    assert drafts[0].unsupported_reason == ""
+
+
+@pytest.mark.parametrize(
+    ("raw_name", "canonical_name", "unit"),
+    [
+        ("Số lượng bạch cầu (WBC)", "WBC", "10^9/L"),
+        ("Tỷ lệ bạch cầu trung tính (NEUT%)", "Neutrophils %", "%"),
+        ("Số lượng bạch cầu trung tính (NEUT#)", "Neutrophils abs", "10^9/L"),
+        ("Tỷ lệ bạch cầu lympho (LYMPH%)", "Lymphocytes %", "%"),
+        ("Số lượng bạch cầu lympho (LYMPH#)", "Lymphocytes abs", "10^9/L"),
+        ("Tỷ lệ bạch cầu mono (MONO%)", "Monocytes %", "%"),
+        ("Số lượng bạch cầu mono (MONO#)", "Monocytes abs", "10^9/L"),
+        ("Tỷ lệ bạch cầu ái toan (EO%)", "Eosinophils %", "%"),
+        ("Số lượng bạch cầu ái toan (EO#)", "Eosinophils abs", "10^9/L"),
+        ("Số lượng hồng cầu (RBC)", "RBC", "10^12/L"),
+        ("Nồng độ huyết sắc tố (HGB)", "HGB", "g/L"),
+        ("Thể tích khối hồng cầu trong máu toàn phần (HCT)", "HCT", "L/L"),
+        ("Thể tích trung bình hồng cầu (MCV)", "MCV", "fL"),
+        ("Lượng huyết sắc tố trung bình hồng cầu (MCH)", "MCH", "pg"),
+    ],
+)
+def test_ocr_observed_labels_are_supported_and_canonicalized(raw_name, canonical_name, unit):
+    drafts, _ = prepare_review(
+        [OCRIndicatorDraft(name=raw_name, value=1.0, unit=unit, confidence=0.95)],
+        username="benhnhan",
+    )
+
+    assert drafts[0].supported is True
+    assert drafts[0].name == canonical_name
     assert drafts[0].unsupported_reason == ""
 
 
@@ -477,17 +508,17 @@ def test_ocr_review_gate_alias_support_and_safety():
     by_name = {d.name: d for d in drafts}
 
     # Positive cases: supported = True
-    assert by_name["K+"].supported is True
-    assert by_name["K+"].unsupported_reason == ""
+    assert by_name["Potassium"].supported is True
+    assert by_name["Potassium"].unsupported_reason == ""
 
-    assert by_name["Creatinin"].supported is True
-    assert by_name["Creatinin"].unsupported_reason == ""
+    assert by_name["Creatinine"].supported is True
+    assert by_name["Creatinine"].unsupported_reason == ""
 
-    assert by_name["HDL-cho."].supported is True
-    assert by_name["HDL-cho."].unsupported_reason == ""
+    assert by_name["HDL-C"].supported is True
+    assert by_name["HDL-C"].unsupported_reason == ""
 
-    assert by_name["LDL-cho."].supported is True
-    assert by_name["LDL-cho."].unsupported_reason == ""
+    assert by_name["LDL-C"].supported is True
+    assert by_name["LDL-C"].unsupported_reason == ""
 
     # Negative/safety case: generic Glucose remains fail-closed (supported = False)
     assert by_name["Glucose"].supported is False
@@ -506,7 +537,7 @@ def test_ocr_hospital_labels_resolve_safe_lipids_and_expose_glucose_ambiguity():
     )
     by_name = {draft.name: draft for draft in drafts}
 
-    assert by_name[names[0]].supported is True
-    assert by_name[names[1]].supported is True
+    assert by_name["Total cholesterol"].supported is True
+    assert by_name["Triglyceride"].supported is True
     assert by_name[names[2]].supported is False
     assert "chưa đủ thông tin" in by_name[names[2]].unsupported_reason

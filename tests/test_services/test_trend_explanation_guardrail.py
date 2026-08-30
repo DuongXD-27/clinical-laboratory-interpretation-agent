@@ -10,7 +10,10 @@ cụ thể". ADR-010 định nghĩa 4 dạng câu được phép và một danh 
 from datetime import date
 
 from src.models.schemas import TrendPointResponse, TrendResponse
-from src.services.trend_explanation_service import validate_trend_explanation
+from src.services.trend_explanation_service import (
+    _classify_reference_position,
+    validate_trend_explanation,
+)
 
 
 def _trend(unit: str = "mmol/L", values=(2.1, 2.3, 2.6)) -> TrendResponse:
@@ -60,6 +63,30 @@ def test_allows_stating_value_above_reference_range_bound():
     )
 
     assert violations == []
+
+
+def test_allows_stating_point_dates_below_and_near_reference_bounds():
+    trend = _trend(values=(3.4, 3.6, 5.2))
+
+    violations = validate_trend_explanation(
+        (
+            "Ngày 01/08/2026 nằm dưới cận dưới 3.5 mmol/L; "
+            "ngày 03/08/2026 nằm trong khoảng tham chiếu và gần cận trên 5.3 mmol/L."
+        ),
+        trend,
+        extra_allowed_numbers=[3.5, 5.3],
+    )
+
+    assert violations == []
+
+
+def test_reference_position_classifier_marks_near_bounds_only_for_two_sided_ranges():
+    assert _classify_reference_position(3.4, 3.5, 5.3) == "below_reference"
+    assert _classify_reference_position(5.4, 3.5, 5.3) == "above_reference"
+    assert _classify_reference_position(3.6, 3.5, 5.3) == "near_lower_bound"
+    assert _classify_reference_position(5.2, 3.5, 5.3) == "near_upper_bound"
+    assert _classify_reference_position(4.4, 3.5, 5.3) == "within_reference"
+    assert _classify_reference_position(4.4, None, 5.3) == "within_reference"
 
 
 def test_reference_range_bound_not_in_extra_is_still_blocked():

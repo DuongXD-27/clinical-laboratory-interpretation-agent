@@ -45,6 +45,19 @@ class TrendExplanationViolation:
     evidence: str
 
 
+REFERENCE_NEAR_MARGIN_RATIO = 0.10
+
+
+@dataclass(frozen=True)
+class TrendPointReferenceFact:
+    report_id: int
+    test_date: str
+    value: float
+    lower: float | None
+    upper: float | None
+    relation: str
+
+
 def _decimal_variants(value: float | int) -> set[str]:
     raw = str(value)
     try:
@@ -229,18 +242,13 @@ def _parse_bound(value: object) -> float | None:
         return None
 
 
-def matched_reference_bounds(db: Session, trend: TrendResponse) -> tuple[float | None, float | None]:
-    """ADR-010 CRIT-TREND-02: khớp khoảng tham chiếu theo sex/age tại lần đo gần nhất.
-
-    Dùng đúng snapshot giới tính/tuổi mà pipeline chính đã dùng cho lần đo đó
-    (``lab_reports.patient_gender_at_test`` / ``patient_age_at_test``), không phải hồ sơ
-    hiện tại của bệnh nhân. Không khớp được (chưa hỗ trợ, thiếu dữ liệu, sai đơn vị...)
-    thì trả về (None, None) — bên gọi không được đưa ra nhận định "trong khoảng/vượt
-    ngưỡng" nào trong trường hợp đó.
-    """
-    if not trend.points:
-        return None, None
-    gender, age = get_report_patient_snapshot(db, report_id=trend.points[-1].report_id)
+def _matched_reference_bounds_for_report(
+    db: Session,
+    trend: TrendResponse,
+    *,
+    report_id: int,
+) -> tuple[float | None, float | None]:
+    gender, age = get_report_patient_snapshot(db, report_id=report_id)
     if gender is None:
         return None, None
     try:
@@ -256,6 +264,90 @@ def matched_reference_bounds(db: Session, trend: TrendResponse) -> tuple[float |
     if not result.matched or not result.rule:
         return None, None
     return _parse_bound(result.rule.get("range_lower")), _parse_bound(result.rule.get("range_upper"))
+
+
+def matched_reference_bounds(db: Session, trend: TrendResponse) -> tuple[float | None, float | None]:
+    """ADR-010 CRIT-TREND-02: khớp khoảng tham chiếu theo sex/age tại lần đo gần nhất.
+
+    Dùng đúng snapshot giới tính/tuổi mà pipeline chính đã dùng cho lần đo đó
+    (``lab_reports.patient_gender_at_test`` / ``patient_age_at_test``), không phải hồ sơ
+    hiện tại của bệnh nhân. Không khớp được (chưa hỗ trợ, thiếu dữ liệu, sai đơn vị...)
+    thì trả về (None, None) — bên gọi không được đưa ra nhận định "trong khoảng/vượt
+    ngưỡng" nào trong trường hợp đó.
+    """
+    if not trend.points:
+        return None, None
+    return _matched_reference_bounds_for_report(db, trend, report_id=trend.points[-1].report_id)
+
+
+def _classify_reference_position(value: float, lower: float | None, upper: float | None) -> str:
+    if lower is None and upper is None:
+        return "unknown_reference"
+    if lower is not None and value < lower:
+        return "below_reference"
+    if upper is not None and value > upper:
+        return "above_reference"
+    if lower is not None and upper is not None and upper > lower:
+        margin = (upper - lower) * REFERENCE_NEAR_MARGIN_RATIO
+        if value - lower <= margin:
+            return "near_lower_bound"
+        if upper - value <= margin:
+            return "near_upper_bound"
+    return "within_reference"
+
+
+def build_point_reference_facts(db: Session, trend: TrendResponse) -> list[TrendPointReferenceFact]:
+    """Classify each trend point against its own sex/age-matched reference range."""
+    facts: list[TrendPointReferenceFact] = []
+    for point in trend.points:
+        lower, upper = _matched_reference_bounds_for_report(db, trend, report_id=point.report_id)
+        facts.append(
+            TrendPointReferenceFact(
+                report_id=point.report_id,
+                test_date=point.test_date.isoformat(),
+                value=point.value,
+                lower=lower,
+                upper=upper,
+                relation=_classify_reference_position(point.value, lower, upper),
+            )
+        )
+    return facts
+
+
+def _reference_relation_text(fact: TrendPointReferenceFact, unit: str) -> str:
+    if fact.relation == "unknown_reference":
+        return "chưa khớp được khoảng tham chiếu cho điểm này"
+    if fact.relation == "below_reference":
+        return f"nằm dưới cận dưới {fact.lower} {unit}"
+    if fact.relation == "above_reference":
+        return f"vượt cận trên {fact.upper} {unit}"
+    if fact.relation == "near_lower_bound":
+        return f"nằm trong khoảng tham chiếu và gần cận dưới {fact.lower} {unit}"
+    if fact.relation == "near_upper_bound":
+        return f"nằm trong khoảng tham chiếu và gần cận trên {fact.upper} {unit}"
+    if fact.lower is not None and fact.upper is not None:
+        return f"nằm trong khoảng tham chiếu {fact.lower} - {fact.upper} {unit}"
+    if fact.lower is not None:
+        return f"nằm trên cận dưới {fact.lower} {unit}"
+    if fact.upper is not None:
+        return f"nằm dưới cận trên {fact.upper} {unit}"
+    return "chưa khớp được khoảng tham chiếu cho điểm này"
+
+
+def format_point_reference_facts(facts: list[TrendPointReferenceFact], unit: str) -> str:
+    if not facts:
+        return "Không có dữ kiện khoảng tham chiếu theo từng điểm."
+    return "\n".join(
+        f"- {fact.test_date}: giá trị {fact.value} {unit}, {_reference_relation_text(fact, unit)}."
+        for fact in facts
+    )
+
+
+def point_reference_extra_numbers(facts: list[TrendPointReferenceFact]) -> list[float | None]:
+    numbers: list[float | None] = []
+    for fact in facts:
+        numbers.extend([fact.lower, fact.upper])
+    return numbers
 
 
 def critical_threshold_bounds(trend: TrendResponse) -> tuple[float | None, float | None]:
@@ -297,6 +389,7 @@ def _trend_prompt(
     trend: TrendResponse,
     *,
     range_bounds: tuple[float | None, float | None] = (None, None),
+    point_reference_facts: list[TrendPointReferenceFact] | None = None,
     pct_change: float | None = None,
     pct_direction: str | None = None,
     critical_bounds: tuple[float | None, float | None] = (None, None),
@@ -323,6 +416,8 @@ def _trend_prompt(
             "Chưa khớp được khoảng tham chiếu theo giới tính/độ tuổi bệnh nhân cho chỉ số này — "
             "TUYỆT ĐỐI KHÔNG được nói giá trị 'trong khoảng tham chiếu' hay 'đã vượt ngưỡng' dưới bất kỳ hình thức nào."
         )
+
+    point_reference_section = format_point_reference_facts(point_reference_facts or [], trend.canonical_unit)
 
     pct_section = ""
     if pct_change is not None and pct_direction is not None:
@@ -364,22 +459,30 @@ def _trend_prompt(
 
         {range_section}{pct_section}{critical_section}
 
-        Nhiệm vụ: viết MỘT đoạn ngắn tiếng Việt, dễ hiểu cho bệnh nhân, chỉ được ghép các
+        Phân loại từng điểm so với khoảng tham chiếu đã khớp theo từng ngày:
+        {point_reference_section}
+
+        Nhiệm vụ: viết một đoạn tiếng Việt dễ hiểu cho bệnh nhân, giàu dữ kiện hơn phần đọc biểu đồ thô.
+        Chỉ được ghép các
         dạng câu sau (bỏ dạng nào không có dữ liệu tương ứng ở trên):
         1. Vị trí so với khoảng tham chiếu, chỉ dùng số cận đã cho ở trên.
         2. Mức biến động giữa hai lần đo gần nhất, chỉ dùng số phần trăm đã cho ở trên.
         3. Hướng đi tổng thể của chuỗi: tăng dần, giảm dần, dao động, hay ổn định tương đối.
+        4. Các ngày đáng chú ý trong phần phân loại từng điểm: ngày nằm dưới cận dưới,
+           vượt cận trên, hoặc gần cận trên/dưới.
         Quy tắc bắt buộc:
         - Không chẩn đoán bệnh, không kết luận tình trạng sức khỏe.
         - Không suy đoán nguyên nhân.
         - Không suy diễn mức độ nguy cơ hay ý nghĩa lâm sàng ngoài dữ kiện đã cho.
         - Không khuyến nghị thuốc, điều trị, xét nghiệm thêm hoặc hành động y khoa.
         - Không dự đoán giá trị tương lai.
+        - Có thể gọi các ngày vượt/dưới/gần cận là "điểm cần chú ý trên biểu đồ", nhưng không tự
+          suy ra bệnh, nguy cơ, nguyên nhân hoặc hướng xử trí.
         - Không tạo số, ngày hoặc đơn vị ngoài dữ liệu đã cung cấp ở trên.
         - Không thêm từ nối số đếm/khoảng thời gian tự đặt như "1 tháng", "1 ngày", "2 lần đo",
           "khoảng 3 tuần" — chỉ nói đến dữ liệu các lần đo, không đo khoảng cách thời gian.
         - Không viết disclaimer.
-        Chỉ trả về đoạn giải thích, không bullet list.
+        Chỉ trả về 2 đến 4 câu văn liền mạch, không bullet list.
         """
     )
 
@@ -435,9 +538,17 @@ async def explain_patient_trend(
 
     escalate = bool(trend.critical_status or trend.approaching_critical)
     range_lower, range_upper = matched_reference_bounds(db, trend)
+    point_reference_facts = build_point_reference_facts(db, trend)
     pct_change, pct_direction = _percent_change(trend)
     critical_low, critical_high = critical_threshold_bounds(trend)
-    extra_allowed = [range_lower, range_upper, pct_change, critical_low, critical_high]
+    extra_allowed = [
+        range_lower,
+        range_upper,
+        pct_change,
+        critical_low,
+        critical_high,
+        *point_reference_extra_numbers(point_reference_facts),
+    ]
 
     try:
         llm = get_llm()
@@ -452,6 +563,7 @@ async def explain_patient_trend(
     prompt = _trend_prompt(
         trend,
         range_bounds=(range_lower, range_upper),
+        point_reference_facts=point_reference_facts,
         pct_change=pct_change,
         pct_direction=pct_direction,
         critical_bounds=(critical_low, critical_high),

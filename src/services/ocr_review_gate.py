@@ -60,14 +60,18 @@ def _get_reference_repository() -> ReferenceRepository:
     return ReferenceRepository.from_default_files()
 
 
-def _is_supported_analyte(name: str) -> bool:
+def _supported_canonical_analyte(name: str) -> str | None:
     try:
         repository = _get_reference_repository()
     except ReferenceRepositoryError:
-        return True
+        return name
 
     canonical = repository.resolve_analyte(name)
-    return canonical in repository.approved_analytes
+    return canonical if canonical in repository.approved_analytes else None
+
+
+def _is_supported_analyte(name: str) -> bool:
+    return _supported_canonical_analyte(name) is not None
 
 
 def _unsupported_reason(name: str) -> str:
@@ -272,10 +276,12 @@ def prepare_review(
 
     prepared = []
     for draft in drafts:
-        supported = _is_supported_analyte(draft.name)
+        canonical_name = _supported_canonical_analyte(draft.name)
+        supported = canonical_name is not None
         prepared.append(
             draft.model_copy(
                 update={
+                    "name": canonical_name or draft.name,
                     "needs_review": supported and draft.confidence < threshold,
                     "supported": supported,
                     "unsupported_reason": ("" if supported else _unsupported_reason(draft.name)),
@@ -410,7 +416,8 @@ def validate_review(
         confidence = float(signed["confidence"])
         raw_text = str(signed["raw_text"])
 
-        supported = _is_supported_analyte(row.name)
+        canonical_name = _supported_canonical_analyte(row.name)
+        supported = canonical_name is not None
         is_low_confidence = supported and confidence < float(threshold)
 
         if not row.reviewed:
@@ -425,7 +432,7 @@ def validate_review(
         # client không thể thay đổi.
         draft = OCRIndicatorDraft(
             draft_id=row.draft_id,
-            name=row.name,
+            name=canonical_name or row.name,
             value=row.value,
             unit=row.unit,
             confidence=confidence,

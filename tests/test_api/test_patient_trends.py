@@ -729,6 +729,37 @@ async def test_trend_explanation_prompt_carries_matched_reference_range(isolated
 
 
 @pytest.mark.asyncio
+async def test_trend_explanation_prompt_carries_per_point_reference_facts(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for date_text, value in [("2026-08-01", 3.4), ("2026-08-02", 3.6), ("2026-08-03", 5.2)]:
+        _save(session_local, "benhnhan", date_text, [{"name": "Potassium", "value": value, "unit": "mmol/L"}])
+    captured_prompt = {}
+
+    async def fake_ainvoke(messages):
+        captured_prompt["text"] = messages[0].content
+        return SimpleNamespace(
+            content=(
+                "Potassium dao động qua các lần đo. Ngày 2026-08-01 nằm dưới cận dưới 3.5 mmol/L, "
+                "còn ngày 2026-08-03 nằm trong khoảng tham chiếu và gần cận trên 5.3 mmol/L."
+            )
+        )
+
+    mock_llm = SimpleNamespace(ainvoke=fake_ainvoke)
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("Potassium"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["fallback"] is False
+    assert "Phân loại từng điểm" in captured_prompt["text"]
+    assert "2026-08-01: giá trị 3.4 mmol/L, nằm dưới cận dưới 3.5 mmol/L." in captured_prompt["text"]
+    assert "2026-08-03: giá trị 5.2 mmol/L, nằm trong khoảng tham chiếu và gần cận trên 5.3 mmol/L." in captured_prompt["text"]
+    assert "Ngày 2026-08-01 nằm dưới cận dưới 3.5 mmol/L" in payload["explanation"]
+
+
+@pytest.mark.asyncio
 async def test_trend_guardrail_blocks_risk_inference_and_referral_language(isolated_client):
     """ADR-010 CRIT-TREND-01: từ vựng suy diễn nguy cơ / khuyến nghị thăm khám thêm
     phải bị chặn dù không phải chẩn đoán hay dự đoán tương lai trực tiếp."""
