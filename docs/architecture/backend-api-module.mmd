@@ -1,0 +1,21 @@
+%% Diagram 2 — Backend API module (FastAPI)
+%% Trích/tách từ ARCHITECTURE.md phần "API Design"
+%% Thiết kế mới: node label NGẮN, không nhồi danh sách endpoint vào diagram —
+%% chi tiết từng route nằm ở bảng chú thích riêng (xem panel #p2 trong
+%% diagrams.html, hoặc mục "API Design" trong ARCHITECTURE.md). Diagram chỉ
+%% vẽ luồng chính để không bị rối.
+
+graph LR
+
+    CLIENT["Client"] --> JWT{"JWT Auth Gate"}
+
+    AUTH_PUBLIC["Auth: register/login/guest<br/>(public)"] -.->|"tạo JWT, không qua gate"| JWT
+
+    JWT -->|"protected"| AUTH_ME["Auth: /me"]
+    JWT -->|"protected"| ANALYSIS["Phân tích, OCR & Assistant"]
+    JWT -->|"protected"| DATA["Dữ liệu / CRUD"]
+    HEALTH["Health check"]
+
+    ANALYSIS --> PIPE["Medical Pipeline<br/>+ Orchestrator Agent<br/>+ OCR Service"]
+    PIPE --> DB[("Database")]
+    DATA --> DB

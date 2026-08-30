@@ -321,6 +321,48 @@
     border-radius: 5px;
     color: var(--ink);
   }
+
+  .route-legend {
+    margin-top: 20px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  .route-legend-wrap {
+    overflow-x: auto;
+  }
+
+  .route-legend th,
+  .route-legend td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .route-legend th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .route-legend td:first-child {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .route-legend code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
 </style>
 </head>
 <body>
@@ -513,7 +555,7 @@ graph TD
       <div class="panel-head">
         <div class="eyebrow">Diagram 2 — Backend API module</div>
         <h2>FastAPI</h2>
-        <p>JWT auth gate và các nhóm route: analyze, orchestrator, auth, ocr, patient, history, doctor, conversations, trend-reviews, admin, health.</p>
+        <p>Diagram chỉ vẽ luồng chính (node ngắn gọn) — chi tiết từng route xem bảng chú thích bên dưới.</p>
       </div>
       <div class="diagram-frame">
         <div class="zoom-toolbar">
@@ -526,64 +568,48 @@ graph TD
         <div class="zoom-viewport">
           <div class="zoom-stage">
 <pre class="mermaid">
-graph TD
+graph LR
 
-    JWT["JWT Auth Gate&lt;br/&gt;patient / doctor / guest"]
+    CLIENT["Client"] --> JWT{"JWT Auth Gate"}
 
-    subgraph ROUTES["API Routes"]
-        ANALYZE["/api/v1/analyze&lt;br/&gt;Phân tích phiếu XN (Manual/Reviewed OCR)"]
-        ORCH_MSG["/api/v1/orchestrator/message (+ /message/stream SSE)&lt;br/&gt;Canonical Assistant"]
-        ORCH_ONB["/api/v1/orchestrator/onboarding/acknowledge"]
-        AUTH_R["/api/v1/auth/*&lt;br/&gt;register · login · guest (không cần JWT) · me (cần JWT)"]
-        OCR_R["/api/v1/ocr/*&lt;br/&gt;policy · samples/{id} · upload · confirm"]
-        PATIENT_R["/api/v1/patient/*&lt;br/&gt;dashboard · profile · lab-reports · trends (analytes/sections/heatmap/explain)"]
-        HISTORY_R["/api/v1/history/*&lt;br/&gt;list · detail · questions · notes · review"]
-        DOCTOR_R["/api/v1/doctor/*&lt;br/&gt;queue · reports · findings review · questions answer · complete"]
-        CONV_R["/api/v1/conversations&lt;br/&gt;CRUD hội thoại + messages"]
-        TREND_REVIEW_R["/api/v1/trend-reviews/*&lt;br/&gt;patient request/history · doctor review"]
-        ADMIN_R["/api/v1/admin/*&lt;br/&gt;tracing status · traces/spans/SLO (observability)"]
-        HEALTH_R["/health · /ready"]
-    end
+    AUTH_PUBLIC["Auth: register/login/guest&lt;br/&gt;(public)"] -.->|"tạo JWT, không qua gate"| JWT
 
-    subgraph DOWNSTREAM["Xử lý downstream"]
-        MEDICAL_PIPE["LangGraph Medical Pipeline"]
-        ORCH_AGENT["Orchestrator Agent"]
-        OCR_SVC["OCR / Vision Service&lt;br/&gt;(Gemini + fallback)"]
-        DB_W["Database read/write"]
-    end
+    JWT -->|"protected"| AUTH_ME["Auth: /me"]
+    JWT -->|"protected"| ANALYSIS["Phân tích, OCR &amp; Assistant"]
+    JWT -->|"protected"| DATA["Dữ liệu / CRUD"]
+    HEALTH["Health check"]
 
-    JWT --> ANALYZE
-    JWT --> ORCH_MSG
-    JWT --> ORCH_ONB
-    JWT --> OCR_R
-    JWT --> PATIENT_R
-    JWT --> HISTORY_R
-    JWT --> DOCTOR_R
-    JWT --> CONV_R
-    JWT --> TREND_REVIEW_R
-    JWT --> ADMIN_R
-
-    ANALYZE --> MEDICAL_PIPE
-    ORCH_MSG --> ORCH_AGENT
-    ORCH_AGENT -->|"approved wrapper"| ANALYZE
-    OCR_R --> OCR_SVC
-    OCR_SVC -->|"User confirmed"| ANALYZE
-
-    PATIENT_R --> DB_W
-    HISTORY_R --> DB_W
-    DOCTOR_R --> DB_W
-    CONV_R --> DB_W
-    TREND_REVIEW_R --> DB_W
-    ADMIN_R --> DB_W
-    MEDICAL_PIPE --> DB_W
-
-    AUTH_R -->|"tạo JWT (register/login/guest)"| JWT
-    JWT -->|"chỉ /auth/me cần token"| AUTH_R
+    ANALYSIS --> PIPE["Medical Pipeline&lt;br/&gt;+ Orchestrator Agent&lt;br/&gt;+ OCR Service"]
+    PIPE --> DB[("Database")]
+    DATA --> DB
 </pre>
           </div>
         </div>
       </div>
       <div class="source-note">File: <code>docs/architecture/backend-api-module.mmd</code></div>
+
+      <div class="route-legend-wrap">
+        <table class="route-legend">
+          <thead>
+            <tr><th>Nhóm</th><th>Route</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="2">Auth routes</td><td><code>/api/v1/auth/register · login · guest</code></td><td>Không cần JWT — tạo JWT</td></tr>
+            <tr><td><code>/api/v1/auth/me</code></td><td>Cần JWT</td></tr>
+            <tr><td rowspan="4">Phân tích &amp; OCR</td><td><code>/api/v1/analyze</code></td><td>Manual/Reviewed OCR</td></tr>
+            <tr><td><code>/api/v1/orchestrator/message</code> (+ <code>/message/stream</code> SSE)</td><td>Canonical Assistant</td></tr>
+            <tr><td><code>/api/v1/orchestrator/onboarding/acknowledge</code></td><td></td></tr>
+            <tr><td><code>/api/v1/ocr/policy · samples/{id} · upload · confirm</code></td><td></td></tr>
+            <tr><td rowspan="6">Dữ liệu / CRUD</td><td><code>/api/v1/patient/*</code></td><td>dashboard · profile · lab-reports · trends</td></tr>
+            <tr><td><code>/api/v1/history/*</code></td><td>list · detail · questions · notes · review</td></tr>
+            <tr><td><code>/api/v1/doctor/*</code></td><td>queue · reports · findings · complete</td></tr>
+            <tr><td><code>/api/v1/conversations</code></td><td>CRUD hội thoại + messages</td></tr>
+            <tr><td><code>/api/v1/trend-reviews/*</code></td><td>patient request/history · doctor review</td></tr>
+            <tr><td><code>/api/v1/admin/*</code></td><td>tracing/traces/SLO (observability)</td></tr>
+            <tr><td>Health</td><td><code>/health · /ready</code></td><td>Không cần JWT</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel" id="p3">
