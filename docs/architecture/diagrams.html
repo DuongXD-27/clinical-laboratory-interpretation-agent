@@ -448,7 +448,7 @@ graph TD
     end
 
     subgraph INPUT_FLOW["Nhập liệu"]
-        MANUAL["Form nhập thủ công&lt;br/&gt;9 chỉ số chuẩn hóa"]
+        MANUAL["Form nhập thủ công&lt;br/&gt;Chọn từ danh mục chỉ số chuẩn hóa (analyteCatalog)"]
         UPLOAD["Upload ảnh phiếu XN"]
         REVIEW["OCR Review UI&lt;br/&gt;Xác nhận giá trị trích xuất"]
     end
@@ -487,8 +487,7 @@ graph TD
     REVIEW -->|"Xác nhận"| RESULT
     MANUAL --> RESULT
 
-    WIDGET --> ONBOARD
-    ONBOARD --> WIDGET
+    WIDGET &lt;--&gt; ONBOARD
     WIDGET -->|"SuggestedAction: OPEN_REPORT / VIEW_ABNORMAL / VIEW_DOCTOR_QUESTIONS / CONFIRM_OCR"| RESULT
     WIDGET --> TRENDS
     WIDGET --> HISTORY
@@ -498,7 +497,7 @@ graph TD
     RESULT --> HISTORY
 
     DOC_QUEUE --> DOC_REPORT
-    DOC_REPORT -->|"Ghi chú / Answer câu hỏi"| QUESTIONS
+    DOC_REPORT -.->|"Answer câu hỏi inline trong sidebar (không điều hướng)"| QUESTIONS
     DOC_QUEUE --> DOC_TREND
 
     classDef auth fill:#eef,stroke:#66a;
