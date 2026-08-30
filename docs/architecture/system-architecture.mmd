@@ -1,105 +1,52 @@
-graph TD
-    %% ==========================================
-    %% TẦNG FRONTEND
-    %% ==========================================
-    subgraph Frontend ["Frontend (Next.js / React)"]
-        UI_Upload["Upload Phiếu Kết Quả (JSON)"]
-        UI_Review["Giao diện Xác nhận Chỉ số (Phase 2)"]
-        UI_Results["Màn hình Kết quả<br/>(Giải thích, Cảnh báo, Câu hỏi, Disclaimer)<br/>+ Widget thu thập Metrics"]
+%% Diagram 0 — System Overview (high-level)
+%% Xem chi tiết từng module tại các file .mmd khác trong docs/architecture/:
+%%   frontend-module.mmd, backend-api-module.mmd, langgraph-pipeline.mmd,
+%%   orchestrator-agent.mmd, data-deployment.mmd
+
+graph LR
+
+    CLIENT["Client Browser<br/>Patient / Doctor / Guest"]
+
+    subgraph APP["Application"]
+        FE["Frontend<br/>Next.js"]
+        API["Backend API<br/>FastAPI"]
     end
 
-    %% ==========================================
-    %% TẦNG DATA INGESTION
-    %% ==========================================
-    subgraph Ingestion ["Data Ingestion Layer (FastAPI)"]
-        Router{"Loại File Input?"}
-        Adapter_JSON["JSON Adapter<br/>Parse & Validate"]
-        Adapter_Vision["Vision LLM Adapter (Phase 2)"]
-        Schema[["Standard Internal Schema<br/>(Contract: Patient Metadata [Age/Gender] + List of Indicators)"]]
-        De_ID["Khử định danh (De-identification)<br/>Xóa Tên/ID, GIỮ Tuổi/Giới tính cho RuleCheck"]
+    subgraph ENGINE["AI Engine"]
+        MEDICAL["LangGraph Medical Pipeline<br/>(Reference Check → RAG/LLM → Guardrail)"]
+        RETRIEVE["RAG Retriever<br/>(Embeddings + ChromaDB query)"]
+        ORCH["Orchestrator<br/>Conversational Agent"]
     end
 
-    %% ==========================================
-    %% TẦNG AI AGENT (LANGGRAPH) - State Machine
-    %% ==========================================
-    subgraph Agent ["AI Agent Engine (LangGraph)"]
-        RuleCheck["Reference & Critical Checker<br/>(Gắn cờ Normal/Abnormal/Critical)"]
-        
-        RAG["RAG Explanation Engine<br/>(Sinh giải thích - Per Indicator)"]
-        QuestionGen["Question Generator<br/>(Sinh danh sách câu hỏi)"]
-        
-        Guard["Medical Guardrails<br/>(Kiểm duyệt Độc lập: Từng giải thích & Câu hỏi)"]
-        
-        TemplateFallback["Template Fallback Node<br/>(Lấy giải thích tĩnh)"]
-        QuestionFallback["Default Question Node<br/>(Lấy câu hỏi an toàn)"]
-        Out["Output Formatter<br/>(Merge State -> Đóng gói JSON)"]
+    subgraph DATA["Data & Knowledge"]
+        DB[("SQLite / PostgreSQL<br/>Users · Reports · History")]
+        CFG[("Reference Range &<br/>Critical Threshold Config")]
+        %% Cạnh vô hình chỉ để canh layout (VDB nằm bên phải CFG) — KHÔNG phải
+        %% quan hệ dữ liệu thật, SQLite/PostgreSQL và ChromaDB là 2 store độc lập.
+        CFG ~~~ VDB
+        VDB[("ChromaDB<br/>Medical Knowledge")]
     end
 
-    %% ==========================================
-    %% TẦNG DATA & KNOWLEDGE
-    %% ==========================================
-    subgraph DataLayer ["Data & Storage"]
-        RefConfig[("Reference Range Config<br/>(Lookup cứng theo Tuổi/Giới tính)")]
-        VectorDB[("Vector DB<br/>(Tri thức Y khoa - Semantic search)")]
-        TemplateLib[("Template Library<br/>(Mẫu giải thích & Mẫu câu hỏi duyệt sẵn)")]
-        MetricsDB[("Metrics Logging DB")]
-        GuardLogDB[("Guardrail Logs DB<br/>(Lưu vết reject để Eval)")]
+    subgraph CLOUD["External AI APIs"]
+        LLM["OpenAI<br/>gpt-4o-mini / embeddings"]
+        VISION["Google Gemini Vision<br/>OCR"]
     end
 
-    %% ==========================================
-    %% LUỒNG MVP (Nét liền)
-    %% ==========================================
-    UI_Upload -->|"File JSON"| Router
-    Router --> Adapter_JSON
-    Adapter_JSON --> Schema
-    Schema -->|"Auto-forward"| De_ID
-    De_ID --> RuleCheck
-    RefConfig -->|"Ngưỡng tham chiếu chính xác"| RuleCheck
-    
-    %% Fan-out 3 nhánh
-    RuleCheck -->|"Subset: Chỉ số Abnormal/Critical"| RAG
-    RuleCheck -->|"Subset: Chỉ số Abnormal/Critical"| QuestionGen
-    RuleCheck -->|"Pass-through: Full Data (Base Fact)"| Out
-    
-    RAG <-->|"Semantic Search Context"| VectorDB
-    
-    %% Fan-in Text vào Guardrail
-    RAG -->|"Draft Explanations"| Guard
-    QuestionGen -->|"Draft Questions"| Guard
-    
-    %% ==========================================
-    %% LUỒNG FALLBACK ĐỘC LẬP TẠI GUARDRAIL
-    %% ==========================================
-    %% 1. Phân luồng cho Giải thích (RAG)
-    Guard -->|"RAG Rejected (Lần 1)"| RAG
-    Guard -->|"RAG Rejected (Fail) -> Dùng mẫu tĩnh"| TemplateFallback
-    TemplateFallback <-->|"Đọc mẫu giải thích"| TemplateLib
-    TemplateFallback -->|"Safe Explanation"| Out
-    
-    %% 2. Phân luồng cho Câu hỏi (QuestionGen)
-    Guard -->|"Question Rejected (Lần 1)"| QuestionGen
-    Guard -->|"Question Rejected (Fail) -> Dùng câu hỏi mặc định"| QuestionFallback
-    QuestionFallback <-->|"Đọc câu hỏi an toàn"| TemplateLib
-    QuestionFallback -->|"Safe Questions"| Out
+    CLIENT --> FE
+    FE -->|"HTTPS REST / JWT"| API
 
-    %% Luồng Pass an toàn tuyệt đối
-    Guard -->|"Approved (Safe)"| Out
-    
-    %% Logging (Đã đổi thành nét liền)
-    Guard -->|"Log nội dung & lý do chặn"| GuardLogDB
-    
-    %% Output
-    Out -->|"REST JSON Response"| UI_Results
-    UI_Results -->|"Log: Lựa chọn trắc nghiệm & Hành vi"| MetricsDB
+    API --> MEDICAL
+    API --> ORCH
+    ORCH -.->|"chỉ gọi qua wrapper đã duyệt"| MEDICAL
 
-    %% ==========================================
-    %% LUỒNG PHASE 2 (Nét đứt)
-    %% ==========================================
-    UI_Upload -.-> Router
-    Router -.-> Adapter_Vision
-    Adapter_Vision -.-> UI_Review
-    UI_Review -.->|"Xác nhận thủ công"| De_ID
+    MEDICAL --> DB
+    MEDICAL --> CFG
+    ORCH --> DB
 
-    %% Styling
-    classDef future stroke-dasharray: 5 5, fill:#f9f9f9, color:#666, stroke:#666;
-    class Adapter_Vision,UI_Review future;
+    MEDICAL --> RETRIEVE
+    RETRIEVE --> VDB
+    VDB --> RETRIEVE
+    RETRIEVE --> LLM
+    API -->|"OCR upload (trước khi vào Medical Pipeline)"| VISION
+
+    API -->|"REST JSON"| FE
