@@ -17,7 +17,52 @@ from src.services.llm import get_llm
 from src.services.medical_safety_validator import MedicalSafetyValidator
 from src.services.reference_repository import ReferenceRepositoryError
 from src.services.request_timing import add_timing_event
+from src.services.trend_claims import (
+    REFERENCE_NEAR_MARGIN_RATIO,
+    TrendClaim,
+    TrendClaimSet,
+    TrendPointReferenceFact,
+    build_claim_set,
+    classify_reference_position,
+    compose_deterministic_explanation,
+    decimal_variants,
+    format_claims_for_prompt,
+    format_point_reference_facts,
+    percent_change,
+    point_reference_extra_numbers,
+    reference_relation_text,
+    validate_claims,
+)
 from src.services.trend_service import get_patient_trend, get_report_patient_snapshot
+
+# Bí danh giữ nguyên đường import cũ sau khi lớp dữ kiện tách sang ``trend_claims``.
+_decimal_variants = decimal_variants
+_classify_reference_position = classify_reference_position
+_reference_relation_text = reference_relation_text
+_percent_change = percent_change
+
+__all__ = [
+    "CONTACT_DOCTOR_NOTICE",
+    "REFERENCE_NEAR_MARGIN_RATIO",
+    "TREND_EXPLANATION_FALLBACK",
+    "TrendClaim",
+    "TrendClaimSet",
+    "TrendExplanationUnavailableError",
+    "TrendExplanationViolation",
+    "TrendPointReferenceFact",
+    "build_claim_set",
+    "build_point_reference_facts",
+    "collect_allowed_numbers",
+    "critical_threshold_bounds",
+    "explain_patient_trend",
+    "format_point_reference_facts",
+    "matched_reference_bounds",
+    "point_reference_extra_numbers",
+    "scan_fabricated_numbers",
+    "strip_units",
+    "validate_section_explanation",
+    "validate_trend_explanation",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -43,33 +88,6 @@ class TrendExplanationUnavailableError(ValueError):
 class TrendExplanationViolation:
     reason: str
     evidence: str
-
-
-REFERENCE_NEAR_MARGIN_RATIO = 0.10
-
-
-@dataclass(frozen=True)
-class TrendPointReferenceFact:
-    report_id: int
-    test_date: str
-    value: float
-    lower: float | None
-    upper: float | None
-    relation: str
-
-
-def _decimal_variants(value: float | int) -> set[str]:
-    raw = str(value)
-    try:
-        decimal_value = Decimal(str(value)).normalize()
-    except (InvalidOperation, ValueError):
-        return {raw}
-    normalized = format(decimal_value, "f")
-    variants = {raw, raw.replace(".", ","), normalized, normalized.replace(".", ",")}
-    if "." in normalized:
-        variants.add(normalized.rstrip("0").rstrip("."))
-        variants.add(normalized.rstrip("0").rstrip(".").replace(".", ","))
-    return {item for item in variants if item}
 
 
 # Đơn vị dạng khoa học, bắt cả khi model viết khác đơn vị canonical một chút:
@@ -186,7 +204,15 @@ def validate_trend_explanation(
     trend: TrendResponse,
     *,
     extra_allowed_numbers: list[float | None] | None = None,
+    claims: list[TrendClaim] | tuple[TrendClaim, ...] | None = None,
 ) -> list[TrendExplanationViolation]:
+    """Kiểm duyệt giải thích đơn chỉ số.
+
+    Bốn lớp: từ vựng y khoa cấm, từ vựng ADR-010 cấm, số bịa, và — khi bên gọi
+    truyền ``claims`` — mâu thuẫn ngữ nghĩa với dữ kiện backend đã chốt. Lớp cuối là
+    lớp duy nhất bắt được lỗi model đảo hướng ("giảm 33.3%" khi backend tính ra
+    "tăng 33.3%"), vì lỗi đó không sinh ra con số mới nào.
+    """
     violations = [
         TrendExplanationViolation(violation.mechanism, violation.evidence)
         for violation in MedicalSafetyValidator().validate(text)
@@ -199,6 +225,9 @@ def validate_trend_explanation(
     allowed = _allowed_numbers(trend, extra=extra_allowed_numbers)
     for token in scan_fabricated_numbers(text, allowed, [trend.canonical_unit]):
         violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
+
+    for reason, evidence in validate_claims(text, claims or ()):
+        violations.append(TrendExplanationViolation(reason, evidence))
     return list(dict.fromkeys(violations))
 
 
@@ -207,12 +236,17 @@ def validate_section_explanation(
     trends: list[TrendResponse],
     *,
     extra_allowed_numbers: list[list[float | None]] | None = None,
+    claims: list[TrendClaim] | tuple[TrendClaim, ...] | None = None,
 ) -> list[TrendExplanationViolation]:
     """ADR-010 CRIT-TREND-07: kiểm duyệt giải thích theo nhóm chức năng.
 
     Cùng khung an toàn như validator đơn chỉ số, nhưng whitelist là **hợp** của mọi
     chỉ số trong nhóm (CRIT-TREND-05 amendment) và đơn vị được bỏ ra cho tất cả
     chỉ số. Banned vocabulary bao gồm cả kết luận lâm sàng theo nhóm.
+
+    ``claims`` là hợp claim của mọi chỉ số trong nhóm. Bên gọi phải neo claim hình
+    dạng chuỗi theo tên chỉ số (``build_claim_set(..., shape_anchor=...)``), vì ở
+    chế độ nhóm "A tăng dần trong khi B dao động" là câu hợp lệ.
     """
     violations = [
         TrendExplanationViolation(violation.mechanism, violation.evidence)
@@ -227,6 +261,9 @@ def validate_section_explanation(
     units = [trend.canonical_unit for trend in trends]
     for token in scan_fabricated_numbers(text, allowed, units):
         violations.append(TrendExplanationViolation("Số không có trong dữ liệu trend", token))
+
+    for reason, evidence in validate_claims(text, claims or ()):
+        violations.append(TrendExplanationViolation(reason, evidence))
     return list(dict.fromkeys(violations))
 
 
@@ -280,22 +317,6 @@ def matched_reference_bounds(db: Session, trend: TrendResponse) -> tuple[float |
     return _matched_reference_bounds_for_report(db, trend, report_id=trend.points[-1].report_id)
 
 
-def _classify_reference_position(value: float, lower: float | None, upper: float | None) -> str:
-    if lower is None and upper is None:
-        return "unknown_reference"
-    if lower is not None and value < lower:
-        return "below_reference"
-    if upper is not None and value > upper:
-        return "above_reference"
-    if lower is not None and upper is not None and upper > lower:
-        margin = (upper - lower) * REFERENCE_NEAR_MARGIN_RATIO
-        if value - lower <= margin:
-            return "near_lower_bound"
-        if upper - value <= margin:
-            return "near_upper_bound"
-    return "within_reference"
-
-
 def build_point_reference_facts(db: Session, trend: TrendResponse) -> list[TrendPointReferenceFact]:
     """Classify each trend point against its own sex/age-matched reference range."""
     facts: list[TrendPointReferenceFact] = []
@@ -308,46 +329,10 @@ def build_point_reference_facts(db: Session, trend: TrendResponse) -> list[Trend
                 value=point.value,
                 lower=lower,
                 upper=upper,
-                relation=_classify_reference_position(point.value, lower, upper),
+                relation=classify_reference_position(point.value, lower, upper),
             )
         )
     return facts
-
-
-def _reference_relation_text(fact: TrendPointReferenceFact, unit: str) -> str:
-    if fact.relation == "unknown_reference":
-        return "chưa khớp được khoảng tham chiếu cho điểm này"
-    if fact.relation == "below_reference":
-        return f"nằm dưới cận dưới {fact.lower} {unit}"
-    if fact.relation == "above_reference":
-        return f"vượt cận trên {fact.upper} {unit}"
-    if fact.relation == "near_lower_bound":
-        return f"nằm trong khoảng tham chiếu và gần cận dưới {fact.lower} {unit}"
-    if fact.relation == "near_upper_bound":
-        return f"nằm trong khoảng tham chiếu và gần cận trên {fact.upper} {unit}"
-    if fact.lower is not None and fact.upper is not None:
-        return f"nằm trong khoảng tham chiếu {fact.lower} - {fact.upper} {unit}"
-    if fact.lower is not None:
-        return f"nằm trên cận dưới {fact.lower} {unit}"
-    if fact.upper is not None:
-        return f"nằm dưới cận trên {fact.upper} {unit}"
-    return "chưa khớp được khoảng tham chiếu cho điểm này"
-
-
-def format_point_reference_facts(facts: list[TrendPointReferenceFact], unit: str) -> str:
-    if not facts:
-        return "Không có dữ kiện khoảng tham chiếu theo từng điểm."
-    return "\n".join(
-        f"- {fact.test_date}: giá trị {fact.value} {unit}, {_reference_relation_text(fact, unit)}."
-        for fact in facts
-    )
-
-
-def point_reference_extra_numbers(facts: list[TrendPointReferenceFact]) -> list[float | None]:
-    numbers: list[float | None] = []
-    for fact in facts:
-        numbers.extend([fact.lower, fact.upper])
-    return numbers
 
 
 def critical_threshold_bounds(trend: TrendResponse) -> tuple[float | None, float | None]:
@@ -366,68 +351,28 @@ def critical_threshold_bounds(trend: TrendResponse) -> tuple[float | None, float
     return low, high
 
 
-def _percent_change(trend: TrendResponse) -> tuple[float | None, str | None]:
-    """ADR-010 CRIT-TREND-04: % biến động giữa 2 lần đo gần nhất, tính ở backend.
-
-    Trả về (độ lớn tuyệt đối đã làm tròn 1 chữ số thập phân, hướng "tăng"/"giảm").
-    Model chỉ lặp lại số này, không tự tính — nếu để model tự tính, guardrail không
-    còn cách nào phân biệt số thật với số bịa.
-    """
-    if len(trend.points) < 2:
-        return None, None
-    latest, previous = trend.points[-1].value, trend.points[-2].value
-    if previous == 0:
-        return None, None
-    change = round(abs((latest - previous) / previous * 100), 1)
-    direction = "tăng" if latest > previous else "giảm" if latest < previous else "không đổi"
-    if direction == "không đổi":
-        return 0.0, direction
-    return change, direction
-
-
 def _trend_prompt(
     trend: TrendResponse,
     *,
-    range_bounds: tuple[float | None, float | None] = (None, None),
+    claim_sentences: tuple[str, ...] | list[str],
     point_reference_facts: list[TrendPointReferenceFact] | None = None,
-    pct_change: float | None = None,
-    pct_direction: str | None = None,
     critical_bounds: tuple[float | None, float | None] = (None, None),
 ) -> str:
+    """Prompt "chỉ diễn đạt lại".
+
+    Trước đây prompt cấp dữ liệu thô rồi liệt kê 4 *dạng câu* và để model tự chọn
+    nhãn cho từng dạng — nghĩa là chính model quyết định "tăng hay giảm", "trong hay
+    ngoài khoảng tham chiếu", "tăng dần hay dao động". Ba lỗi trong ca WBC đều sinh
+    ra ở bước đó. Giờ backend chốt sẵn từng câu, model chỉ còn việc viết lại cho mượt.
+
+    ``point_lines`` cũng bỏ trường ``assessment`` của từng phiếu: nó là nguồn nhãn
+    HIGH/LOW/NORMAL thứ hai (do OCR/analyzer gán) đặt cạnh nhãn tính từ khoảng tham
+    chiếu, và khi hai nguồn lệch nhau model chọn tùy ý.
+    """
     point_lines = "\n".join(
-        f"- {point.test_date.isoformat()}: {point.value} {trend.canonical_unit}, trạng thái {point.assessment}"
-        for point in trend.points
+        f"- {point.test_date.isoformat()}: {point.value} {trend.canonical_unit}" for point in trend.points
     )
-    values = [point.value for point in trend.points]
-    latest = trend.points[-1]
-    previous = trend.points[-2]
-
-    range_lower, range_upper = range_bounds
-    if range_lower is not None or range_upper is not None:
-        range_section = (
-            f"Khoảng tham chiếu đã khớp theo giới tính/độ tuổi bệnh nhân tại lần đo gần nhất: "
-            f"{range_lower if range_lower is not None else 'không giới hạn dưới'} - "
-            f"{range_upper if range_upper is not None else 'không giới hạn trên'} {trend.canonical_unit}. "
-            "Bạn ĐƯỢC PHÉP nói giá trị gần nhất nằm trong khoảng, đã vượt ngưỡng trên/dưới, hay đang tiến "
-            "gần ngưỡng trên/dưới của khoảng này — chỉ dùng đúng hai số trên, không tự đổi số."
-        )
-    else:
-        range_section = (
-            "Chưa khớp được khoảng tham chiếu theo giới tính/độ tuổi bệnh nhân cho chỉ số này — "
-            "TUYỆT ĐỐI KHÔNG được nói giá trị 'trong khoảng tham chiếu' hay 'đã vượt ngưỡng' dưới bất kỳ hình thức nào."
-        )
-
     point_reference_section = format_point_reference_facts(point_reference_facts or [], trend.canonical_unit)
-
-    pct_section = ""
-    if pct_change is not None and pct_direction is not None:
-        change_phrase = (
-            f"{pct_direction} {pct_change}%" if pct_direction != "không đổi" else f"không có biến động ({pct_change}%)"
-        )
-        pct_section = (
-            f"\nMức biến động giữa lần gần nhất và lần ngay trước: {change_phrase} "
-            "(số do backend tính sẵn — chỉ được lặp lại nguyên số này, không được tự tính lại)."
-        )
 
     critical_low, critical_high = critical_bounds
     critical_section = ""
@@ -443,42 +388,36 @@ def _trend_prompt(
 
     return textwrap.dedent(
         f"""\
-        Bạn là trợ lý giải thích biểu đồ xu hướng xét nghiệm cho mục đích giáo dục.
+        Bạn là trợ lý diễn đạt lại kết quả phân tích xu hướng xét nghiệm cho bệnh nhân đọc.
 
-        Dữ liệu đã được backend xác thực, KHÔNG được sửa, không được thêm số/ngày mới:
         Chỉ số: {trend.display_name}
         Đơn vị: {trend.canonical_unit}
         Số điểm: {len(trend.points)}
-        Giá trị đầu tiên: {trend.points[0].value}
-        Giá trị gần nhất: {latest.value}
-        Giá trị ngay trước đó: {previous.value}
-        Giá trị thấp nhất: {min(values)}
-        Giá trị cao nhất: {max(values)}
         Các điểm theo thời gian:
         {point_lines}
 
-        {range_section}{pct_section}{critical_section}
+        Phân loại từng điểm so với khoảng tham chiếu đã khớp theo giới tính/độ tuổi bệnh nhân:
+        {point_reference_section}{critical_section}
 
-        Phân loại từng điểm so với khoảng tham chiếu đã khớp theo từng ngày:
-        {point_reference_section}
+        NHẬN ĐỊNH ĐÃ CHỐT — backend đã tính và kiểm chứng, đây là toàn bộ nội dung bạn được nói:
+        {format_claims_for_prompt(claim_sentences)}
 
-        Nhiệm vụ: viết một đoạn tiếng Việt dễ hiểu cho bệnh nhân, giàu dữ kiện hơn phần đọc biểu đồ thô.
-        Chỉ được ghép các
-        dạng câu sau (bỏ dạng nào không có dữ liệu tương ứng ở trên):
-        1. Vị trí so với khoảng tham chiếu, chỉ dùng số cận đã cho ở trên.
-        2. Mức biến động giữa hai lần đo gần nhất, chỉ dùng số phần trăm đã cho ở trên.
-        3. Hướng đi tổng thể của chuỗi: tăng dần, giảm dần, dao động, hay ổn định tương đối.
-        4. Các ngày đáng chú ý trong phần phân loại từng điểm: ngày nằm dưới cận dưới,
-           vượt cận trên, hoặc gần cận trên/dưới.
+        Nhiệm vụ: viết lại CHÍNH XÁC các nhận định trên thành một đoạn tiếng Việt liền mạch, dễ
+        hiểu cho bệnh nhân. Bạn chỉ được đổi cách hành văn.
         Quy tắc bắt buộc:
-        - Không chẩn đoán bệnh, không kết luận tình trạng sức khỏe.
-        - Không suy đoán nguyên nhân.
+        - Giữ nguyên mọi nhận định: không bỏ bớt, không thêm nhận định mới, không đảo ý.
+        - Hướng biến động (tăng/giảm/không đổi) và vị trí so với khoảng tham chiếu (trong khoảng /
+          vượt cận trên / dưới cận dưới) phải giữ ĐÚNG như đã chốt ở trên. Đây là lỗi bị chặn
+          thường xuyên nhất — đọc kỹ lại trước khi viết.
+        - Không tự phân loại lại hình dạng chuỗi. Nếu ở trên ghi "dao động" thì không được viết
+          "tăng dần" hay "giảm dần", và ngược lại.
+        - Không tạo số, ngày hoặc đơn vị ngoài các nhận định đã chốt và bảng dữ liệu ở trên.
+        - Không chẩn đoán bệnh, không kết luận tình trạng sức khỏe, không suy đoán nguyên nhân.
         - Không suy diễn mức độ nguy cơ hay ý nghĩa lâm sàng ngoài dữ kiện đã cho.
         - Không khuyến nghị thuốc, điều trị, xét nghiệm thêm hoặc hành động y khoa.
         - Không dự đoán giá trị tương lai.
         - Có thể gọi các ngày vượt/dưới/gần cận là "điểm cần chú ý trên biểu đồ", nhưng không tự
           suy ra bệnh, nguy cơ, nguyên nhân hoặc hướng xử trí.
-        - Không tạo số, ngày hoặc đơn vị ngoài dữ liệu đã cung cấp ở trên.
         - Không thêm từ nối số đếm/khoảng thời gian tự đặt như "1 tháng", "1 ngày", "2 lần đo",
           "khoảng 3 tuần" — chỉ nói đến dữ liệu các lần đo, không đo khoảng cách thời gian.
         - Không viết disclaimer.
@@ -539,7 +478,7 @@ async def explain_patient_trend(
     escalate = bool(trend.critical_status or trend.approaching_critical)
     range_lower, range_upper = matched_reference_bounds(db, trend)
     point_reference_facts = build_point_reference_facts(db, trend)
-    pct_change, pct_direction = _percent_change(trend)
+    pct_change, _pct_direction = percent_change(trend)
     critical_low, critical_high = critical_threshold_bounds(trend)
     extra_allowed = [
         range_lower,
@@ -550,22 +489,33 @@ async def explain_patient_trend(
         *point_reference_extra_numbers(point_reference_facts),
     ]
 
+    # Backend chốt toàn bộ nhận định TRƯỚC khi gọi model: cùng một bộ câu vừa dựng
+    # prompt, vừa làm chuẩn đối chiếu output, vừa làm nội dung dự phòng.
+    claim_set = build_claim_set(trend, point_reference_facts)
+    deterministic = compose_deterministic_explanation(claim_set.sentences)
+
+    def _fallback(reason: str) -> TrendExplanationResponse:
+        """Dự phòng bằng chính câu backend đã soạn, không phải câu 'không khả dụng'.
+
+        Không đi qua ``validate_trend_explanation``: đây không phải nội dung model
+        sinh ra, cùng nguyên tắc với ``CONTACT_DOCTOR_NOTICE``.
+        """
+        return TrendExplanationResponse(
+            explanation=_with_escalation_notice(deterministic or TREND_EXPLANATION_FALLBACK, escalate=escalate),
+            fallback=True,
+            reason=reason,
+        )
+
     try:
         llm = get_llm()
     except Exception as exc:
         logger.error("Trend explanation LLM unavailable: %s", exc)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="PROVIDER_UNAVAILABLE",
-        )
+        return _fallback("PROVIDER_UNAVAILABLE")
 
     prompt = _trend_prompt(
         trend,
-        range_bounds=(range_lower, range_upper),
+        claim_sentences=claim_set.sentences,
         point_reference_facts=point_reference_facts,
-        pct_change=pct_change,
-        pct_direction=pct_direction,
         critical_bounds=(critical_low, critical_high),
     )
 
@@ -581,11 +531,7 @@ async def explain_patient_trend(
             target=analyte_canonical,
         )
         logger.error("Trend explanation failed for %s: %s", analyte_canonical, exc)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="PROVIDER_ERROR",
-        )
+        return _fallback("PROVIDER_ERROR")
 
     add_timing_event(
         "trend-explanation-call",
@@ -594,20 +540,17 @@ async def explain_patient_trend(
         target=analyte_canonical,
     )
     if not text:
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="EMPTY_OUTPUT",
-        )
+        return _fallback("EMPTY_OUTPUT")
 
-    violations = validate_trend_explanation(text, trend, extra_allowed_numbers=extra_allowed)
+    violations = validate_trend_explanation(
+        text,
+        trend,
+        extra_allowed_numbers=extra_allowed,
+        claims=claim_set.claims,
+    )
     if violations:
         logger.warning("Trend explanation blocked: %s\nBlocked text: %s", violations, text)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="GUARDRAIL_BLOCKED",
-        )
+        return _fallback("GUARDRAIL_BLOCKED")
 
     return TrendExplanationResponse(
         explanation=_with_escalation_notice(text, escalate=escalate),

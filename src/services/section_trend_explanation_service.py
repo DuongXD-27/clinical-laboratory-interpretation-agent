@@ -20,17 +20,23 @@ from src.models.schemas import TrendExplanationResponse, TrendFilter
 from src.services.analyte_sections import CHEMISTRY, HEMATOLOGY, LIPIDS, section_label
 from src.services.llm import get_llm
 from src.services.request_timing import add_timing_event
+from src.services.trend_claims import (
+    build_claim_set,
+    compose_deterministic_explanation,
+    format_claims_for_prompt,
+    format_point_reference_facts,
+    merge_claims,
+    percent_change,
+    point_reference_extra_numbers,
+)
 from src.services.trend_explanation_service import (
     CONTACT_DOCTOR_NOTICE,
     TREND_EXPLANATION_FALLBACK,
     TrendExplanationUnavailableError,
     build_point_reference_facts,
     _extract_text_content,
-    _percent_change,
     critical_threshold_bounds,
-    format_point_reference_facts,
     matched_reference_bounds,
-    point_reference_extra_numbers,
     validate_section_explanation,
 )
 from src.services.trend_service import get_patient_trend, get_patient_trend_analytes
@@ -41,24 +47,20 @@ SECTION_KEYS = frozenset({HEMATOLOGY, CHEMISTRY, LIPIDS})
 
 
 def _fact_block(trend) -> str:
-    """Block dữ kiện của một chỉ số, giống dữ liệu đơn chỉ số (CRIT-TREND-02/04/05)."""
+    """Block dữ kiện của một chỉ số, giống dữ liệu đơn chỉ số (CRIT-TREND-02/04/05).
+
+    Bỏ ``assessment`` của từng phiếu vì lý do như ở luồng đơn chỉ số: đó là nguồn nhãn
+    HIGH/LOW/NORMAL thứ hai đặt cạnh nhãn tính từ khoảng tham chiếu, và khi hai nguồn
+    lệch nhau model chọn tùy ý.
+    """
     point_lines = "\n".join(
-        f"- {point.test_date.isoformat()}: {point.value} {trend.canonical_unit}, trạng thái {point.assessment}"
-        for point in trend.points
+        f"- {point.test_date.isoformat()}: {point.value} {trend.canonical_unit}" for point in trend.points
     )
-    values = [point.value for point in trend.points]
-    latest = trend.points[-1]
-    previous = trend.points[-2]
 
     lines = [
         f"Chỉ số: {trend.display_name}",
         f"Đơn vị: {trend.canonical_unit}",
         f"Số điểm: {len(trend.points)}",
-        f"Giá trị đầu tiên: {trend.points[0].value}",
-        f"Giá trị gần nhất: {latest.value}",
-        f"Giá trị ngay trước đó: {previous.value}",
-        f"Giá trị thấp nhất: {min(values)}",
-        f"Giá trị cao nhất: {max(values)}",
         "Các điểm theo thời gian:",
         point_lines,
     ]
@@ -79,20 +81,6 @@ def _group_prompt(
     blocks: list[str] = []
     for trend, fact in zip(trends, facts):
         block = _fact_block(trend)
-        range_lower, range_upper = fact["range_lower"], fact["range_upper"]
-        if range_lower is not None or range_upper is not None:
-            block += (
-                f"\nKhoảng tham chiếu khớp theo giới tính/độ tuổi tại lần đo gần nhất: "
-                f"{range_lower if range_lower is not None else 'không giới hạn dưới'} - "
-                f"{range_upper if range_upper is not None else 'không giới hạn trên'} {trend.canonical_unit}. "
-                "Bạn ĐƯỢC PHÉP nói giá trị gần nhất nằm trong khoảng, đã vượt ngưỡng trên/dưới, hay đang "
-                "tiến gần ngưỡng của khoảng này — chỉ dùng đúng hai số trên, không tự đổi số."
-            )
-        else:
-            block += (
-                "\nChưa khớp được khoảng tham chiếu theo giới tính/độ tuổi cho chỉ số này — "
-                "TUYỆT ĐỐI KHÔNG được nói giá trị 'trong khoảng tham chiếu' hay 'đã vượt ngưỡng'."
-            )
 
         point_reference_facts = fact["point_reference_facts"]
         block += (
@@ -100,17 +88,11 @@ def _group_prompt(
             f"{format_point_reference_facts(point_reference_facts, trend.canonical_unit)}"
         )
 
-        pct_change, pct_direction = fact["pct_change"], fact["pct_direction"]
-        if pct_change is not None and pct_direction is not None:
-            change_phrase = (
-                f"{pct_direction} {pct_change}%"
-                if pct_direction != "không đổi"
-                else f"không có biến động ({pct_change}%)"
-            )
-            block += (
-                f"\nMức biến động giữa lần gần nhất và lần ngay trước: {change_phrase} "
-                "(số do backend tính sẵn — chỉ được lặp lại nguyên số này, không được tự tính lại)."
-            )
+        block += (
+            f"\nNHẬN ĐỊNH ĐÃ CHỐT cho {trend.display_name} — đây là toàn bộ nội dung bạn được nói "
+            "về chỉ số này:\n"
+            f"{format_claims_for_prompt(fact['claim_set'].sentences)}"
+        )
 
         critical_low, critical_high = fact["critical_low"], fact["critical_high"]
         if critical_low is not None or critical_high is not None:
@@ -127,25 +109,30 @@ def _group_prompt(
 
     return textwrap.dedent(
         f"""\
-        Bạn là trợ lý giải thích xu hướng xét nghiệm theo nhóm chức năng cho mục đích giáo dục.
+        Bạn là trợ lý diễn đạt lại kết quả phân tích xu hướng xét nghiệm theo nhóm chức năng.
 
         Nhóm chức năng: {section_label(section)}
 
-        Dữ liệu từng chỉ số dưới đây đã được backend xác thực. KHÔNG được sửa, không được thêm số/ngày mới.
-        Mọi số trong câu của một chỉ số phải lấy từ đúng block của chỉ số đó:
+        Dữ liệu và nhận định từng chỉ số dưới đây đã được backend tính và kiểm chứng. KHÔNG được
+        sửa, không được thêm số/ngày mới. Mọi câu về một chỉ số phải lấy nội dung từ đúng block
+        của chỉ số đó:
 
         {chr(10).join(blocks)}
 
-        Nhiệm vụ: viết MỘT đoạn ngắn tiếng Việt, dễ hiểu cho bệnh nhân, giúp đọc các chỉ số trong nhóm
-        CÙNG NHAU. Chỉ được ghép các dạng câu sau (bỏ dạng nào không có dữ liệu tương ứng ở trên):
-        1. Quan hệ cùng chiều giữa các chỉ số: "[Chỉ số A] và [Chỉ số B] cùng tăng/giảm/ổn định qua các lần đo."
-        2. Vị trí chung so với khoảng tham chiếu: "Cả [A] và [B] trong nhóm đều vượt ngưỡng trên của khoảng tham chiếu."
-           hoặc "...đều nằm trong khoảng tham chiếu."
-        3. Quan hệ trái chiều: "[A] tăng trong khi [B] giảm."
-        4. Mức biến động của từng chỉ số giữa hai lần đo gần nhất, chỉ dùng số phần trăm đã cho của đúng chỉ số đó.
-        5. Các ngày đáng chú ý của từng chỉ số: ngày nằm dưới cận dưới, vượt cận trên, hoặc gần cận trên/dưới.
+        Nhiệm vụ: viết lại các nhận định đã chốt ở trên thành MỘT đoạn ngắn tiếng Việt liền mạch,
+        giúp bệnh nhân đọc các chỉ số trong nhóm CÙNG NHAU. Bạn chỉ được đổi cách hành văn và
+        được nối các chỉ số lại bằng những câu quan hệ sau:
+        1. Cùng chiều: "[A] và [B] cùng tăng/giảm/ổn định qua các lần đo."
+        2. Vị trí chung: "Cả [A] và [B] đều nằm trong khoảng tham chiếu." / "...đều vượt cận trên."
+        3. Trái chiều: "[A] tăng trong khi [B] giảm."
+        Câu quan hệ chỉ được nói lại đúng những gì các nhận định đã chốt nói; không được suy ra
+        quan hệ mới.
         Quy tắc bắt buộc:
-        - Mọi số phải lấy từ block của đúng chỉ số mà câu đang nói đến; KHÔNG gộp số của hai chỉ số thành một phép tính.
+        - Giữ nguyên mọi nhận định đã chốt: không bỏ bớt, không thêm nhận định mới, không đảo ý.
+        - Hướng biến động (tăng/giảm/không đổi) và vị trí so với khoảng tham chiếu của TỪNG chỉ số
+          phải giữ ĐÚNG như đã chốt. Không tự phân loại lại hình dạng chuỗi của bất kỳ chỉ số nào.
+        - Mọi số phải lấy từ block của đúng chỉ số mà câu đang nói đến; KHÔNG gộp số của hai chỉ số
+          thành một phép tính.
         - Không kết luận tình trạng sức khỏe hay bệnh từ tổ hợp chỉ số. Không dùng: "sự kết hợp này cho thấy",
           "nhóm chỉ số này nghĩa là", "nguy cơ tim mạch", "hội chứng chuyển hóa".
         - Không chẩn đoán, không suy đoán nguyên nhân, không dự đoán giá trị tương lai.
@@ -233,18 +220,23 @@ async def explain_section_trend(
 
     facts: list[dict] = []
     extra_allowed: list[list[float | None]] = []
+    claim_groups: list[tuple] = []
+    deterministic_parts: list[str] = []
     for trend in trends:
         range_lower, range_upper = matched_reference_bounds(db, trend)
         point_reference_facts = build_point_reference_facts(db, trend)
-        pct_change, pct_direction = _percent_change(trend)
+        pct_change, _pct_direction = percent_change(trend)
         critical_low, critical_high = critical_threshold_bounds(trend)
+        # Neo nhãn hình dạng chuỗi theo tên chỉ số: ở chế độ nhóm, "A tăng dần trong
+        # khi B dao động" là câu hợp lệ, nên không thể soi toàn đoạn như luồng đơn
+        # chỉ số — chỉ những câu có nhắc tên chỉ số mới bị đối chiếu.
+        claim_set = build_claim_set(trend, point_reference_facts, shape_anchor=trend.display_name)
+        claim_groups.append(claim_set.claims)
+        deterministic_parts.append(f"{trend.display_name}: {compose_deterministic_explanation(claim_set.sentences)}")
         facts.append(
             {
-                "range_lower": range_lower,
-                "range_upper": range_upper,
                 "point_reference_facts": point_reference_facts,
-                "pct_change": pct_change,
-                "pct_direction": pct_direction,
+                "claim_set": claim_set,
                 "critical_low": critical_low,
                 "critical_high": critical_high,
             }
@@ -260,17 +252,24 @@ async def explain_section_trend(
             ]
         )
 
+    claims = merge_claims(claim_groups)
+    deterministic = " ".join(deterministic_parts).strip()
+
+    def _fallback(reason: str) -> TrendExplanationResponse:
+        """Dự phòng bằng chính câu backend đã soạn cho từng chỉ số trong nhóm."""
+        return TrendExplanationResponse(
+            explanation=_with_escalation_notice(deterministic or TREND_EXPLANATION_FALLBACK, escalate=escalate),
+            fallback=True,
+            reason=reason,
+        )
+
     prompt = _group_prompt(section, trends, facts=facts)
 
     try:
         llm = get_llm()
     except Exception as exc:
         logger.error("Section trend explanation LLM unavailable: %s", exc)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="PROVIDER_UNAVAILABLE",
-        )
+        return _fallback("PROVIDER_UNAVAILABLE")
 
     started_at = time.perf_counter()
     try:
@@ -284,11 +283,7 @@ async def explain_section_trend(
             target=section,
         )
         logger.error("Section trend explanation failed for %s: %s", section, exc)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="PROVIDER_ERROR",
-        )
+        return _fallback("PROVIDER_ERROR")
 
     add_timing_event(
         "section-trend-explanation-call",
@@ -297,20 +292,17 @@ async def explain_section_trend(
         target=section,
     )
     if not text:
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="EMPTY_OUTPUT",
-        )
+        return _fallback("EMPTY_OUTPUT")
 
-    violations = validate_section_explanation(text, trends, extra_allowed_numbers=extra_allowed)
+    violations = validate_section_explanation(
+        text,
+        trends,
+        extra_allowed_numbers=extra_allowed,
+        claims=claims,
+    )
     if violations:
         logger.warning("Section trend explanation blocked: %s\nBlocked text: %s", violations, text)
-        return TrendExplanationResponse(
-            explanation=_with_escalation_notice(TREND_EXPLANATION_FALLBACK, escalate=escalate),
-            fallback=True,
-            reason="GUARDRAIL_BLOCKED",
-        )
+        return _fallback("GUARDRAIL_BLOCKED")
 
     return TrendExplanationResponse(
         explanation=_with_escalation_notice(text, escalate=escalate),
