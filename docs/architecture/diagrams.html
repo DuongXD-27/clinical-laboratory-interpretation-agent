@@ -651,7 +651,7 @@ graph LR
       <div class="panel-head">
         <div class="eyebrow">Diagram 4 — Orchestrator Agent</div>
         <h2>Canonical Conversational Agent</h2>
-        <p>Admission gates → session context → tool selection có kiểm soát → guardrail phản hồi → suggested actions. Gates dưới đây đã <strong>đơn giản hoá</strong> cho overview — code thật (<code>src/orchestrator/gates.py</code>) có thêm <code>emergency_safety_gate</code>, <code>sensitive_system_gate</code>, <code>out_of_scope_gate</code>, <code>treatment_followup_gate</code> và các kiểm tra input mơ hồ. Đã bỏ gate "lab values trong chat" khỏi sơ đồ vì <code>contains_lab_value()</code> trong code không reject — nó chỉ miễn trừ tin nhắn khỏi bị chặn nhầm unclear/out-of-scope.</p>
+        <p>Admission gates → session context → tool selection → guardrail → suggested actions. Đã <strong>đơn giản hoá</strong>: bỏ bớt vài gate phụ (xem <code>gates.py</code>).</p>
       </div>
       <div class="diagram-frame">
         <div class="zoom-toolbar">
@@ -668,27 +668,26 @@ graph TD
 
     WIDGET["Frontend AssistantWidget"] -->|"OrchestratorRequest"| ENDPOINT["/api/v1/orchestrator/message&lt;br/&gt;(+ /message/stream SSE)"]
 
-    subgraph GATES["Admission Gates (đã đơn giản hoá)"]
-        G1{"Token hợp lệ?"}
+    subgraph GATES["Admission Gates (đã đơn giản hoá — xem gates.py để biết đầy đủ)"]
         G2{"Role = doctor?"}
+        G_EMERGENCY{"Emergency safety&lt;br/&gt;(cấp cứu)?"}
         G3{"Onboarding đã xác nhận?"}
-        G5{"Nội dung unsafe/emergency?"}
+        G5{"Nội dung unsafe&lt;br/&gt;(medical safety)?"}
         G6{"OCR skip attempt?"}
     end
 
-    ENDPOINT --> G1
-    G1 -->|No| REJECT["401 / Reject"]
-    G1 -->|Yes| G2
+    ENDPOINT -->|"JWT đã qua Depends(get_current_user)"| G2
+    G2 -->|No| CTX["session_store.py&lt;br/&gt;Hydrate conversation context"]
     G2 -->|Yes| BLOCKED["UNSUPPORTED_CAPABILITY&lt;br/&gt;(doctor bị chặn trước Agent/DB)"]
-    G2 -->|No| G3
+    CTX --> G_EMERGENCY
+    G_EMERGENCY -->|Yes| REJECT
+    G_EMERGENCY -->|No| G3
     G3 -->|No| ONBOARD_PROMPT["Yêu cầu ack onboarding"]
     G3 -->|Yes| G5
     G5 -->|Yes| REJECT
     G5 -->|No| G6
     G6 -->|Yes| REJECT
-    G6 -->|No| CTX["session_store.py&lt;br/&gt;Hydrate conversation context"]
-
-    CTX --> PLAN["agent.py&lt;br/&gt;Chọn tool đã duyệt&lt;br/&gt;(report/analyte/history/trend/doctor-question/RAG/app-help)"]
+    G6 -->|No| PLAN["agent.py&lt;br/&gt;Chọn tool đã duyệt&lt;br/&gt;(report/analyte/history/trend/doctor-question/RAG/app-help)"]
     PLAN --> TOOLS["agent_tools.py&lt;br/&gt;Patient-scoped wrappers&lt;br/&gt;Identity từ JWT, không nhận patient_id từ caller"]
     TOOLS --> SERVICES["Deterministic domain services&lt;br/&gt;(RuleCheck, RAG, DB…)"]
     SERVICES --> LLM_MSG["LLM sinh nội dung message&lt;br/&gt;(server kiểm soát intent/status/data/sources)"]
@@ -696,7 +695,7 @@ graph TD
     LLM_MSG --> GUARD["response_guardrail.py&lt;br/&gt;Medical safety · canonical-fact contradiction&lt;br/&gt;· patient-grounding validation"]
     GUARD --> SCHEMA_V["Schema Validation"]
     SCHEMA_V --> ACTION_V["SuggestedAction Validation&lt;br/&gt;(7 variants cố định)"]
-    ACTION_V --> WIDGET
+    ACTION_V --> RESPONSE["Trả OrchestratorResponse&lt;br/&gt;về AssistantWidget"]
 
     UNAVAIL["LLM_UNAVAILABLE&lt;br/&gt;Deterministic fallback response"] -.->|"provider fails"| GUARD
 </pre>
