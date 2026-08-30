@@ -1,0 +1,78 @@
+%% Diagram 5 — Data & Knowledge + Deployment
+%% Nguồn: ARCHITECTURE.md, mục "4. Database", "5. Vector Store", "Deployment Architecture"
+%% Thiết kế: diagram chỉ vẽ quan hệ ownership CỐT LÕI (patient → report → ...).
+%% Các FK phụ (bác sĩ: verified_by/reviewed_by/answered_by/doctor_id, các
+%% quan hệ nullable của INDICATORS, và các cạnh không-FK/polymorphic của
+%% NOTES/OCR_LC) chuyển xuống bảng chú thích trong diagrams.html #p5 để
+%% tránh nhồi quá nhiều cạnh vào 1 khối.
+
+graph TD
+
+    subgraph DB_TABLES["Database (SQLite dev / PostgreSQL prod)"]
+        USERS[("users")]
+        REPORTS[("lab_reports")]
+        INDICATORS[("report_indicators")]
+        ALERTS[("report_critical_alerts")]
+        CATALOG[("indicator_catalog")]
+        QUESTIONS[("report_questions")]
+        NOTES[("doctor_notes")]
+        VIEWS[("report_doctor_views")]
+        OOS[("out_of_scope_log")]
+        OCR_LC[("ocr_review_lifecycle<br/>PENDING → CONSUMED/EXPIRED")]
+        CONV[("conversations")]
+        CONV_MSG[("conversation_messages")]
+        FLAGS[("review_flags")]
+        TREND_REQ[("trend_review_requests")]
+        TRACES[("request_traces<br/>không chứa PHI")]
+    end
+
+    USERS -->|"patient_id"| REPORTS
+    REPORTS --> INDICATORS
+    REPORTS --> ALERTS
+    REPORTS --> QUESTIONS
+    REPORTS --> VIEWS
+    REPORTS --> OOS
+    REPORTS --> FLAGS
+    INDICATORS --> CATALOG
+    USERS --> OCR_LC
+    USERS --> CONV
+    CONV --> CONV_MSG
+    USERS -->|"patient_id"| TREND_REQ
+
+    subgraph VECTOR["Vector Store"]
+        CHROMA[("ChromaDB<br/>data/chroma")]
+        EXPL[("explanations.json<br/>Curated fallback")]
+    end
+    EXPL -->|"Indexed"| CHROMA
+
+    subgraph DEPLOY_CLIENT["Client Browser"]
+        WEB["Next.js Web Interface"]
+    end
+
+    subgraph DEPLOY_FE["Vercel Cloud"]
+        FE_APP["Frontend Next.js App<br/>vmec-05.vercel.app"]
+    end
+
+    subgraph DEPLOY_BE["Railway Cloud"]
+        BE_APP["Backend FastAPI API<br/>vmec-05-api-production.up.railway.app"]
+        CHROMA_D[("ChromaDB Vector Store<br/>data/chroma")]
+    end
+
+    subgraph DEPLOY_DB["Neon Cloud (Frankfurt)"]
+        PG_D[("Neon PostgreSQL<br/>Production DB")]
+    end
+
+    subgraph DEPLOY_CLOUD["External Cloud AI Services"]
+        OPENAI_D["OpenAI API<br/>gpt-4o-mini / text-embedding-3-small"]
+        GEMINI_D["Google Gemini Vision<br/>OCR Engine"]
+    end
+
+    WEB --> FE_APP
+    FE_APP -->|"HTTPS REST API / JWT"| BE_APP
+    BE_APP --> PG_D
+    BE_APP --> CHROMA_D
+    BE_APP --> OPENAI_D
+    BE_APP --> GEMINI_D
+
+    PG_D -.->|"chứa (dev dùng SQLite local, xem ARCHITECTURE.md)"| DB_TABLES
+    CHROMA_D -.->|"chứa"| CHROMA

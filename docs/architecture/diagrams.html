@@ -709,7 +709,7 @@ graph TD
       <div class="panel-head">
         <div class="eyebrow">Diagram 5 — Data &amp; Deployment</div>
         <h2>Database, vector store, hạ tầng triển khai</h2>
-        <p>15 bảng SQLite/PostgreSQL, ChromaDB local vector store, và deployment trên Vercel/Railway kèm external AI services.</p>
+        <p>15 bảng — diagram chỉ vẽ quan hệ ownership cốt lõi, FK phụ (bác sĩ, nullable) xem bảng chú thích bên dưới.</p>
       </div>
       <div class="diagram-frame">
         <div class="zoom-toolbar">
@@ -742,19 +742,18 @@ graph TD
         TRACES[("request_traces&lt;br/&gt;không chứa PHI")]
     end
 
-    USERS --> REPORTS
+    USERS -->|"patient_id"| REPORTS
     REPORTS --> INDICATORS
     REPORTS --> ALERTS
     REPORTS --> QUESTIONS
     REPORTS --> VIEWS
+    REPORTS --> OOS
+    REPORTS --> FLAGS
     INDICATORS --> CATALOG
-    NOTES -.->|"target_type/target_id polymorphic — không FK cứng, đa số trỏ report"| REPORTS
     USERS --> OCR_LC
-    OCR_LC -.->|"Confirm (process trigger, không có FK tới lab_reports)"| REPORTS
     USERS --> CONV
     CONV --> CONV_MSG
-    REPORTS --> FLAGS
-    USERS -->|"patient_id (không qua 1 report cụ thể — trend gộp nhiều reports)"| TREND_REQ
+    USERS -->|"patient_id"| TREND_REQ
 
     subgraph VECTOR["Vector Store"]
         CHROMA[("ChromaDB&lt;br/&gt;data/chroma")]
@@ -772,8 +771,11 @@ graph TD
 
     subgraph DEPLOY_BE["Railway Cloud"]
         BE_APP["Backend FastAPI API&lt;br/&gt;vmec-05-api-production.up.railway.app"]
-        SQLITE_D[("SQLite Persistent DB&lt;br/&gt;data/app.db")]
         CHROMA_D[("ChromaDB Vector Store&lt;br/&gt;data/chroma")]
+    end
+
+    subgraph DEPLOY_DB["Neon Cloud (Frankfurt)"]
+        PG_D[("Neon PostgreSQL&lt;br/&gt;Production DB")]
     end
 
     subgraph DEPLOY_CLOUD["External Cloud AI Services"]
@@ -783,18 +785,38 @@ graph TD
 
     WEB --> FE_APP
     FE_APP -->|"HTTPS REST API / JWT"| BE_APP
-    BE_APP --> SQLITE_D
+    BE_APP --> PG_D
     BE_APP --> CHROMA_D
     BE_APP --> OPENAI_D
     BE_APP --> GEMINI_D
 
-    SQLITE_D -.->|"chứa"| DB_TABLES
+    PG_D -.->|"chứa (dev dùng SQLite local, xem ARCHITECTURE.md)"| DB_TABLES
     CHROMA_D -.->|"chứa"| CHROMA
 </pre>
           </div>
         </div>
       </div>
       <div class="source-note">File: <code>docs/architecture/data-deployment.mmd</code> · nguồn gốc <code>ARCHITECTURE.md</code></div>
+
+      <div class="route-legend-wrap">
+        <table class="route-legend">
+          <thead>
+            <tr><th>Bảng</th><th>Cột FK</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="6">FK bác sĩ (users.id)</td><td><code>lab_reports.verified_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>report_indicators.reviewed_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>report_questions.answered_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>doctor_notes.doctor_id</code></td><td>NOT NULL</td></tr>
+            <tr><td><code>report_doctor_views.doctor_id</code></td><td>NOT NULL</td></tr>
+            <tr><td><code>trend_review_requests.reviewed_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td rowspan="2">Nullable (report_indicators)</td><td><code>report_questions.indicator_id</code></td><td>1 câu hỏi có thể gắn 1 indicator cụ thể, hoặc không (fallback/gộp nhóm)</td></tr>
+            <tr><td><code>review_flags.finding_id</code></td><td>1 flag có thể gắn 1 finding cụ thể, hoặc không</td></tr>
+            <tr><td>Không phải FK</td><td><code>doctor_notes.target_type</code> / <code>target_id</code></td><td>Polymorphic — trỏ report / indicator / report_question, không ràng buộc FK cứng</td></tr>
+            <tr><td>Không phải FK</td><td><code>ocr_review_lifecycle</code> → <code>lab_reports</code></td><td>Chỉ là process trigger lúc Confirm, không có cột FK nào trỏ sang lab_reports</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 </div>
