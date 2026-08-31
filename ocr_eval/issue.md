@@ -1,141 +1,104 @@
-# Issue: Gemini OCR Schema Validation Failure
+# Issue: Gemini OCR JSON Truncation — max_output_tokens Too Low
 
-**Severity:** P0  
-**Component:** `src/adapters/vision_adapter.py`  
-**Observed in:** OCR evaluation runs on `png/` and `png_v2/` (2026-08-30)
-
----
-
-## Mô tả
-
-60% request gọi Gemini Vision (`gemini-3.5-flash-lite`) trả về response không khớp Pydantic schema `_GeminiOCRPayload`, khiến `VisionAdapter._extract_gemini()` raise `VisionAdapterError` và từ chối toàn bộ phiếu — không có fallback sang OpenRouter.
-
-```
-VisionAdapterError: Gemini OCR trả về dữ liệu không đúng schema.
-```
-
-Lỗi phát sinh tại [`vision_adapter.py:274`](../src/adapters/vision_adapter.py#L274):
-
-```python
-payload = _GeminiOCRPayload.model_validate_json(response.text or "")
-```
+**Severity:** P0 → **RESOLVED**  
+**Component:** `src/adapters/vision_adapter.py` + `.env`  
+**Observed in:** OCR evaluation runs (2026-08-30)  
+**Resolved in:** Fix Plan B (2026-08-31) — increase `GEMINI_VISION_MAX_OUTPUT_TOKENS` from 2048 → 4096
 
 ---
 
-## Bằng chứng
+## Mô tả ban đầu
 
-| Run | Bộ ảnh | Thành công | Thất bại | Success Rate |
-|-----|--------|------------|----------|--------------|
-| v1  | `png/`     | 8/20 | 12/20 | 40% |
-| v2  | `png_v2/`  | 8/20 | 12/20 | 40% |
+60% request gọi Gemini Vision (`gemini-3.5-flash-lite`) raise `VisionAdapterError`:
 
-Tỉ lệ thất bại giống nhau trên cả hai bộ ảnh với bố cục khác nhau.  
-Các file bị lỗi **không cố định** giữa hai lần chạy (phiếu 001–002 thành công ở lần 1, thất bại ở lần 2; ngược lại với phiếu 003–004) → lỗi **không phụ thuộc vào nội dung ảnh**, mà là vấn đề **API-level**.
+```
+ValidationError: Invalid JSON: EOF while parsing a string
+```
+
+Báo cáo: 40% Report Success Rate (8/20 phiếu) qua 2 lần chạy trên 2 bộ ảnh khác nhau.
 
 ---
 
-## Phân tích nguyên nhân
+## Root Cause Confirmed
 
-### Nguyên nhân 1 (khả năng cao nhất) — Thinking tokens lẫn vào JSON output
+**JSON bị truncate do `max_output_tokens=2048` quá thấp.**
 
-Model được khởi tạo với `thinking_config=types.ThinkingConfig(thinking_level="low")`. Với một số prompt/ảnh, Gemini có thể emit thinking tokens trước JSON body, khiến `response.text` chứa text dạng:
+`GEMINI_VISION_THINKING_LEVEL=low` tiêu tốn ~600 token thinking từ ngân sách output, chỉ còn ~1400 token cho JSON thực. Mỗi phiếu có 35 chỉ số × ~40 token/chỉ số ≈ 1400 token — ở ngưỡng giới hạn, khiến JSON bị cắt giữa chừng tại indicator #33 của 35.
+
+**Bằng chứng từ `fix_plan_A.py` log:**
 
 ```
-<thinking>
-Tôi cần đọc bảng xét nghiệm...
-</thinking>
-{"indicators": [...]}
+ValidationError: Invalid JSON: EOF while parsing a string at line 183 column 11
 ```
+- Compact JSON: luôn cắt ở ký tự ~4050 (tương đương indicator #33)
+- Pretty-printed JSON: luôn cắt ở dòng 183 (tương đương indicator #23 trong format 9-dòng/indicator)
+- Tất cả failure đều là `EOF while parsing` — không phải schema mismatch
 
-`model_validate_json()` không parse được phần `<thinking>...` và raise `ValidationError`.
-
-### Nguyên nhân 2 — Model trả `null` cho trường `value`
-
-Khi OCR không đọc được giá trị số (ô trống, font không nhận diện được), model có thể trả:
-
-```json
-{"name": "WBC", "value": null, "unit": "10^9/L", "confidence": 0.4, "raw_text": "WBC  —"}
-```
-
-`_ProviderIndicator.value` được khai báo `float` không có `Optional` → Pydantic reject toàn bộ response.
-
-### Nguyên nhân 3 — Rate limit / quota
-
-Gemini API trả HTTP 429 hoặc 503 nhưng `_is_transient()` không nhận dạng được response body dạng JSON error, dẫn đến parse JSON thất bại thay vì trigger retry.
+**Tại sao non-deterministic?** Gemini đôi khi dùng compact JSON, đôi khi pretty-printed — dẫn đến số indicator được fit vào ngân sách khác nhau; những file có indicator cuối nhỏ hơn đôi khi may mắn vừa.
 
 ---
 
-## Tác động
+## Evidence Table
 
-- **60% phiếu không được xử lý** — người dùng nhận lỗi thay vì kết quả OCR.
-- OpenRouter fallback **không được kích hoạt** vì lỗi schema được classify là non-transient (`raise VisionAdapterError` không qua `fallback_enabled` branch).
-- Mất dữ liệu không tường minh: không có log nào ghi lại `response.text` raw khi schema fail.
-
----
-
-## Hướng khắc phục
-
-### Fix ngắn hạn — Trigger fallback khi schema fail
-
-Tại `vision_adapter.py:274–280`, thay vì raise ngay, thử fallback sang OpenRouter:
-
-```python
-# Hiện tại (không fallback):
-try:
-    payload = _GeminiOCRPayload.model_validate_json(response.text or "")
-    ...
-except (ValidationError, TypeError, ValueError) as exc:
-    raise VisionAdapterError("Gemini OCR trả về dữ liệu không đúng schema.") from exc
-
-# Đề xuất (có fallback):
-try:
-    payload = _GeminiOCRPayload.model_validate_json(response.text or "")
-    ...
-except (ValidationError, TypeError, ValueError) as exc:
-    logger.warning(
-        "vision_gemini_schema_fail attempt=%d response_preview=%r",
-        attempt, (response.text or "")[:200],
-    )
-    if self.fallback_enabled and self.settings.openrouter_api_key.strip():
-        return await self._extract_openrouter(image_bytes, mime_type)
-    raise VisionAdapterError("Gemini OCR trả về dữ liệu không đúng schema.") from exc
-```
-
-### Fix trung hạn — Strip thinking tokens trước khi parse
-
-```python
-import re
-
-def _strip_thinking(text: str) -> str:
-    """Remove <thinking>...</thinking> blocks Gemini may prepend."""
-    return re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL).strip()
-
-# Dùng trước model_validate_json:
-clean_text = _strip_thinking(response.text or "")
-payload = _GeminiOCRPayload.model_validate_json(clean_text)
-```
-
-### Fix dài hạn — Cho phép `value` là `Optional[float]`
-
-```python
-class _ProviderIndicator(BaseModel):
-    name: str = Field(..., min_length=1)
-    value: float | None = Field(None, allow_inf_nan=False)  # None khi không đọc được
-    unit: str = Field(..., min_length=1)
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    raw_text: str
-```
-
-Row có `value=None` sẽ được annotate `needs_review=True` và hiển thị cho user tự nhập thay vì bị drop.
+| Run | Script | max_tokens | Success Rate | Ghi chú |
+|-----|--------|-----------|-------------|---------|
+| v1 baseline | `run_eval.py` | 2048 | 8/20 = **40%** | Original |
+| v2 baseline | `run_eval.py` | 2048 | 8/20 = **40%** | `png_v2/` |
+| Plan A | `fix_plan_A.py` | 2048 | 10/20 = **50%** | Retry schema fail → partially helps |
+| Plan A re-run | `fix_plan_A.py` | 2048 | 12/20 = **60%** | Non-deterministic |
+| **Plan B** | `fix_plan_B.py` | **4096** | **20/20 = 100%** | **Fix confirmed** |
+| **v3 final** | `run_eval.py` | **4096** | **20/20 = 100%** | All 12 metrics |
 
 ---
 
-## Các bước điều tra tiếp theo
+## Fix Applied
 
-1. **Bật DEBUG logging** — thêm `logger.debug("response_text=%r", response.text)` trước dòng `model_validate_json` để xem raw output của 12 request thất bại.
-2. **Kiểm tra thinking config** — thử lại với `thinking_level="none"` để loại trừ Nguyên nhân 1.
-3. **Kiểm tra quota** — so sánh timestamp của các request thất bại với Cloud Console logs để xem có liên quan đến rate limit không.
+**`.env`** — tăng token limit:
+
+```diff
+- GEMINI_VISION_MAX_OUTPUT_TOKENS=2048
++ GEMINI_VISION_MAX_OUTPUT_TOKENS=4096
+```
+
+`Settings` model cho phép tối đa 4096. Giá trị này đủ cho 35 indicator × ~40 token + ~600 token thinking = ~2000 token tổng, trong ngân sách 4096.
+
+**Không cần thay đổi code** — chỉ cần tăng config.
 
 ---
 
-*Issue documented from evaluation runs — `data_mock/run_eval.py`. See `report.md` and `report_v2.md` for full metric context.*
+## Kết quả sau khi fix (report_v3.md)
+
+| Metric | Kết quả |
+|--------|---------|
+| Report Success Rate | **100%** (20/20) |
+| Analyte Precision / Recall / F1 | **100%** |
+| Value Accuracy | **100%** |
+| Unit Accuracy | 94.4% |
+| Reference Range Accuracy | 99.8% |
+| Complete Record Accuracy | 94.4% |
+| Critical OCR Error Rate | 0% |
+| Mean Latency | 6,903 ms |
+| P95 Latency | 9,434 ms |
+
+Unit Accuracy 94.4% và Complete Record Accuracy 94.4% là giới hạn nhận dạng của model đối với một số đơn vị hiếm — không phải lỗi truncation.
+
+---
+
+## Lessons Learned
+
+1. `GEMINI_VISION_THINKING_LEVEL=low` với Gemini 2.5 Flash Lite tiêu tốn ~600 token từ ngân sách `max_output_tokens` — cần tính vào capacity planning.
+2. Response text bị truncate → `json.JSONDecodeError` → bị wrap bởi `ValidationError` → dẫn đến lỗi trông giống như schema mismatch nhưng thực chất là truncation.
+3. Logging `str(exc)` thay vì `type(exc).__name__` là bước chẩn đoán quan trọng — nếu message là `EOF while parsing`, đó là truncation, không phải schema incompatibility.
+4. Cần monitor `len(response.text)` và check xem response có kết thúc bằng `}` hợp lệ không khi schema validation fail.
+
+---
+
+## Files liên quan
+
+- `ocr_eval/fix_plan_A.py` — Plan A (schema fail → retry + fallback): cải thiện 40% → 50-60%, không đủ
+- `ocr_eval/fix_plan_B.py` — Plan B (tăng max_output_tokens=4096): giải quyết 100%
+- `ocr_eval/report_v3.md` — Báo cáo đánh giá cuối cùng với tất cả 12 metric
+
+---
+
+*Documented by `ocr_eval/run_eval.py`. Resolved 2026-08-31.*
