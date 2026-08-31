@@ -1052,6 +1052,21 @@ class TimeseriesPointSchema(BaseModel):
     guardrail_fallback_count: int = 0
     guardrail_rewrite_count: int = 0
     guardrail_fallback_rate_pct: float | None = None
+    chat_degraded_count: int = 0
+    chat_blocked_count: int = 0
+    chat_blocked_reasons: dict[str, int] = Field(default_factory=dict)
+    chat_blocked_rate_pct: float | None = None
+    chat_degraded_rate_pct: float | None = None
+    success_rate_pct: float | None = None
+    judge_sample_count: int = 0
+    groundedness_pct: float | None = None
+    faithfulness_pct: float | None = None
+    relevance_pct: float | None = None
+    safety_final_escape_count: int = 0
+    rag_retrieval_count: int = 0
+    rag_retrieval_ms: float = 0.0
+    rag_source_count: int = 0
+    rag_top_k: int = 0
 
 
 class TimeseriesResponse(BaseModel):
@@ -1063,6 +1078,8 @@ class TimeseriesResponse(BaseModel):
     until: str
     points: list[TimeseriesPointSchema] = Field(default_factory=list)
     error_types: list[str] = Field(default_factory=list)
+    rag_status: str
+    rag_required: bool
 
 
 class SloSchema(BaseModel):

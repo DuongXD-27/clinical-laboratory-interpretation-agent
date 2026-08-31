@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import re
+from contextlib import contextmanager
 from typing import Any
 
 from src.config import get_settings
@@ -263,6 +264,32 @@ def flush() -> None:
         logger.warning("langfuse_flush_failed", exc_info=True)
 
 
+@contextmanager
+def chat_trace(*, request_id: str | None = None):
+    """Root trace whose lifetime is the complete chat/SSE iterator."""
+
+    client = get_client()
+    if client is None:
+        yield
+        return
+    try:
+        manager = client._start_as_current_otel_span_with_processed_media(
+            name="chat-turn", as_type="agent", metadata={"request_id": request_id} if request_id else None
+        )
+        manager.__enter__()
+    except Exception:
+        logger.warning("langfuse_chat_trace_failed", exc_info=True)
+        yield
+        return
+    try:
+        yield
+    except BaseException as exc:
+        manager.__exit__(type(exc), exc, exc.__traceback__)
+        raise
+    else:
+        manager.__exit__(None, None, None)
+
+
 def reset_for_tests() -> None:
     """Xoá client đã nhớ, để test đổi cấu hình rồi khởi tạo lại."""
 
@@ -276,6 +303,7 @@ __all__ = [
     "flush",
     "get_callback_handler",
     "get_client",
+    "chat_trace",
     "is_configured",
     "reset_for_tests",
     "scrub_status_message",

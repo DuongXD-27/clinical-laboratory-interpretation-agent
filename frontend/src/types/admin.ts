@@ -145,6 +145,21 @@ export type TimeseriesPoint = {
   guardrail_rewrite_count: number;
   /** Tỉ lệ lượt phải thay bằng văn bản dựng sẵn — đo được, không phải groundedness. */
   guardrail_fallback_rate_pct: number | null;
+  chat_degraded_count?: number;
+  chat_blocked_count?: number;
+  chat_blocked_reasons?: Record<string, number>;
+  chat_blocked_rate_pct: number | null;
+  chat_degraded_rate_pct: number | null;
+  success_rate_pct: number | null;
+  judge_sample_count: number;
+  groundedness_pct: number | null;
+  faithfulness_pct: number | null;
+  relevance_pct: number | null;
+  safety_final_escape_count: number;
+  rag_retrieval_count: number;
+  rag_retrieval_ms: number;
+  rag_source_count: number;
+  rag_top_k: number;
 };
 
 export type Timeseries = {
@@ -154,6 +169,8 @@ export type Timeseries = {
   until: string;
   points: TimeseriesPoint[];
   error_types: string[];
+  rag_status?: string;
+  rag_required?: boolean;
 };
 
 export type Slo = {

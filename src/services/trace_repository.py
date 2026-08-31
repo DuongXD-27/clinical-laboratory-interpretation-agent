@@ -21,7 +21,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.models.db import RequestTrace
+from src.models.db import ChatQualityEvaluation, RequestTrace
 from src.services import error_taxonomy, trace_metrics
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,15 @@ def record_trace(
             llm_ttft_ms=(float(fields["llm_ttft_ms"]) if fields.get("llm_ttft_ms") is not None else None),
             guardrail_fallback_count=int(_num("guardrail_fallback_count")),
             guardrail_rewrite_count=int(_num("guardrail_rewrite_count")),
+            chat_degraded_count=int(_num("chat_degraded_count")),
+            chat_blocked_count=int(_num("chat_blocked_count")),
+            chat_blocked_reason=(
+                str(fields["chat_blocked_reason"])[:64] if fields.get("chat_blocked_reason") else None
+            ),
+            rag_retrieval_count=int(_num("rag_retrieval_count")),
+            rag_retrieval_ms=_num("rag_retrieval_ms"),
+            rag_source_count=int(_num("rag_source_count")),
+            rag_top_k=int(_num("rag_top_k")),
             # Khong bat duoc ten ngoai le (loi xay ra ngoai handler, hoac 5xx do
             # framework tra) thi suy tu ma HTTP. `None` khi request khong loi.
             error_type=(
@@ -277,11 +286,32 @@ def load_traces_for_analysis(db: Session, *, since: datetime | None = None) -> l
         RequestTrace.llm_cost_usd,
         RequestTrace.guardrail_fallback_count,
         RequestTrace.guardrail_rewrite_count,
+        RequestTrace.chat_degraded_count,
+        RequestTrace.chat_blocked_count,
+        RequestTrace.chat_blocked_reason,
+        RequestTrace.rag_retrieval_count,
+        RequestTrace.rag_retrieval_ms,
+        RequestTrace.rag_source_count,
+        RequestTrace.rag_top_k,
         RequestTrace.llm_ttft_ms,
         RequestTrace.llm_missing_usage_count,
     )
     if since is not None:
         query = query.where(RequestTrace.created_at >= since)
+    return list(db.execute(query).all())
+
+
+def load_quality_evaluations(db: Session, *, since: datetime | None = None) -> list[Any]:
+    query = select(
+        ChatQualityEvaluation.created_at,
+        ChatQualityEvaluation.status,
+        ChatQualityEvaluation.groundedness,
+        ChatQualityEvaluation.faithfulness,
+        ChatQualityEvaluation.relevance,
+        ChatQualityEvaluation.safety_final_escape,
+    )
+    if since is not None:
+        query = query.where(ChatQualityEvaluation.created_at >= since)
     return list(db.execute(query).all())
 
 

@@ -330,9 +330,12 @@ function QualityChart({ series, dark }: { series: Timeseries; dark: boolean }) {
   const data = series.points.map((p) => ({
     label: timeLabel(p.start, series.bucket_minutes),
     rate: p.guardrail_fallback_rate_pct,
+    groundedness: p.groundedness_pct,
+    faithfulness: p.faithfulness_pct,
+    relevance: p.relevance_pct,
   }));
 
-  const measured = series.points.some((p) => p.guardrail_fallback_rate_pct !== null);
+  const measured = series.points.some((p) => p.guardrail_fallback_rate_pct !== null || p.groundedness_pct !== null);
   if (!measured) {
     return <EmptyPlot message="Chưa có lượt trả lời nào để đo trong khoảng này." />;
   }
@@ -366,6 +369,9 @@ function QualityChart({ series, dark }: { series: Timeseries; dark: boolean }) {
           activeDot={{ r: 4 }}
           connectNulls={false}
         />
+        <Line type="monotone" dataKey="groundedness" name="Groundedness" stroke={categoricalColor(0, dark) ?? undefined} dot={false} connectNulls={false} />
+        <Line type="monotone" dataKey="faithfulness" name="Faithfulness" stroke={categoricalColor(1, dark) ?? undefined} dot={false} connectNulls={false} />
+        <Line type="monotone" dataKey="relevance" name="Relevance" stroke={categoricalColor(2, dark) ?? undefined} dot={false} connectNulls={false} />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -373,9 +379,43 @@ function QualityChart({ series, dark }: { series: Timeseries; dark: boolean }) {
 
 export default function AdminCharts({ series }: { series: Timeseries }) {
   const dark = useDarkMode();
+  const chatDegraded = series.points.reduce((sum, point) => sum + (point.chat_degraded_count ?? 0), 0);
+  const chatBlocked = series.points.reduce((sum, point) => sum + (point.chat_blocked_count ?? 0), 0);
+  const blockedReasons = series.points.reduce<Record<string, number>>((totals, point) => {
+    Object.entries(point.chat_blocked_reasons ?? {}).forEach(([reason, count]) => {
+      totals[reason] = (totals[reason] ?? 0) + count;
+    });
+    return totals;
+  }, {});
+  const safetyEscapes = series.points.reduce((sum, point) => sum + (point.safety_final_escape_count ?? 0), 0);
+  const judgeSamples = series.points.reduce((sum, point) => sum + (point.judge_sample_count ?? 0), 0);
+  const ragRetrievals = series.points.reduce((sum, point) => sum + (point.rag_retrieval_count ?? 0), 0);
+  const ragLatency = series.points.reduce((sum, point) => sum + (point.rag_retrieval_ms ?? 0), 0);
+  const ragSources = series.points.reduce((sum, point) => sum + (point.rag_source_count ?? 0), 0);
+  const ragTopK = Math.max(0, ...series.points.map((point) => point.rag_top_k ?? 0));
 
   return (
     <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 xl:col-span-2">
+        <p className="text-sm font-semibold">
+          Trạng thái RAG: {series.rag_status === "disabled" ? "ĐANG TẮT" : (series.rag_status ?? "CHƯA ĐO ĐƯỢC")}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Judge samples: {judgeSamples} · Safety Final Escape: {safetyEscapes} · RAG usage: {ragRetrievals}
+          {series.rag_status === "disabled" ? "" : ` · top-k ${ragTopK} · ${ragLatency.toFixed(1)}ms · ${ragSources} nguồn`}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {series.rag_status === "disabled"
+            ? "Production không chạy RAG, vì vậy chưa có groundedness hay retrieval để đo; số 0 không được hiểu là hệ thống đang khỏe."
+            : `RAG ${series.rag_required ? "là thành phần bắt buộc" : "là thành phần tùy chọn"}; groundedness vẫn chưa được chấm tự động.`}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Chat suy giảm: {chatDegraded} · Chat bị chặn: {chatBlocked}
+          {Object.keys(blockedReasons).length
+            ? ` · Lý do: ${Object.entries(blockedReasons).map(([reason, count]) => `${reason} ${count}`).join(", ")}`
+            : ""}
+        </p>
+      </div>
       <ChartFrame
         title="Độ trễ đường AI theo phân vị"
         hint={`mốc ${series.bucket_minutes} phút`}
@@ -392,8 +432,8 @@ export default function AdminCharts({ series }: { series: Timeseries }) {
       </ChartFrame>
 
       <ChartFrame
-        title="Tỉ lệ phải thay bằng văn bản dựng sẵn"
-        hint="đo được — không phải groundedness"
+        title="Chat quality theo thời gian"
+        hint="fallback và LLM-as-Judge sampling"
       >
         <QualityChart series={series} dark={dark} />
       </ChartFrame>

@@ -138,6 +138,9 @@ class Settings(BaseSettings):
     # Tach khoi Langfuse co chu y: admin van xem duoc khi Langfuse chua cau hinh.
     trace_persistence_enabled: bool = True
     trace_retention_days: int = Field(default=14, ge=1, le=365)
+    chat_judge_enabled: bool = False
+    chat_judge_sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    chat_judge_model_name: str = "gpt-4o-mini"
 
     # Auth (JWT)
     jwt_secret: str = Field(default=_INSECURE_DEFAULT_JWT_SECRET, alias="JWT_SECRET")

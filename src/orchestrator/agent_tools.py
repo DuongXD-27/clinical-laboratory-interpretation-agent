@@ -30,6 +30,7 @@ from src.services import trend_service
 from src.services.analyte_resolver import canonical_analyte_id
 from src.services.app_help_retriever import get_app_help_retriever
 from src.services.medical_knowledge_retriever import get_medical_knowledge_retriever
+from src.services.request_timing import RAG_RETRIEVAL_EVENT, add_timing_event
 
 
 def _jsonable(value: Any) -> Any:
@@ -352,11 +353,20 @@ class AgentToolbox:
         resolved = _resolved_analyte(analyte or self.current_analyte or extract_explicit_analyte(query))
         if not resolved:
             return {"evidence": [], "sufficient": False}
+        import time
+
+        started_at = time.perf_counter()
         chunks = get_medical_knowledge_retriever().retrieve(
             query=query,
             analyte_id=canonical_analyte_id(resolved),
             status=(status or "UNKNOWN").lower(),
             limit=3,
+        )
+        add_timing_event(
+            RAG_RETRIEVAL_EVENT,
+            (time.perf_counter() - started_at) * 1000,
+            top_k=3,
+            source_count=len(chunks),
         )
         evidence = []
         for index, chunk in enumerate(chunks, start=1):

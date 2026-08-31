@@ -20,6 +20,8 @@ from src.models.orchestrator_schemas import (
     StreamEventType,
 )
 from src.orchestrator.service import OrchestratorRuntime, handle_message
+from src.services.langfuse_tracing import chat_trace
+from src.services.request_timing import get_current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -114,14 +116,16 @@ async def stream_sse_frames(
     runtime: OrchestratorRuntime | None = None,
     conversation: object | None = None,
 ) -> AsyncIterator[str]:
-    async for event in stream_message_events(
-        request,
-        current_user=current_user,
-        db=db,
-        runtime=runtime,
-        conversation=conversation,
-    ):
-        yield encode_sse_event(event)
+    timing = get_current_timing()
+    with chat_trace(request_id=timing.request_id if timing else None):
+        async for event in stream_message_events(
+            request,
+            current_user=current_user,
+            db=db,
+            runtime=runtime,
+            conversation=conversation,
+        ):
+            yield encode_sse_event(event)
 
 
 __all__ = ["encode_sse_event", "stream_message_events", "stream_sse_frames"]

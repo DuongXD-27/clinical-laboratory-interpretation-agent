@@ -10,6 +10,8 @@ from src.models.db import get_db
 from src.models.orchestrator_schemas import OrchestratorRequest, OrchestratorResponse
 from src.orchestrator.service import acknowledge_onboarding, handle_message
 from src.orchestrator.streaming import stream_sse_frames
+from src.services.langfuse_tracing import chat_trace
+from src.services.request_timing import get_current_timing
 
 router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
 
@@ -25,7 +27,9 @@ async def orchestrator_message(
         current_user=current_user,
         conversation_id=request.conversation_id,
     )
-    return await handle_message(request, current_user=current_user, db=db, conversation=conversation)
+    timing = get_current_timing()
+    with chat_trace(request_id=timing.request_id if timing else None):
+        return await handle_message(request, current_user=current_user, db=db, conversation=conversation)
 
 
 @router.post("/message/stream", response_class=StreamingResponse)
