@@ -1,0 +1,49 @@
+%% Diagram 4 — Orchestrator / Conversational Agent (mới vẽ)
+%% Nguồn: ARCHITECTURE.md, mục "2A. Canonical Conversational Agent"
+%% và "Orchestrator Data Flow"
+%% LƯU Ý: Gates dưới đây đã ĐƠN GIẢN HOÁ cho mục đích overview.
+%% Code thật (src/orchestrator/gates.py, service.py) có thêm:
+%% emergency_safety_gate, sensitive_system_gate, out_of_scope_gate,
+%% treatment_followup_gate, _is_unclear_input, _ambiguous_analyte_response.
+%% ĐÃ BỎ gate "lab values trong chat": contains_lab_value() trong code KHÔNG
+%% reject — nó chỉ MIỄN TRỪ tin nhắn khỏi bị chặn unclear/out-of-scope
+%% (service.py dòng 195, gates.py dòng 837). Vẽ nó như 1 reject-gate là sai.
+%% ĐÃ BỎ node "Token hợp lệ?": JWT được FastAPI validate qua
+%% Depends(get_current_user) TRƯỚC khi vào handle_message — là tầng chung
+%% cho mọi route protected (đã vẽ ở Diagram 2), không phải 1 gate riêng của
+%% Orchestrator. Vẽ chung vào đây gây rối, không thêm thông tin mới.
+
+graph TD
+
+    WIDGET["Frontend AssistantWidget"] -->|"OrchestratorRequest"| ENDPOINT["/api/v1/orchestrator/message<br/>(+ /message/stream SSE)"]
+
+    subgraph GATES["Admission Gates (đã đơn giản hoá — xem gates.py để biết đầy đủ)"]
+        G2{"Role = doctor?"}
+        G_EMERGENCY{"Emergency safety<br/>(cấp cứu)?"}
+        G3{"Onboarding đã xác nhận?"}
+        G5{"Nội dung unsafe<br/>(medical safety)?"}
+        G6{"OCR skip attempt?"}
+    end
+
+    ENDPOINT -->|"JWT đã qua Depends(get_current_user)"| G2
+    G2 -->|No| CTX["session_store.py<br/>Hydrate conversation context"]
+    G2 -->|Yes| BLOCKED["UNSUPPORTED_CAPABILITY<br/>(doctor bị chặn trước Agent/DB)"]
+    CTX --> G_EMERGENCY
+    G_EMERGENCY -->|Yes| REJECT
+    G_EMERGENCY -->|No| G3
+    G3 -->|No| ONBOARD_PROMPT["Yêu cầu ack onboarding"]
+    G3 -->|Yes| G5
+    G5 -->|Yes| REJECT
+    G5 -->|No| G6
+    G6 -->|Yes| REJECT
+    G6 -->|No| PLAN["agent.py<br/>Chọn tool đã duyệt<br/>(report/analyte/history/trend/doctor-question/RAG/app-help)"]
+    PLAN --> TOOLS["agent_tools.py<br/>Patient-scoped wrappers<br/>Identity từ JWT, không nhận patient_id từ caller"]
+    TOOLS --> SERVICES["Deterministic domain services<br/>(RuleCheck, RAG, DB…)"]
+    SERVICES --> LLM_MSG["LLM sinh nội dung message<br/>(server kiểm soát intent/status/data/sources)"]
+
+    LLM_MSG --> GUARD["response_guardrail.py<br/>Medical safety · canonical-fact contradiction<br/>· patient-grounding validation"]
+    GUARD --> SCHEMA_V["Schema Validation"]
+    SCHEMA_V --> ACTION_V["SuggestedAction Validation<br/>(7 variants cố định)"]
+    ACTION_V --> RESPONSE["Trả OrchestratorResponse<br/>về AssistantWidget"]
+
+    UNAVAIL["LLM_UNAVAILABLE<br/>Deterministic fallback response"] -.->|"provider fails"| GUARD

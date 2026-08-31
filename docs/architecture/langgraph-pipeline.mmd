@@ -1,0 +1,14 @@
+%% Diagram 3 — LangGraph Medical Pipeline
+%% Nguồn: ARCHITECTURE.md, mục "3. AI Agent (LangGraph)"
+
+graph LR
+    START([Start]) --> ROUTE{Has unreviewed OCR?}
+    ROUTE -->|Yes| GATE[ui_review_gate<br/>HITL Interrupt]
+    GATE --> INTEGRITY[input_integrity<br/>Source-backed measurement<br/>plausibility rules]
+    ROUTE -->|No| INTEGRITY
+    INTEGRITY --> REF[reference_range_checker]
+    REF --> CRIT[critical_detector]
+    CRIT --> ANALYZE[analyzer<br/>RAG + LLM]
+    ANALYZE --> GEN_Q[generate_questions]
+    GEN_Q --> GUARD[guardrail<br/>Safety Validator]
+    GUARD --> FINISH([End])

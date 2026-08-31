@@ -1,0 +1,69 @@
+%% Diagram 1 — Frontend module (Next.js / React)
+%% Trích/tách từ ARCHITECTURE.md, bổ sung Auth & Trends
+%% Cập nhật: bổ sung Doctor UI & Admin UI (bị thiếu ở bản đầu) — có route
+%% thật trong frontend/src/app/doctor, /app/admin, components/doctor,
+%% components/admin (queue, reports review, trend-reviews, tracing dashboard).
+
+graph TD
+
+    subgraph AUTH["Auth & Session"]
+        LOGIN["Đăng nhập / Đăng ký"]
+        GUEST["Guest Session<br/>(dùng thử tức thì)"]
+        CTX["Auth Context<br/>Patient / Doctor / Guest"]
+    end
+
+    subgraph INPUT_FLOW["Nhập liệu"]
+        MANUAL["Form nhập thủ công<br/>Chọn từ danh mục chỉ số chuẩn hóa (analyteCatalog)"]
+        UPLOAD["Upload ảnh phiếu XN"]
+        REVIEW["OCR Review UI<br/>Xác nhận giá trị trích xuất"]
+    end
+
+    subgraph ASSISTANT["Hybrid Assistant"]
+        WIDGET["Assistant Widget<br/>Patient / Guest"]
+        ONBOARD["Onboarding Acknowledge"]
+    end
+
+    subgraph RESULT_VIEW["Kết quả & Lịch sử (Patient/Guest)"]
+        RESULT["Result Screen<br/>Status · Explanation · Critical Warning · Disclaimer"]
+        TRENDS["Trends Chart<br/>Recharts"]
+        HISTORY["Danh sách phiếu XN"]
+        QUESTIONS["Câu hỏi gợi ý cho bác sĩ"]
+    end
+
+    subgraph DOCTOR_UI["Doctor UI"]
+        DOC_QUEUE["Queue Overview<br/>DoctorQueueOverview"]
+        DOC_REPORT["Report Review<br/>DoctorReportSidebar · FindingCard"]
+        DOC_TREND["Trend Reviews<br/>/doctor/trend-reviews"]
+    end
+
+    subgraph ADMIN_UI["Admin UI"]
+        ADMIN_TRACES["Tracing Dashboard<br/>AdminCharts · /admin/traces"]
+    end
+
+    LOGIN --> CTX
+    GUEST --> CTX
+    CTX --> MANUAL
+    CTX --> UPLOAD
+    CTX --> WIDGET
+    CTX -->|"role = doctor"| DOC_QUEUE
+    CTX -->|"role = admin"| ADMIN_TRACES
+
+    UPLOAD --> REVIEW
+    REVIEW -->|"Xác nhận"| RESULT
+    MANUAL --> RESULT
+
+    WIDGET <--> ONBOARD
+    WIDGET -->|"SuggestedAction: OPEN_REPORT / VIEW_ABNORMAL / VIEW_DOCTOR_QUESTIONS / CONFIRM_OCR"| RESULT
+    WIDGET --> TRENDS
+    WIDGET --> HISTORY
+
+    RESULT --> TRENDS
+    RESULT --> QUESTIONS
+    RESULT --> HISTORY
+
+    DOC_QUEUE --> DOC_REPORT
+    DOC_REPORT -.->|"Answer câu hỏi inline trong sidebar (không điều hướng)"| QUESTIONS
+    DOC_QUEUE --> DOC_TREND
+
+    classDef auth fill:#eef,stroke:#66a;
+    class LOGIN,GUEST,CTX auth;

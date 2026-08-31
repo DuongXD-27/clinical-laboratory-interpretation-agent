@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VMEC-05 Architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #f5f7f6;
+    --surface: #ffffff;
+    --surface-2: #eef2f0;
+    --ink: #16211f;
+    --muted: #5c6c68;
+    --accent: #0f7d6c;
+    --accent-soft: #e2f1ec;
+    --accent-ink: #0b5c4f;
+    --border: #dbe3e0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1513;
+      --surface: #141d1a;
+      --surface-2: #192420;
+      --ink: #e7efec;
+      --muted: #93a5a0;
+      --accent: #35bb9f;
+      --accent-soft: #17332c;
+      --accent-ink: #6fd8c2;
+      --border: #253530;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0e1513;
+    --surface: #141d1a;
+    --surface-2: #192420;
+    --ink: #e7efec;
+    --muted: #93a5a0;
+    --accent: #35bb9f;
+    --accent-soft: #17332c;
+    --accent-ink: #6fd8c2;
+    --border: #253530;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 100vh;
+  }
+
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+
+  .rail {
+    border-right: 1px solid var(--border);
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 860px) {
+    .rail { position: static; height: auto; }
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand .mark {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .brand h1 {
+    font-family: "Archivo", sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .brand p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .tier-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 14px 0 2px;
+  }
+
+  .tier-label:first-child { margin-top: 0; }
+
+  button.tab {
+    all: unset;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+
+  button.tab:hover { background: var(--surface-2); }
+
+  button.tab.active {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+
+  button.tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button.tab .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 18px;
+  }
+
+  button.tab.active .num { color: var(--accent); }
+
+  button.tab .label {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .rail-foot {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .rail-foot code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+
+  main {
+    padding: 40px 48px 64px;
+    max-width: 1100px;
+  }
+
+  @media (max-width: 640px) {
+    main { padding: 28px 20px 48px; }
+  }
+
+  .panel { display: block; margin-bottom: 8px; }
+  .panel.is-hidden { display: none; }
+
+  .panel-head {
+    margin-bottom: 24px;
+  }
+
+  .panel-head .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .panel-head h2 {
+    font-family: "Archivo", sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+
+  .panel-head p {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--muted);
+  }
+
+  .diagram-frame {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .zoom-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .zoom-toolbar button {
+    all: unset;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .zoom-toolbar button:hover { background: var(--accent-soft); color: var(--accent-ink); }
+
+  .zoom-toolbar button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .zoom-toolbar .zoom-reset { width: auto; padding: 0 10px; font-size: 12px; }
+
+  .zoom-level {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 46px;
+    text-align: center;
+  }
+
+  .zoom-hint {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 640px) {
+    .zoom-hint { display: none; }
+  }
+
+  .zoom-viewport {
+    position: relative;
+    height: 62vh;
+    min-height: 360px;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    background:
+      linear-gradient(var(--surface-2) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(90deg, var(--surface-2) 1px, transparent 1px) 0 0 / 24px 24px,
+      var(--surface);
+  }
+
+  .zoom-viewport.dragging { cursor: grabbing; }
+
+  .zoom-stage {
+    transform-origin: 0 0;
+    display: inline-block;
+    padding: 28px;
+  }
+
+  .zoom-stage .mermaid {
+    margin: 0;
+    min-width: 640px;
+  }
+
+  .source-note {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .source-note code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--surface-2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--ink);
+  }
+
+  .route-legend {
+    margin-top: 20px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  .route-legend-wrap {
+    overflow-x: auto;
+  }
+
+  .route-legend th,
+  .route-legend td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .route-legend th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .route-legend td:first-child {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .route-legend code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <span class="mark">VMEC&#8209;05</span>
+      <h1>System Architecture</h1>
+      <p>Từ tổng quan đến chi tiết từng module</p>
+    </div>
+
+    <nav id="tabnav">
+      <div class="tier-label">Tổng quan</div>
+      <button class="tab active" data-target="p0"><span class="num">0</span><span class="label">Overview</span></button>
+
+      <div class="tier-label">Module</div>
+      <button class="tab" data-target="p1"><span class="num">1</span><span class="label">Frontend</span></button>
+      <button class="tab" data-target="p2"><span class="num">2</span><span class="label">Backend API</span></button>
+      <button class="tab" data-target="p3"><span class="num">3</span><span class="label">LangGraph Pipeline</span></button>
+      <button class="tab" data-target="p4"><span class="num">4</span><span class="label">Orchestrator Agent</span></button>
+      <button class="tab" data-target="p5"><span class="num">5</span><span class="label">Data &amp; Deployment</span></button>
+    </nav>
+
+    <div class="rail-foot">
+      Nguồn: <code>docs/architecture/*.mmd</code><br>+ <code>ARCHITECTURE.md</code>
+    </div>
+  </aside>
+
+  <main>
+    <section class="panel active" id="p0">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 0 — Overview</div>
+        <h2>Bức tranh toàn hệ thống</h2>
+        <p>Client → Frontend → Backend API → AI Engine (LangGraph + Orchestrator) → Data &amp; Knowledge → External AI APIs. Xem chi tiết từng khối ở các tab bên trái.</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph LR
+
+    CLIENT["Client Browser&lt;br/&gt;Patient / Doctor / Guest"]
+
+    subgraph APP["Application"]
+        FE["Frontend&lt;br/&gt;Next.js"]
+        API["Backend API&lt;br/&gt;FastAPI"]
+    end
+
+    subgraph ENGINE["AI Engine"]
+        MEDICAL["LangGraph Medical Pipeline&lt;br/&gt;(Reference Check → RAG/LLM → Guardrail)"]
+        RETRIEVE["RAG Retriever&lt;br/&gt;(Embeddings + ChromaDB query)"]
+        ORCH["Orchestrator&lt;br/&gt;Conversational Agent"]
+    end
+
+    subgraph DATA["Data &amp; Knowledge"]
+        DB[("SQLite / PostgreSQL&lt;br/&gt;Users · Reports · History")]
+        CFG[("Reference Range &amp;&lt;br/&gt;Critical Threshold Config")]
+        %% Cạnh vô hình chỉ để canh layout (VDB nằm bên phải CFG) — KHÔNG phải
+        %% quan hệ dữ liệu thật, SQLite/PostgreSQL và ChromaDB là 2 store độc lập.
+        CFG ~~~ VDB
+        VDB[("ChromaDB&lt;br/&gt;Medical Knowledge")]
+    end
+
+    subgraph CLOUD["External AI APIs"]
+        LLM["OpenAI&lt;br/&gt;gpt-4o-mini / embeddings"]
+        VISION["Google Gemini Vision&lt;br/&gt;OCR"]
+    end
+
+    CLIENT --> FE
+    FE -->|"HTTPS REST / JWT"| API
+
+    API --> MEDICAL
+    API --> ORCH
+    ORCH -.->|"chỉ gọi qua wrapper đã duyệt"| MEDICAL
+
+    MEDICAL --> DB
+    MEDICAL --> CFG
+    ORCH --> DB
+
+    MEDICAL --> RETRIEVE
+    RETRIEVE --> VDB
+    VDB --> RETRIEVE
+    RETRIEVE --> LLM
+    API -->|"OCR upload (trước khi vào Medical Pipeline)"| VISION
+
+    API -->|"REST JSON"| FE
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/system-architecture.mmd</code></div>
+    </section>
+
+    <section class="panel" id="p1">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 1 — Frontend module</div>
+        <h2>Next.js / React</h2>
+        <p>Auth &amp; session, luồng nhập liệu (manual/upload/OCR review), Hybrid Assistant, màn hình kết quả/lịch sử/trends, và Doctor/Admin UI.</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph TD
+
+    subgraph AUTH["Auth &amp; Session"]
+        LOGIN["Đăng nhập / Đăng ký"]
+        GUEST["Guest Session&lt;br/&gt;(dùng thử tức thì)"]
+        CTX["Auth Context&lt;br/&gt;Patient / Doctor / Guest"]
+    end
+
+    subgraph INPUT_FLOW["Nhập liệu"]
+        MANUAL["Form nhập thủ công&lt;br/&gt;Chọn từ danh mục chỉ số chuẩn hóa (analyteCatalog)"]
+        UPLOAD["Upload ảnh phiếu XN"]
+        REVIEW["OCR Review UI&lt;br/&gt;Xác nhận giá trị trích xuất"]
+    end
+
+    subgraph ASSISTANT["Hybrid Assistant"]
+        WIDGET["Assistant Widget&lt;br/&gt;Patient / Guest"]
+        ONBOARD["Onboarding Acknowledge"]
+    end
+
+    subgraph RESULT_VIEW["Kết quả &amp; Lịch sử (Patient/Guest)"]
+        RESULT["Result Screen&lt;br/&gt;Status · Explanation · Critical Warning · Disclaimer"]
+        TRENDS["Trends Chart&lt;br/&gt;Recharts"]
+        HISTORY["Danh sách phiếu XN"]
+        QUESTIONS["Câu hỏi gợi ý cho bác sĩ"]
+    end
+
+    subgraph DOCTOR_UI["Doctor UI"]
+        DOC_QUEUE["Queue Overview&lt;br/&gt;DoctorQueueOverview"]
+        DOC_REPORT["Report Review&lt;br/&gt;DoctorReportSidebar · FindingCard"]
+        DOC_TREND["Trend Reviews&lt;br/&gt;/doctor/trend-reviews"]
+    end
+
+    subgraph ADMIN_UI["Admin UI"]
+        ADMIN_TRACES["Tracing Dashboard&lt;br/&gt;AdminCharts · /admin/traces"]
+    end
+
+    LOGIN --> CTX
+    GUEST --> CTX
+    CTX --> MANUAL
+    CTX --> UPLOAD
+    CTX --> WIDGET
+    CTX -->|"role = doctor"| DOC_QUEUE
+    CTX -->|"role = admin"| ADMIN_TRACES
+
+    UPLOAD --> REVIEW
+    REVIEW -->|"Xác nhận"| RESULT
+    MANUAL --> RESULT
+
+    WIDGET &lt;--&gt; ONBOARD
+    WIDGET -->|"SuggestedAction: OPEN_REPORT / VIEW_ABNORMAL / VIEW_DOCTOR_QUESTIONS / CONFIRM_OCR"| RESULT
+    WIDGET --> TRENDS
+    WIDGET --> HISTORY
+
+    RESULT --> TRENDS
+    RESULT --> QUESTIONS
+    RESULT --> HISTORY
+
+    DOC_QUEUE --> DOC_REPORT
+    DOC_REPORT -.->|"Answer câu hỏi inline trong sidebar (không điều hướng)"| QUESTIONS
+    DOC_QUEUE --> DOC_TREND
+
+    classDef auth fill:#eef,stroke:#66a;
+    class LOGIN,GUEST,CTX auth;
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/frontend-module.mmd</code></div>
+    </section>
+
+    <section class="panel" id="p2">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 2 — Backend API module</div>
+        <h2>FastAPI</h2>
+        <p>Diagram chỉ vẽ luồng chính (node ngắn gọn) — chi tiết từng route xem bảng chú thích bên dưới.</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph LR
+
+    CLIENT["Client"] --> JWT{"JWT Auth Gate"}
+
+    AUTH_PUBLIC["Auth: register/login/guest&lt;br/&gt;(public)"] -.->|"tạo JWT, không qua gate"| JWT
+
+    JWT -->|"protected"| AUTH_ME["Auth: /me"]
+    JWT -->|"protected"| ANALYSIS["Phân tích, OCR &amp; Assistant"]
+    JWT -->|"protected"| DATA["Dữ liệu / CRUD"]
+    HEALTH["Health check"]
+
+    ANALYSIS --> PIPE["Medical Pipeline&lt;br/&gt;+ Orchestrator Agent&lt;br/&gt;+ OCR Service"]
+    PIPE --> DB[("Database")]
+    DATA --> DB
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/backend-api-module.mmd</code></div>
+
+      <div class="route-legend-wrap">
+        <table class="route-legend">
+          <thead>
+            <tr><th>Nhóm</th><th>Route</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="2">Auth routes</td><td><code>/api/v1/auth/register · login · guest</code></td><td>Không cần JWT — tạo JWT</td></tr>
+            <tr><td><code>/api/v1/auth/me</code></td><td>Cần JWT</td></tr>
+            <tr><td rowspan="4">Phân tích &amp; OCR</td><td><code>/api/v1/analyze</code></td><td>Manual/Reviewed OCR</td></tr>
+            <tr><td><code>/api/v1/orchestrator/message</code> (+ <code>/message/stream</code> SSE)</td><td>Canonical Assistant</td></tr>
+            <tr><td><code>/api/v1/orchestrator/onboarding/acknowledge</code></td><td></td></tr>
+            <tr><td><code>/api/v1/ocr/policy · samples/{id} · upload · confirm</code></td><td></td></tr>
+            <tr><td rowspan="6">Dữ liệu / CRUD</td><td><code>/api/v1/patient/*</code></td><td>dashboard · profile · lab-reports · trends</td></tr>
+            <tr><td><code>/api/v1/history/*</code></td><td>list · detail · questions · notes · review</td></tr>
+            <tr><td><code>/api/v1/doctor/*</code></td><td>queue · reports · findings · complete</td></tr>
+            <tr><td><code>/api/v1/conversations</code></td><td>CRUD hội thoại + messages</td></tr>
+            <tr><td><code>/api/v1/trend-reviews/*</code></td><td>patient request/history · doctor review</td></tr>
+            <tr><td><code>/api/v1/admin/*</code></td><td>tracing/traces/SLO (observability)</td></tr>
+            <tr><td>Health</td><td><code>/health · /ready</code></td><td>Không cần JWT</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="p3">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 3 — LangGraph Medical Pipeline</div>
+        <h2>StateGraph phân tích phiếu xét nghiệm</h2>
+        <p>Deterministic rule check → critical detection → RAG/LLM explanation → guardrail an toàn y tế.</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph LR
+    START([Start]) --> ROUTE{Has unreviewed OCR?}
+    ROUTE -->|Yes| GATE[ui_review_gate&lt;br/&gt;HITL Interrupt]
+    GATE --> INTEGRITY[input_integrity&lt;br/&gt;Source-backed measurement&lt;br/&gt;plausibility rules]
+    ROUTE -->|No| INTEGRITY
+    INTEGRITY --> REF[reference_range_checker]
+    REF --> CRIT[critical_detector]
+    CRIT --> ANALYZE[analyzer&lt;br/&gt;RAG + LLM]
+    ANALYZE --> GEN_Q[generate_questions]
+    GEN_Q --> GUARD[guardrail&lt;br/&gt;Safety Validator]
+    GUARD --> FINISH([End])
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/langgraph-pipeline.mmd</code> · nguồn gốc <code>ARCHITECTURE.md</code></div>
+    </section>
+
+    <section class="panel" id="p4">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 4 — Orchestrator Agent</div>
+        <h2>Canonical Conversational Agent</h2>
+        <p>Admission gates → session context → tool selection → guardrail → suggested actions. Đã <strong>đơn giản hoá</strong>: bỏ bớt vài gate phụ (xem <code>gates.py</code>).</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph TD
+
+    WIDGET["Frontend AssistantWidget"] -->|"OrchestratorRequest"| ENDPOINT["/api/v1/orchestrator/message&lt;br/&gt;(+ /message/stream SSE)"]
+
+    subgraph GATES["Admission Gates (đã đơn giản hoá — xem gates.py để biết đầy đủ)"]
+        G2{"Role = doctor?"}
+        G_EMERGENCY{"Emergency safety&lt;br/&gt;(cấp cứu)?"}
+        G3{"Onboarding đã xác nhận?"}
+        G5{"Nội dung unsafe&lt;br/&gt;(medical safety)?"}
+        G6{"OCR skip attempt?"}
+    end
+
+    ENDPOINT -->|"JWT đã qua Depends(get_current_user)"| G2
+    G2 -->|No| CTX["session_store.py&lt;br/&gt;Hydrate conversation context"]
+    G2 -->|Yes| BLOCKED["UNSUPPORTED_CAPABILITY&lt;br/&gt;(doctor bị chặn trước Agent/DB)"]
+    CTX --> G_EMERGENCY
+    G_EMERGENCY -->|Yes| REJECT
+    G_EMERGENCY -->|No| G3
+    G3 -->|No| ONBOARD_PROMPT["Yêu cầu ack onboarding"]
+    G3 -->|Yes| G5
+    G5 -->|Yes| REJECT
+    G5 -->|No| G6
+    G6 -->|Yes| REJECT
+    G6 -->|No| PLAN["agent.py&lt;br/&gt;Chọn tool đã duyệt&lt;br/&gt;(report/analyte/history/trend/doctor-question/RAG/app-help)"]
+    PLAN --> TOOLS["agent_tools.py&lt;br/&gt;Patient-scoped wrappers&lt;br/&gt;Identity từ JWT, không nhận patient_id từ caller"]
+    TOOLS --> SERVICES["Deterministic domain services&lt;br/&gt;(RuleCheck, RAG, DB…)"]
+    SERVICES --> LLM_MSG["LLM sinh nội dung message&lt;br/&gt;(server kiểm soát intent/status/data/sources)"]
+
+    LLM_MSG --> GUARD["response_guardrail.py&lt;br/&gt;Medical safety · canonical-fact contradiction&lt;br/&gt;· patient-grounding validation"]
+    GUARD --> SCHEMA_V["Schema Validation"]
+    SCHEMA_V --> ACTION_V["SuggestedAction Validation&lt;br/&gt;(7 variants cố định)"]
+    ACTION_V --> RESPONSE["Trả OrchestratorResponse&lt;br/&gt;về AssistantWidget"]
+
+    UNAVAIL["LLM_UNAVAILABLE&lt;br/&gt;Deterministic fallback response"] -.->|"provider fails"| GUARD
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/orchestrator-agent.mmd</code> · vẽ mới từ mô tả text trong <code>ARCHITECTURE.md</code></div>
+    </section>
+
+    <section class="panel" id="p5">
+      <div class="panel-head">
+        <div class="eyebrow">Diagram 5 — Data &amp; Deployment</div>
+        <h2>Database, vector store, hạ tầng triển khai</h2>
+        <p>15 bảng — diagram chỉ vẽ quan hệ ownership cốt lõi, FK phụ (bác sĩ, nullable) xem bảng chú thích bên dưới.</p>
+      </div>
+      <div class="diagram-frame">
+        <div class="zoom-toolbar">
+          <button type="button" data-action="zoom-out" aria-label="Thu nhỏ">&minus;</button>
+          <span class="zoom-level">100%</span>
+          <button type="button" data-action="zoom-in" aria-label="Phóng to">+</button>
+          <button type="button" class="zoom-reset" data-action="zoom-reset" aria-label="Về mặc định">Reset</button>
+          <span class="zoom-hint">Cuộn để zoom · kéo để di chuyển</span>
+        </div>
+        <div class="zoom-viewport">
+          <div class="zoom-stage">
+<pre class="mermaid">
+graph TD
+
+    subgraph DB_TABLES["Database (SQLite dev / PostgreSQL prod)"]
+        USERS[("users")]
+        REPORTS[("lab_reports")]
+        INDICATORS[("report_indicators")]
+        ALERTS[("report_critical_alerts")]
+        CATALOG[("indicator_catalog")]
+        QUESTIONS[("report_questions")]
+        NOTES[("doctor_notes")]
+        VIEWS[("report_doctor_views")]
+        OOS[("out_of_scope_log")]
+        OCR_LC[("ocr_review_lifecycle&lt;br/&gt;PENDING → CONSUMED/EXPIRED")]
+        CONV[("conversations")]
+        CONV_MSG[("conversation_messages")]
+        FLAGS[("review_flags")]
+        TREND_REQ[("trend_review_requests")]
+        TRACES[("request_traces&lt;br/&gt;không chứa PHI")]
+    end
+
+    USERS -->|"patient_id"| REPORTS
+    REPORTS --> INDICATORS
+    REPORTS --> ALERTS
+    REPORTS --> QUESTIONS
+    REPORTS --> VIEWS
+    REPORTS --> OOS
+    REPORTS --> FLAGS
+    INDICATORS --> CATALOG
+    USERS --> OCR_LC
+    USERS --> CONV
+    CONV --> CONV_MSG
+    USERS -->|"patient_id"| TREND_REQ
+
+    subgraph VECTOR["Vector Store"]
+        CHROMA[("ChromaDB&lt;br/&gt;data/chroma")]
+        EXPL[("explanations.json&lt;br/&gt;Curated fallback")]
+    end
+    EXPL -->|"Indexed"| CHROMA
+
+    subgraph DEPLOY_CLIENT["Client Browser"]
+        WEB["Next.js Web Interface"]
+    end
+
+    subgraph DEPLOY_FE["Vercel Cloud"]
+        FE_APP["Frontend Next.js App&lt;br/&gt;vmec-05.vercel.app"]
+    end
+
+    subgraph DEPLOY_BE["Railway Cloud"]
+        BE_APP["Backend FastAPI API&lt;br/&gt;vmec-05-api-production.up.railway.app"]
+        CHROMA_D[("ChromaDB Vector Store&lt;br/&gt;data/chroma")]
+    end
+
+    subgraph DEPLOY_DB["Neon Cloud (Frankfurt)"]
+        PG_D[("Neon PostgreSQL&lt;br/&gt;Production DB")]
+    end
+
+    subgraph DEPLOY_CLOUD["External Cloud AI Services"]
+        OPENAI_D["OpenAI API&lt;br/&gt;gpt-4o-mini / text-embedding-3-small"]
+        GEMINI_D["Google Gemini Vision&lt;br/&gt;OCR Engine"]
+    end
+
+    WEB --> FE_APP
+    FE_APP -->|"HTTPS REST API / JWT"| BE_APP
+    BE_APP --> PG_D
+    BE_APP --> CHROMA_D
+    BE_APP --> OPENAI_D
+    BE_APP --> GEMINI_D
+
+    PG_D -.->|"chứa (dev dùng SQLite local, xem ARCHITECTURE.md)"| DB_TABLES
+    CHROMA_D -.->|"chứa"| CHROMA
+</pre>
+          </div>
+        </div>
+      </div>
+      <div class="source-note">File: <code>docs/architecture/data-deployment.mmd</code> · nguồn gốc <code>ARCHITECTURE.md</code></div>
+
+      <div class="route-legend-wrap">
+        <table class="route-legend">
+          <thead>
+            <tr><th>Bảng</th><th>Cột FK</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="6">FK bác sĩ (users.id)</td><td><code>lab_reports.verified_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>report_indicators.reviewed_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>report_questions.answered_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td><code>doctor_notes.doctor_id</code></td><td>NOT NULL</td></tr>
+            <tr><td><code>report_doctor_views.doctor_id</code></td><td>NOT NULL</td></tr>
+            <tr><td><code>trend_review_requests.reviewed_by_doctor_id</code></td><td>Nullable, SET NULL</td></tr>
+            <tr><td rowspan="2">Nullable (report_indicators)</td><td><code>report_questions.indicator_id</code></td><td>1 câu hỏi có thể gắn 1 indicator cụ thể, hoặc không (fallback/gộp nhóm)</td></tr>
+            <tr><td><code>review_flags.finding_id</code></td><td>1 flag có thể gắn 1 finding cụ thể, hoặc không</td></tr>
+            <tr><td>Không phải FK</td><td><code>doctor_notes.target_type</code> / <code>target_id</code></td><td>Polymorphic — trỏ report / indicator / report_question, không ràng buộc FK cứng</td></tr>
+            <tr><td>Không phải FK</td><td><code>ocr_review_lifecycle</code> → <code>lab_reports</code></td><td>Chỉ là process trigger lúc Confirm, không có cột FK nào trỏ sang lab_reports</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: prefersDark ? "dark" : "default",
+    securityLevel: "loose"
+  });
+
+  var tabs = document.querySelectorAll(".tab");
+  var panels = document.querySelectorAll(".panel");
+
+  function activate(targetId) {
+    tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.target === targetId); });
+    panels.forEach(function (p) {
+      p.classList.toggle("active", p.id === targetId);
+      p.classList.toggle("is-hidden", p.id !== targetId);
+    });
+  }
+
+  function initZoom(frame) {
+    var viewport = frame.querySelector(".zoom-viewport");
+    var stage = frame.querySelector(".zoom-stage");
+    var levelLabel = frame.querySelector(".zoom-level");
+    var MIN = 0.3;
+    var MAX = 4;
+    var scale = 1;
+    var tx = 0;
+    var ty = 0;
+    var isPanning = false;
+    var startX = 0;
+    var startY = 0;
+    var startTx = 0;
+    var startTy = 0;
+    var lastTouchDist = null;
+
+    function apply() {
+      stage.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")";
+      if (levelLabel) levelLabel.textContent = Math.round(scale * 100) + "%";
+    }
+
+    function zoomAt(clientX, clientY, factor) {
+      var rect = viewport.getBoundingClientRect();
+      var offsetX = clientX - rect.left;
+      var offsetY = clientY - rect.top;
+      var newScale = Math.min(MAX, Math.max(MIN, scale * factor));
+      tx = offsetX - (offsetX - tx) * (newScale / scale);
+      ty = offsetY - (offsetY - ty) * (newScale / scale);
+      scale = newScale;
+      apply();
+    }
+
+    function touchDist(touches) {
+      var dx = touches[0].clientX - touches[1].clientX;
+      var dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    viewport.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      zoomAt(e.clientX, e.clientY, factor);
+    }, { passive: false });
+
+    viewport.addEventListener("mousedown", function (e) {
+      isPanning = true;
+      viewport.classList.add("dragging");
+      startX = e.clientX;
+      startY = e.clientY;
+      startTx = tx;
+      startTy = ty;
+    });
+
+    window.addEventListener("mousemove", function (e) {
+      if (!isPanning) return;
+      tx = startTx + (e.clientX - startX);
+      ty = startTy + (e.clientY - startY);
+      apply();
+    });
+
+    window.addEventListener("mouseup", function () {
+      isPanning = false;
+      viewport.classList.remove("dragging");
+    });
+
+    viewport.addEventListener("touchstart", function (e) {
+      if (e.touches.length === 1) {
+        isPanning = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startTx = tx;
+        startTy = ty;
+      } else if (e.touches.length === 2) {
+        lastTouchDist = touchDist(e.touches);
+      }
+    }, { passive: true });
+
+    viewport.addEventListener("touchmove", function (e) {
+      if (e.touches.length === 1 && isPanning) {
+        tx = startTx + (e.touches[0].clientX - startX);
+        ty = startTy + (e.touches[0].clientY - startY);
+        apply();
+      } else if (e.touches.length === 2 && lastTouchDist) {
+        var dist = touchDist(e.touches);
+        var factor = dist / lastTouchDist;
+        lastTouchDist = dist;
+        var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        zoomAt(cx, cy, factor);
+      }
+    }, { passive: true });
+
+    viewport.addEventListener("touchend", function () {
+      isPanning = false;
+      lastTouchDist = null;
+    });
+
+    var btnOut = frame.querySelector('[data-action="zoom-out"]');
+    var btnIn = frame.querySelector('[data-action="zoom-in"]');
+    var btnReset = frame.querySelector('[data-action="zoom-reset"]');
+
+    btnIn.addEventListener("click", function () {
+      var rect = viewport.getBoundingClientRect();
+      zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25);
+    });
+    btnOut.addEventListener("click", function () {
+      var rect = viewport.getBoundingClientRect();
+      zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.8);
+    });
+    btnReset.addEventListener("click", function () {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      apply();
+    });
+
+    apply();
+  }
+
+  // Render every diagram while all panels are still visible (mermaid needs
+  // real layout to measure text/SVG size — display:none panels fail to render),
+  // then collapse to the tab-selected panel once rendering has finished.
+  mermaid.run({ querySelector: ".mermaid" }).then(function () {
+    document.querySelectorAll(".diagram-frame").forEach(initZoom);
+    activate("p0");
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        activate(tab.dataset.target);
+      });
+    });
+  });
+</script>
+</body>
+</html>

@@ -6,6 +6,9 @@ Hệ thống AI Agent hỗ trợ giải thích kết quả xét nghiệm ngoại
 
 ## Architecture Diagram
 
+> Xem trang tổng hợp trực quan (6 sơ đồ, từ tổng quan đến chi tiết từng module) tại
+> [`docs/architecture/diagrams.html`](docs/architecture/diagrams.html) — mở trực tiếp bằng trình duyệt.
+
 ```mermaid
 flowchart LR
 
@@ -179,6 +182,7 @@ Patient/Guest UI
 - **State:** `AgentState` (TypedDict) quản lý toàn bộ vòng đời phân tích: `patient_age`, `patient_gender`, `test_date`, `raw_indicators`, `ocr_drafts`, `is_ocr_reviewed`, `indicators` (IndicatorAssessment), `critical_alerts`, `has_critical_values`, `retrieved_contexts`, `explanations`, `questions_for_doctor`, `guardrail_passed`, `disclaimer`, `summary`.
 - **Nodes:**
   - `ui_review_gate`: Điểm neo ngắt luồng (interrupt_before) cho OCR Review Gate khi có ảnh trích xuất cần người dùng duyệt.
+  - `input_integrity`: Kiểm tra tính hợp lý (source-backed measurement plausibility rules) trước khi phân loại chỉ số; chạy sau `ui_review_gate` (nếu có OCR) hoặc ngay từ entry point.
   - `reference_range_checker`: Đối chiếu chỉ số với khoảng tham chiếu chuẩn hóa theo độ tuổi/giới tính từ `reference_ranges.json`.
   - `critical_detector`: Nhận diện ngưỡng nguy kịch tất định từ `critical_thresholds.json`, tạo cảnh báo khẩn cấp độc lập với LLM.
   - `analyzer`: RAG retriever tra cứu ChromaDB (hoặc Curated Fallback) kết hợp gọi LLM (`gpt-4o-mini`) diễn giải ý nghĩa ngôn ngữ tự nhiên.
@@ -190,8 +194,9 @@ Patient/Guest UI
 graph LR
     START([Start]) --> ROUTE{Has unreviewed OCR?}
     ROUTE -->|Yes| GATE[ui_review_gate<br/>HITL Interrupt]
-    GATE --> REF[reference_range_checker]
-    ROUTE -->|No| REF
+    GATE --> INTEGRITY[input_integrity<br/>Source-backed measurement<br/>plausibility rules]
+    ROUTE -->|No| INTEGRITY
+    INTEGRITY --> REF[reference_range_checker]
     REF --> CRIT[critical_detector]
     CRIT --> ANALYZE[analyzer<br/>RAG + LLM]
     ANALYZE --> GEN_Q[generate_questions]
@@ -214,6 +219,11 @@ second route for OCR-derived medical input.
   - `report_questions`: Câu hỏi gợi ý cho bác sĩ, trạng thái bệnh nhân tick chọn và câu trả lời của bác sĩ.
   - `doctor_notes`: Ghi chú nhận xét chuyên môn của bác sĩ (HITL notes).
   - `report_doctor_views`: Lịch sử bác sĩ đã mở xem phiếu xét nghiệm.
+  - `ocr_review_lifecycle`: Xương sống của OCR Lifecycle (`PENDING → CONSUMED/EXPIRED`) — `review_id`, `expires_at`, `owner_*`.
+  - `conversations` / `conversation_messages`: Hội thoại Orchestrator (context như `current_report_ref`, `current_analyte`, `onboarding_acknowledged`, `pending_question`) và từng lượt tin nhắn.
+  - `review_flags`: Lý do phiếu/luận điểm được đưa vào hàng đợi kiểm chứng của bác sĩ.
+  - `trend_review_requests`: Yêu cầu bác sĩ review biểu đồ xu hướng của bệnh nhân.
+  - `request_traces`: Vận hành/monitoring (không chứa PHI).
   - `out_of_scope_log`: Nhật ký ghi nhận các chỉ số ngoài danh mục hỗ trợ.
 - **Schema/startup reconciliation:** `Base.metadata.create_all()` creates missing tables; `add_missing_columns()`, `backfill_added_column_defaults()`, and `add_missing_indexes()` perform minimal idempotent reconciliation. Package-aware manual migrations and backfill ownership are documented in `src/scripts/README.md`.
 
@@ -241,7 +251,7 @@ second route for OCR-derived medical input.
 ## Orchestrator Data Flow
 
 1. **Assistant entry:** Frontend `AssistantWidget` gửi `OrchestratorRequest` tới `/api/v1/orchestrator/message`.
-2. **Admission gates:** Backend chặn token không hợp lệ, doctor conversational access, onboarding chưa xác nhận, lab values nhập qua chat, yêu cầu unsafe và OCR skip attempt.
+2. **Admission gates:** Backend chặn token không hợp lệ, doctor conversational access, onboarding chưa xác nhận, yêu cầu unsafe/emergency/sensitive-system/out-of-scope và OCR skip attempt. (`contains_lab_value()` trong `gates.py` KHÔNG phải một reject-gate — nó chỉ miễn trừ tin nhắn có chỉ số y tế khỏi bị chặn nhầm là unclear/out-of-scope.)
 3. **Conversation context:** `session_store.py` hydrates the active conversation from the database; client identity fields remain forbidden.
 4. **Agent planning:** `src/orchestrator/agent.py` selects only approved tools for report, analyte, history, trend, doctor-question, RAG and app-help capabilities.
 5. **Tool authority:** `agent_tools.py` calls patient-scoped wrappers and deterministic domain services. Wrappers resolve identity from JWT/current user and never accept a caller-supplied patient ID.
