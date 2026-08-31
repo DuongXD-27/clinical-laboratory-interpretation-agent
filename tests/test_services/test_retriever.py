@@ -492,3 +492,91 @@ def test_long_correctly_labeled_but_semantically_off_topic_metadata_chunk_is_cap
     assert by_text[off_topic_long_metadata["text"]]["score"] < 0.1
     # The genuinely on-topic dense hit outranks it.
     assert chunks[0]["text"] == on_topic_dense["text"]
+
+
+def test_semantic_score_outranks_status_tier_for_a_real_gap(monkeypatch):
+    """Golden Set V1 regression: a limitation_note that answers the actual
+    question must outrank a merely status-matching description, even though
+    "description" is the primary_note for a normal-status query. Before the
+    fix, the note-type tier was checked before score, so a weaker
+    "description" chunk always won regardless of how much better the
+    limitation_note's semantic score was.
+    """
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc = _doc(
+        "Ý nghĩa xét nghiệm WBC nói chung, đây là chỉ số bạch cầu trong máu ngoại vi",
+        note_type="description",
+        source="https://a.test",
+    )
+    limitation = _doc(
+        "Xét nghiệm này có một số hạn chế: kết quả có thể bị ảnh hưởng bởi tình trạng viêm nhiễm cấp "
+        "tính, thuốc corticosteroid dùng gần đây, hoặc thời điểm lấy mẫu trong ngày",
+        note_type="limitation_note",
+        source="https://b.test",
+    )
+    retriever, store = _retriever([desc, limitation])
+    original_search = store.search
+
+    def fake_search(query, *, k, filter=None, query_embedding=None):
+        result = original_search(query, k=k, filter=filter, query_embedding=query_embedding)
+        result["documents"] = [[desc["text"], limitation["text"]]]
+        result["metadatas"] = [[desc["metadata"], limitation["metadata"]]]
+        # description: distance 0.35 -> score 0.65 ; limitation_note: distance
+        # 0.05 -> score 0.95. The 0.30 gap is far wider than the 0.02 tier
+        # tie-break bucket, so the semantically stronger chunk must win
+        # outright, not the status-derived primary_note.
+        result["distances"] = [[0.35, 0.05]]
+        return result
+
+    store.search = fake_search
+
+    chunks = retriever.retrieve(
+        query="Xét nghiệm này có hạn chế gì, cần chuẩn bị gì trước khi lấy mẫu?",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert chunks[0]["note_type"] == "limitation_note"
+    assert chunks[0]["text"] == limitation["text"]
+
+
+def test_status_tier_still_breaks_genuine_near_ties(monkeypatch):
+    """Preserve the original intent of the tier: when two chunks are
+    genuinely tied in score (within the 0.02 bucket), the status-derived
+    primary_note should still decide, so this does not regress into "score
+    only, tier never matters".
+    """
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc = _doc(
+        "Ý nghĩa xét nghiệm WBC nói chung, đây là chỉ số bạch cầu trong máu ngoại vi",
+        note_type="description",
+        source="https://a.test",
+    )
+    limitation = _doc(
+        "Xét nghiệm này có một số hạn chế cần lưu ý khi diễn giải kết quả trong bối cảnh lâm sàng",
+        note_type="limitation_note",
+        source="https://b.test",
+    )
+    retriever, store = _retriever([desc, limitation])
+    original_search = store.search
+
+    def fake_search(query, *, k, filter=None, query_embedding=None):
+        result = original_search(query, k=k, filter=filter, query_embedding=query_embedding)
+        result["documents"] = [[desc["text"], limitation["text"]]]
+        result["metadatas"] = [[desc["metadata"], limitation["metadata"]]]
+        # score 0.80 vs 0.805 — a 0.005 gap, well inside one 0.02 tie-break
+        # bucket, i.e. a genuine tie.
+        result["distances"] = [[0.20, 0.195]]
+        return result
+
+    store.search = fake_search
+
+    chunks = retriever.retrieve(
+        query="Ý nghĩa xét nghiệm WBC là gì?",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert chunks[0]["note_type"] == "description"

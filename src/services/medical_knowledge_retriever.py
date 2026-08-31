@@ -37,6 +37,18 @@ Design decisions after the RAG architecture review:
 - top_k (default 3): primary_hit_rate@1 is 1.0 at every tested value on the
   real corpus and larger top_k only adds context chars with no accuracy
   gain (eval/rag/retrieval_param_sweep.md) — kept at 3.
+- Fusion ranking (`_fuse`) sorts by semantic score first, and only falls
+  back to the status-derived note-type tier as a tie-break within a 0.02
+  score bucket. Golden Set V1 (eval/full_system_v1) found the previous
+  tier-first ordering let a merely status-matching `description`/`high_note`
+  chunk outrank a `limitation_note`/`preanalytic_note` chunk the query
+  embedding scored higher — the query embedding already generalizes across
+  how the question is phrased, so trusting score first (instead of adding a
+  keyword-based intent detector) fixes this without a brittle keyword list.
+  The 0.02 bucket width comes from the RETRIEVAL_MIN_SCORE score geometry
+  above (genuine floor 0.807 vs. closest catchable-junk ceiling 0.794, a
+  ~0.013 gap): wide enough to still break genuine near-ties, narrow enough
+  that a real relevance gap is never masked by the tier.
 """
 
 from __future__ import annotations
@@ -328,12 +340,32 @@ class ChromaMedicalKnowledgeRetriever:
         if not passed:
             return []
 
-        # Prefer status-matching note types first. For critical notes,
-        # the base note (e.g. high_note) is preferred over generic descriptions.
-        # Then sort by score, then by content richness.
+        # Rank by semantic score FIRST, note-type tier only as a tie-break.
+        #
+        # `primary_note` is derived purely from the deterministic clinical
+        # status (normal -> description, high -> high_note, ...); it carries
+        # no signal about what the user's question actually asks for. Giving
+        # it priority over `score` used to let a merely status-matching
+        # `description`/`high_note` chunk outrank a `limitation_note` or
+        # `preanalytic_note` chunk that the query embedding shows is the
+        # far better semantic match (e.g. "xét nghiệm này có hạn chế gì,
+        # cần chuẩn bị gì trước khi lấy máu?") — the query embedding already
+        # generalizes across phrasing, so trusting it more fixes this without
+        # a brittle keyword list.
+        #
+        # The bucket width below (0.02) is chosen from the score geometry
+        # already documented for RETRIEVAL_MIN_SCORE: genuine-content floor
+        # is 0.807 and the closest catchable-junk ceiling is 0.794, a ~0.013
+        # gap. 0.02 keeps the tier tie-break active only when two chunks are
+        # closer than that natural corpus gap (i.e. genuinely tied), while
+        # anything wider is treated as a real relevance difference and score
+        # wins outright. Re-validate with eval/rag/retrieval_param_sweep.py
+        # style analysis if the corpus or embedding model changes.
+        _TIER_TIE_BUCKET = 0.02
         base_note = primary_note.replace("critical_", "") if primary_note.startswith("critical_") else None
         passed.sort(
             key=lambda chunk: (
+                -round(float(chunk.get("score", 0.0)) / _TIER_TIE_BUCKET),
                 0
                 if str(chunk.get("note_type", "")) == primary_note
                 else (1 if base_note and str(chunk.get("note_type", "")) == base_note else 2),

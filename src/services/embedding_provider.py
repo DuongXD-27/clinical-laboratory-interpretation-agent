@@ -75,15 +75,25 @@ class GeminiEmbeddingProvider:
         self._client = genai.Client(api_key=api_key)
         self._timeout = timeout_seconds
 
+    # Gemini's BatchEmbedContentsRequest rejects more than 100 items per call
+    # ("at most 100 requests can be in one batch"), so any real corpus (the
+    # curated medical KB has several hundred chunks) must be split into
+    # sub-batches — a single unbatched call always fails past 100 chunks.
+    _MAX_BATCH_SIZE = 100
+
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        result = self._client.models.embed_content(
-            model=self.model_name,
-            contents=texts,
-            config=types.EmbedContentConfig(
-                output_dimensionality=self.dimension,
-            ),
-        )
-        return [list(embedding.values) for embedding in result.embeddings]
+        embeddings: list[list[float]] = []
+        for start in range(0, len(texts), self._MAX_BATCH_SIZE):
+            batch = texts[start : start + self._MAX_BATCH_SIZE]
+            result = self._client.models.embed_content(
+                model=self.model_name,
+                contents=batch,
+                config=types.EmbedContentConfig(
+                    output_dimensionality=self.dimension,
+                ),
+            )
+            embeddings.extend(list(embedding.values) for embedding in result.embeddings)
+        return embeddings
 
     def embed_query(self, text: str) -> list[float]:
         result = self._client.models.embed_content(
