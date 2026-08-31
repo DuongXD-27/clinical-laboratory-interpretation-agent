@@ -708,7 +708,12 @@ async def test_trend_explanation_prepends_fixed_notice_even_when_llm_fails(isola
 @pytest.mark.asyncio
 async def test_trend_explanation_prompt_carries_matched_reference_range(isolated_client, monkeypatch):
     """ADR-010 CRIT-TREND-02: prompt phải mang cận khoảng tham chiếu đã khớp theo
-    sex/age tại lần đo gần nhất — không chỉ giá trị điểm dữ liệu như trước đây."""
+    sex/age tại lần đo gần nhất — không chỉ giá trị điểm dữ liệu như trước đây.
+
+    Cận tham chiếu giờ tới model qua nhận định backend đã chốt sẵn thay vì qua một
+    đoạn hướng dẫn "bạn ĐƯỢC PHÉP nói..." — chính chỗ tự do đó là nơi model gán sai
+    nhãn vị trí. Test khoá dữ kiện phải có mặt, không khoá câu chữ của prompt.
+    """
 
     client, session_local = isolated_client
     headers = await _auth_headers(client)
@@ -725,7 +730,42 @@ async def test_trend_explanation_prompt_carries_matched_reference_range(isolated
     response = await client.post(_explain_url("LDL-C"), headers=headers)
 
     assert response.status_code == 200, response.text
-    assert "Khoảng tham chiếu đã khớp" in captured_prompt["text"]
+    prompt = captured_prompt["text"]
+    prompt_claims = prompt.split("NHẬN ĐỊNH ĐÃ CHỐT", 1)
+    assert len(prompt_claims) == 2, prompt
+    # 2.59 là cận trên đã khớp theo sex/age (RRV2-0062), không phải số nào trong chuỗi điểm.
+    assert "nằm dưới cận trên 2.59 mmol/L" in prompt_claims[1]
+
+
+@pytest.mark.asyncio
+async def test_trend_explanation_prompt_carries_per_point_reference_facts(isolated_client, monkeypatch):
+    client, session_local = isolated_client
+    headers = await _auth_headers(client)
+    for date_text, value in [("2026-08-01", 3.4), ("2026-08-02", 3.6), ("2026-08-03", 5.2)]:
+        _save(session_local, "benhnhan", date_text, [{"name": "Potassium", "value": value, "unit": "mmol/L"}])
+    captured_prompt = {}
+
+    async def fake_ainvoke(messages):
+        captured_prompt["text"] = messages[0].content
+        return SimpleNamespace(
+            content=(
+                "Potassium dao động qua các lần đo. Ngày 2026-08-01 nằm dưới cận dưới 3.5 mmol/L, "
+                "còn ngày 2026-08-03 nằm trong khoảng tham chiếu và gần cận trên 5.3 mmol/L."
+            )
+        )
+
+    mock_llm = SimpleNamespace(ainvoke=fake_ainvoke)
+    monkeypatch.setattr("src.services.trend_explanation_service.get_llm", lambda: mock_llm)
+
+    response = await client.post(_explain_url("Potassium"), headers=headers)
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["fallback"] is False
+    assert "Phân loại từng điểm" in captured_prompt["text"]
+    assert "2026-08-01: giá trị 3.4 mmol/L, nằm dưới cận dưới 3.5 mmol/L." in captured_prompt["text"]
+    assert "2026-08-03: giá trị 5.2 mmol/L, nằm trong khoảng tham chiếu và gần cận trên 5.3 mmol/L." in captured_prompt["text"]
+    assert "Ngày 2026-08-01 nằm dưới cận dưới 3.5 mmol/L" in payload["explanation"]
 
 
 @pytest.mark.asyncio
