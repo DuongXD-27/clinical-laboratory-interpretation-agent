@@ -6448,7 +6448,7 @@ body.assistant-mobile-open {
   text-transform: uppercase;
 }
 
-.doctor-worklist-surface {
+.doctor-worklist-workspace {
   position: relative;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--glass-border), var(--border) 28%);
@@ -6464,7 +6464,7 @@ body.assistant-mobile-open {
   -webkit-backdrop-filter: blur(22px) saturate(112%);
 }
 
-.doctor-worklist-surface::before {
+.doctor-worklist-workspace::before {
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -6473,12 +6473,12 @@ body.assistant-mobile-open {
   pointer-events: none;
 }
 
-.doctor-worklist-surface > * {
+.doctor-worklist-workspace > * {
   position: relative;
   z-index: 1;
 }
 
-.doctor-worklist-surface__filters {
+.doctor-worklist-workspace__filters {
   overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 20%);
   padding: 10px;
@@ -6586,16 +6586,12 @@ body.assistant-mobile-open {
   font-size: 12px;
 }
 
-.doctor-worklist-rows {
+.doctor-worklist-cards {
   margin: 0;
   list-style: none;
 }
 
-.doctor-worklist-rows > li + li {
-  border-top: 1px solid color-mix(in srgb, var(--border), transparent 18%);
-}
-
-.doctor-worklist-row {
+.doctor-worklist-card {
   position: relative;
   display: grid;
   min-width: 0;
@@ -6609,46 +6605,36 @@ body.assistant-mobile-open {
   transition: background var(--motion-fast), box-shadow var(--motion-fast);
 }
 
-.doctor-worklist-row[data-severity="critical"]::before {
-  position: absolute;
-  inset: 12px auto 12px 0;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
-  background: color-mix(in srgb, var(--status-critical-fg), transparent 22%);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--status-critical-bg), transparent 42%);
-  content: "";
-}
-
-.doctor-worklist-row:hover {
+.doctor-worklist-card:hover {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.32), color-mix(in srgb, var(--holo-cyan), transparent 92%));
 }
 
-.doctor-worklist-row:focus-visible {
+.doctor-worklist-card:focus-visible {
   background: rgba(255, 255, 255, 0.42);
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand), transparent 44%);
 }
 
-.doctor-worklist-row__identity,
-.doctor-worklist-row__reasons,
-.doctor-worklist-row__workflow {
+.doctor-worklist-card__identity,
+.doctor-worklist-card__reasons,
+.doctor-worklist-card__workflow {
   min-width: 0;
 }
 
-.doctor-worklist-row__identity,
-.doctor-worklist-row__reasons {
+.doctor-worklist-card__identity,
+.doctor-worklist-card__reasons {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.doctor-worklist-row__patient {
+.doctor-worklist-card__patient {
   display: flex;
   min-width: 0;
   align-items: baseline;
   gap: 8px;
 }
 
-.doctor-worklist-row__patient strong {
+.doctor-worklist-card__patient strong {
   overflow: hidden;
   color: var(--foreground);
   font-size: 16px;
@@ -6658,14 +6644,14 @@ body.assistant-mobile-open {
   white-space: nowrap;
 }
 
-.doctor-worklist-row__patient span {
+.doctor-worklist-card__patient span {
   flex: 0 0 auto;
   color: var(--foreground-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.doctor-worklist-row__metadata {
+.doctor-worklist-card__metadata {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 7px;
@@ -6674,7 +6660,7 @@ body.assistant-mobile-open {
   line-height: 1.45;
 }
 
-.doctor-worklist-row__zone-label {
+.doctor-worklist-card__zone-label {
   color: var(--foreground-muted);
   font-size: 10px;
   font-weight: 750;
@@ -6682,8 +6668,8 @@ body.assistant-mobile-open {
   text-transform: uppercase;
 }
 
-.doctor-worklist-row__critical-reason,
-.doctor-worklist-row__quiet-reason {
+.doctor-worklist-card__critical-reason,
+.doctor-worklist-card__quiet-reason {
   display: flex;
   min-width: 0;
   align-items: flex-start;
@@ -6694,7 +6680,7 @@ body.assistant-mobile-open {
   line-height: 1.45;
 }
 
-.doctor-worklist-row__critical-reason svg {
+.doctor-worklist-card__critical-reason svg {
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
@@ -6702,12 +6688,12 @@ body.assistant-mobile-open {
   color: var(--status-critical-fg);
 }
 
-.doctor-worklist-row__quiet-reason {
+.doctor-worklist-card__quiet-reason {
   color: var(--foreground-muted);
   font-weight: 500;
 }
 
-.doctor-worklist-row__chips {
+.doctor-worklist-card__chips {
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
@@ -6715,33 +6701,33 @@ body.assistant-mobile-open {
   gap: 6px;
 }
 
-.doctor-worklist-row__more {
+.doctor-worklist-card__more {
   color: var(--foreground-muted);
   font-size: 11px;
   font-weight: 650;
 }
 
-.doctor-worklist-row__workflow {
+.doctor-worklist-card__workflow {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.doctor-worklist-row__state-line {
+.doctor-worklist-card__state-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-.doctor-worklist-row__progress-copy {
+.doctor-worklist-card__progress-copy {
   color: var(--foreground-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.doctor-worklist-row__progress-track {
+.doctor-worklist-card__progress-track {
   overflow: hidden;
   width: 100%;
   height: 3px;
@@ -6749,14 +6735,14 @@ body.assistant-mobile-open {
   background: color-mix(in srgb, var(--border), transparent 22%);
 }
 
-.doctor-worklist-row__progress-track span {
+.doctor-worklist-card__progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
   background: color-mix(in srgb, var(--brand), transparent 22%);
 }
 
-.doctor-worklist-row__open {
+.doctor-worklist-card__open {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -6766,14 +6752,14 @@ body.assistant-mobile-open {
   font-weight: 720;
 }
 
-.doctor-worklist-row__open svg {
+.doctor-worklist-card__open svg {
   width: 14px;
   height: 14px;
   transition: transform var(--motion-fast);
 }
 
-.doctor-worklist-row:hover .doctor-worklist-row__open svg,
-.doctor-worklist-row:focus-visible .doctor-worklist-row__open svg {
+.doctor-worklist-card:hover .doctor-worklist-card__open svg,
+.doctor-worklist-card:focus-visible .doctor-worklist-card__open svg {
   transform: translateX(2px);
 }
 
@@ -6867,16 +6853,12 @@ body.assistant-mobile-open {
   background: color-mix(in srgb, var(--status-critical-bg), transparent 75%);
 }
 
-.doctor-worklist-skeleton__row {
+.doctor-worklist-card--skeleton {
   display: grid;
   grid-template-columns: minmax(210px, 0.78fr) minmax(300px, 1.28fr) minmax(230px, 0.78fr);
   align-items: center;
   gap: 28px;
   padding: 22px;
-}
-
-.doctor-worklist-skeleton__row + .doctor-worklist-skeleton__row {
-  border-top: 1px solid color-mix(in srgb, var(--border), transparent 18%);
 }
 
 .doctor-worklist-skeleton__identity {
@@ -6898,25 +6880,25 @@ body.assistant-mobile-open {
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .doctor-worklist-surface {
+  .doctor-worklist-workspace {
     border-color: var(--border);
     background: var(--surface);
   }
 }
 
 @media (max-width: 1023px) {
-  .doctor-worklist-row,
-  .doctor-worklist-skeleton__row {
+  .doctor-worklist-card,
+  .doctor-worklist-card--skeleton {
     grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr);
     gap: 18px 24px;
   }
 
-  .doctor-worklist-row__workflow,
+  .doctor-worklist-card__workflow,
   .doctor-worklist-skeleton__workflow {
     grid-column: 1 / -1;
   }
 
-  .doctor-worklist-row__workflow {
+  .doctor-worklist-card__workflow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr) auto;
     align-items: center;
@@ -6934,7 +6916,7 @@ body.assistant-mobile-open {
     font-size: 27px;
   }
 
-  .doctor-worklist-surface {
+  .doctor-worklist-workspace {
     border-radius: 20px;
   }
 
@@ -6957,33 +6939,33 @@ body.assistant-mobile-open {
     gap: 1px;
   }
 
-  .doctor-worklist-row,
-  .doctor-worklist-skeleton__row {
+  .doctor-worklist-card,
+  .doctor-worklist-card--skeleton {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
     padding: 17px 15px;
   }
 
-  .doctor-worklist-row__workflow,
+  .doctor-worklist-card__workflow,
   .doctor-worklist-skeleton__workflow {
     grid-column: auto;
   }
 
-  .doctor-worklist-row__workflow {
+  .doctor-worklist-card__workflow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px 12px;
   }
 
-  .doctor-worklist-row__state-line {
+  .doctor-worklist-card__state-line {
     grid-column: 1 / -1;
   }
 
-  .doctor-worklist-row__progress-track {
+  .doctor-worklist-card__progress-track {
     align-self: center;
   }
 
-  .doctor-worklist-row__open {
+  .doctor-worklist-card__open {
     min-height: 32px;
   }
 
@@ -8290,14 +8272,14 @@ body.assistant-mobile-open {
 .doctor-report-sidebar { gap: var(--card-gap); }
 .doctor-report-sidebar { width: auto; }
 
-.doctor-worklist-surface,
+.doctor-worklist-workspace,
 .doctor-queue-workspace {
   border: 1px solid var(--border);
   border-radius: var(--radius-glass);
   background: rgba(255,255,255,.78);
   box-shadow: var(--shadow-sm);
 }
-.doctor-worklist-row {
+.doctor-worklist-card {
   grid-template-columns: minmax(0, 25fr) minmax(0, 45fr) minmax(15rem, 30fr);
   min-height: 5.5rem;
   border-radius: var(--radius-lg);
@@ -8597,7 +8579,7 @@ body.assistant-mobile-open {
   }
   .doctor-report-grid { grid-template-columns: minmax(0, 1fr); }
   .doctor-report-sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .doctor-worklist-row { grid-template-columns: minmax(0, 1fr); }
+  .doctor-worklist-card { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (min-width: 1024px) and (max-width: 1199px) {
@@ -9734,7 +9716,7 @@ body.lumilab-root {
 .clinical-indicator-card,
 .result-card,
 .finding-card,
-.doctor-worklist-surface,
+.doctor-worklist-workspace,
 .doctor-queue-workspace {
   border-color: rgba(203,219,224,.88);
   background: rgba(255,255,255,.93);
@@ -9783,9 +9765,9 @@ body.lumilab-root {
 .result-card:has([data-state="normal"])::before,
 .finding-card:has([data-state="normal"])::before { background: var(--status-normal-fg); opacity: .6; }
 
-.doctor-worklist-row,
+.doctor-worklist-card,
 .history-row { transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast); }
-.doctor-worklist-row:hover,
+.doctor-worklist-card:hover,
 .history-row:hover { border-color: var(--border-strong); background: var(--surface); box-shadow: var(--shadow-card); transform: translateY(-1px); }
 
 /* Shared loading, empty, error and fallback states. */
@@ -9924,7 +9906,7 @@ body.lumilab-root {
 .trend-chart-card, .trend-data-card { box-shadow: var(--shadow-card); }
 .trend-control-surface { padding: clamp(1rem, 2vw, 1.35rem); }
 .doctor-report-grid, .doctor-trend-review-grid { gap: 1.25rem; }
-.doctor-worklist-surface, .doctor-queue-workspace { overflow: clip; }
+.doctor-worklist-workspace, .doctor-queue-workspace { overflow: clip; }
 .app-shell--admin [data-slot="card"] { border-color: rgba(203,219,224,.88); box-shadow: var(--shadow-card); }
 .app-shell--admin table thead { background: rgba(237,243,245,.72); }
 .app-shell--admin table tbody tr { transition: background-color var(--motion-fast); }
@@ -9976,7 +9958,7 @@ body.lumilab-root {
   .assistant-history-view,
   .assistant-user-message,
   .assistant-turn,
-  .doctor-worklist-row,
+  .doctor-worklist-card,
   .history-row,
   .landing-feature-card,
   .dashboard-quick-action,
@@ -11170,7 +11152,6 @@ body.lumilab-root {
   border-left: 1px solid var(--border);
 }
 
-.app-shell--doctor .doctor-worklist-surface,
 .app-shell--doctor .doctor-queue-workspace {
   overflow: clip;
   border-color: var(--doctor-section-border);
@@ -11179,15 +11160,34 @@ body.lumilab-root {
   box-shadow: var(--shadow-hairline);
 }
 
+.app-shell--doctor .doctor-worklist-workspace {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-shell--doctor .doctor-worklist-workspace::before {
+  display: none;
+}
+
 .doctor-queue-toolbar {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgba(198, 215, 220, 0.82);
-  background: rgba(249, 252, 253, 0.82);
-  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--doctor-section-border);
+  border-radius: var(--radius-glass);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0.625rem 0.75rem;
+  box-shadow: var(--shadow-hairline);
 }
 
 .doctor-queue-toolbar__filters {
@@ -11291,89 +11291,117 @@ body.lumilab-root {
   text-align: center;
 }
 
-.app-shell--doctor .doctor-worklist-row {
-  min-height: 5.25rem;
+.doctor-worklist-cards {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-shell--doctor .doctor-worklist-card {
+  min-height: 6.25rem;
   grid-template-columns: minmax(11.5rem, 24fr) minmax(17rem, 46fr) minmax(14.5rem, 30fr);
+  align-items: center;
   gap: clamp(1rem, 2vw, 2rem);
-  border: 0;
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.76);
-  padding: 0.875rem 1rem;
-  box-shadow: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-glass);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 1rem 1.125rem;
+  box-shadow: var(--shadow-hairline);
+  color: inherit;
   content-visibility: auto;
-  contain-intrinsic-size: auto 5.25rem;
-  transition: background-color var(--motion-fast), box-shadow var(--motion-fast);
+  contain-intrinsic-size: auto 6.25rem;
+  outline: none;
+  text-decoration: none;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
 }
 
-.app-shell--doctor .doctor-worklist-row[data-severity="critical"] {
-  background: color-mix(in srgb, var(--status-critical-bg), white 72%);
-}
-
-.app-shell--doctor .doctor-worklist-row[data-severity="critical"]::before {
-  inset-block: 0.75rem;
-  width: 3px;
-  box-shadow: none;
-}
-
-.app-shell--doctor .doctor-worklist-row[data-verified="true"] {
-  background: color-mix(in srgb, var(--status-normal-bg), white 76%);
-}
-
-.app-shell--doctor .doctor-worklist-row:hover {
+.app-shell--doctor .doctor-worklist-card:hover {
+  border-color: var(--border-strong);
   background: var(--surface);
-  box-shadow: inset 3px 0 var(--brand-muted), 0 5px 16px rgba(20, 38, 45, 0.045);
-  transform: none;
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
-.app-shell--doctor .doctor-worklist-row[data-severity="critical"]:hover {
-  box-shadow: inset 3px 0 var(--status-critical-fg), 0 5px 16px rgba(80, 35, 38, 0.055);
-}
-
-.app-shell--doctor .doctor-worklist-row:focus-visible {
+.app-shell--doctor .doctor-worklist-card:focus-visible {
   background: var(--surface);
-  box-shadow: inset 0 0 0 2px var(--ring);
+  box-shadow: 0 0 0 2px var(--ring), var(--shadow-card);
 }
 
-.app-shell--doctor .doctor-worklist-row__patient strong {
+.app-shell--doctor .doctor-worklist-card__identity,
+.app-shell--doctor .doctor-worklist-card__reasons,
+.app-shell--doctor .doctor-worklist-card__workflow {
+  min-width: 0;
+}
+
+.app-shell--doctor .doctor-worklist-card__reasons,
+.app-shell--doctor .doctor-worklist-card__workflow {
+  border-left: 1px solid color-mix(in srgb, var(--border), transparent 18%);
+  padding-left: clamp(0.875rem, 1.6vw, 1.5rem);
+}
+
+.app-shell--doctor .doctor-worklist-card__patient strong {
   font-size: 0.9375rem;
   font-weight: 720;
 }
 
-.app-shell--doctor .doctor-worklist-row__metadata,
-.app-shell--doctor .doctor-worklist-row__progress-copy {
+.app-shell--doctor .doctor-worklist-card__metadata,
+.app-shell--doctor .doctor-worklist-card__progress-copy {
   font-size: 0.6875rem;
 }
 
-.app-shell--doctor .doctor-worklist-row__zone-label {
+.app-shell--doctor .doctor-worklist-card__zone-label {
   font-size: 0.6rem;
 }
 
-.app-shell--doctor .doctor-worklist-row__critical-reason,
-.app-shell--doctor .doctor-worklist-row__quiet-reason {
+.app-shell--doctor .doctor-worklist-card__critical-reason,
+.app-shell--doctor .doctor-worklist-card__quiet-reason {
   font-size: 0.75rem;
 }
 
-.app-shell--doctor .doctor-worklist-row__critical-reason {
+.app-shell--doctor .doctor-worklist-card__critical-reason {
   color: color-mix(in srgb, var(--status-critical-fg), var(--foreground) 24%);
   font-weight: 680;
+  overflow-wrap: anywhere;
 }
 
-.app-shell--doctor .doctor-worklist-row__workflow {
+.app-shell--doctor .doctor-worklist-card__workflow {
   gap: 0.45rem;
 }
 
-.app-shell--doctor .doctor-worklist-row__open {
-  min-height: 1.75rem;
+.app-shell--doctor .doctor-worklist-card__open {
+  width: fit-content;
+  min-height: 2rem;
+  justify-self: end;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  padding: 0.3rem 0.625rem;
   color: var(--brand-strong);
   font-size: 0.7rem;
+  transition: border-color var(--motion-fast), background-color var(--motion-fast), color var(--motion-fast);
 }
 
-.app-shell--doctor .doctor-worklist-row__progress-track {
-  height: 2px;
+.app-shell--doctor .doctor-worklist-card:hover .doctor-worklist-card__open,
+.app-shell--doctor .doctor-worklist-card:focus-visible .doctor-worklist-card__open {
+  border-color: color-mix(in srgb, var(--brand), transparent 62%);
+  background: var(--brand-soft);
+}
+
+.app-shell--doctor .doctor-worklist-card__progress-track {
+  height: 3px;
 }
 
 .app-shell--doctor .doctor-worklist-pagination {
   min-height: 3.25rem;
+  border: 1px solid var(--doctor-section-border);
+  border-radius: var(--radius-glass);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-hairline);
 }
 
 .doctor-state-panel > .system-state {
@@ -11388,6 +11416,17 @@ body.lumilab-root {
 .doctor-worklist-body .doctor-state-panel > .system-state,
 .doctor-queue-workspace > .doctor-state-panel > .system-state {
   min-height: 16rem;
+}
+
+.doctor-worklist-body .doctor-state-panel > .system-state {
+  border: 1px solid var(--doctor-section-border);
+  border-radius: var(--radius-glass);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-hairline);
+}
+
+.doctor-worklist-card--skeleton {
+  pointer-events: none;
 }
 
 .doctor-detail-skeleton {
@@ -11827,23 +11866,25 @@ body.lumilab-root {
     font-size: 0.65rem;
   }
 
-  .app-shell--doctor .doctor-worklist-row,
-  .doctor-worklist-skeleton__row {
+  .app-shell--doctor .doctor-worklist-card,
+  .doctor-worklist-card--skeleton {
     grid-template-columns: minmax(11rem, 0.82fr) minmax(0, 1.18fr);
     gap: 0.75rem 1.25rem;
   }
 
-  .app-shell--doctor .doctor-worklist-row__workflow,
+  .app-shell--doctor .doctor-worklist-card__workflow,
   .doctor-worklist-skeleton__workflow {
     grid-column: 1 / -1;
   }
 
-  .app-shell--doctor .doctor-worklist-row__workflow {
+  .app-shell--doctor .doctor-worklist-card__workflow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.7fr) auto;
     align-items: center;
+    border-left: 0;
     border-top: 1px solid color-mix(in srgb, var(--border), transparent 30%);
-    padding-top: 0.55rem;
+    padding-top: 0.75rem;
+    padding-left: 0;
   }
 }
 
@@ -11910,23 +11951,31 @@ body.lumilab-root {
     padding: 0.45rem 0.25rem 0;
   }
 
-  .app-shell--doctor .doctor-worklist-row,
-  .doctor-worklist-skeleton__row {
+  .app-shell--doctor .doctor-worklist-card,
+  .doctor-worklist-card--skeleton {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
+    padding: 0.875rem 1rem;
   }
 
-  .app-shell--doctor .doctor-worklist-row__workflow,
+  .app-shell--doctor .doctor-worklist-card__workflow,
   .doctor-worklist-skeleton__workflow {
     grid-column: auto;
   }
 
-  .app-shell--doctor .doctor-worklist-row__workflow {
+  .app-shell--doctor .doctor-worklist-card__workflow {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .app-shell--doctor .doctor-worklist-row__state-line {
+  .app-shell--doctor .doctor-worklist-card__reasons {
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--border), transparent 30%);
+    padding-top: 0.75rem;
+    padding-left: 0;
+  }
+
+  .app-shell--doctor .doctor-worklist-card__state-line {
     grid-column: 1 / -1;
   }
 
@@ -11982,7 +12031,7 @@ body.lumilab-root {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell--doctor .doctor-worklist-row,
+  .app-shell--doctor .doctor-worklist-card,
   .app-shell--doctor .doctor-trend-row,
   .doctor-navigation-link,
   .doctor-navigation-logout,

@@ -320,12 +320,47 @@ test("doctor workspace refactor is audit-backed and composes shared operational 
   assert.match(audit, /Patient/);
   assert.match(queue, /DoctorPageHeader/);
   assert.match(queue, /DoctorQueueToolbar/);
+  assert.doesNotMatch(queue, /DoctorQueueOverview/);
   assert.match(queue, /DoctorStatePanel/);
   assert.match(report, /DoctorSection/);
   assert.match(trendList, /DoctorQueueToolbar/);
   assert.match(trendDetail, /DoctorSection/);
-  assert.match(css, /\.app-shell--doctor \.doctor-worklist-row[\s\S]*content-visibility: auto/);
+  assert.match(css, /\.app-shell--doctor \.doctor-worklist-card[\s\S]*content-visibility: auto/);
   assert.match(css, /@media \(max-width: 1199px\)[\s\S]*\.app-shell--doctor \.doctor-trend-review-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+});
+
+test("doctor queue renders independent reusable cards with shared clinical status semantics", () => {
+  const page = read("src/app/doctor/page.tsx");
+  const card = read("src/components/doctor/DoctorQueueCard.tsx");
+  const reasons = read("src/components/doctor/ReasonChip.tsx");
+  const history = read("src/components/HistoryPanel.tsx");
+  const css = read("src/app/globals.css");
+
+  assert.match(page, /import DoctorQueueCard/);
+  assert.match(page, /className="doctor-worklist-cards"/);
+  assert.match(page, /doctor-worklist-card doctor-worklist-card--skeleton/);
+  assert.match(card, /export default function DoctorQueueCard/);
+  assert.match(card, /doctor-worklist-card__identity/);
+  assert.match(card, /doctor-worklist-card__reasons/);
+  assert.match(card, /doctor-worklist-card__workflow/);
+  assert.match(card, /data-queue-state=\{statusState\}/);
+  assert.match(card, /StatusIndicator state=\{statusState\}/);
+  assert.match(card, /ReasonChip/);
+  assert.match(reasons, /LOW_OCR_CONFIDENCE: "ocr-review"/);
+  assert.match(reasons, /PATIENT_HAS_QUESTIONS: "question"/);
+  assert.match(card, /\? "verified"/);
+  assert.match(card, /\? "critical"/);
+  assert.match(card, /: "pending"/);
+  assert.match(css, /\.doctor-worklist-cards \{[\s\S]*?gap: 0\.75rem/);
+  assert.match(css, /\.app-shell--doctor \.doctor-worklist-card \{[\s\S]*?border: 1px solid var\(--border\)[\s\S]*?border-radius: var\(--radius-glass\)[\s\S]*?box-shadow: var\(--shadow-hairline\)/);
+  assert.match(css, /\.doctor-worklist-body \.doctor-state-panel > \.system-state \{[\s\S]*?border-radius: var\(--radius-glass\)/);
+  assert.match(history, /className="history-row"/);
+  assert.match(history, /StatusIndicator/);
+  assert.doesNotMatch(page, /doctor-worklist-row|QueueRow/);
+  assert.doesNotMatch(card, /doctor-worklist-row/);
+  assert.doesNotMatch(css, /doctor-worklist-row/);
+  assert.doesNotMatch(css, /\.doctor-worklist-card\[data-severity="critical"\][\s\S]*?background:/);
+  assert.doesNotMatch(css, /\.doctor-worklist-cards > li \+ li[\s\S]*?border-top:/);
 });
 
 test("doctor trend review page establishes task-based H1 and unified two-column geometry", () => {

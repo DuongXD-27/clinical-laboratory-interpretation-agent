@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import QueueRow from "@/components/doctor/QueueRow";
+import DoctorQueueCard from "@/components/doctor/DoctorQueueCard";
 import QueueTabs from "@/components/doctor/QueueTabs";
-import DoctorQueueOverview from "@/components/doctor/DoctorQueueOverview";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
 import DoctorQueueToolbar from "@/components/doctor/DoctorQueueToolbar";
 import DoctorStatePanel from "@/components/doctor/DoctorStatePanel";
@@ -88,9 +87,7 @@ export default function DoctorPage() {
           description="Ưu tiên tín hiệu cần chú ý, theo dõi tiến độ và mở phiếu để kiểm chứng."
         />
 
-        <DoctorQueueOverview counts={counts} />
-
-        <section className="doctor-worklist-surface" aria-labelledby="doctor-worklist-title">
+        <section className="doctor-worklist-workspace" aria-labelledby="doctor-worklist-title">
           <h2 id="doctor-worklist-title" className="sr-only">Danh sách phiếu cần đánh giá</h2>
           <DoctorQueueToolbar
             filters={<QueueTabs active={tab} counts={counts} onChange={changeTab} />}
@@ -102,13 +99,15 @@ export default function DoctorPage() {
           <div className="doctor-worklist-body" aria-live="polite">
             {loading && (
               <div className="doctor-worklist-skeleton" role="status" aria-label="Đang tải hàng đợi">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="doctor-worklist-skeleton__row">
-                    <Skeleton className="doctor-worklist-skeleton__identity" />
-                    <Skeleton className="doctor-worklist-skeleton__reason" />
-                    <Skeleton className="doctor-worklist-skeleton__workflow" />
-                  </div>
-                ))}
+                <ul className="doctor-worklist-cards" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <li key={index} className="doctor-worklist-card doctor-worklist-card--skeleton">
+                      <Skeleton className="doctor-worklist-skeleton__identity" />
+                      <Skeleton className="doctor-worklist-skeleton__reason" />
+                      <Skeleton className="doctor-worklist-skeleton__workflow" />
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -141,14 +140,14 @@ export default function DoctorPage() {
             )}
 
             {!error && !loading && items.length > 0 && (
-              <ul className="doctor-worklist-rows">
+              <ul className="doctor-worklist-cards">
                 {items.map((item, index) => (
                   <li
                     key={item.report_id}
                     className="motion-row-stagger"
                     style={{ "--stagger-index": index } as React.CSSProperties}
                   >
-                    <QueueRow item={item} activeTab={tab} />
+                    <DoctorQueueCard item={item} activeTab={tab} />
                   </li>
                 ))}
               </ul>
