@@ -1025,12 +1025,36 @@ class RequestTrace(Base):
     # 0 nghia la benh nhan nhan noi dung xuong cap, con response van 200.
     guardrail_fallback_count = Column(Integer, nullable=False, default=0)
     guardrail_rewrite_count = Column(Integer, nullable=False, default=0)
+    # Tin hieu chat tach rieng khoi guardrail cua /analyze. Khong luu noi dung
+    # chat; reason code la enum van hanh, khong phai du lieu benh nhan.
+    chat_degraded_count = Column(Integer, nullable=False, default=0)
+    chat_blocked_count = Column(Integer, nullable=False, default=0)
+    chat_blocked_reason = Column(String(64), nullable=True)
+    rag_retrieval_count = Column(Integer, nullable=False, default=0)
+    rag_retrieval_ms = Column(Float, nullable=False, default=0.0)
+    rag_source_count = Column(Integer, nullable=False, default=0)
+    rag_top_k = Column(Integer, nullable=False, default=0)
 
     user_role = Column(String(20), nullable=True)
 
     # Chuỗi Server-Timing, giữ nguyên để màn chi tiết dựng lại được cây span mà
     # không cần thêm bảng con.
     server_timing = Column(Text, nullable=True)
+
+
+class ChatQualityEvaluation(Base):
+    """Async judge result keyed by request id; contains scores, never chat text."""
+
+    __tablename__ = "chat_quality_evaluations"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_id = Column(String(64), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=_utcnow)
+    status = Column(String(24), nullable=False, default="pending")
+    groundedness = Column(Float, nullable=True)
+    faithfulness = Column(Float, nullable=True)
+    relevance = Column(Float, nullable=True)
+    safety_final_escape = Column(Integer, nullable=False, default=0)
+    error_type = Column(String(64), nullable=True)
 
 
 DEMO_USERS = [

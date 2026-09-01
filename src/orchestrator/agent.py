@@ -57,6 +57,7 @@ class AgentResult:
     current_report_ref: str | None
     current_analyte: str | None
     workflow_selected: str
+    evidence_contexts: tuple[str, ...] = ()
 
 
 _SYSTEM_PROMPT = """You are LumiLab, the patient-facing AI Agent for VMEC-05.
@@ -668,6 +669,12 @@ async def run_agent(
         current_report_ref=report_ref or current_report_ref,
         current_analyte=analyte or current_analyte,
         workflow_selected=workflow,
+        evidence_contexts=tuple(
+            str(evidence.get("text", ""))
+            for pack in evidence_packs
+            for evidence in pack.get("evidence", [])
+            if evidence.get("text")
+        ),
     )
 
 

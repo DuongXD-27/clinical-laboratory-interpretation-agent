@@ -62,6 +62,17 @@ class _Bucket:
     llm_error_count: int = 0
     guardrail_fallback_count: int = 0
     guardrail_rewrite_count: int = 0
+    chat_degraded_count: int = 0
+    chat_blocked_count: int = 0
+    chat_blocked_reasons: dict[str, int] = field(default_factory=dict)
+    groundedness: list[float] = field(default_factory=list)
+    faithfulness: list[float] = field(default_factory=list)
+    relevance: list[float] = field(default_factory=list)
+    safety_final_escape_count: int = 0
+    rag_retrieval_count: int = 0
+    rag_retrieval_ms: float = 0.0
+    rag_source_count: int = 0
+    rag_top_k: int = 0
 
 
 def build_timeseries(
@@ -70,6 +81,7 @@ def build_timeseries(
     since: datetime,
     until: datetime,
     group: str = GROUP_AI,
+    quality_rows: Iterable[object] = (),
 ) -> dict[str, object]:
     """Chuỗi thời gian cho MỘT nhóm endpoint.
 
@@ -136,11 +148,35 @@ def build_timeseries(
         bucket.llm_error_count += int(getattr(row, "llm_error_count", 0) or 0)
         bucket.guardrail_fallback_count += int(getattr(row, "guardrail_fallback_count", 0) or 0)
         bucket.guardrail_rewrite_count += int(getattr(row, "guardrail_rewrite_count", 0) or 0)
+        bucket.chat_degraded_count += int(getattr(row, "chat_degraded_count", 0) or 0)
+        bucket.chat_blocked_count += int(getattr(row, "chat_blocked_count", 0) or 0)
+        blocked_reason = getattr(row, "chat_blocked_reason", None)
+        if blocked_reason:
+            reason = str(blocked_reason)
+            bucket.chat_blocked_reasons[reason] = bucket.chat_blocked_reasons.get(reason, 0) + 1
+        bucket.rag_retrieval_count += int(getattr(row, "rag_retrieval_count", 0) or 0)
+        bucket.rag_retrieval_ms += float(getattr(row, "rag_retrieval_ms", 0.0) or 0.0)
+        bucket.rag_source_count += int(getattr(row, "rag_source_count", 0) or 0)
+        bucket.rag_top_k = max(bucket.rag_top_k, int(getattr(row, "rag_top_k", 0) or 0))
 
         cost = getattr(row, "llm_cost_usd", None)
         if cost is not None:
             bucket.cost_usd += float(cost)
             bucket.priced_any = True
+
+    for row in quality_rows:
+        created = getattr(row, "created_at", None)
+        if not isinstance(created, datetime):
+            continue
+        index = _index_for(created)
+        if index is None:
+            continue
+        bucket = buckets[index]
+        for name in ("groundedness", "faithfulness", "relevance"):
+            value = getattr(row, name, None)
+            if isinstance(value, int | float):
+                getattr(bucket, name).append(float(value))
+        bucket.safety_final_escape_count += int(getattr(row, "safety_final_escape", 0) or 0)
 
     points = [
         {
@@ -161,6 +197,38 @@ def build_timeseries(
             "llm_error_count": bucket.llm_error_count,
             "guardrail_fallback_count": bucket.guardrail_fallback_count,
             "guardrail_rewrite_count": bucket.guardrail_rewrite_count,
+            "chat_degraded_count": bucket.chat_degraded_count,
+            "chat_blocked_count": bucket.chat_blocked_count,
+            "chat_blocked_reasons": dict(sorted(bucket.chat_blocked_reasons.items())),
+            "chat_blocked_rate_pct": round(bucket.chat_blocked_count / len(bucket.durations) * 100, 2)
+            if bucket.durations
+            else None,
+            "chat_degraded_rate_pct": round(bucket.chat_degraded_count / len(bucket.durations) * 100, 2)
+            if bucket.durations
+            else None,
+            "success_rate_pct": round(
+                max(0, len(bucket.durations) - bucket.error_count - bucket.chat_degraded_count)
+                / len(bucket.durations)
+                * 100,
+                2,
+            )
+            if bucket.durations
+            else None,
+            "judge_sample_count": len(bucket.groundedness),
+            "groundedness_pct": round(sum(bucket.groundedness) / len(bucket.groundedness) * 100, 2)
+            if bucket.groundedness
+            else None,
+            "faithfulness_pct": round(sum(bucket.faithfulness) / len(bucket.faithfulness) * 100, 2)
+            if bucket.faithfulness
+            else None,
+            "relevance_pct": round(sum(bucket.relevance) / len(bucket.relevance) * 100, 2)
+            if bucket.relevance
+            else None,
+            "safety_final_escape_count": bucket.safety_final_escape_count,
+            "rag_retrieval_count": bucket.rag_retrieval_count,
+            "rag_retrieval_ms": round(bucket.rag_retrieval_ms, 3),
+            "rag_source_count": bucket.rag_source_count,
+            "rag_top_k": bucket.rag_top_k,
             # Ti le luot tra loi phai thay bang van ban dung san. Day la tin hieu
             # chat luong DO DUOC — khong phai groundedness, thu can mot bo danh
             # gia truc tuyen ma he thong chua co.

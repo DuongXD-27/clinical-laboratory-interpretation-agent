@@ -31,6 +31,23 @@ GUARDRAIL_REWRITE_EVENT = "guardrail-rewrite"
 # Ngoai le da bi chan o exception handler.
 ERROR_EVENT = "unhandled-error"
 
+# --- duong chat: hai ket cuc tat dinh, do duoc ma khong can LLM cham ---------
+#
+# `guardrail-fallback` o tren CHI phat ra tu `guardrail_node`, ma nut do chi
+# chay trong graph `/analyze`. Duong chat khong di qua no, nen chi so chat luong
+# tren /admin dang do MOT NUA san pham: chatbot dong gop 0 vao ca tu so lan mau
+# so. Hai event duoi day la phan tuong duong cua duong chat.
+#
+# `chat-degraded` la nang nhat: Agent hong, nguoi dung nhan van ban dung san,
+# HTTP van 200 va khong co ma loi nao. Khong dem thi khong ai biet.
+CHAT_DEGRADED_EVENT = "chat-degraded"
+# Bi chan boi mot cong an toan hoac vi ngoai pham vi. Ban than viec chan la
+# dung — cai dang theo doi la TI LE va CO CAU ma ly do: `UNKNOWN_INTENT` tang
+# dot bien nghia la bo phan loai dang troi, con ngoai pham vi tang nghia la
+# nguoi dung dang muon mot thu san pham chua lam.
+CHAT_BLOCKED_EVENT = "chat-blocked"
+RAG_RETRIEVAL_EVENT = "rag-retrieval"
+
 _SERVER_TIMING_NAME_RE = re.compile(r"[^a-zA-Z0-9_-]+")
 _current_timing: ContextVar[RequestTiming | None] = ContextVar(
     "current_request_timing",
@@ -244,9 +261,34 @@ class RequestTiming:
         error_events = [event for event in events if event.name == ERROR_EVENT]
         raw_type = str(error_events[-1].attributes.get("exception_type", "")) if error_events else ""
 
+        blocked = [event for event in events if event.name == CHAT_BLOCKED_EVENT]
+        # Chi giu ma ly do CUOI. Mot luot chi bi chan mot lan roi tra ve ngay,
+        # nen danh sach nay gan nhu luon co 0 hoac 1 phan tu; lay phan tu cuoi
+        # de neu ai do them mot cong nua thi ly do gan nhat van la ly do dung.
+        reason = str(blocked[-1].attributes.get("reason_code", "")) if blocked else ""
+
         return {
             "guardrail_fallback_count": sum(1 for event in events if event.name == GUARDRAIL_FALLBACK_EVENT),
             "guardrail_rewrite_count": sum(1 for event in events if event.name == GUARDRAIL_REWRITE_EVENT),
+            # Duong chat: hai ket cuc tat dinh. Tach rieng khoi guardrail cua
+            # `/analyze` chu khong cong gop, vi hai duong co the hong doc lap va
+            # gop lai thi khong con biet duong nao dang hong.
+            "chat_degraded_count": sum(1 for event in events if event.name == CHAT_DEGRADED_EVENT),
+            "chat_blocked_count": len(blocked),
+            "chat_blocked_reason": reason or None,
+            "rag_retrieval_count": sum(1 for event in events if event.name == RAG_RETRIEVAL_EVENT),
+            "rag_retrieval_ms": round(
+                sum(event.duration_ms for event in events if event.name == RAG_RETRIEVAL_EVENT), 3
+            ),
+            "rag_source_count": sum(
+                int(event.attributes.get("source_count", 0) or 0)
+                for event in events
+                if event.name == RAG_RETRIEVAL_EVENT
+            ),
+            "rag_top_k": max(
+                (int(event.attributes.get("top_k", 0) or 0) for event in events if event.name == RAG_RETRIEVAL_EVENT),
+                default=0,
+            ),
             "error_raw_type": raw_type or None,
             "error_type": error_taxonomy.classify_exception(raw_type) if raw_type else None,
         }

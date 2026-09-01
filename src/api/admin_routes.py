@@ -45,6 +45,7 @@ from src.services import (
     trace_slo,
     trace_timeseries,
 )
+from src.services.medical_knowledge_retriever import get_rag_readiness
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -103,7 +104,9 @@ async def traces_timeseries(
     until = datetime.now(UTC).replace(tzinfo=None)
     since = until - timedelta(hours=window_hours)
     rows = trace_repository.load_traces_for_analysis(db, since=since)
-    data = trace_timeseries.build_timeseries(rows, since=since, until=until)
+    quality_rows = trace_repository.load_quality_evaluations(db, since=since)
+    data = trace_timeseries.build_timeseries(rows, since=since, until=until, quality_rows=quality_rows)
+    rag = get_rag_readiness()
     return TimeseriesResponse(
         group=str(data["group"]),
         bucket_minutes=int(data["bucket_minutes"]),
@@ -111,6 +114,8 @@ async def traces_timeseries(
         until=str(data["until"]),
         points=[TimeseriesPointSchema(**point) for point in data["points"]],
         error_types=list(data["error_types"]),
+        rag_status=str(rag.get("status", "unavailable")),
+        rag_required=bool(rag.get("required", False)),
     )
 
 

@@ -32,4 +32,7 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 
 # JSON exec form invokes the shell explicitly so runtime PORT expansion remains
 # available while Uvicorn still receives signals as PID 1 through `exec`.
-CMD ["sh", "-c", "exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Railway containers are ephemeral and data/chroma is intentionally not in Git.
+# Build the small approved corpus on boot when production RAG is enabled, then
+# start serving only after the collection exists.
+CMD ["sh", "-c", "if [ \"${RAG_ENABLED:-false}\" = \"true\" ]; then python -m src.scripts.ingest_kb; fi && exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

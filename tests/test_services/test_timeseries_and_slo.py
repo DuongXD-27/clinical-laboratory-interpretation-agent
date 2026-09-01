@@ -159,6 +159,21 @@ def test_bucket_aggregates_tokens_cost_and_guardrail():
     assert filled["guardrail_fallback_rate_pct"] == pytest.approx(33.33, abs=0.01)
 
 
+def test_bucket_aggregates_chat_quality_signals_and_block_reasons():
+    since = NOW - timedelta(hours=1)
+    row = _row(10)
+    row.chat_degraded_count = 1
+    row.chat_blocked_count = 1
+    row.chat_blocked_reason = "UNKNOWN_INTENT"
+
+    series = build_timeseries([row], since=since, until=NOW)
+    filled = next(point for point in series["points"] if point["count"] == 1)
+
+    assert filled["chat_degraded_count"] == 1
+    assert filled["chat_blocked_count"] == 1
+    assert filled["chat_blocked_reasons"] == {"UNKNOWN_INTENT": 1}
+
+
 def test_error_types_are_collected_per_bucket_and_for_the_window():
     since = NOW - timedelta(hours=2)
     rows = [

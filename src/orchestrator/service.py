@@ -38,7 +38,7 @@ from src.orchestrator.session_store import (
     default_session_store,
 )
 from src.services import conversation_repository
-from src.services.request_timing import get_current_timing
+from src.services.request_timing import CHAT_BLOCKED_EVENT, CHAT_DEGRADED_EVENT, get_current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -376,6 +376,11 @@ async def _handle_message_core(
         workflow: str = "",
         intent: IntentEnum | None = None,
     ) -> OrchestratorResponse:
+        if timing is not None:
+            if response.reason_code == ReasonCode.LLM_UNAVAILABLE:
+                timing.add_event(CHAT_DEGRADED_EVENT, 0.0, reason_code=response.reason_code.value)
+            elif response.status == ResponseStatus.BLOCKED and response.reason_code is not None:
+                timing.add_event(CHAT_BLOCKED_EVENT, 0.0, reason_code=response.reason_code.value)
         _log_turn(
             request_id=request_id,
             session_id=session.session_id,
@@ -491,6 +496,14 @@ async def _handle_message_core(
         conversation_state=ConversationState(),
     )
     await emit_progress(progress_callback, ProgressStage.RESPONSE_COMPOSITION)
+    from src.services.chat_quality_judge import schedule as schedule_quality_judge
+
+    schedule_quality_judge(
+        request_id,
+        request.message,
+        agent_result.response.message,
+        agent_result.evidence_contexts,
+    )
     return finish(agent_result.response, workflow=agent_result.workflow_selected)
 
 
