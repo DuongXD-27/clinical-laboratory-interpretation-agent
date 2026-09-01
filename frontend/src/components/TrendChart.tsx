@@ -12,6 +12,11 @@ import {
   YAxis,
 } from "recharts";
 import { assessmentText, dedupeTrendPoints, formatTrendDate } from "@/lib/trendUi.mjs";
+import {
+  formatClinicalUnit,
+  formatClinicalUnitSuffix,
+  formatClinicalValue,
+} from "@/lib/clinicalUnit.mjs";
 import type { TrendPoint } from "@/types/analysis";
 
 /** Minimum number of on-chart points before the chart is allowed to fill the full container width. */
@@ -96,7 +101,7 @@ function TrendTooltipSingle({ active, payload, label, unit, analytes }: TrendToo
     <div className="trend-tooltip">
       <p className="font-semibold text-slate-950">{formatTrendDate(label ?? chartPoint.timestamp)}</p>
       <p className="mt-1 text-sm text-slate-700">
-        {analytes}: <span className="font-semibold">{value}</span> {unit}
+        {analytes}: <span className="font-semibold">{value}</span> {formatClinicalUnitSuffix(unit)}
       </p>
       <p className="mt-1 text-xs text-slate-500">Trạng thái: {assessmentText(assessment)}</p>
     </div>
@@ -126,7 +131,7 @@ function TrendTooltipGroup({ active, payload, label, unit, analytes }: TrendTool
               style={{ backgroundColor: entry.color ?? "#94a3b8" }}
             />
             {analyteName}:{" "}
-            <span className="font-semibold">{val}</span> {unit}
+            <span className="font-semibold">{val}</span> {formatClinicalUnitSuffix(unit)}
           </p>
         );
       })}
@@ -299,7 +304,7 @@ function TrendTooltipNormalized({ active, payload, label, unit }: NormalizedTool
               style={{ backgroundColor: entry.color ?? "#94a3b8" }}
             />
             {name}: <span className="font-semibold">{pct > 0 ? "+" : ""}{pct.toFixed(1)}%</span>
-            {abs !== null && abs !== undefined ? ` (${abs} ${unit})` : ""}
+            {abs !== null && abs !== undefined ? ` (${formatClinicalValue(abs, unit)})` : ""}
           </p>
         );
       })}
@@ -343,7 +348,7 @@ export default function TrendChart({ height = 340, ...props }: TrendChartProps) 
       <div
         className="trend-chart-shell"
         role="img"
-        aria-label={`Biểu đồ xu hướng ${unit} (${analyteNames.join(", ")})`}
+        aria-label={`Biểu đồ xu hướng ${formatClinicalUnit(unit)} (${analyteNames.join(", ")})`}
       >
         <TrendLegend analytes={analyteNames} colors={colors} />
         {useNormalized && (

@@ -1,4 +1,5 @@
 import { formatMoment } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 
 type Props = {
   note: string;
@@ -10,7 +11,7 @@ export default function DoctorNoteBlock({ note, doctorName, reviewedAt }: Props)
   return (
     <div className="doctor-note-block">
       <p className="doctor-note-block__label">Bác sĩ đính chính</p>
-      <p className="doctor-note-block__content">{note}</p>
+      <p className="doctor-note-block__content">{formatClinicalText(note)}</p>
       {(doctorName || reviewedAt) && (
         <p className="doctor-note-block__meta">
           {doctorName || "Bác sĩ"}

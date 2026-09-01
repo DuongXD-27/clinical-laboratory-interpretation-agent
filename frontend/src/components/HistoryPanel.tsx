@@ -19,6 +19,7 @@ import LocalizedDateInput from "@/components/common/LocalizedDateInput";
 import IndicatorResultCard from "./patient/IndicatorResultCard";
 import type { LabReportDetail, LabReportSummary } from "@/types/history";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
 import type { SeverityLevel } from "@/types/doctor";
 
@@ -345,7 +346,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
             </button>
           )}
           {mode === "patient" && !fromDate && !toDate && (
-            <Link href="/patient/analysis" className="primary-button mt-4 inline-flex items-center">
+            <Link href="/patient/analysis" transitionTypes={["nav-route"]} className="primary-button mt-4 inline-flex items-center">
               Phân tích kết quả đầu tiên
             </Link>
           )}
@@ -358,11 +359,15 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
             Hiển thị {rangeStart}-{rangeEnd} trong {total} phiếu
           </p>
           <ul className="pb-6">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const severity = reportSeverity(item);
 
               return (
-                <li key={item.id}>
+                <li
+                  key={item.id}
+                  className="motion-row-stagger"
+                  style={{ "--stagger-index": index } as React.CSSProperties}
+                >
                   <div className="history-row-actions">
                     <button
                       type="button"
@@ -444,7 +449,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                             ))}
 
                             {detail.disclaimer && (
-                              <p className="text-xs italic text-slate-500">{detail.disclaimer}</p>
+                              <p className="text-xs italic text-slate-500">{formatClinicalText(detail.disclaimer)}</p>
                             )}
                           </div>
 
@@ -475,7 +480,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                                     className="rounded-lg border border-white/75 bg-white/70 p-3"
                                   >
                                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                                      {note.note_text}
+                                      {formatClinicalText(note.note_text)}
                                     </p>
                                     <p className="mt-2 text-xs text-slate-500">
                                       {note.doctor_username || "Bác sĩ"} ·{" "}
@@ -574,17 +579,17 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                                             disabled={busy}
                                             onChange={() => toggleQuestion(item.id, question.id)}
                                           />
-                                          <span>{question.question_text}</span>
+                                          <span>{formatClinicalText(question.question_text)}</span>
                                         </label>
                                       ) : (
-                                        <p className="text-sm">{question.question_text}</p>
+                                        <p className="text-sm">{formatClinicalText(question.question_text)}</p>
                                       )}
 
                                       {question.answer_text ? (
                                         <div className="status-review-note mt-3">
                                           <StatusIndicator state="answered" />
                                           <p className="text-sm whitespace-pre-wrap">
-                                            {question.answer_text}
+                                            {formatClinicalText(question.answer_text)}
                                           </p>
                                           <p className="mt-2 text-xs text-slate-500">
                                             Bác sĩ {question.answered_by_username || ""} trả lời
@@ -636,7 +641,7 @@ export default function HistoryPanel({ mode, id, pageSize = 5, refreshToken = 0,
                           
                           {mode === "patient" && (
                             <div className="pt-4 mt-2 flex justify-end">
-                              <Link href={`/patient/reports/${item.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+                              <Link href={`/patient/reports/${item.id}`} transitionTypes={["nav-forward"]} className="text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
                                 Xem trang chi tiết ›
                               </Link>
                             </div>

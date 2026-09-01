@@ -31,13 +31,14 @@ export default function RecentReports({ reports, excludeReportId }: RecentReport
   }
 
   return (
-    <section aria-labelledby="recent-activity-title" className="space-y-4">
+    <section aria-labelledby="recent-activity-title" className="dashboard-section">
       <div className="flex items-center justify-between">
         <h2 id="recent-activity-title" className="text-lg font-semibold text-foreground">
           Hoạt động gần đây
         </h2>
         <Link 
           href="/patient/history" 
+          transitionTypes={["nav-forward"]}
           className="text-sm font-medium text-[var(--brand)] hover:underline"
         >
           Xem tất cả
@@ -49,7 +50,8 @@ export default function RecentReports({ reports, excludeReportId }: RecentReport
           <Link
             key={report.report_id}
             href={`/patient/reports/${report.report_id}`}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-sm hover:shadow-md hover:border-[var(--border)] transition-all duration-200 motion-reduce:transition-none hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 group"
+            transitionTypes={["nav-forward"]}
+            className="dashboard-report-row group"
             aria-label={`Xem phiếu ngày ${formatDate(report.test_date)}`}
           >
             <div className="flex items-start gap-3">

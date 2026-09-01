@@ -10,7 +10,9 @@ import VerificationBadge from "@/components/common/VerificationBadge";
 import ClinicalConfirmDialog from "@/components/common/ClinicalConfirmDialog";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatDate, reportTone } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import { groupBySection } from "@/lib/trendUi.mjs";
+import { motionElementName } from "@/lib/motion";
 import type { CriticalAlert, IndicatorResult } from "@/types/analysis";
 import type { ReportQuestion } from "@/types/history";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
@@ -96,7 +98,7 @@ export default function PatientReportDetail() {
     return (
       <section className="patient-card p-5 sm:p-7">
         <div role="alert" className="error-message">{error ?? "Không tìm thấy phiếu xét nghiệm."}</div>
-        <Link href="/patient/history" className="secondary-button mt-4 inline-flex">Quay lại lịch sử</Link>
+        <Link href="/patient/history" transitionTypes={["nav-back"]} className="secondary-button mt-4 inline-flex">Quay lại lịch sử</Link>
       </section>
     );
   }
@@ -112,9 +114,10 @@ export default function PatientReportDetail() {
         title="Kết quả xét nghiệm"
         description={formatDate(report.test_date)}
         className="report-detail-heading"
+        transitionName={motionElementName("patient-report", report.id)}
         actions={(
           <div className="report-action-cluster">
-            <Link href="/patient/history" className="patient-btn-secondary">
+            <Link href="/patient/history" className="patient-btn-secondary" transitionTypes={["nav-back"]}>
               <ArrowLeft aria-hidden="true" />
               Quay lại lịch sử
             </Link>
@@ -134,7 +137,7 @@ export default function PatientReportDetail() {
       {report.critical_alerts?.length > 0 && (
         <div className="critical-report-notice" role="alert">
           <strong>Cần chú ý ngay</strong>
-          {report.critical_alerts.map((alert, index) => <p key={index}>{alert.message}</p>)}
+          {report.critical_alerts.map((alert, index) => <p key={index}>{formatClinicalText(alert.message)}</p>)}
         </div>
       )}
 
@@ -142,7 +145,7 @@ export default function PatientReportDetail() {
         <div className="report-summary-row">
           <div>
             <h3 id="report-summary-title">Tóm tắt phiếu</h3>
-            <p>{report.summary}</p>
+            <p>{formatClinicalText(report.summary)}</p>
           </div>
           <div className="report-summary-stats">
             <div><strong>{report.result_count}</strong><span>chỉ số</span></div>
@@ -185,7 +188,7 @@ export default function PatientReportDetail() {
               ) : null}
             </p>
           ) : (
-            <p className="mt-1">{report.disclaimer}</p>
+            <p className="mt-1">{formatClinicalText(report.disclaimer)}</p>
           )}
         </div>
       </section>

@@ -4,8 +4,10 @@ import Link from "next/link";
 import QuestionsForDoctorPanel from "@/components/QuestionsForDoctorPanel";
 import IndicatorResultCard from "@/components/patient/IndicatorResultCard";
 import { reportTone, sortIndicatorsBySeverity } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import type { AnalysisResult } from "@/types/analysis";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import AnalysisProgressStepper from "@/components/patient/AnalysisProgressStepper";
 import StatusIndicator from "@/components/common/StatusIndicator";
 import { FileText, RotateCcw } from "lucide-react";
 type Props = {
@@ -42,14 +44,7 @@ export default function AnalysisResultView({
   return (
     <section className="results-section" aria-labelledby="result-title">
       {sourceMode === "ocr" && (
-        <ol className="ocr-stepper ocr-stepper-result" aria-label="Quy trình phân tích ảnh đã hoàn tất">
-          {["Tải phiếu", "Kiểm tra dữ liệu", "Phân tích", "Xem kết quả"].map((label, index) => (
-            <li key={label} className="complete" aria-current={index === 3 ? "step" : undefined}>
-              <span aria-hidden="true">✓</span>
-              <strong>{label}</strong>
-            </li>
-          ))}
-        </ol>
+        <AnalysisProgressStepper currentStep={4} />
       )}
       <PatientPageHeader
         eyebrow="Kết quả phân tích"
@@ -59,7 +54,7 @@ export default function AnalysisResultView({
         className="analysis-result-heading"
         actions={<>
           {reportId && (
-            <Link href={`/patient/reports/${reportId}`} className="secondary-button">
+            <Link href={`/patient/reports/${reportId}`} transitionTypes={["nav-forward"]} className="secondary-button">
               <FileText aria-hidden="true" />
               Mở trang chi tiết
             </Link>
@@ -77,7 +72,7 @@ export default function AnalysisResultView({
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/80">Cần chú ý ngay</p>
             <h2 className="mt-1 text-xl font-bold">Cảnh báo sức khỏe nghiêm trọng</h2>
             <div className="mt-2 space-y-1 text-sm leading-6 text-white/90">
-              {result.critical_alerts.map((alert, index) => <p key={index}>{alert.message}</p>)}
+              {result.critical_alerts.map((alert, index) => <p key={index}>{formatClinicalText(alert.message)}</p>)}
             </div>
           </div>
           <button type="button" onClick={onAcknowledgeCritical} className="critical-button">
@@ -87,7 +82,7 @@ export default function AnalysisResultView({
       )}
 
       <div className="analysis-result-summary">
-        {result.summary && <div className="summary-box">{result.summary}</div>}
+        {result.summary && <div className="summary-box">{formatClinicalText(result.summary)}</div>}
 
         {(result.indicators?.length ?? 0) > 0 && (
           <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Tổng quan tình trạng chỉ số">
@@ -131,7 +126,7 @@ export default function AnalysisResultView({
           <div className="info-message mt-5" role="status">
             Kết quả xét nghiệm này có vẻ đã được lưu trước đó.
             {result.existing_report_id && (
-              <Link href={`/patient/reports/${result.existing_report_id}`} className="ml-2 text-blue-700 hover:underline">
+              <Link href={`/patient/reports/${result.existing_report_id}`} transitionTypes={["nav-forward"]} className="ml-2 text-blue-700 hover:underline">
                 Xem kết quả đã lưu
               </Link>
             )}
@@ -141,7 +136,7 @@ export default function AnalysisResultView({
         {result.saved && reportId && (
           <div className="info-message mt-5" role="status">
             Kết quả đã được lưu vào lịch sử xét nghiệm.
-            <Link href={`/patient/reports/${reportId}`} className="ml-2 text-blue-700 hover:underline">
+            <Link href={`/patient/reports/${reportId}`} transitionTypes={["nav-forward"]} className="ml-2 text-blue-700 hover:underline">
               Xem chi tiết
             </Link>
           </div>
@@ -158,7 +153,7 @@ export default function AnalysisResultView({
       <div className="disclaimer-box" role="note" aria-label="Lưu ý y khoa">
         <p className="font-semibold text-slate-700">Lưu ý quan trọng</p>
         <p className="mt-1">
-          {result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn."}
+          {formatClinicalText(result.disclaimer ?? "Kết quả do AI tạo ra chỉ nhằm mục đích tham khảo, không thay thế chẩn đoán y khoa. Vui lòng tham vấn bác sĩ chuyên môn.")}
         </p>
       </div>
 

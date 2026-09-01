@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 
 const cardVariants = cva(
-  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[var(--radius-lg)] py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-[var(--radius-lg)] *:[img:last-child]:rounded-b-[var(--radius-lg)]",
+  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[var(--radius-glass)] py-(--card-spacing) text-sm [--card-spacing:--spacing(5)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-[var(--radius-glass)] *:[img:last-child]:rounded-b-[var(--radius-glass)]",
   {
     variants: {
       variant: {
-        default: "bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] shadow-[var(--shadow-sm)]",
-        glass: "bg-[var(--glass-surface)] text-[var(--foreground)] border border-[var(--glass-border)] shadow-[var(--shadow-glass)] backdrop-blur-md",
+        default: "bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] shadow-[var(--shadow-card)]",
+        glass: "bg-[var(--glass-surface)] text-[var(--foreground)] border border-[var(--glass-border)] shadow-[var(--shadow-glass)] backdrop-blur-xl",
       },
     },
     defaultVariants: {

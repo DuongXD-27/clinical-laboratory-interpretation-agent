@@ -1,21 +1,21 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, RotateCcw } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 
+import { BrandMark } from "@/components/common/BrandSignature";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
-import { Message, MessageContent, MessageHeader } from "@/components/ui/message";
+import { Message, MessageAvatar, MessageContent, MessageHeader } from "@/components/ui/message";
 import { sanitizeSuggestedAction } from "@/lib/assistantActions.mjs";
+import { formatClinicalText, formatClinicalValue } from "@/lib/clinicalUnit.mjs";
 import { tokenizeInlineMarkdown } from "@/lib/inlineMarkdown.mjs";
 import { formatDate } from "@/lib/patientUi.mjs";
 import {
   authoritativeCriticalAlerts,
-  progressLabel,
   safeHttpSources,
 } from "@/lib/orchestratorChat.mjs";
-import { publicSourceLabel } from "@/lib/citationUi.mjs";
 import type { Role } from "@/lib/api";
 import type { CriticalAlert } from "@/types/analysis";
 import type {
@@ -24,6 +24,7 @@ import type {
   SuggestedAction,
 } from "@/types/orchestrator";
 import type { ChatTurn } from "./useOrchestratorChat";
+import ChatSources from "./ChatSources";
 
 type Props = {
   turn: ChatTurn;
@@ -49,11 +50,24 @@ function InlineMarkdownText({ text }: { text: string }) {
   return (
     <>
       {tokenizeInlineMarkdown(text).map((token, index) => {
-        if (token.type === "bold") return <strong key={index}>{token.value}</strong>;
+        if (token.type === "bold") return <strong key={index}>{formatClinicalText(token.value)}</strong>;
         if (token.type === "code") return <code key={index}>{token.value}</code>;
-        return <span key={index}>{token.value}</span>;
+        return <span key={index}>{formatClinicalText(token.value)}</span>;
       })}
     </>
+  );
+}
+
+function ResponseBody({ text }: { text: string }) {
+  const paragraphs = text.split(/\n{2,}/).filter((paragraph) => paragraph.trim());
+  return (
+    <div className="assistant-response-body">
+      {paragraphs.map((paragraph, index) => (
+        <p className="assistant-prose" key={`${index}-${paragraph.slice(0, 24)}`}>
+          <InlineMarkdownText text={paragraph} />
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -80,7 +94,7 @@ function StructuredMedicalPayload({ data }: { data: OrchestratorPayload }) {
             <li key={`${indicator.name}-${indicator.unit}`}>
               <span>{indicator.name}</span>
               <span className="assistant-medical-value">
-                {indicator.value} {indicator.unit}
+                {formatClinicalValue(indicator.value, indicator.unit)}
                 <small data-status={indicator.status.toLowerCase()}>{indicator.status}</small>
               </span>
             </li>
@@ -112,7 +126,7 @@ function StructuredMedicalPayload({ data }: { data: OrchestratorPayload }) {
           <div><dt>Số lần đo</dt><dd>{data.trend.result_count}</dd></div>
           {latest ? (
             <>
-              <div><dt>Kết quả gần nhất</dt><dd>{latest.value} {data.trend.canonical_unit}</dd></div>
+              <div><dt>Kết quả gần nhất</dt><dd>{formatClinicalValue(latest.value, data.trend.canonical_unit)}</dd></div>
               <div><dt>Ngày xét nghiệm</dt><dd>{formatDate(latest.test_date)}</dd></div>
               <div><dt>Đánh giá</dt><dd>{latest.assessment}</dd></div>
             </>
@@ -129,7 +143,7 @@ function StructuredMedicalPayload({ data }: { data: OrchestratorPayload }) {
         <ol className="assistant-question-list">
           {data.questions.map((question, index) => (
             <li key={`${question.display_order ?? index}-${question.text ?? question.question_text}`}>
-              {question.text ?? question.question_text}
+              {formatClinicalText(question.text ?? question.question_text)}
             </li>
           ))}
         </ol>
@@ -154,8 +168,8 @@ function CriticalAlerts({ alerts }: { alerts: CriticalAlert[] }) {
           <AlertTriangle aria-hidden="true" />
           <AlertTitle>Cần chú ý khẩn</AlertTitle>
           <AlertDescription>
-            <strong>{alert.indicator_name}: {alert.value} {alert.unit}</strong>
-            <p>{alert.message}</p>
+            <strong>{alert.indicator_name}: {formatClinicalValue(alert.value, alert.unit)}</strong>
+            <p>{formatClinicalText(alert.message)}</p>
           </AlertDescription>
         </Alert>
       ))}
@@ -166,29 +180,6 @@ function CriticalAlerts({ alerts }: { alerts: CriticalAlert[] }) {
 function responseSources(response: OrchestratorResponse) {
   const nested = response.data.data_type === "explanation" ? response.data.sources ?? [] : [];
   return safeHttpSources([...(response.sources ?? []), ...nested]);
-}
-
-function Sources({ sources }: { sources: string[] }) {
-  if (sources.length === 0) return null;
-  return (
-    <details className="assistant-sources">
-      <summary>Nguồn tham khảo ({sources.length})</summary>
-      <ol>
-        {sources.map((source) => {
-          const hostname = new URL(source).hostname.replace(/^www\./, "");
-          const label = publicSourceLabel(source);
-          return (
-            <li key={source}>
-              <a href={source} target="_blank" rel="noopener noreferrer" aria-label={`Mở nguồn ${hostname} trong thẻ mới`}>
-                <span>{label}</span>
-                <ExternalLink aria-hidden="true" />
-              </a>
-            </li>
-          );
-        })}
-      </ol>
-    </details>
-  );
 }
 
 function TurnError({ turn, requestActive, onRetry }: Pick<Props, "turn" | "requestActive" | "onRetry">) {
@@ -206,22 +197,28 @@ function TurnError({ turn, requestActive, onRetry }: Pick<Props, "turn" | "reque
 
 export default function AssistantTurn({ turn, role, requestActive, onRetry, onAction }: Props) {
   const response = turn.response;
-  const progress = turn.progressStage ? progressLabel(turn.progressStage) : null;
+
+  if (turn.deliveryState === "CONNECTING" || turn.deliveryState === "RECEIVING_PROGRESS") {
+    return (
+      <Message align="start" className="assistant-thinking">
+        <MessageAvatar className="assistant-thinking-avatar"><BrandMark /></MessageAvatar>
+        <MessageContent className="assistant-thinking-content">
+          <div className="assistant-thinking-status" role="status" aria-live="polite" aria-atomic="true">
+            <span className="assistant-thinking-label shimmer">LumiLab đang trả lời</span>
+            <span className="assistant-thinking-dots" aria-hidden="true">•••</span>
+          </div>
+        </MessageContent>
+      </Message>
+    );
+  }
 
   return (
     <Message align="start" className="assistant-turn">
+      <MessageAvatar className="assistant-avatar"><BrandMark /></MessageAvatar>
       <MessageContent>
-        <MessageHeader><span className="sr-only">Trợ lý LumiLab</span></MessageHeader>
+        <MessageHeader><span>Trợ lý LumiLab</span></MessageHeader>
         <Bubble variant="ghost" className="assistant-response">
           <BubbleContent>
-            {turn.deliveryState === "CONNECTING" ? (
-              <div className="assistant-progress" role="status">Đang kết nối an toàn…</div>
-            ) : null}
-            {turn.deliveryState === "RECEIVING_PROGRESS" && progress ? (
-              <div className="assistant-progress" role="status" aria-live="polite" aria-atomic="true">
-                <span aria-hidden="true" />{progress}
-              </div>
-            ) : null}
             {turn.deliveryState === "FAILED" || turn.deliveryState === "CANCELLED" ? (
               <TurnError turn={turn} requestActive={requestActive} onRetry={onRetry} />
             ) : null}
@@ -232,7 +229,7 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
                     Server không lưu payload có cấu trúc — xem
                     `conversationTranscript.mjs` để biết vì sao. */}
                 {turn.restoredMessage ? (
-                  <p className="assistant-prose">{turn.restoredMessage}</p>
+                  <ResponseBody text={turn.restoredMessage} />
                 ) : (
                   <p className="assistant-prose assistant-restored-gap">
                     Lượt này chưa có câu trả lời được lưu.
@@ -242,7 +239,7 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
             ) : null}
             {turn.deliveryState === "COMPLETED" && response ? (
               <div className="assistant-completed-response">
-                <p className="assistant-prose"><InlineMarkdownText text={response.message} /></p>
+                <ResponseBody text={response.message} />
                 {statusLabel(response.status) ? (
                   <StatusIndicator state={statusState(response.status)} label={statusLabel(response.status)} />
                 ) : null}
@@ -250,10 +247,10 @@ export default function AssistantTurn({ turn, role, requestActive, onRetry, onAc
                 <CriticalAlerts alerts={authoritativeCriticalAlerts(response.data) as CriticalAlert[]} />
                 {response.safety_notice && response.safety_notice !== response.message ? (
                   <Alert variant="warning" className="assistant-safety-notice">
-                    <AlertDescription>{response.safety_notice}</AlertDescription>
+                    <AlertDescription>{formatClinicalText(response.safety_notice)}</AlertDescription>
                   </Alert>
                 ) : null}
-                <Sources sources={responseSources(response)} />
+                <ChatSources sources={responseSources(response)} />
                 {response.suggested_actions && response.suggested_actions.length > 0 ? (
                   <div className="assistant-actions" aria-label="Hành động gợi ý">
                     {response.suggested_actions.map((action, index) => (

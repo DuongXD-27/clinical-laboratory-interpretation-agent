@@ -8,6 +8,7 @@ type Props = {
   actions?: ReactNode;
   className?: string;
   titleId?: string;
+  transitionName?: string;
 };
 
 export default function PatientPageHeader({
@@ -17,6 +18,7 @@ export default function PatientPageHeader({
   actions,
   className = "",
   titleId,
+  transitionName,
 }: Props) {
-  return <PageHero eyebrow={eyebrow} title={title} description={description} actions={actions} titleId={titleId} className={className} />;
+  return <PageHero eyebrow={eyebrow} title={title} description={description} actions={actions} titleId={titleId} className={className} transitionName={transitionName} />;
 }

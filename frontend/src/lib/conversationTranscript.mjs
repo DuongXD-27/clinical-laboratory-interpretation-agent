@@ -95,24 +95,3 @@ export function conversationLabel(conversation) {
   if (typeof title === "string" && title.trim() !== "") return title.trim();
   return "Cuộc trò chuyện mới";
 }
-
-/** Chọn hội thoại để mở khi vừa vào trang.
- *
- * Ưu tiên hội thoại người dùng đang mở lần trước (id lưu ở localStorage), và
- * chỉ khi id đó CÒN trong danh sách. Không kiểm lại thì một hội thoại đã bị
- * xoá, hoặc id còn sót từ một tài khoản khác từng đăng nhập trên máy này, sẽ
- * làm màn hình mở ra rồi báo 404.
- *
- * Không có gì hợp lệ thì mở hội thoại mới nhất. Trả `null` khi danh sách rỗng —
- * lúc đó lượt đầu tiên sẽ tự tạo hội thoại ở phía server.
- */
-export function pickInitialConversation(conversations, storedId) {
-  const list = Array.isArray(conversations) ? conversations : [];
-  if (list.length === 0) return null;
-
-  const parsed = typeof storedId === "string" ? Number.parseInt(storedId, 10) : storedId;
-  if (Number.isInteger(parsed) && list.some((item) => item?.id === parsed)) {
-    return parsed;
-  }
-  return list[0]?.id ?? null;
-}

@@ -1,46 +1,43 @@
 import type { DoctorQueueCounts } from "@/types/doctor";
 import { AlertCircle, FileSearch, MessageCircle, FileText, CheckCircle2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Props = {
   counts: DoctorQueueCounts | null;
 };
 
 export default function DoctorQueueOverview({ counts }: Props) {
-  if (!counts) return null;
+  if (!counts) {
+    return (
+      <div className="doctor-summary-strip doctor-summary-strip--loading" role="status" aria-label="Đang tải tổng quan hàng đợi">
+        {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="doctor-summary-strip__skeleton" />)}
+      </div>
+    );
+  }
+
+  const metrics = [
+    { key: "pending", label: "Chờ đánh giá", value: counts.pending, icon: FileText },
+    { key: "critical", label: "Nguy kịch", value: counts.critical, icon: AlertCircle },
+    { key: "ocr", label: "OCR cần kiểm tra", value: counts.ocr, icon: FileSearch },
+    { key: "question", label: "Có câu hỏi", value: counts.questions, icon: MessageCircle },
+    { key: "verified", label: "Đã xác minh", value: counts.verified, icon: CheckCircle2 },
+  ] as const;
 
   return (
-    <Card variant="glass" className="doctor-overview">
-      <CardHeader>
-        <CardTitle>Tổng quan hoạt động</CardTitle>
-      </CardHeader>
-      <CardContent className="doctor-overview__grid">
-        <div className="doctor-metric doctor-metric--pending">
-          <FileText aria-hidden="true" />
-          <span>Chờ đánh giá</span>
-          <strong>{counts.pending}</strong>
-        </div>
-        <div className="doctor-metric doctor-metric--critical">
-          <AlertCircle aria-hidden="true" />
-          <span>Nguy kịch</span>
-          <strong>{counts.critical}</strong>
-        </div>
-        <div className="doctor-metric doctor-metric--ocr">
-          <FileSearch aria-hidden="true" />
-          <span>OCR cần kiểm tra</span>
-          <strong>{counts.ocr}</strong>
-        </div>
-        <div className="doctor-metric doctor-metric--question">
-          <MessageCircle aria-hidden="true" />
-          <span>Có câu hỏi</span>
-          <strong>{counts.questions}</strong>
-        </div>
-        <div className="doctor-metric doctor-metric--verified">
-          <CheckCircle2 aria-hidden="true" />
-          <span>Đã xác minh</span>
-          <strong>{counts.verified}</strong>
-        </div>
-      </CardContent>
-    </Card>
+    <section className="doctor-summary-strip" aria-labelledby="doctor-summary-title">
+      <h2 id="doctor-summary-title" className="sr-only">Tổng quan hoạt động</h2>
+      <dl>
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div key={metric.key} className="doctor-summary-metric" data-tone={metric.key}>
+              <Icon aria-hidden="true" />
+              <dt>{metric.label}</dt>
+              <dd>{metric.value}</dd>
+            </div>
+          );
+        })}
+      </dl>
+    </section>
   );
 }

@@ -6,6 +6,11 @@ import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { formatMoment } from "@/lib/patientUi.mjs";
 import { RESPONSE_STYLES } from "@/lib/responseStyleUi.mjs";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
+import { SystemState } from "@/components/common/SystemState";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 type PatientProfile = {
   patient_id: number;
@@ -106,9 +111,9 @@ export default function PatientProfilePage() {
       />
       <section className="patient-card p-5 sm:p-7">
           {loading ? (
-            <div className="loading-message" role="status">Đang tải hồ sơ...</div>
+            <SystemState kind="loading" title="Đang tải hồ sơ…" compact />
           ) : error ? (
-            <div role="alert" className="error-message">{error}</div>
+            <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>
           ) : profile ? (
             <>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -118,32 +123,32 @@ export default function PatientProfilePage() {
                   <p>Thông tin dùng để đối chiếu khi xem lại các phiếu đã lưu.</p>
                 </div>
                 {!editing && (
-                  <button type="button" onClick={() => setEditing(true)} className="primary-button w-full sm:w-auto">
+                  <Button type="button" onClick={() => setEditing(true)} className="w-full sm:w-auto">
                     Chỉnh sửa
-                  </button>
+                  </Button>
                 )}
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="field-label">
                   Họ tên
-                  <input disabled={!editing} value={form.full_name} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} className="form-control mt-2" />
+                  <Input disabled={!editing} value={form.full_name} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} className="mt-2" />
                 </label>
                 <label className="field-label">
                   Ngày sinh
-                  <input disabled={!editing} type="date" value={form.date_of_birth} onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))} className="form-control mt-2" />
+                  <Input disabled={!editing} type="date" value={form.date_of_birth} onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))} className="mt-2" />
                 </label>
                 <label className="field-label">
                   Giới tính
-                  <select disabled={!editing} value={form.sex} onChange={(event) => setForm((current) => ({ ...current, sex: event.target.value }))} className="form-control mt-2">
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
-                  </select>
+                  <NativeSelect className="mt-2 w-full" disabled={!editing} value={form.sex} onChange={(event) => setForm((current) => ({ ...current, sex: event.target.value }))}>
+                    <NativeSelectOption value="male">Nam</NativeSelectOption>
+                    <NativeSelectOption value="female">Nữ</NativeSelectOption>
+                    <NativeSelectOption value="other">Khác</NativeSelectOption>
+                  </NativeSelect>
                 </label>
                 <label className="field-label">
                   Email
-                  <input disabled={!editing} type="email" value={form.email} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="form-control mt-2" />
+                  <Input disabled={!editing} type="email" value={form.email} placeholder="Chưa cập nhật" onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="mt-2" />
                 </label>
               </div>
 
@@ -157,12 +162,10 @@ export default function PatientProfilePage() {
                   {RESPONSE_STYLES.map((style) => (
                     <label
                       key={style.id}
-                      className={`flex flex-col p-4 rounded-lg border cursor-pointer transition-colors ${
-                        form.response_style === style.id ? "border-emerald-600 bg-emerald-50/50" : "border-gray-200 hover:border-gray-300"
-                      } ${!editing ? "opacity-90 cursor-default" : ""}`}
+                      className={`profile-style-option ${form.response_style === style.id ? "is-selected" : ""} ${!editing ? "is-disabled" : ""}`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-900">{style.title}</span>
+                        <span className="font-medium text-foreground">{style.title}</span>
                         <input
                           type="radio"
                           name="response_style"
@@ -170,10 +173,10 @@ export default function PatientProfilePage() {
                           disabled={!editing}
                           checked={form.response_style === style.id}
                           onChange={(e) => setForm((curr) => ({ ...curr, response_style: e.target.value }))}
-                          className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                          className="size-4 accent-[var(--brand)]"
                         />
                       </div>
-                      <p className="text-xs text-gray-500">{style.description}</p>
+                      <p className="text-xs text-muted-foreground">{style.description}</p>
                     </label>
                   ))}
                 </div>
@@ -181,10 +184,10 @@ export default function PatientProfilePage() {
 
               {editing && (
                 <div className="mt-6 flex flex-wrap gap-2">
-                  <button type="button" onClick={save} disabled={saving} className="primary-button">
-                    {saving ? "Đang lưu..." : "Lưu thay đổi"}
-                  </button>
-                  <button type="button" onClick={() => {
+                  <Button type="button" onClick={save} disabled={saving}>
+                    {saving ? "Đang lưu…" : "Lưu thay đổi"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => {
                     setEditing(false);
                     setForm({
                       full_name: profile.full_name ?? "",
@@ -193,9 +196,9 @@ export default function PatientProfilePage() {
                       email: profile.email ?? "",
                       response_style: profile.response_style ?? "simple",
                     });
-                  }} className="secondary-button">
+                  }}>
                     Hủy
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -205,7 +208,7 @@ export default function PatientProfilePage() {
               </div>
             </>
           ) : (
-            <div className="empty-metrics">Không tìm thấy hồ sơ bệnh nhân.</div>
+            <SystemState kind="empty" title="Không tìm thấy hồ sơ bệnh nhân" compact />
           )}
       </section>
     </div>

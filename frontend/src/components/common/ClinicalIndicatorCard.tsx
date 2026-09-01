@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
+import { formatClinicalText, formatClinicalUnitSuffix } from "@/lib/clinicalUnit.mjs";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -46,6 +47,10 @@ export default function ClinicalIndicatorCard({
   const Heading = headingLevel;
   const canToggle = (explanationText?.length ?? 0) > 280;
   const hasInterpretation = Boolean(explanation || explanationText || interpretationExtra || sourceFooter);
+  const displayUnit = typeof unit === "string" || typeof unit === "number"
+    ? formatClinicalUnitSuffix(unit)
+    : unit;
+  const displayExplanationText = explanationText ? formatClinicalText(explanationText) : explanationText;
 
   return (
     <article className={cn("clinical-indicator-card clinical-card", `clinical-card--${tone}`, className)}>
@@ -56,7 +61,7 @@ export default function ClinicalIndicatorCard({
         </div>
         <div className="clinical-card__measurement">
           <span className="clinical-card__value">{value}</span>
-          {unit ? <span className="clinical-card__unit">{unit}</span> : null}
+          {displayUnit ? <span className="clinical-card__unit">{displayUnit}</span> : null}
         </div>
       </div>
 
@@ -80,7 +85,7 @@ export default function ClinicalIndicatorCard({
                 id={explanationId}
                 className={cn("clinical-card__explanation", expanded && "is-expanded")}
               >
-                {explanation ?? explanationText}
+                {explanation ?? displayExplanationText}
               </div>
               {canToggle ? (
                 <button

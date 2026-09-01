@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { ViewTransition } from "react";
 import { formatDate } from "@/lib/patientUi.mjs";
 import type { DoctorQueueItem } from "@/types/doctor";
 import type { DoctorQueueTab } from "@/lib/api";
 import ReasonChip from "./ReasonChip";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import { motionElementName } from "@/lib/motion";
 
 type Props = {
   item: DoctorQueueItem;
@@ -32,6 +34,15 @@ export default function QueueRow({ item, activeTab }: Props) {
     : 0;
   const isVerified = activeTab === "verified";
   const isCritical = item.severity_level === "critical";
+  const statusState = isVerified
+    ? "verified"
+    : isCritical
+      ? "critical"
+      : item.severity_level === "abnormal"
+        ? "abnormal"
+        : item.severity_level === "unknown"
+          ? "unknown"
+          : "pending";
   const queueState = isVerified
     ? "Đã xác minh"
     : isCritical
@@ -43,10 +54,13 @@ export default function QueueRow({ item, activeTab }: Props) {
   return (
     <Link
       href={`/doctor/reports/${item.report_id}?tab=${activeTab}`}
+      transitionTypes={["nav-forward"]}
       className="doctor-worklist-row group"
       data-severity={item.severity_level}
+      data-verified={isVerified ? "true" : undefined}
       aria-label={`Mở phiếu của ${item.patient_name}, ${queueState}`}
     >
+      <ViewTransition name={motionElementName("doctor-report", item.report_id)} default="none" share="lumilens-shared-detail">
       <div className="doctor-worklist-row__identity">
         <div className="doctor-worklist-row__patient">
           <strong>{item.patient_name}</strong>
@@ -64,6 +78,7 @@ export default function QueueRow({ item, activeTab }: Props) {
           )}
         </div>
       </div>
+      </ViewTransition>
 
       <div className="doctor-worklist-row__reasons">
         <span className="doctor-worklist-row__zone-label">Lý do cần xem</span>
@@ -89,7 +104,7 @@ export default function QueueRow({ item, activeTab }: Props) {
       <div className="doctor-worklist-row__workflow">
         <div className="doctor-worklist-row__state-line">
           <StatusIndicator
-            state={isVerified ? "verified" : isCritical ? "critical" : item.severity_level === "abnormal" ? "abnormal" : "pending"}
+            state={statusState}
             label={queueState}
           />
           <span className="doctor-worklist-row__progress-copy">

@@ -4,7 +4,6 @@ import { test } from "node:test";
 import {
   conversationLabel,
   messagesToTurns,
-  pickInitialConversation,
 } from "./conversationTranscript.mjs";
 
 const msg = (id, role, content, extra = {}) => ({
@@ -86,24 +85,4 @@ test("nhãn hội thoại: có tiêu đề thì dùng, không thì nhãn tạm",
   assert.equal(conversationLabel({ title: "   " }), "Cuộc trò chuyện mới");
   assert.equal(conversationLabel({ title: null }), "Cuộc trò chuyện mới");
   assert.equal(conversationLabel(undefined), "Cuộc trò chuyện mới");
-});
-
-test("mở lại đúng hội thoại đang xem lần trước", () => {
-  const list = [{ id: 7 }, { id: 4 }, { id: 2 }];
-  assert.equal(pickInitialConversation(list, "4"), 4);
-  assert.equal(pickInitialConversation(list, 2), 2);
-});
-
-test("id đã lưu nhưng không còn trong danh sách thì rơi về hội thoại mới nhất", () => {
-  // Hội thoại đã bị xoá, hoặc id còn sót từ một tài khoản khác từng đăng nhập
-  // trên máy này. Tin id đó là mở màn hình ra rồi báo 404.
-  const list = [{ id: 7 }, { id: 4 }];
-  assert.equal(pickInitialConversation(list, "999"), 7);
-  assert.equal(pickInitialConversation(list, null), 7);
-  assert.equal(pickInitialConversation(list, "không-phải-số"), 7);
-});
-
-test("danh sách rỗng trả null để lượt đầu tự tạo hội thoại ở server", () => {
-  assert.equal(pickInitialConversation([], "4"), null);
-  assert.equal(pickInitialConversation(undefined, "4"), null);
 });

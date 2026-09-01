@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import TrendChart from "@/components/TrendChart";
@@ -8,6 +8,12 @@ import TrendDoctorReviewPanel from "@/components/patient/TrendDoctorReviewPanel"
 import TrendHeatmap from "@/components/TrendHeatmap";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
+import { motionElementName } from "@/lib/motion";
+import {
+  formatClinicalText,
+  formatClinicalUnit,
+  formatClinicalValue,
+} from "@/lib/clinicalUnit.mjs";
 import {
   canRenderTrendChart,
   defaultTrendAnalyte,
@@ -336,7 +342,7 @@ export default function PatientTrendsPage() {
           ) : analytes.length === 0 ? (
             <div className="empty-metrics mt-5">
               <p className="font-medium text-slate-700">Bạn chưa có dữ liệu xét nghiệm để theo dõi xu hướng.</p>
-              <Link href={PATIENT_ROUTES.ANALYSIS} className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
+              <Link href={PATIENT_ROUTES.ANALYSIS} transitionTypes={["nav-route"]} className="text-button mt-2">Thêm kết quả xét nghiệm</Link>
             </div>
           ) : (
             <>
@@ -395,7 +401,7 @@ export default function PatientTrendsPage() {
                     <div className="trend-control-field-shell trend-control-participants" data-trend-field="participants">
                       <p className="trend-control-label">Chỉ số tham gia</p>
                       <div className="trend-participant-chips" aria-label="Chỉ số tham gia trong nhóm">
-                        {groupAnalyteItems.map((item) => <span key={item.analyte_canonical}>{item.display_name} · {item.canonical_unit}</span>)}
+                        {groupAnalyteItems.map((item) => <span key={item.analyte_canonical}>{item.display_name} · {formatClinicalUnit(item.canonical_unit)}</span>)}
                       </div>
                     </div>
                     <div className="trend-control-field-shell" data-trend-field="display">
@@ -452,13 +458,15 @@ export default function PatientTrendsPage() {
                           </div>
                         )}
                         
+                        <ViewTransition name={motionElementName("patient-analyte", selectedAnalyte)} default="none" share="lumilens-shared-detail">
                         <div className="trend-result-heading">
                           <h3>{trend.display_name}</h3>
                           <p>
                             {trend.section_label ? `${trend.section_label} · ` : ""}
-                            Đơn vị: {trend.canonical_unit} · {dedupeTrendPoints(trend.points).length} lần đo
+                            Đơn vị: {formatClinicalUnit(trend.canonical_unit)} · {dedupeTrendPoints(trend.points).length} lần đo
                           </p>
                         </div>
+                        </ViewTransition>
 
                         <div className="patient-glass-clinical trend-chart-card p-4 sm:p-6">
                           <TrendChart
@@ -478,7 +486,7 @@ export default function PatientTrendsPage() {
                             <ul>
                               {trend.points.map((p, i) => (
                                 <li key={i}>
-                                  Ngày {p.test_date}: {p.value} {trend.canonical_unit}, trạng thái: {p.assessment || "Không có"}
+                                  Ngày {p.test_date}: {formatClinicalValue(p.value, trend.canonical_unit)}, trạng thái: {p.assessment || "Không có"}
                                 </li>
                               ))}
                             </ul>
@@ -503,7 +511,7 @@ export default function PatientTrendsPage() {
                               <span className="text-xs text-slate-400">LumiLab</span>
                             </div>
                             {explanation ? (
-                              <p className="text-sm leading-relaxed text-slate-700">{explanation}</p>
+                              <p className="text-sm leading-relaxed text-slate-700">{formatClinicalText(explanation)}</p>
                             ) : (
                               <div role="status" className="text-sm text-slate-600">{explanationError}</div>
                             )}
@@ -565,7 +573,7 @@ export default function PatientTrendsPage() {
                               <article key={item.analyte_canonical} className="patient-glass-clinical p-4 trend-chart-card">
                                 <div className="trend-mini-header mb-2">
                                   <h4>{item.display_name}</h4>
-                                  <p>{item.canonical_unit}</p>
+                                  <p>{formatClinicalUnit(item.canonical_unit)}</p>
                                 </div>
                                 {(item.critical_status || item.approaching_critical) ? (
                                   <div className="mb-2">
@@ -604,7 +612,7 @@ export default function PatientTrendsPage() {
                                 {sectionFallbackReason(groupExplanation.reason)}
                               </div>
                             ) : (
-                              <p className="text-sm leading-relaxed text-slate-700">{groupExplanation.explanation}</p>
+                              <p className="text-sm leading-relaxed text-slate-700">{formatClinicalText(groupExplanation.explanation)}</p>
                             )
                           ) : (
                             <div role="status" className="text-sm text-slate-600">{groupExplanationError}</div>

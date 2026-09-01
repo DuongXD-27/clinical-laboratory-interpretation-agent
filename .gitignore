@@ -70,6 +70,7 @@ kilo.json
 
 # Local debug / audit scratch files
 scratch/
+artifacts/
 
 .agents/rules/vibecode-kit
 .agents/skills/

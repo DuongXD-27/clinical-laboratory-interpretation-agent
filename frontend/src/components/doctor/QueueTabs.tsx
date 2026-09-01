@@ -1,5 +1,6 @@
 import type { DoctorQueueCounts } from "@/types/doctor";
 import type { DoctorQueueTab } from "@/lib/api";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Props = {
   active: DoctorQueueTab;
@@ -15,27 +16,20 @@ const TABS: { key: DoctorQueueTab; label: string; countKey: keyof DoctorQueueCou
   { key: "verified", label: "Đã xác minh", countKey: "verified" },
 ];
 
-import { cn } from "@/lib/utils";
-
 export default function QueueTabs({ active, counts, onChange }: Props) {
   return (
-    <div className="doctor-worklist-tabs" role="group" aria-label="Lọc hàng đợi kiểm chứng">
-      {TABS.map((tab) => {
-        const count = counts?.[tab.countKey];
-        const isActive = active === tab.key;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            aria-pressed={isActive}
-            className={cn("doctor-worklist-tab", isActive && "is-active", count === 0 && !isActive && "is-empty")}
-            onClick={() => onChange(tab.key)}
-          >
-            <span>{tab.label}</span>
-            {count !== undefined && <span className="doctor-worklist-tab__count">{count}</span>}
-          </button>
-        );
-      })}
-    </div>
+    <Tabs value={active} onValueChange={(value) => onChange(value as DoctorQueueTab)} className="doctor-worklist-tabs">
+      <TabsList variant="line" aria-label="Lọc hàng đợi kiểm chứng">
+        {TABS.map((tab) => {
+          const count = counts?.[tab.countKey];
+          return (
+            <TabsTrigger key={tab.key} value={tab.key} data-empty={count === 0 && active !== tab.key ? "true" : undefined}>
+              <span>{tab.label}</span>
+              {count !== undefined ? <span className="doctor-worklist-tab__count">{count}</span> : null}
+            </TabsTrigger>
+          );
+        })}
+      </TabsList>
+    </Tabs>
   );
 }

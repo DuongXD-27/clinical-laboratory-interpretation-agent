@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
 } from "@/lib/api";
 import { formatMoment } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import type { TrendResponse, TrendReviewPatientState } from "@/types/analysis";
 import TrendReviewHistoryPanel from "./TrendReviewHistoryPanel";
 import StatusIndicator from "@/components/common/StatusIndicator";
@@ -159,7 +160,7 @@ export default function TrendDoctorReviewPanel({ trend, explanation, onUnauthori
             state={latest.doctor_assessment === "corrected" ? "corrected" : latest.doctor_assessment === "needs_follow_up" ? "reviewing" : "completed"}
             label={assessmentText(latest.doctor_assessment)}
           />
-          <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-800">{latest.doctor_comment}</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-800">{formatClinicalText(latest.doctor_comment)}</p>
           <p className="text-xs text-slate-600">
             {latest.reviewed_by_username || "Bác sĩ"}
             {latest.reviewed_at ? ` · ${formatMoment(latest.reviewed_at)}` : ""}

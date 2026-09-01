@@ -1,11 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import { ViewTransition } from "react";
 import SourcesDisclosure from "@/components/patient/SourcesDisclosure";
 import DoctorNoteBlock from "@/components/common/DoctorNoteBlock";
 import ClinicalIndicatorCard from "@/components/common/ClinicalIndicatorCard";
 import { indicatorDisplayLabel, referencePresentation, reportTone } from "@/lib/patientUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import type { IndicatorResult } from "@/types/analysis";
 import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
+import { motionElementName } from "@/lib/motion";
 
 function getIndicatorCriticalText(critical_status?: string | null) {
   if (!critical_status) return "Giá trị khẩn cấp";
@@ -24,6 +28,7 @@ type Props = {
 
 export default function IndicatorResultCard({ indicator }: Props) {
   const tone = reportTone(indicator.status);
+  const analyteId = indicator.analyte_canonical ?? indicator.name;
   
   const explanationCitations = indicator.explanation_sources ?? indicator.citations ?? [];
   const hasAISection = !!(indicator.explanation || indicator.doctor_note || explanationCitations.length > 0 || (indicator.sources && indicator.sources.length > 0));
@@ -33,7 +38,17 @@ export default function IndicatorResultCard({ indicator }: Props) {
     <ClinicalIndicatorCard
       tone={tone}
       className={`result-card result-card-${tone}`}
-      title={indicator.analyte_canonical ?? indicator.name}
+      title={(
+        <ViewTransition name={motionElementName("patient-analyte", analyteId)} default="none" share="lumilens-shared-detail">
+          <Link
+            href={`/patient/trends?analyte=${encodeURIComponent(analyteId)}`}
+            transitionTypes={["nav-forward"]}
+            className="clinical-card__trend-link"
+          >
+            {analyteId}
+          </Link>
+        </ViewTransition>
+      )}
       titleMeta={indicator.analyte_raw && indicator.analyte_raw !== (indicator.analyte_canonical ?? indicator.name)
         ? <>Tên gốc: {indicator.analyte_raw}</>
         : undefined}
@@ -42,7 +57,7 @@ export default function IndicatorResultCard({ indicator }: Props) {
       notice={String(indicator.input_integrity_status || "").toUpperCase() === "NEED_REVIEW" ? (
         <div className="input-review-callout mt-3" role="status">
           <StatusIndicator state="input-review" size="md" />
-          <span>{indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc."}</span>
+          <span>{formatClinicalText(indicator.input_integrity_message || "Hãy đối chiếu tên chỉ số, giá trị và đơn vị với phiếu gốc.")}</span>
         </div>
       ) : undefined}
       reference={reference.primary ? (

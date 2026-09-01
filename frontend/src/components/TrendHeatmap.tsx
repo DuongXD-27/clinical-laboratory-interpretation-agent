@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatTrendDate } from "@/lib/trendUi.mjs";
 import { indicatorStatusText, reportTone } from "@/lib/patientUi.mjs";
+import { formatClinicalUnitSuffix, formatClinicalValue } from "@/lib/clinicalUnit.mjs";
 import type { HeatmapCell, SectionHeatmapResponse } from "@/types/analysis";
 
 type Tone = "normal" | "abnormal" | "critical" | "unknown";
@@ -22,10 +23,10 @@ const LEGEND: { tone: Tone; label: string }[] = [
 
 function referenceRangeText(cell: HeatmapCell): string {
   if (cell.reference_low !== null && cell.reference_low !== undefined && cell.reference_high !== null && cell.reference_high !== undefined) {
-    return `${cell.reference_low} – ${cell.reference_high} ${cell.unit}`;
+    return `${cell.reference_low} – ${cell.reference_high} ${formatClinicalUnitSuffix(cell.unit)}`;
   }
-  if (cell.reference_high !== null && cell.reference_high !== undefined) return `≤ ${cell.reference_high} ${cell.unit}`;
-  if (cell.reference_low !== null && cell.reference_low !== undefined) return `≥ ${cell.reference_low} ${cell.unit}`;
+  if (cell.reference_high !== null && cell.reference_high !== undefined) return `≤ ${formatClinicalValue(cell.reference_high, cell.unit)}`;
+  if (cell.reference_low !== null && cell.reference_low !== undefined) return `≥ ${formatClinicalValue(cell.reference_low, cell.unit)}`;
   return "Chưa xác định khoảng tham chiếu";
 }
 
@@ -97,7 +98,7 @@ export default function TrendHeatmap({ data }: { data: SectionHeatmapResponse })
                         type="button"
                         className={`heatmap-cell heatmap-cell-${tone} ${isSelected ? "heatmap-cell-selected" : ""}`}
                         onClick={() => setSelected({ analyte: row.analyte_canonical, cell })}
-                        aria-label={`${row.analyte_canonical} ngày ${formatTrendDate(column.test_date)}: ${cell.value} ${cell.unit}, ${indicatorStatusText(cell.status, cell.critical_status)}`}
+                        aria-label={`${row.analyte_canonical} ngày ${formatTrendDate(column.test_date)}: ${formatClinicalValue(cell.value, cell.unit)}, ${indicatorStatusText(cell.status, cell.critical_status)}`}
                       >
                         {cell.value}
                       </button>
@@ -122,7 +123,7 @@ export default function TrendHeatmap({ data }: { data: SectionHeatmapResponse })
             <div>
               <dt className="text-xs text-slate-500">Giá trị</dt>
               <dd className="font-semibold">
-                {selected.cell.value} {selected.cell.unit}
+                {formatClinicalValue(selected.cell.value, selected.cell.unit)}
               </dd>
             </div>
             <div>

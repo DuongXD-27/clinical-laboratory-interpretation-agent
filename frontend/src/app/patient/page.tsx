@@ -14,6 +14,9 @@ import Link from "next/link";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
 import StatusIndicator from "@/components/common/StatusIndicator";
 import { PATIENT_ROUTES } from "@/lib/patientRoutes.mjs";
+import { SystemState } from "@/components/common/SystemState";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type DashboardSummary = {
   total_reports: number;
@@ -112,7 +115,7 @@ export default function PatientDashboardPage() {
 
       {/* MAIN CONTENT AREA */}
       {isGuest ? (
-        <section className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
+        <section className="dashboard-guest-card">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="font-semibold text-lg text-foreground">Bạn đang dùng thử với tư cách khách</h3>
@@ -120,38 +123,33 @@ export default function PatientDashboardPage() {
                 Kết quả phân tích không được lưu sau khi thoát phiên. Bạn vẫn có thể nhập tay hoặc tải ảnh phiếu xét nghiệm để trải nghiệm.
               </p>
             </div>
-            <Link href={PATIENT_ROUTES.ANALYSIS} className="shrink-0 inline-flex items-center justify-center h-10 px-6 font-medium text-sm text-[var(--brand-strong)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)]/80 rounded-lg transition-colors">
+            <Link href={PATIENT_ROUTES.ANALYSIS} transitionTypes={["nav-route"]} className={buttonVariants({ variant: "secondary" })}>
               Bắt đầu phân tích
             </Link>
           </div>
         </section>
       ) : loading ? (
-        <div className="space-y-8 animate-pulse motion-reduce:animate-none">
-          <div className="h-40 bg-[var(--surface-subtle)] rounded-xl" />
-          <div className="h-24 bg-[var(--surface-subtle)] rounded-xl" />
-          <div className="h-48 bg-[var(--surface-subtle)] rounded-xl" />
+        <div className="dashboard-skeleton" role="status" aria-label="Đang tải tổng quan">
+          <Skeleton className="h-40 rounded-[var(--radius-glass)]" />
+          <Skeleton className="h-24 rounded-[var(--radius-glass)]" />
+          <Skeleton className="h-48 rounded-[var(--radius-glass)]" />
         </div>
       ) : error ? (
-        <section className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-fg)]/20 p-6 rounded-xl">
-          <div className="flex items-center gap-3 text-[var(--status-critical-fg)] mb-3">
-            <span className="font-semibold" role="alert">{error}</span>
-          </div>
-          <button 
-            type="button" 
-            onClick={() => void loadDashboard()} 
-            className="inline-flex items-center justify-center h-9 px-4 font-medium text-sm bg-white dark:bg-black border border-[var(--border)] rounded-md hover:bg-[var(--surface-subtle)] transition-colors"
-          >
-            Thử lại
-          </button>
-        </section>
+        <SystemState
+          kind="error"
+          title="Chưa tải được tổng quan"
+          description={error}
+          className="dashboard-state"
+          action={<Button type="button" variant="outline" onClick={() => void loadDashboard()}>Thử lại</Button>}
+        />
       ) : dashboard ? (
-        <div className="space-y-8">
+        <div className="dashboard-stack">
           
           {dashboard.newly_verified_count > 0 && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-white/70 bg-white/45 px-4 py-3 text-sm text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]" role="status">
+            <div className="dashboard-verified-notice" role="status">
               <StatusIndicator state="verified" label="Đã kiểm chứng" />
               <span>Bác sĩ đã kiểm chứng {dashboard.newly_verified_count} phiếu xét nghiệm của bạn.</span>
-              <Link href={PATIENT_ROUTES.HISTORY} className="font-semibold hover:underline ml-1">
+              <Link href={PATIENT_ROUTES.HISTORY} transitionTypes={["nav-route"]} className="font-semibold hover:underline ml-1">
                 Xem lại
               </Link>
             </div>
@@ -160,11 +158,11 @@ export default function PatientDashboardPage() {
           {/* LATEST REPORT SUMMARY & NEEDS ATTENTION */}
           {dashboard.total_reports > 0 ? (
             detailLoading ? (
-              <div className="h-40 bg-[var(--surface-subtle)] rounded-xl animate-pulse motion-reduce:animate-none" />
+              <Skeleton className="h-40 rounded-[var(--radius-glass)]" />
             ) : detailError ? (
               <LatestReportSummary basicReport={latestBasicReport} detailError={true} />
             ) : latestDetail ? (
-              <div className="space-y-8">
+              <div className="dashboard-stack">
                 <LatestReportSummary report={latestDetail} basicReport={latestBasicReport} />
                 <NeedsAttention report={latestDetail} />
               </div>

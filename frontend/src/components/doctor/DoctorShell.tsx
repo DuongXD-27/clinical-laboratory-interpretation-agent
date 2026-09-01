@@ -3,9 +3,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/common/LayoutPrimitives";
+import { ShellLoadingState } from "@/components/common/SystemState";
 import { clearSession, getRole, getToken, getUsername } from "@/lib/api";
 import DoctorSidebar from "./DoctorSidebar";
 import DoctorTopbar from "./DoctorTopbar";
+import RouteTransition from "@/components/common/RouteTransition";
 
 export default function DoctorShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -28,11 +30,7 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
-        <div className="text-muted-foreground animate-pulse" role="status">Đang mở khu vực bác sĩ...</div>
-      </main>
-    );
+    return <ShellLoadingState label="Đang mở khu vực bác sĩ…" />;
   }
 
   return (
@@ -43,8 +41,9 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
         tier="wide"
         sidebar={<DoctorSidebar pathname={pathname} username={session.username} onLogout={logout} />}
         topbar={<DoctorTopbar pathname={pathname} username={session.username} onLogout={logout} />}
+        motionKey={pathname}
       >
-        {children}
+        <RouteTransition variant="doctor">{children}</RouteTransition>
       </AppShell>
     </>
   );

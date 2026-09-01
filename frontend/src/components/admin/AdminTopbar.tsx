@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLockup } from "@/components/common/BrandSignature";
 import {
   Sheet,
   SheetContent,
@@ -29,20 +30,19 @@ export default function AdminTopbar({ pathname, username, onLogout }: AdminTopba
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 lg:px-8 bg-[var(--glass-surface)] backdrop-blur-md border-b border-[var(--glass-border)] shrink-0">
+    <header className="role-topbar">
       <div className="flex items-center gap-3">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors"
             aria-label="Mở menu"
           >
-            <Menu className="w-5 h-5" aria-hidden="true" />
+            <Menu className="size-5" aria-hidden="true" />
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0 flex flex-col bg-[var(--surface)]">
             <SheetHeader className="h-16 flex items-center justify-center border-b border-[var(--border)] px-4">
-              <SheetTitle className="text-left w-full flex flex-col">
-                <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab Operations</span>
-                <span className="text-xs text-muted-foreground font-normal">Không gian vận hành</span>
+              <SheetTitle className="w-full text-left">
+                <BrandLockup context="Không gian vận hành" />
               </SheetTitle>
               <SheetDescription className="sr-only">Menu điều hướng vận hành</SheetDescription>
             </SheetHeader>
@@ -54,6 +54,7 @@ export default function AdminTopbar({ pathname, username, onLogout }: AdminTopba
                   <Link
                     key={item.href}
                     href={item.href}
+                    transitionTypes={["nav-route"]}
                     aria-current={active ? "page" : undefined}
                     onClick={() => setOpen(false)}
                     className={cn(
@@ -69,7 +70,7 @@ export default function AdminTopbar({ pathname, username, onLogout }: AdminTopba
                         aria-hidden="true"
                       />
                     )}
-                    <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
+                    <Icon data-icon="inline-start" className="size-5 shrink-0" aria-hidden="true" />
                     {item.label}
                   </Link>
                 );
@@ -83,7 +84,7 @@ export default function AdminTopbar({ pathname, username, onLogout }: AdminTopba
                 }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--status-critical-fg)] hover:bg-[var(--status-critical-bg)] rounded-lg transition-colors font-medium"
               >
-                <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <LogOut data-icon="inline-start" className="size-4 shrink-0" aria-hidden="true" />
                 Đăng xuất
               </button>
             </div>
@@ -92,7 +93,7 @@ export default function AdminTopbar({ pathname, username, onLogout }: AdminTopba
 
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Khu vực vận hành</span>
-          <h1 className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</h1>
+          <p className="font-semibold text-sm lg:text-base truncate m-0 leading-none">{pageTitle(pathname)}</p>
         </div>
       </div>
 

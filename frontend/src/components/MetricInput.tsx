@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import {
+  canonicalizeClinicalUnitInput,
+  formatClinicalUnit,
+  formatClinicalUnitSuffix,
+} from "@/lib/clinicalUnit.mjs";
 
 type Props = {
   id: string;
@@ -89,7 +94,7 @@ export default function MetricInput({
             />
             {!onUnitChange && (
               <span className="shrink-0 border-l border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                {unit}
+                {formatClinicalUnitSuffix(unit)}
               </span>
             )}
           </div>
@@ -100,8 +105,8 @@ export default function MetricInput({
             Đơn vị
             <input
               id={unitId}
-              value={unit}
-              onChange={(event) => onUnitChange(event.target.value)}
+              value={formatClinicalUnit(unit)}
+              onChange={(event) => onUnitChange(canonicalizeClinicalUnitInput(event.target.value))}
               className="form-control mt-2"
               autoComplete="off"
             />
