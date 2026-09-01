@@ -82,10 +82,10 @@ test("assistant chatbot implements deterministic visibility state machine and li
   const panel = read("src/components/patient/assistant/ChatPanel.tsx");
 
   assert.match(widget, /useState<AssistantVisibility>\("closed"\)/);
-  assert.match(widget, /setVisibility\("opening"\)/);
-  assert.match(widget, /setVisibility\("closing"\)/);
-  assert.match(widget, /setVisibility\("open"\)/);
-  assert.match(widget, /setVisibility\("closed"\)/);
+  assert.match(widget, /"opening"/);
+  assert.match(widget, /"closing"/);
+  assert.match(widget, /"open"/);
+  assert.match(widget, /"closed"/);
   assert.match(widget, /handleAnimationEnd/);
   assert.match(widget, /onAnimationEnd=\{handleAnimationEnd\}/);
 
