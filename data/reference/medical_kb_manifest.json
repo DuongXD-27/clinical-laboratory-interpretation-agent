@@ -8,8 +8,8 @@
   "source_record_count": 77,
   "analyte_count": 35,
   "chunk_builder_version": "corpus_builder",
-  "embedding_provider": "openai",
-  "embedding_model": "text-embedding-3-small",
+  "embedding_provider": "gemini",
+  "embedding_model": "gemini-embedding-001",
   "embedding_dimension": 1536,
   "build_timestamp": "2026-08-18T00:15:00+07:00",
   "release_validator_result": "PASS"

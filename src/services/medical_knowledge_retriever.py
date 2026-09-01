@@ -49,6 +49,22 @@ Design decisions after the RAG architecture review:
   above (genuine floor 0.807 vs. closest catchable-junk ceiling 0.794, a
   ~0.013 gap): wide enough to still break genuine near-ties, narrow enough
   that a real relevance gap is never masked by the tier.
+- Note-type intent promotion (`_note_type_intent_hint` /
+  `_promote_note_type_hint`): the score-first fix above still let
+  `description` win over `limitation_note`/`preanalytic_note` on Golden Set
+  V1's `limitation`/`preanalytic` intent cases — `description` is
+  structurally the broadest, most comprehensive chunk, so it out-scores
+  narrower note types on raw cosine similarity even when the query is
+  explicitly asking about limitations or sample prep (measured gap ~0.06 on
+  the golden query wording, ~0.003-0.05 even on well-phrased natural
+  Vietnamese). Same problem class `app_help_retriever.py` already solved for
+  its own retriever (`_section_hint`/`_promote_section_hint`): deterministic
+  keyword cues, checked only when unambiguous, promote the matching
+  note_type to the front — `_fuse`'s general score-first ranking is
+  untouched for every query without such a cue. Today's only production
+  caller builds a fixed status-only query with no such cues, so this is
+  inert in production today; it exists for the golden-set intent cases and
+  any future free-text Q&A surface.
 """
 
 from __future__ import annotations
@@ -89,6 +105,30 @@ class MedicalKnowledgeRetriever(Protocol):
 def _normalized_text(value: str) -> str:
     decomposed = unicodedata.normalize("NFKD", value.casefold())
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).strip()
+
+
+# Deterministic note-type intent cues, same idea as app_help_retriever.py's
+# FEATURE_HINTS/_section_hint: dense search alone structurally favors
+# `description` (the broadest, most comprehensive chunk) over narrower
+# `limitation_note`/`preanalytic_note` chunks even when the query explicitly
+# asks about limitations or sample-prep, because raw cosine similarity has no
+# notion of "what specific facet of the analyte is being asked about" — see
+# the ranking-fix design note below `_fuse` for the measured score gaps.
+# Today's only production caller (`analyzer_node.py`) builds a fixed
+# "Ý nghĩa xét nghiệm ... khi kết quả ở mức ..." query that never contains
+# these cues, so this hint is inert on the current production path; it exists
+# for the golden-set eval queries and any future free-text Q&A surface.
+_LIMITATION_CUES = ("limitation", "han che", "nhuoc diem", "gioi han", "sai so")
+_PREANALYTIC_CUES = ("preanalytic", "chuan bi", "truoc khi lay mau", "nhin an", "dieu kien lay mau")
+
+
+def _note_type_intent_hint(query: str) -> str | None:
+    normalized = _normalized_text(query)
+    if any(term in normalized for term in _LIMITATION_CUES):
+        return "limitation_note"
+    if any(term in normalized for term in _PREANALYTIC_CUES):
+        return "preanalytic_note"
+    return None
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -395,6 +435,42 @@ class ChromaMedicalKnowledgeRetriever:
                     break
         return selected
 
+    def _promote_note_type_hint(
+        self,
+        candidates: list[RetrievedChunk],
+        selected: list[RetrievedChunk],
+        *,
+        hint: str,
+        min_score: float,
+        min_chunk_length: int,
+        limit: int,
+    ) -> list[RetrievedChunk]:
+        """If the query has an unambiguous note-type intent cue (see
+        `_note_type_intent_hint`), promote the best-scoring candidate of that
+        note_type to the front — mirrors
+        `app_help_retriever.py::_promote_section_hint`. No-op if the hinted
+        note_type is already first, or no candidate of that type clears the
+        same score/length gates `_fuse` already applies (never fabricate a
+        promotion out of nothing)."""
+        if selected and str(selected[0].get("note_type", "")) == hint:
+            return selected
+
+        best: RetrievedChunk | None = None
+        for chunk in candidates:
+            if str(chunk.get("note_type", "")) != hint:
+                continue
+            if float(chunk.get("score", 0.0)) < min_score:
+                continue
+            if len(_normalized_text(str(chunk.get("text", "")))) < min_chunk_length:
+                continue
+            if best is None or float(chunk.get("score", 0.0)) > float(best.get("score", 0.0)):
+                best = chunk
+        if best is None:
+            return selected
+
+        rest = [chunk for chunk in selected if chunk.get("chunk_id") != best.get("chunk_id")]
+        return [best, *rest][:limit]
+
     def retrieve(
         self,
         *,
@@ -482,13 +558,25 @@ class ChromaMedicalKnowledgeRetriever:
             )
         )
 
-        return self._fuse(
+        selected = self._fuse(
             candidates,
             primary_note=primary_note,
             limit=limit,
             min_score=settings.retrieval_min_score,
             min_chunk_length=settings.metadata_min_chunk_length,
         )
+
+        hint = _note_type_intent_hint(query)
+        if hint:
+            selected = self._promote_note_type_hint(
+                candidates,
+                selected,
+                hint=hint,
+                min_score=settings.retrieval_min_score,
+                min_chunk_length=settings.metadata_min_chunk_length,
+                limit=limit,
+            )
+        return selected
 
     def readiness(self) -> dict[str, Any]:
         return self.vector_store.readiness()

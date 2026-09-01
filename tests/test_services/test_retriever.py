@@ -580,3 +580,184 @@ def test_status_tier_still_breaks_genuine_near_ties(monkeypatch):
     )
 
     assert chunks[0]["note_type"] == "description"
+
+
+def _limitation_vs_description_docs() -> tuple[dict, dict]:
+    desc = _doc(
+        "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch, "
+        "phản ánh tình trạng viêm nhiễm và các bệnh lý huyết học nói chung",
+        note_type="description",
+        source="https://a.test",
+    )
+    limitation = _doc(
+        "Xét nghiệm này có một số hạn chế: kết quả có thể bị ảnh hưởng bởi tình trạng viêm nhiễm cấp "
+        "tính, thuốc corticosteroid dùng gần đây, hoặc thời điểm lấy mẫu trong ngày",
+        note_type="limitation_note",
+        source="https://b.test",
+    )
+    return desc, limitation
+
+
+def _preanalytic_vs_description_docs() -> tuple[dict, dict]:
+    desc = _doc(
+        "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch, "
+        "phản ánh tình trạng viêm nhiễm và các bệnh lý huyết học nói chung",
+        note_type="description",
+        source="https://a.test",
+    )
+    preanalytic = _doc(
+        "Trước khi lấy mẫu xét nghiệm này, người bệnh nên nhịn ăn và tránh vận động mạnh để kết quả "
+        "chính xác nhất, đồng thời báo bác sĩ về các thuốc đang dùng",
+        note_type="preanalytic_note",
+        source="https://b.test",
+    )
+    return desc, preanalytic
+
+
+def _search_favoring_description(desc: dict, other: dict):
+    def fake_search(query, *, k, filter=None, query_embedding=None):
+        # description: distance 0.22 -> score 0.78 ; other note type: distance
+        # 0.40 -> score 0.60. A 0.18 gap, far wider than the 0.02 tier
+        # tie-break bucket, so description legitimately wins on score alone —
+        # only an explicit intent-hint promotion should flip this.
+        return {
+            "documents": [[desc["text"], other["text"]]],
+            "metadatas": [[desc["metadata"], other["metadata"]]],
+            "distances": [[0.22, 0.40]],
+            "ids": [[]],
+        }
+
+    return fake_search
+
+
+def test_limitation_intent_promotes_limitation_note_chunk(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc, limitation = _limitation_vs_description_docs()
+    retriever, store = _retriever([desc, limitation])
+    store.search = _search_favoring_description(desc, limitation)
+
+    chunks = retriever.retrieve(
+        query="Giải thích WBC: limitation",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert chunks[0]["note_type"] == "limitation_note"
+    assert chunks[0]["text"] == limitation["text"]
+
+
+def test_preanalytic_intent_promotes_preanalytic_note_chunk(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc, preanalytic = _preanalytic_vs_description_docs()
+    retriever, store = _retriever([desc, preanalytic])
+    store.search = _search_favoring_description(desc, preanalytic)
+
+    chunks = retriever.retrieve(
+        query="Giải thích WBC: preanalytic",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert chunks[0]["note_type"] == "preanalytic_note"
+    assert chunks[0]["text"] == preanalytic["text"]
+
+
+def test_no_promotion_when_query_has_no_intent_cue(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc, limitation = _limitation_vs_description_docs()
+    retriever, store = _retriever([desc, limitation])
+    store.search = _search_favoring_description(desc, limitation)
+
+    chunks = retriever.retrieve(
+        query="Ý nghĩa xét nghiệm WBC là gì?",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    # No intent cue in the query -> the promotion step never fires, general
+    # score-first ranking (description scores higher) stays in charge.
+    assert chunks[0]["note_type"] == "description"
+
+
+def test_no_promotion_when_hinted_note_type_missing(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc = _doc(
+        "WBC là viết tắt của White Blood Cell, tức bạch cầu, thành phần quan trọng của hệ miễn dịch",
+        note_type="description",
+        source="https://a.test",
+    )
+    retriever, store = _retriever([desc])
+    store.search = lambda query, *, k, filter=None, query_embedding=None: {
+        "documents": [[desc["text"]]],
+        "metadatas": [[desc["metadata"]]],
+        "distances": [[0.2]],
+        "ids": [[]],
+    }
+
+    # Intent cue present, but no limitation_note chunk exists anywhere in the
+    # corpus for this analyte -> promotion must no-op, not crash or fabricate.
+    chunks = retriever.retrieve(
+        query="Giải thích WBC: limitation",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert [chunk["note_type"] for chunk in chunks] == ["description"]
+
+
+def test_no_promotion_when_hinted_note_type_below_relevance_gate(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.5)
+    desc, limitation = _limitation_vs_description_docs()
+    retriever, store = _retriever([desc, limitation])
+
+    def fake_search(query, *, k, filter=None, query_embedding=None):
+        # description: distance 0.22 -> score 0.78 (passes 0.5 gate).
+        # limitation_note: distance 0.85 -> score 0.15 (fails the 0.5 gate) —
+        # promotion must not resurrect a chunk that was correctly dropped.
+        return {
+            "documents": [[desc["text"], limitation["text"]]],
+            "metadatas": [[desc["metadata"], limitation["metadata"]]],
+            "distances": [[0.22, 0.85]],
+            "ids": [[]],
+        }
+
+    store.search = fake_search
+
+    chunks = retriever.retrieve(
+        query="Giải thích WBC: limitation",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert [chunk["note_type"] for chunk in chunks] == ["description"]
+
+
+def test_no_promotion_when_already_first(monkeypatch):
+    _settings_stub(monkeypatch, metadata_prong=False, min_score=0.3)
+    desc, limitation = _limitation_vs_description_docs()
+    retriever, store = _retriever([desc, limitation])
+
+    def fake_search(query, *, k, filter=None, query_embedding=None):
+        # limitation_note already scores highest on its own merit.
+        return {
+            "documents": [[limitation["text"], desc["text"]]],
+            "metadatas": [[limitation["metadata"], desc["metadata"]]],
+            "distances": [[0.05, 0.40]],
+            "ids": [[]],
+        }
+
+    store.search = fake_search
+
+    chunks = retriever.retrieve(
+        query="Giải thích WBC: limitation",
+        analyte_id="wbc",
+        status="normal",
+        limit=2,
+    )
+
+    assert [chunk["note_type"] for chunk in chunks] == ["limitation_note", "description"]
