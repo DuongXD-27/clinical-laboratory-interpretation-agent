@@ -1,3 +1,5 @@
+import { formatClinicalUnitSuffix, formatClinicalValue } from "./clinicalUnit.mjs";
+
 export function formatDate(value) {
   if (!value) return "Chưa có";
   const datePart = String(value).slice(0, 10);
@@ -108,11 +110,11 @@ export function renderReferenceRange(indicator) {
     }
     if (indicator.rule_type === "ONE_SIDED_LIMIT") {
       if (indicator.upper_operator && indicator.reference_high !== null && indicator.reference_high !== undefined) {
-        return `Ngưỡng: ${indicator.upper_operator} ${indicator.reference_high} ${indicator.unit}`;
+        return `Ngưỡng: ${indicator.upper_operator} ${formatClinicalValue(indicator.reference_high, indicator.unit)}`;
       }
       if (indicator.reference_low !== null && indicator.reference_low !== undefined) {
         const op = indicator.upper_operator === "<" || indicator.upper_operator === "<=" ? ">" : (indicator.upper_operator || ">");
-        return `Ngưỡng: ${op} ${indicator.reference_low} ${indicator.unit}`;
+        return `Ngưỡng: ${op} ${formatClinicalValue(indicator.reference_low, indicator.unit)}`;
       }
       return null;
     }
@@ -138,7 +140,7 @@ function formatClinicalNumber(value) {
 function formatBound(operator, value, unit) {
   if (value === null || value === undefined) return "";
   const displayOperator = operator === ">=" ? "≥" : operator === "<=" ? "≤" : operator || "";
-  return `${displayOperator ? `${displayOperator} ` : ""}${formatClinicalNumber(value)}${unit ? ` ${unit}` : ""}`;
+  return `${displayOperator ? `${displayOperator} ` : ""}${formatClinicalValue(formatClinicalNumber(value), unit)}`;
 }
 
 export function indicatorDisplayLabel(indicator) {
@@ -177,7 +179,7 @@ export function referencePresentation(indicator) {
   if (indicator.reference_low !== null && indicator.reference_low !== undefined
       && indicator.reference_high !== null && indicator.reference_high !== undefined) {
     return {
-      primary: `Khoảng tham chiếu: ${formatClinicalNumber(indicator.reference_low)}–${formatClinicalNumber(indicator.reference_high)} ${indicator.unit}`,
+      primary: `Khoảng tham chiếu: ${formatClinicalNumber(indicator.reference_low)}–${formatClinicalNumber(indicator.reference_high)} ${formatClinicalUnitSuffix(indicator.unit)}`,
       secondary: null,
     };
   }

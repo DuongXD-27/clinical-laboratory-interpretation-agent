@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import QueueRow from "@/components/doctor/QueueRow";
 import QueueTabs from "@/components/doctor/QueueTabs";
 import DoctorQueueOverview from "@/components/doctor/DoctorQueueOverview";
+import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
+import DoctorQueueToolbar from "@/components/doctor/DoctorQueueToolbar";
+import DoctorStatePanel from "@/components/doctor/DoctorStatePanel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   fetchDoctorQueue,
   getRole,
@@ -78,29 +82,22 @@ export default function DoctorPage() {
   return (
     <div className="doctor-worklist-page">
       <section className="doctor-worklist-page__content">
-        <header className="page-section-heading doctor-worklist-heading">
-          <div>
-            <span className="doctor-worklist-heading__eyebrow">Không gian lâm sàng</span>
-            <h1>Hàng đợi đánh giá</h1>
-            <p>Ưu tiên tín hiệu cần chú ý, theo dõi tiến độ và mở phiếu để kiểm chứng.</p>
-          </div>
-        </header>
+        <DoctorPageHeader
+          eyebrow="Không gian lâm sàng"
+          title="Hàng đợi đánh giá"
+          description="Ưu tiên tín hiệu cần chú ý, theo dõi tiến độ và mở phiếu để kiểm chứng."
+        />
 
         <DoctorQueueOverview counts={counts} />
 
         <section className="doctor-worklist-surface" aria-labelledby="doctor-worklist-title">
           <h2 id="doctor-worklist-title" className="sr-only">Danh sách phiếu cần đánh giá</h2>
-          <div className="doctor-worklist-surface__filters">
-            <QueueTabs active={tab} counts={counts} onChange={changeTab} />
-          </div>
-
-          <div className="doctor-worklist-toolbar">
-            <div>
-              <strong>{total} phiếu</strong>
-              <span>trong bộ lọc hiện tại</span>
-            </div>
-            <p>Sắp xếp theo mức ưu tiên</p>
-          </div>
+          <DoctorQueueToolbar
+            filters={<QueueTabs active={tab} counts={counts} onChange={changeTab} />}
+            total={total}
+            itemLabel="phiếu trong bộ lọc"
+            contextLabel="Ưu tiên lâm sàng trước"
+          />
 
           <div className="doctor-worklist-body" aria-live="polite">
             {loading && (
@@ -116,42 +113,41 @@ export default function DoctorPage() {
             )}
 
             {error && !loading && (
-              <div className="doctor-worklist-message doctor-worklist-message--error" role="alert">
-                <strong>Không tải được dữ liệu hàng đợi.</strong>
-                <p>{error}</p>
-                <button type="button" onClick={() => void load(tab, page)}>Thử lại</button>
-              </div>
+              <DoctorStatePanel
+                kind="error"
+                title="Không tải được dữ liệu hàng đợi"
+                description={error}
+                action={<Button type="button" variant="outline" onClick={() => void load(tab, page)}>Thử lại</Button>}
+              />
             )}
 
             {!error && !loading && items.length === 0 && (
-              <div className="doctor-worklist-message doctor-worklist-message--empty">
-                <span aria-hidden="true">✓</span>
-                <h2>
-                  {isPendingDefault
-                    ? hasVerified
-                      ? "Không có phiếu nào đang chờ kiểm chứng."
-                      : "Chưa có phiếu nào cần kiểm chứng."
-                    : "Không có phiếu nào khớp bộ lọc này."}
-                </h2>
-                <p>
-                  {isPendingDefault
-                    ? hasVerified
-                      ? "Tất cả phiếu đã đi qua hàng đợi hiện đã được xử lý."
-                      : "Hệ thống chưa tìm thấy phiếu có cờ cần bác sĩ xem."
-                    : "Bộ lọc hiện tại đang rỗng."}
-                </p>
-                {!isPendingDefault && (
-                  <button type="button" onClick={() => changeTab("pending")}>
-                    Xem tất cả phiếu đang chờ
-                  </button>
-                )}
-              </div>
+              <DoctorStatePanel
+                kind="empty"
+                title={isPendingDefault
+                  ? hasVerified
+                    ? "Không có phiếu nào đang chờ kiểm chứng"
+                    : "Chưa có phiếu nào cần kiểm chứng"
+                  : "Không có phiếu nào khớp bộ lọc này"}
+                description={isPendingDefault
+                  ? hasVerified
+                    ? "Tất cả phiếu đã đi qua hàng đợi hiện đã được xử lý."
+                    : "Hệ thống chưa tìm thấy phiếu có cờ cần bác sĩ xem."
+                  : "Bộ lọc hiện tại đang rỗng."}
+                action={!isPendingDefault
+                  ? <Button type="button" variant="outline" onClick={() => changeTab("pending")}>Xem phiếu đang chờ</Button>
+                  : undefined}
+              />
             )}
 
             {!error && !loading && items.length > 0 && (
               <ul className="doctor-worklist-rows">
-                {items.map((item) => (
-                  <li key={item.report_id}>
+                {items.map((item, index) => (
+                  <li
+                    key={item.report_id}
+                    className="motion-row-stagger"
+                    style={{ "--stagger-index": index } as React.CSSProperties}
+                  >
                     <QueueRow item={item} activeTab={tab} />
                   </li>
                 ))}

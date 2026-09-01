@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import MetricInput from "@/components/MetricInput";
 import UploadDropzone from "@/components/UploadDropzone";
+import AnalysisProgressStepper from "@/components/patient/AnalysisProgressStepper";
 import { API_BASE, authFetch } from "@/lib/api";
 import { getOcrIndicators, parseFiniteLabValue } from "@/lib/ocrReviewValidation.mjs";
 import { friendlyOcrError } from "@/lib/ocrErrors.mjs";
@@ -261,7 +262,6 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   const uploadsAllowed = Boolean(policy?.upload_enabled && policy.custom_image_allowed);
   const uploadUnavailable = policyLoaded && !uploadsAllowed;
   const currentStep = busyAction === "confirm" ? 3 : rows.length > 0 ? 2 : 1;
-  const workflowSteps = ["Tải phiếu", "Kiểm tra dữ liệu", "Phân tích", "Xem kết quả"];
   
   const readiness = useMemo(() => getConfirmReadiness(meta, rows), [meta, rows]);
   const globalReviewed = includedRows.length > 0 && includedRows.every(
@@ -281,26 +281,8 @@ export default function OcrReviewPanel({ onResult, onUnauthorized }: Props) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex items-center text-sm font-medium whitespace-nowrap overflow-x-auto pb-2 sm:pb-0 select-none" aria-label="Quy trình tải ảnh">
-        {workflowSteps.map((label, index) => {
-          const step = index + 1;
-          const isActiveOrPast = currentStep >= step;
-          return (
-            <Fragment key={label}>
-              <div className={`flex items-center gap-2 ${isActiveOrPast ? 'text-foreground' : 'text-muted-foreground/70'}`}>
-                <span className={`flex items-center justify-center w-6 h-6 rounded-full border text-xs font-semibold ${isActiveOrPast ? 'bg-[var(--surface)] border-[var(--border)] shadow-sm' : 'border-[var(--border)]/50'}`}>
-                  {step}
-                </span>
-                <span>{label}</span>
-              </div>
-              {index < workflowSteps.length - 1 && (
-                <div className="w-8 sm:w-12 h-px bg-[var(--border)]/60 mx-3 sm:mx-4" />
-              )}
-            </Fragment>
-          );
-        })}
-      </div>
+    <div className="space-y-8">
+      <AnalysisProgressStepper currentStep={currentStep} />
 
       <div className="mt-6">
         <UploadDropzone

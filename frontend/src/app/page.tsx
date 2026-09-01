@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { ViewTransition } from "react";
+import MotionBoundary from "@/components/common/MotionBoundary";
 import {
   AlertTriangle,
   Camera,
@@ -12,6 +14,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import { BrandLockup } from "@/components/common/BrandSignature";
+import { formatClinicalUnitSuffix } from "@/lib/clinicalUnit.mjs";
 
 const features = [
   {
@@ -55,12 +59,12 @@ const steps = [
 export default function LandingPage() {
 
   return (
-    <main className="landing-page">
+    <MotionBoundary variant="public">
+    <main className="landing-page motion-public-page">
       <nav className="landing-nav" aria-label="Điều hướng trang giới thiệu">
         <div className="landing-container landing-nav-inner">
           <Link href="/" className="landing-logo" aria-label="LumiLab">
-            <span className="brand-mark" aria-hidden="true">+</span>
-            <span>LumiLab</span>
+            <BrandLockup compact />
           </Link>
           <div className="landing-nav-links">
             <a href="#features">Tính năng</a>
@@ -76,13 +80,14 @@ export default function LandingPage() {
               này `router.replace()` sang trang của vai trò, nên link "Về trang
               giới thiệu" ở màn đăng nhập bấm vào là bị đá đi ngay. */}
           <div className="landing-nav-actions">
-            <Link href="/login" className="text-button">Đăng nhập</Link>
-            <Link href="/login?tab=register" className="landing-primary-link">Bắt đầu miễn phí</Link>
+            <Link href="/login" transitionTypes={["nav-forward"]} className="text-button">Đăng nhập</Link>
+            <Link href="/login?tab=register" transitionTypes={["nav-forward"]} className="landing-primary-link">Bắt đầu miễn phí</Link>
           </div>
         </div>
       </nav>
 
       <section className="landing-container landing-hero">
+        <ViewTransition default="none" enter="lumilens-layer-header">
         <div className="landing-hero-copy">
           <span className="landing-badge">Miễn phí · Không cần tài khoản để dùng thử</span>
           <h1>Hiểu rõ phiếu xét nghiệm của bạn, bằng tiếng Việt</h1>
@@ -91,15 +96,17 @@ export default function LandingPage() {
             cảnh báo giá trị bất thường và giúp bạn chuẩn bị câu hỏi mang đi khám.
           </p>
           <div className="landing-hero-actions">
-            <Link href="/login" className="landing-primary-link">Dùng thử ngay - không cần đăng ký</Link>
-            <Link href="/login" className="landing-secondary-link">Đăng nhập</Link>
+            <Link href="/login" transitionTypes={["nav-forward"]} className="landing-primary-link">Dùng thử ngay - không cần đăng ký</Link>
+            <Link href="/login" transitionTypes={["nav-forward"]} className="landing-secondary-link">Đăng nhập</Link>
           </div>
           <p className="landing-privacy-note">
-            <span aria-hidden="true">[]</span>
+            <ShieldCheck aria-hidden="true" />
             Chế độ khách không lưu bất kỳ dữ liệu nào.
           </p>
         </div>
+        </ViewTransition>
 
+        <ViewTransition default="none">
         <div className="landing-demo-card" aria-label="Minh họa kết quả xét nghiệm">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -109,7 +116,7 @@ export default function LandingPage() {
             <StatusIndicator state="abnormal" label="Cao" />
           </div>
           <p className="mt-5 text-4xl font-bold text-foreground">
-            12.4 <span className="text-base font-medium text-muted-foreground">10^9/L</span>
+            12.4 <span className="text-base font-medium text-muted-foreground">{formatClinicalUnitSuffix("10^9/L")}</span>
           </p>
           <div className="landing-range" aria-hidden="true">
             <span />
@@ -124,6 +131,7 @@ export default function LandingPage() {
             <p className="mt-1">Kết quả này có thể liên quan đến viêm, nhiễm trùng hoặc phản ứng của cơ thể.</p>
           </div>
         </div>
+        </ViewTransition>
       </section>
 
       <section className="landing-trust-band" aria-label="Cam kết sản phẩm">
@@ -188,7 +196,7 @@ export default function LandingPage() {
               Portal bác sĩ hỗ trợ xem phiếu xét nghiệm của bệnh nhân, ghi nhận xét lâm sàng
               và trả lời trực tiếp những câu hỏi bệnh nhân đã chọn.
             </p>
-            <Link href="/login" className="landing-text-link">Đăng nhập portal bác sĩ -&gt;</Link>
+            <Link href="/login" transitionTypes={["nav-forward"]} className="landing-text-link">Đăng nhập portal bác sĩ -&gt;</Link>
             <p className="mt-3 text-sm text-muted-foreground">Tài khoản bác sĩ do quản trị viên cấp.</p>
           </div>
         </div>
@@ -208,25 +216,25 @@ export default function LandingPage() {
       <section className="landing-cta">
         <div className="landing-container">
           <h2>Bắt đầu đọc phiếu xét nghiệm theo cách dễ hiểu hơn</h2>
-          <Link href="/login" className="landing-white-link">Dùng thử ngay</Link>
+          <Link href="/login" transitionTypes={["nav-forward"]} className="landing-white-link">Dùng thử ngay</Link>
         </div>
       </section>
 
       <footer className="landing-footer">
         <div className="landing-container landing-footer-inner">
           <div className="landing-logo">
-            <span className="brand-mark" aria-hidden="true">+</span>
-            <span>LumiLab</span>
+            <BrandLockup compact />
           </div>
           <p>© 2026 LumiLab. Thông tin chỉ mang tính tham khảo.</p>
           {/* Google kiểm trang chủ có dẫn tới chính sách quyền riêng tư không
               trước khi cho publish OAuth app. Nhưng lý do chính vẫn là người
               dùng phải tìm được nó mà không cần đoán URL. */}
-          <Link href="/privacy" className="landing-text-link">
+          <Link href="/privacy" transitionTypes={["nav-forward"]} className="landing-text-link">
             Chính sách quyền riêng tư
           </Link>
         </div>
       </footer>
     </main>
+    </MotionBoundary>
   );
 }

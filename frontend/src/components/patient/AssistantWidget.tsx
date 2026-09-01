@@ -8,9 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { MessageCircle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { BrandMark } from "@/components/common/BrandSignature";
 import ChatPanel from "@/components/patient/assistant/ChatPanel";
 import { useOrchestratorChat } from "@/components/patient/assistant/useOrchestratorChat";
 import {
@@ -20,6 +20,7 @@ import {
   type Role,
 } from "@/lib/api";
 import { actionDestination, sanitizeSuggestedAction } from "@/lib/assistantActions.mjs";
+import { MOTION_DURATIONS, type AssistantVisibility } from "@/lib/motion";
 import type { OrchestratorUiContext, SuggestedAction } from "@/types/orchestrator";
 
 type Props = {
@@ -44,6 +45,17 @@ function uiContextForPath(pathname: string, searchParams: URLSearchParams): Orch
   };
 }
 
+function contextLabelForUiContext(context: OrchestratorUiContext) {
+  if (context.candidate_report_ref) return "Đang hỗ trợ dựa trên phiếu hiện tại";
+  if (context.view === "trend" && context.candidate_analyte) {
+    return `Đang hỗ trợ dựa trên xu hướng ${context.candidate_analyte}`;
+  }
+  if (context.view === "trend") return "Đang hỗ trợ dựa trên xu hướng gần đây";
+  if (context.view === "analysis") return "Đang hỗ trợ tại màn hình phân tích";
+  if (context.view === "history") return "Đang hỗ trợ tại lịch sử xét nghiệm";
+  return "Hỗ trợ hiểu kết quả xét nghiệm của bạn";
+}
+
 export default function AssistantWidget({ role }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,8 +63,9 @@ export default function AssistantWidget({ role }: Props) {
   const launcherRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
-  const [open, setOpen] = useState(false);
+  const [visibility, setVisibility] = useState<AssistantVisibility>("closed");
   const [mobile, setMobile] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const [onboardingAccepted, setOnboardingAccepted] = useState(false);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
@@ -60,6 +73,7 @@ export default function AssistantWidget({ role }: Props) {
     () => uiContextForPath(pathname, searchParams),
     [pathname, searchParams],
   );
+  const contextLabel = useMemo(() => contextLabelForUiContext(uiContext), [uiContext]);
 
   const onUnauthorized = useCallback(() => {
     clearSession();
@@ -68,9 +82,6 @@ export default function AssistantWidget({ role }: Props) {
   const onOnboardingRequired = useCallback(() => setOnboardingAccepted(false), []);
   const onOnboardingAccepted = useCallback(() => setOnboardingAccepted(true), []);
 
-  // Chỉ bệnh nhân có hội thoại được lưu. Khách vẫn chat bình thường — hợp đồng
-  // của chế độ khách là không lưu gì, và ở đây nó được tôn trọng bằng cách
-  // không gọi API hội thoại, chứ không phải gọi rồi nuốt 403.
   const persistence = role === "patient";
 
   const {
@@ -79,7 +90,11 @@ export default function AssistantWidget({ role }: Props) {
     conversations,
     conversationId,
     loadingTranscript,
+    loadingConversations,
+    conversationListError,
+    transcriptError,
     openConversation,
+    refreshConversations,
     startNewChat,
     send,
     stop,
@@ -92,10 +107,50 @@ export default function AssistantWidget({ role }: Props) {
     onOnboardingAccepted,
   });
 
+  const openPanel = useCallback(() => {
+    setVisibility(reducedMotion ? "open" : "opening");
+  }, [reducedMotion]);
+
   const closePanel = useCallback(() => {
-    setOpen(false);
-    requestAnimationFrame(() => launcherRef.current?.focus());
-  }, []);
+    if (reducedMotion) {
+      setVisibility("closed");
+      requestAnimationFrame(() => launcherRef.current?.focus());
+      return;
+    }
+    setVisibility("closing");
+  }, [reducedMotion]);
+
+  const handleAnimationEnd = useCallback((event: React.AnimationEvent<HTMLElement>) => {
+    if (event.target !== panelRef.current) return;
+    if (visibility === "opening") {
+      setVisibility("open");
+    } else if (visibility === "closing") {
+      setVisibility("closed");
+      requestAnimationFrame(() => launcherRef.current?.focus());
+    }
+  }, [visibility]);
+
+  // Safety fallback timer if onAnimationEnd is skipped or suppressed
+  useEffect(() => {
+    if (visibility === "opening") {
+      const timer = setTimeout(() => {
+        setVisibility((current) => (current === "opening" ? "open" : current));
+      }, MOTION_DURATIONS.chatOpen + 120);
+      return () => clearTimeout(timer);
+    }
+    if (visibility === "closing") {
+      const timer = setTimeout(() => {
+        setVisibility((current) => {
+          if (current === "closing") {
+            requestAnimationFrame(() => launcherRef.current?.focus());
+            return "closed";
+          }
+          return current;
+        });
+      }, MOTION_DURATIONS.chatClose + 120);
+      return () => clearTimeout(timer);
+    }
+  }, [visibility]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -106,16 +161,37 @@ export default function AssistantWidget({ role }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => {
+      setReducedMotion(media.matches);
+      if (!media.matches) return;
+      setVisibility((current) => {
+        if (current === "opening") return "open";
+        if (current === "closing") {
+          requestAnimationFrame(() => launcherRef.current?.focus());
+          return "closed";
+        }
+        return current;
+      });
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (visibility !== "open") return;
     const frame = requestAnimationFrame(() => {
       if (onboardingAccepted) composerRef.current?.focus();
       else panelRef.current?.querySelector<HTMLButtonElement>(".assistant-onboarding button")?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [onboardingAccepted, open]);
+  }, [onboardingAccepted, visibility]);
+
+  const isPanelActive = visibility === "open" || visibility === "opening";
 
   useEffect(() => {
-    if (!open || !mobile || !panelRef.current) return;
+    if (!isPanelActive || !mobile || !panelRef.current) return;
     document.body.classList.add("assistant-mobile-open");
     const panel = panelRef.current;
     const siblings = panel.parentElement
@@ -131,13 +207,20 @@ export default function AssistantWidget({ role }: Props) {
         if (!inert) element.removeAttribute("inert");
       }
     };
-  }, [mobile, open]);
+  }, [isPanelActive, mobile]);
 
   async function acknowledge() {
     if (onboardingLoading) return;
     setOnboardingLoading(true);
     setOnboardingError(null);
     try {
+      if (persistence && conversationId === null) {
+        const createdId = await startNewChat();
+        if (createdId === null) {
+          setOnboardingError("Chưa thể bắt đầu cuộc trò chuyện. Vui lòng thử lại.");
+          return;
+        }
+      }
       await acknowledgeOrchestratorOnboarding();
       setOnboardingAccepted(true);
     } catch (caught: unknown) {
@@ -187,14 +270,17 @@ export default function AssistantWidget({ role }: Props) {
     }
     const destination = actionDestination(safeAction, role);
     if (destination) {
-      router.push(destination);
+      router.push(destination, { transitionTypes: ["nav-route"] });
       closePanel();
     }
   }
 
+  const open = visibility === "open" || visibility === "opening";
+  const isLauncherVisible = visibility === "closed";
+
   return (
     <>
-      {!open ? (
+      {isLauncherVisible ? (
         <button
           ref={launcherRef}
           type="button"
@@ -202,37 +288,46 @@ export default function AssistantWidget({ role }: Props) {
           aria-label={open ? "Đóng trợ lý AI" : "Mở trợ lý AI"}
           aria-expanded={open}
           aria-controls="patient-ai-assistant"
-          onClick={() => setOpen(true)}
+          onClick={openPanel}
         >
-          <MessageCircle aria-hidden="true" />
-          <span className="assistant-launcher-label">Hỏi trợ lý</span>
+          <BrandMark className="assistant-launcher-mark" />
+          <span className="assistant-launcher-copy">
+            <strong>Trợ lý Lumi</strong>
+            <small><i aria-hidden="true" /> Sẵn sàng hỗ trợ</small>
+          </span>
         </button>
       ) : null}
 
       <ChatPanel
-        open={open}
-        mobile={mobile}
-        role={role}
-        panelRef={panelRef}
-        composerRef={composerRef}
-        onboardingAccepted={onboardingAccepted}
-        onboardingLoading={onboardingLoading}
-        onboardingError={onboardingError}
-        turns={turns}
-        requestActive={requestActive}
-        conversations={conversations}
-        conversationId={conversationId}
-        loadingTranscript={loadingTranscript}
-        persistence={persistence}
-        onNewChat={() => void startNewChat()}
-        onOpenConversation={(id) => void openConversation(id)}
-        onClose={closePanel}
-        onAcknowledge={() => void acknowledge()}
-        onSend={(message) => void send(message)}
-        onStop={stop}
-        onRetry={(turnId) => void retry(turnId)}
-        onAction={runAction}
-        onPanelKeyDown={handlePanelKeyDown}
+          mobile={mobile}
+          role={role}
+          state={visibility}
+          panelRef={panelRef}
+          composerRef={composerRef}
+          contextLabel={contextLabel}
+          onboardingAccepted={onboardingAccepted}
+          onboardingLoading={onboardingLoading}
+          onboardingError={onboardingError}
+          turns={turns}
+          requestActive={requestActive}
+          conversations={conversations}
+          conversationId={conversationId}
+          loadingTranscript={loadingTranscript}
+          loadingConversations={loadingConversations}
+          conversationListError={conversationListError}
+          transcriptError={transcriptError}
+          persistence={persistence}
+          onNewChat={() => void startNewChat()}
+          onOpenConversation={(id) => void openConversation(id)}
+          onRefreshConversations={() => void refreshConversations()}
+          onClose={closePanel}
+          onAcknowledge={() => void acknowledge()}
+          onSend={(message) => void send(message)}
+          onStop={stop}
+          onRetry={(turnId) => void retry(turnId)}
+          onAction={runAction}
+          onPanelKeyDown={handlePanelKeyDown}
+          onAnimationEnd={handleAnimationEnd}
       />
     </>
   );

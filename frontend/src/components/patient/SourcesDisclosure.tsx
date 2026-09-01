@@ -1,5 +1,6 @@
 import { sourceHostname } from "@/lib/patientUi.mjs";
 import { citationContext, citationLabel, uniqueCitations, uniqueSourceUrls } from "@/lib/citationUi.mjs";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 import type { Citation } from "@/types/analysis";
 
 type Props = {
@@ -23,9 +24,9 @@ export default function SourcesDisclosure({ sources = [], citations = [] }: Prop
         {renderedCitations.map((citation) => (
           <li key={citation.source_id || citation.url}>
             <a href={citation.url} target="_blank" rel="noopener noreferrer">
-              {citationLabel(citation)}
+              {formatClinicalText(citationLabel(citation))}
             </a>
-            {citationContext(citation) && <small className="block text-slate-500">{citationContext(citation)}</small>}
+            {citationContext(citation) && <small className="block text-slate-500">{formatClinicalText(citationContext(citation))}</small>}
           </li>
         ))}
         {renderedCitations.length === 0 && renderedSources.map((source) => (

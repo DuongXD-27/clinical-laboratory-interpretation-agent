@@ -10,7 +10,8 @@ import {
   submitDoctorTrendReview,
   UnauthorizedError,
 } from "@/lib/api";
-import { formatDate, formatMoment, formatClinicalAssessment, formatPatientDemographics } from "@/lib/patientUi.mjs";
+import { formatDate, formatMoment, formatClinicalAssessment, formatPatientDemographics, reportTone } from "@/lib/patientUi.mjs";
+import { formatClinicalText, formatClinicalUnit } from "@/lib/clinicalUnit.mjs";
 import type {
   DoctorTrendReviewDetail,
   TrendPoint,
@@ -18,10 +19,15 @@ import type {
   TrendReviewAssessment,
 } from "@/types/analysis";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
+import { motionElementName } from "@/lib/motion";
+import DoctorSection from "@/components/doctor/DoctorSection";
+import DoctorStatePanel from "@/components/doctor/DoctorStatePanel";
 import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, LineChart, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, ClipboardList, FileChartColumn, LineChart, Send, Sparkles, UserRound } from "lucide-react";
 
 const ASSESSMENT_OPTIONS: { value: TrendReviewAssessment; label: string }[] = [
   { value: "confirmed", label: "Xác nhận nhận xét AI phù hợp" },
@@ -113,10 +119,15 @@ export default function DoctorTrendReviewDetailPage() {
   if (loading) {
     return (
       <div className="doctor-page doctor-detail-page">
-        <DoctorPageHeader eyebrow="Đánh giá xu hướng" title="Đang tải yêu cầu" />
-        <section className="doctor-detail-skeleton" aria-label="Đang tải yêu cầu đánh giá xu hướng">
-          <div className="skeleton-card" />
-          <div className="skeleton-card" />
+        <DoctorPageHeader eyebrow="Đánh giá xu hướng" title="Đang tải yêu cầu…" />
+        <section className="doctor-detail-skeleton" aria-label="Đang tải yêu cầu đánh giá xu hướng" role="status">
+          <div className="doctor-detail-skeleton__grid">
+            <div className="doctor-detail-skeleton__primary">
+              <Skeleton />
+              <Skeleton />
+            </div>
+            <Skeleton className="doctor-detail-skeleton__sidebar" />
+          </div>
         </section>
       </div>
     );
@@ -126,12 +137,16 @@ export default function DoctorTrendReviewDetailPage() {
     return (
       <div className="doctor-page doctor-detail-page">
         <DoctorPageHeader eyebrow="Đánh giá xu hướng" title="Không mở được yêu cầu" />
-        <section className="doctor-state-card doctor-state-card--error">
-          <div className="doctor-error-state" role="alert">
-            <p>{error || "Không tìm thấy yêu cầu đánh giá xu hướng."}</p>
-            <Link href="/doctor/trend-reviews">Quay lại danh sách</Link>
-          </div>
-        </section>
+        <DoctorStatePanel
+          kind="error"
+          title="Không mở được yêu cầu đánh giá xu hướng"
+          description={error || "Không tìm thấy yêu cầu đánh giá xu hướng."}
+          action={(
+            <Button render={<Link href="/doctor/trend-reviews" transitionTypes={["nav-back"]} />} nativeButton={false} variant="outline">
+              Quay lại danh sách
+            </Button>
+          )}
+        />
       </div>
     );
   }
@@ -144,6 +159,7 @@ export default function DoctorTrendReviewDetailPage() {
       <DoctorPageHeader
         eyebrow="ĐÁNH GIÁ XU HƯỚNG"
         title={`Đánh giá xu hướng ${review.display_name}`}
+        transitionName={motionElementName("doctor-trend-review", review.id)}
         description={
           <div className="doctor-trend-hero-meta">
             <p className="doctor-trend-hero-meta__primary">
@@ -171,20 +187,14 @@ export default function DoctorTrendReviewDetailPage() {
 
       <div className="doctor-trend-review-grid">
         <section className="doctor-trend-primary-col" aria-label="Chi tiết đánh giá xu hướng">
-          <article className="finding-card finding-card--normal trend-chart-card">
-            <div className="finding-card__header">
-              <div>
-                <h2><LineChart aria-hidden="true" /> {review.display_name}</h2>
-                <p className="finding-card__ref">
-                  {review.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"} · {review.canonical_unit}
-                </p>
-              </div>
-              <span className="doctor-card-meta">
-                {points.length} mốc xét nghiệm
-              </span>
-            </div>
-
-            <div className="mt-5">
+          <DoctorSection
+            className="trend-chart-card"
+            title={review.display_name}
+            description={`${review.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"} · ${formatClinicalUnit(review.canonical_unit)}`}
+            icon={LineChart}
+            meta={<span className="doctor-section-count">{points.length} mốc</span>}
+          >
+            <div className="doctor-trend-chart">
               <TrendChart
                 analyte={review.display_name}
                 unit={review.canonical_unit}
@@ -196,21 +206,20 @@ export default function DoctorTrendReviewDetailPage() {
               />
             </div>
 
-            <div className="finding-card__ai mt-6">
+            <div className="finding-card__ai doctor-ai-review">
               <p className="doctor-ai-label"><Sparkles aria-hidden="true" /> Nhận xét xu hướng của AI</p>
               <p className="finding-card__explanation text-[var(--foreground-secondary)] leading-relaxed">
-                {review.llm_explanation_snapshot}
+                {formatClinicalText(review.llm_explanation_snapshot)}
               </p>
             </div>
-          </article>
+          </DoctorSection>
 
-          <article className="finding-card finding-card--normal trend-data-card mt-6">
-            <div className="finding-card__header">
-              <div>
-                <h2>Dữ liệu các mốc xét nghiệm</h2>
-                <p className="finding-card__ref">{points.length} mốc được ghi nhận khi bệnh nhân gửi yêu cầu.</p>
-              </div>
-            </div>
+          <DoctorSection
+            className="trend-data-card"
+            title="Dữ liệu các mốc xét nghiệm"
+            description={`${points.length} mốc được ghi nhận khi bệnh nhân gửi yêu cầu.`}
+            icon={FileChartColumn}
+          >
             <div className="doctor-table-wrap">
               <table className="doctor-data-table">
                 <thead>
@@ -227,14 +236,16 @@ export default function DoctorTrendReviewDetailPage() {
                     <tr key={`${point.report_id}-${point.test_date}`}>
                       <td>{formatDate(point.test_date)}</td>
                       <td><strong>{point.value}</strong></td>
-                      <td>{review.canonical_unit}</td>
+                      <td>{formatClinicalUnit(review.canonical_unit)}</td>
                       <td>
-                        <span className={`status-badge status-badge--${String(point.assessment).toLowerCase()}`}>
-                          {formatClinicalAssessment(point.assessment)}
-                        </span>
+                        <StatusIndicator
+                          state={reportTone(point.assessment)}
+                          label={formatClinicalAssessment(point.assessment)}
+                          level="inline"
+                        />
                       </td>
                       <td>
-                        <Link href={`/doctor/reports/${point.report_id}`} className="doctor-table-link">
+                        <Link href={`/doctor/reports/${point.report_id}`} transitionTypes={["nav-forward"]} className="doctor-table-link">
                           #{point.report_id}
                         </Link>
                       </td>
@@ -243,12 +254,11 @@ export default function DoctorTrendReviewDetailPage() {
                 </tbody>
               </table>
             </div>
-          </article>
+          </DoctorSection>
         </section>
 
         <aside className="doctor-report-sidebar" aria-label="Thông tin bổ sung và nhận xét">
-          <section className="doctor-side-card">
-            <h2>Thông tin yêu cầu</h2>
+          <DoctorSection className="doctor-side-card" title="Bệnh nhân & yêu cầu" icon={UserRound}>
             <dl className="doctor-metadata-list">
               <div>
                 <dt>Bệnh nhân</dt>
@@ -275,13 +285,12 @@ export default function DoctorTrendReviewDetailPage() {
                 <dd>{statusText(review)}</dd>
               </div>
             </dl>
-          </section>
+          </DoctorSection>
 
-          <section className="doctor-side-card">
-            <h2>Nhận xét chuyên môn</h2>
+          <DoctorSection className="doctor-side-card" title="Nhận xét chuyên môn" icon={ClipboardList}>
             {readOnly && review.doctor_comment ? (
               <div className="doctor-question-answer">
-                <p className="doctor-comment-text">{review.doctor_comment}</p>
+                <p className="doctor-comment-text">{formatClinicalText(review.doctor_comment)}</p>
                 <span className="doctor-assessment-badge">{assessmentText(review.doctor_assessment)}</span>
               </div>
             ) : (
@@ -290,17 +299,19 @@ export default function DoctorTrendReviewDetailPage() {
                   <label className="doctor-form-label" htmlFor="trend-review-assessment">
                     Đánh giá xu hướng
                   </label>
-                  <select
+                  <NativeSelect
                     id="trend-review-assessment"
                     className="doctor-select"
+                    name="trend-review-assessment"
+                    autoComplete="off"
                     value={assessment}
                     disabled={saving}
                     onChange={(event) => setAssessment(event.target.value as TrendReviewAssessment)}
                   >
                     {ASSESSMENT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                      <NativeSelectOption key={option.value} value={option.value}>{option.label}</NativeSelectOption>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
 
                 <div className="doctor-form-field">
@@ -309,11 +320,13 @@ export default function DoctorTrendReviewDetailPage() {
                   </label>
                   <Textarea
                     id="trend-review-comment"
+                    name="trend-review-comment"
+                    autoComplete="off"
                     value={comment}
                     disabled={saving}
                     maxLength={8000}
                     rows={5}
-                    placeholder="Nhập nhận xét chuyên môn về diễn tiến chỉ số..."
+                    placeholder="Nhập nhận xét chuyên môn về diễn tiến chỉ số…"
                     onChange={(event) => setComment(event.target.value)}
                   />
                   {comment.trim().length === 0 ? (
@@ -334,12 +347,12 @@ export default function DoctorTrendReviewDetailPage() {
                     onClick={() => void handleSubmit()}
                   >
                     <Send data-icon="inline-start" aria-hidden="true" />
-                    {saving ? "Đang gửi..." : "Gửi đánh giá"}
+                    {saving ? "Đang gửi…" : "Gửi đánh giá"}
                   </Button>
                 </div>
               </div>
             )}
-          </section>
+          </DoctorSection>
         </aside>
       </div>
     </div>

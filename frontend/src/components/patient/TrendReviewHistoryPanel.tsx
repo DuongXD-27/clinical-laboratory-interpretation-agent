@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
 } from "@/lib/api";
 import { formatDate, formatMoment } from "@/lib/patientUi.mjs";
+import { formatClinicalText, formatClinicalUnit } from "@/lib/clinicalUnit.mjs";
 import type { TrendResponse, TrendReview } from "@/types/analysis";
 import StatusIndicator from "@/components/common/StatusIndicator";
 
@@ -108,7 +109,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
                 {review.doctor_comment && (
                   <div className="status-review-note">
                     <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
-                      {review.doctor_comment}
+                      {formatClinicalText(review.doctor_comment)}
                     </p>
                     <p className="text-xs text-slate-600">
                       {review.reviewed_by_username || "Bác sĩ"}
@@ -138,7 +139,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
                     Nhận xét AI tại thời điểm gửi
                   </p>
                   <p className="text-sm leading-relaxed text-slate-700">
-                    {review.llm_explanation_snapshot}
+                    {formatClinicalText(review.llm_explanation_snapshot)}
                   </p>
                 </div>
 
@@ -157,7 +158,7 @@ export default function TrendReviewHistoryPanel({ trend, onUnauthorized, onClose
                         <tr key={`${review.id}-${point.report_id}-${point.test_date}`} className="border-b border-slate-100">
                           <td className="py-2 pr-4 text-slate-700">{formatDate(point.test_date)}</td>
                           <td className="py-2 pr-4 font-semibold text-slate-900">{point.value}</td>
-                          <td className="py-2 pr-4 text-slate-600">{review.trend_snapshot.canonical_unit}</td>
+                          <td className="py-2 pr-4 text-slate-600">{formatClinicalUnit(review.trend_snapshot.canonical_unit)}</td>
                           <td className="py-2 text-slate-600">{point.assessment}</td>
                         </tr>
                       ))}

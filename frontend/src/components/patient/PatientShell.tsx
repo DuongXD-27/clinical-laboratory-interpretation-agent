@@ -3,10 +3,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@/components/common/LayoutPrimitives";
+import { ShellLoadingState } from "@/components/common/SystemState";
 import AssistantWidget from "@/components/patient/AssistantWidget";
 import { clearSession, getRole, getToken, getUsername, type Role } from "@/lib/api";
 import PatientSidebar from "./PatientSidebar";
 import PatientTopbar from "./PatientTopbar";
+import RouteTransition from "@/components/common/RouteTransition";
 
 const WIDE_CONTENT_ROUTES = ["/patient/analysis", "/patient/history", "/patient/reports/", "/patient/trends"];
 
@@ -37,11 +39,7 @@ export default function PatientShell({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
-        <div className="text-muted-foreground animate-pulse" role="status">Đang mở khu vực bệnh nhân...</div>
-      </main>
-    );
+    return <ShellLoadingState label="Đang mở khu vực bệnh nhân…" />;
   }
 
   const isGuest = session.role === "guest";
@@ -55,8 +53,9 @@ export default function PatientShell({ children }: { children: ReactNode }) {
         sidebar={<PatientSidebar pathname={pathname} isGuest={isGuest} username={session.username} onLogout={logout} />}
         topbar={<PatientTopbar pathname={pathname} isGuest={isGuest} username={session.username} onLogout={logout} />}
         floating={<AssistantWidget role={session.role} />}
+        motionKey={pathname}
       >
-        <div key={pathname} className="page-transition-enter">{children}</div>
+        <RouteTransition variant="patient">{children}</RouteTransition>
       </AppShell>
     </>
   );

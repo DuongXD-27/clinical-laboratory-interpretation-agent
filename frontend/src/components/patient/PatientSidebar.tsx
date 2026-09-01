@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LayoutDashboard, FileSearch, History, TrendingUp, UserRound, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLockup } from "@/components/common/BrandSignature";
 
 import { CANONICAL_PATIENT_NAV_ITEMS, isNavActive } from "@/lib/patientRoutes.mjs";
 
@@ -37,10 +38,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
       <div className="absolute inset-0 pointer-events-none shadow-[inset_1px_1px_0_rgba(255,255,255,0.4)] mix-blend-overlay" aria-hidden="true" />
       {/* Brand */}
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
-        <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab</span>
-          <span className="text-xs text-muted-foreground">Không gian bệnh nhân</span>
-        </div>
+        <BrandLockup context="Không gian bệnh nhân" />
       </div>
 
       {/* Navigation */}
@@ -52,6 +50,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
             <Link
               key={item.href}
               href={item.href}
+              transitionTypes={["nav-route"]}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-2xl text-sm font-medium transition-colors relative",
@@ -67,7 +66,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
                   aria-hidden="true" 
                 />
               )}
-              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <Icon data-icon="inline-start" className="size-5 shrink-0" aria-hidden="true" />
               {item.label}
             </Link>
           );
@@ -93,7 +92,7 @@ export default function PatientSidebar({ pathname, isGuest, username, onLogout }
           onClick={onLogout}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--status-critical-fg)] hover:bg-[var(--status-critical-bg)] rounded-lg transition-colors font-medium"
         >
-          <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <LogOut data-icon="inline-start" className="size-4 shrink-0" aria-hidden="true" />
           {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
         </button>
       </div>

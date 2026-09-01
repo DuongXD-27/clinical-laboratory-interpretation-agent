@@ -9,9 +9,19 @@ import OcrReviewPanel from "@/components/OcrReviewPanel";
 import { authFetch, clearSession, getRole, getToken } from "@/lib/api";
 import { buildManualIndicators, MANUAL_ANALYTES, manualAnalyteAttentionMessage } from "@/lib/manualEntry.mjs";
 import type { AnalysisResult } from "@/types/analysis";
-import { cn } from "@/lib/utils";
 import PatientPageHeader from "@/components/patient/PatientPageHeader";
 import LocalizedDateInput from "@/components/common/LocalizedDateInput";
+import SegmentedControl from "@/components/common/SegmentedControl";
+import { SystemState } from "@/components/common/SystemState";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+
+const INPUT_MODES = [
+  { value: "manual", label: "Nhập tay", controls: "manual-analysis-panel" },
+  { value: "ocr", label: "Tải ảnh phiếu", controls: "ocr-analysis-panel" },
+] as const;
 
 function metricInputId(name: string) {
   return name.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
@@ -128,7 +138,7 @@ export default function PatientAnalysisPage() {
   }
 
   if (checkingAuth) {
-    return <div className="loading-message" role="status">Đang mở khu vực phân tích...</div>;
+    return <SystemState kind="loading" title="Đang mở khu vực phân tích…" compact />;
   }
 
   const selectedMetrics = MANUAL_ANALYTES.filter((metric) => selectedManualMetrics.includes(metric.name));
@@ -162,44 +172,24 @@ export default function PatientAnalysisPage() {
             </div>
           )}
 
-          <div className="space-y-8">
+          <div className="analysis-workspace">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2" aria-label="Cách nhập kết quả xét nghiệm" role="group">
-                <button
-                  type="button"
-                  aria-pressed={inputMode === "manual"}
-                  onClick={() => setInputMode("manual")}
-                  className={cn(
-                    "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    inputMode === "manual"
-                      ? "bg-[var(--glass-surface)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_2px_10px_rgba(0,0,0,0.05)] border border-[var(--holo-cyan)]/20 text-foreground"
-                      : "bg-[var(--surface)] border border-[var(--border)] text-muted-foreground hover:bg-[var(--surface-subtle)] hover:text-foreground"
-                  )}
-                >
-                  Nhập tay
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={inputMode === "ocr"}
-                  onClick={() => setInputMode("ocr")}
-                  className={cn(
-                    "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    inputMode === "ocr"
-                      ? "bg-[var(--glass-surface)] backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_2px_10px_rgba(0,0,0,0.05)] border border-[var(--holo-cyan)]/20 text-foreground"
-                      : "bg-[var(--surface)] border border-[var(--border)] text-muted-foreground hover:bg-[var(--surface-subtle)] hover:text-foreground"
-                  )}
-                >
-                  Tải ảnh phiếu
-                </button>
-              </div>
+              <SegmentedControl
+                value={inputMode}
+                options={INPUT_MODES}
+                onValueChange={setInputMode}
+                ariaLabel="Cách nhập kết quả xét nghiệm"
+                semantics="tabs"
+                className="analysis-mode-control"
+              />
               
-              <button type="button" onClick={resetAnalysis} className="px-4 py-2 text-sm font-medium text-destructive/90 bg-transparent hover:text-destructive hover:bg-destructive/5 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-destructive/30 rounded-xl outline-none">
+              <Button type="button" variant="ghost" onClick={resetAnalysis} className="text-[var(--status-critical-fg)]">
                 Xóa dữ liệu đang nhập
-              </button>
+              </Button>
             </div>
 
             {inputMode === "manual" && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div id="manual-analysis-panel" role="tabpanel" className="analysis-panel motion-tab-pane motion-tab-pane--clinical">
                 <div className="flex items-center text-sm font-medium whitespace-nowrap overflow-x-auto pb-2 sm:pb-0 select-none" aria-label="Quy trình nhập tay">
                   <div className="flex items-center gap-2 text-foreground">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--border)] text-xs font-semibold shadow-sm">1</span>
@@ -226,24 +216,21 @@ export default function PatientAnalysisPage() {
                       </p>
                     </div>
                     <div className="flex flex-col sm:items-end gap-2 shrink-0">
-                      <button type="button" onClick={() => setSelectorOpen(true)} className="px-4 py-2 text-sm font-medium bg-[var(--surface)] border border-[var(--border)] rounded-xl hover:bg-[var(--surface-subtle)] transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex items-center gap-2 justify-center w-full sm:w-auto">
+                      <Button type="button" variant="outline" onClick={() => setSelectorOpen(true)} className="w-full sm:w-auto">
                         <span aria-hidden="true">+</span> Thêm chỉ số
-                      </button>
+                      </Button>
                       <p className="text-xs font-medium text-muted-foreground">Đã chọn {selectedMetrics.length} chỉ số</p>
                     </div>
                   </div>
 
                   {selectedMetrics.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 sm:p-10 bg-[var(--surface-subtle)] border border-[var(--border)]/60 border-dashed rounded-[1.25rem] text-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.01)]">
-                      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-background border border-[var(--border)] text-[var(--brand)] text-xl shadow-sm mb-4 transition-transform hover:scale-105 duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100" aria-hidden="true">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                      </div>
-                      <p className="text-base font-semibold text-foreground">Chưa có chỉ số xét nghiệm</p>
-                      <p className="text-sm text-muted-foreground mt-1 mb-4">Hãy thêm các chỉ số có trên phiếu kết quả của bạn.</p>
-                      <button type="button" onClick={() => setSelectorOpen(true)} className="text-sm font-medium text-[var(--brand)] hover:text-[var(--brand-strong)] hover:underline focus-visible:ring-2 focus-visible:ring-ring rounded outline-none transition-colors duration-200">
-                        Thêm chỉ số đầu tiên
-                      </button>
-                    </div>
+                    <SystemState
+                      kind="empty"
+                      title="Chưa có chỉ số xét nghiệm"
+                      description="Hãy thêm các chỉ số có trên phiếu kết quả của bạn."
+                      className="analysis-empty-state"
+                      action={<Button type="button" variant="outline" onClick={() => setSelectorOpen(true)}>Thêm chỉ số đầu tiên</Button>}
+                    />
                   ) : (
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {selectedMetrics.map((metric) => (
@@ -268,15 +255,15 @@ export default function PatientAnalysisPage() {
                     <p className="text-sm text-muted-foreground mt-1">Thông tin này được dùng để đối chiếu khoảng tham chiếu.</p>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 bg-[var(--surface-subtle)] p-5 sm:p-6 rounded-2xl border border-[var(--border)]">
+                  <div className="analysis-meta-grid">
                     <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-age">Tuổi
-                      <input id="manual-age" type="number" min="18" max="60" value={manualMeta.age} onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground" />
+                      <Input id="manual-age" type="number" min="18" max="60" value={manualMeta.age} onChange={(event) => setManualMeta((current) => ({ ...current, age: event.target.value }))} className="mt-2" />
                     </label>
                     <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-gender">Giới tính
-                      <select id="manual-gender" value={manualMeta.gender} onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow text-foreground">
-                        <option value="male">Nam</option>
-                        <option value="female">Nữ</option>
-                      </select>
+                      <NativeSelect className="mt-2 w-full" id="manual-gender" value={manualMeta.gender} onChange={(event) => setManualMeta((current) => ({ ...current, gender: event.target.value }))}>
+                        <NativeSelectOption value="male">Nam</NativeSelectOption>
+                        <NativeSelectOption value="female">Nữ</NativeSelectOption>
+                      </NativeSelect>
                     </label>
                     <label className="flex flex-col text-sm font-medium text-foreground" htmlFor="manual-date">Ngày xét nghiệm
                       <LocalizedDateInput id="manual-date" ariaLabel="Ngày xét nghiệm" value={manualMeta.date} onChange={(event) => setManualMeta((current) => ({ ...current, date: event.target.value }))} className="mt-2 w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--brand-soft)] transition-shadow" />
@@ -284,19 +271,19 @@ export default function PatientAnalysisPage() {
                   </div>
                 </div>
 
-                {error && <div role="alert" className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">{error}</div>}
+                {error && <Alert variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
                 
                 <div className="pt-2">
-                  <button type="button" onClick={handleManualAnalyze} disabled={loading} className="w-full sm:w-auto px-8 py-3.5 bg-[var(--brand)] text-primary-foreground text-sm font-semibold rounded-xl hover:bg-[var(--brand-strong)] transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-sm shadow-[var(--brand-soft)] hover:shadow-md hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-                    {loading ? "Đang phân tích kết quả..." : "Phân tích kết quả"}
-                  </button>
+                  <Button type="button" size="lg" onClick={handleManualAnalyze} disabled={loading} className="w-full sm:w-auto">
+                    {loading ? "Đang phân tích kết quả…" : "Phân tích kết quả"}
+                  </Button>
                 </div>
               </div>
             </div>
           )}
 
             {inputMode === "ocr" && (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div id="ocr-analysis-panel" role="tabpanel" className="motion-tab-pane motion-tab-pane--clinical">
                 <OcrReviewPanel
                   key={ocrPanelKey}
                   onResult={(data) => {

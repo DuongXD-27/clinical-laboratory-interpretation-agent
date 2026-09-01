@@ -3,8 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Stethoscope } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import { BrandLockup } from "@/components/common/BrandSignature";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import SegmentedControl from "@/components/common/SegmentedControl";
+import { Separator } from "@/components/ui/separator";
 import { homeForRole } from "@/lib/roleHome.mjs";
 import { login, register, startGuestSession } from "@/lib/api";
 
@@ -14,6 +21,11 @@ const DEMO_ACCOUNTS = [
 ];
 
 type Mode = "login" | "register";
+
+const AUTH_MODES = [
+  { value: "login", label: "Đăng nhập", id: "auth-login-tab", controls: "auth-access-panel" },
+  { value: "register", label: "Đăng ký", id: "auth-register-tab", controls: "auth-access-panel" },
+] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,6 +45,7 @@ export default function LoginPage() {
 
   function switchMode(next: Mode) {
     setMode(next);
+    window.history.replaceState(null, "", next === "register" ? "/login?tab=register" : "/login");
     setError(null);
     setPassword("");
     setConfirmPassword("");
@@ -77,7 +90,7 @@ export default function LoginPage() {
     try {
       // Đăng ký xong đăng nhập luôn, để người dùng không phải nhập lại.
       const session = mode === "login" ? await login(username, password) : await register(username, password, email);
-      router.push(homeForRole(session.role));
+      router.push(homeForRole(session.role), { transitionTypes: ["nav-forward"] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thực hiện được, vui lòng thử lại");
     } finally {
@@ -90,7 +103,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await startGuestSession();
-      router.push("/patient");
+      router.push("/patient", { transitionTypes: ["nav-forward"] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không mở được phiên dùng thử");
     } finally {
@@ -105,165 +118,170 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-7 bg-[var(--background)] px-6 py-10 text-foreground">
-      <div className="text-center">
-        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-xl bg-[var(--brand)] text-white shadow-[0_8px_24px_rgba(8,126,139,0.18)]" aria-hidden="true">
-          <Stethoscope className="h-6 w-6" />
+    <main className="auth-page motion-auth-page">
+      <section className="auth-intro" aria-labelledby="auth-title">
+        <BrandLockup context="Quiet medical intelligence" />
+        <div>
+          <p className="type-eyebrow">Không gian riêng tư của bạn</p>
+          <h1 id="auth-title" className="text-2xl font-semibold text-foreground">
+            Hiểu kết quả xét nghiệm, rõ ràng hơn
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Đăng nhập, đăng ký, hoặc dùng thử ngay không cần tài khoản.
+          </p>
         </div>
-        <h1 className="text-2xl font-semibold text-foreground">
-          LumiLab - Hiểu Kết Quả Xét Nghiệm
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Đăng nhập, đăng ký, hoặc dùng thử ngay không cần tài khoản
-        </p>
-        <Link href="/" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-strong)] hover:underline">
-          <ArrowLeft className="h-4 w-4" />
+        <ul className="auth-intro__trust" aria-label="Cam kết của LumiLab">
+          <li>Diễn giải bằng tiếng Việt dễ hiểu</li>
+          <li>Hiển thị nguồn và khoảng tham chiếu</li>
+          <li>Không thay thế chẩn đoán của bác sĩ</li>
+        </ul>
+        <Link href="/" className="auth-back-link" transitionTypes={["nav-back"]}>
+          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
           Về trang giới thiệu
         </Link>
-      </div>
+      </section>
 
-      <div className="flex min-h-[438px] w-full max-w-sm flex-col gap-4 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-surface)] p-6 shadow-[var(--shadow-glass)] backdrop-blur-md">
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-subtle)] p-1">
-          {(["login", "register"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => switchMode(value)}
-              className={`h-9 rounded-md text-sm font-medium transition-colors ${
-                mode === value
-                  ? "bg-[var(--surface)] text-[var(--brand-strong)] shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {value === "login" ? "Đăng nhập" : "Đăng ký"}
-            </button>
-          ))}
+      <section className="auth-panel" aria-label="Khu vực truy cập tài khoản">
+      <section className="auth-card" aria-label="Đăng nhập hoặc đăng ký">
+        <div className="auth-card__mobile-brand">
+          <BrandLockup compact />
+        </div>
+        <SegmentedControl
+          value={mode}
+          options={AUTH_MODES}
+          onValueChange={switchMode}
+          ariaLabel="Chọn hình thức truy cập"
+          semantics="tabs"
+          className="auth-mode-tabs"
+        />
+
+        <div
+          key={mode}
+          id="auth-access-panel"
+          className="motion-auth-form"
+          role="tabpanel"
+          aria-labelledby={mode === "login" ? "auth-login-tab" : "auth-register-tab"}
+        >
+        <div className="auth-card__heading">
+          <h2>{mode === "login" ? "Chào mừng bạn trở lại" : "Tạo tài khoản bệnh nhân"}</h2>
+          <p>{mode === "login" ? "Tiếp tục vào không gian LumiLab của bạn." : "Lưu lịch sử và theo dõi xu hướng theo thời gian."}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="username" className="text-sm font-medium text-foreground">
+        <form onSubmit={handleSubmit} className="auth-form">
+          <FieldGroup className="auth-fields">
+          <Field className="auth-field">
+            <FieldLabel htmlFor="username">
               {mode === "login" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"}
-            </label>
-            <input
+            </FieldLabel>
+            <Input
               id="username"
+              name="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               autoComplete="username"
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
+              spellCheck={false}
+              aria-describedby={mode === "register" ? "username-description" : undefined}
             />
             {mode === "register" && (
-              <p className="text-xs leading-5 text-muted-foreground">
+              <FieldDescription id="username-description">
                 Từ 3 ký tự, chỉ dùng chữ, số và các ký tự _ . -
-              </p>
+              </FieldDescription>
             )}
-          </div>
+          </Field>
 
           {mode === "register" && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
-                Email <span className="font-normal text-muted-foreground">(không bắt buộc)</span>
-              </label>
-              <input
+            <Field className="auth-field">
+              <FieldLabel htmlFor="email">
+                Email <span>(không bắt buộc)</span>
+              </FieldLabel>
+              <Input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                placeholder="ban@example.com"
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
+                spellCheck={false}
+                placeholder="Ví dụ: ban@example.com"
+                aria-describedby="email-description"
               />
-              <p className="text-xs leading-5 text-muted-foreground">
+              <FieldDescription id="email-description">
                 Điền email thì lần sau đăng nhập được bằng cả tên lẫn email.
-              </p>
-            </div>
+              </FieldDescription>
+            </Field>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-foreground">
-              Mật khẩu
-            </label>
-            <input
+          <Field className="auth-field">
+            <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
+            <Input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
+              aria-describedby={mode === "register" ? "password-description" : undefined}
             />
-            {mode === "register" && <p className="text-xs leading-5 text-muted-foreground">Ít nhất 8 ký tự.</p>}
-          </div>
+            {mode === "register" && (
+              <FieldDescription id="password-description">Ít nhất 8 ký tự.</FieldDescription>
+            )}
+          </Field>
 
           {mode === "register" && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="confirm" className="text-sm font-medium text-foreground">
-                Nhập lại mật khẩu
-              </label>
-              <input
+            <Field className="auth-field">
+              <FieldLabel htmlFor="confirm">Nhập lại mật khẩu</FieldLabel>
+              <Input
                 id="confirm"
+                name="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-soft)]"
               />
-            </div>
+            </Field>
           )}
+          </FieldGroup>
 
-          {error && <p className="text-sm text-[var(--status-critical-fg)]">{error}</p>}
+          {error ? (
+            <Alert variant="destructive" role="alert">
+              <AlertTriangle aria-hidden="true" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-1 h-11 rounded-lg bg-[var(--brand)] font-medium text-white transition-colors hover:bg-[var(--brand-strong)] disabled:opacity-50"
-          >
-            {loading ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản bệnh nhân"}
-          </button>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Đang xử lý…" : mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản bệnh nhân"}
+          </Button>
         </form>
 
-        <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-[var(--border)]" />
-          <span className="text-xs text-muted-foreground">hoặc</span>
-          <span className="h-px flex-1 bg-[var(--border)]" />
-        </div>
+        <div className="auth-divider"><Separator /><span>hoặc</span><Separator /></div>
 
-        {/* Tự ẩn khi máy chủ chưa cấu hình GOOGLE_OAUTH_CLIENT_ID. */}
         <GoogleSignInButton
-          onSuccess={(role) => router.push(homeForRole(role))}
+          onSuccess={(role) => router.push(homeForRole(role), { transitionTypes: ["nav-forward"] })}
           onError={(message) => setError(message)}
         />
 
-        <button
-          type="button"
-          onClick={handleGuest}
-          disabled={loading}
-          className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] font-medium text-[var(--brand-strong)] transition-colors hover:bg-[var(--surface-subtle)] disabled:opacity-50"
-        >
+        <Button type="button" variant="outline" onClick={handleGuest} disabled={loading} className="w-full">
           Dùng thử với tư cách khách
-        </button>
-        <p className="text-center text-xs leading-5 text-muted-foreground">
-          Chế độ khách dùng thử được ngay, nhưng không lưu lịch sử xét nghiệm.
-        </p>
-      </div>
+        </Button>
+        <p className="auth-guest-note">Chế độ khách dùng thử được ngay, nhưng không lưu lịch sử xét nghiệm.</p>
 
-      <div className="flex flex-col items-center gap-2 pt-1">
-        <p className="text-xs text-muted-foreground">Tài khoản demo (chỉ điền nhanh vào form):</p>
-        <div className="flex flex-wrap justify-center gap-3">
-          {DEMO_ACCOUNTS.map((account) => (
-            <button
-              key={account.username}
-              type="button"
-              onClick={() => fillDemo(account)}
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-xs font-medium text-[var(--foreground-secondary)] transition-colors hover:bg-[var(--surface-subtle)] hover:text-foreground"
-            >
-              {account.label}
-            </button>
-          ))}
+        <div className="auth-demo">
+          <p>Tài khoản demo — chỉ điền nhanh vào form:</p>
+          <div>
+            {DEMO_ACCOUNTS.map((account) => (
+              <Button key={account.username} type="button" variant="ghost" size="sm" onClick={() => fillDemo(account)}>
+                {account.label}
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </section>
+      </section>
+    </main>
   );
 }

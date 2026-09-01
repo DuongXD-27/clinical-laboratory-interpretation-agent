@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import MotionBoundary from "@/components/common/MotionBoundary";
+import { ArrowLeft } from "lucide-react";
+import { BrandLockup } from "@/components/common/BrandSignature";
 
 export const metadata: Metadata = {
   title: "Chính sách quyền riêng tư · LumiLab",
@@ -22,7 +25,7 @@ const UPDATED = "23/08/2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-8">
+    <section className="policy-section">
       <h2 className="m-0 text-lg font-semibold tracking-tight text-[var(--foreground)]">{title}</h2>
       <div className="mt-2 flex flex-col gap-3 text-sm leading-relaxed text-[var(--foreground-secondary)]">
         {children}
@@ -33,10 +36,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-dvh bg-[var(--background)] px-5 py-10">
-      <article className="mx-auto w-full max-w-3xl">
-        <Link href="/" className="text-sm font-medium text-[var(--brand-strong)] hover:underline">
-          ← Về trang giới thiệu
+    <MotionBoundary variant="public">
+    <main className="policy-page motion-public-page">
+      <article className="policy-article">
+        <BrandLockup context="Quyền riêng tư và dữ liệu" />
+        <Link href="/" className="policy-back-link" transitionTypes={["nav-back"]}>
+          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+          Về trang giới thiệu
         </Link>
 
         <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[var(--foreground)] lg:text-3xl">
@@ -177,5 +183,6 @@ export default function PrivacyPage() {
         </p>
       </article>
     </main>
+    </MotionBoundary>
   );
 }

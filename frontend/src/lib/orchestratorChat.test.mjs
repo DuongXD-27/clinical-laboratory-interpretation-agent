@@ -142,6 +142,8 @@ test("critical presentation requires an authoritative alert and never infers fro
 test("component contract includes stop, retry, focus restoration, critical alerts, and safe sources", () => {
   const widget = readFileSync("src/components/patient/AssistantWidget.tsx", "utf8");
   const panel = readFileSync("src/components/patient/assistant/ChatPanel.tsx", "utf8");
+  const composer = readFileSync("src/components/patient/assistant/ChatComposer.tsx", "utf8");
+  const sources = readFileSync("src/components/patient/assistant/ChatSources.tsx", "utf8");
   const turn = readFileSync("src/components/patient/assistant/AssistantTurn.tsx", "utf8");
   const controller = readFileSync("src/components/patient/assistant/useOrchestratorChat.ts", "utf8");
 
@@ -150,10 +152,22 @@ test("component contract includes stop, retry, focus restoration, critical alert
   assert.match(turn, /Thử lại/);
   assert.match(panel, /Tin nhắn mới ↓/);
   assert.match(panel, /role="log"/);
-  assert.match(panel, /isComposing/);
+  assert.match(composer, /isComposing/);
   assert.match(turn, /Cần chú ý khẩn/);
-  assert.match(turn, /Nguồn tham khảo/);
+  assert.match(sources, /Nguồn tham khảo/);
   assert.doesNotMatch(turn, /indicator\.status === "HIGH".*CriticalAlert/s);
+});
+
+test("opening the assistant loads history metadata but never an old transcript", () => {
+  const controller = readFileSync("src/components/patient/assistant/useOrchestratorChat.ts", "utf8");
+  const panel = readFileSync("src/components/patient/assistant/ChatPanel.tsx", "utf8");
+
+  assert.match(controller, /useEffect\(\(\) => \{[\s\S]*refreshConversations\(\)/);
+  assert.doesNotMatch(controller, /pickInitialConversation|localStorage/);
+  assert.match(controller, /POST \/conversations là contract New Chat/);
+  assert.match(panel, /"conversation" \| "history"/);
+  assert.match(panel, /view === "history"/);
+  assert.match(panel, /<ChatThreadList/);
 });
 
 test("responsive and reduced-motion CSS contract is explicit", () => {

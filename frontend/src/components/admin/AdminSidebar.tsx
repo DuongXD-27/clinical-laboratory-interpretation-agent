@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Activity, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLockup } from "@/components/common/BrandSignature";
 
 export const adminNavigation = [{ href: "/admin", label: "Trace hệ thống", icon: Activity }];
 
@@ -25,12 +26,9 @@ interface AdminSidebarProps {
  */
 export default function AdminSidebar({ pathname, username, onLogout }: AdminSidebarProps) {
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--glass-surface)] backdrop-blur-md border-r border-[var(--glass-border)] sticky top-0 h-dvh z-40">
+    <aside className="role-sidebar hidden lg:flex">
       <div className="h-16 flex items-center px-6 border-b border-[var(--glass-border)]/50 shrink-0">
-        <div className="flex flex-col">
-          <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab Operations</span>
-          <span className="text-xs text-muted-foreground">Không gian vận hành</span>
-        </div>
+        <BrandLockup context="Không gian vận hành" />
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1" aria-label="Điều hướng vận hành">
@@ -41,6 +39,7 @@ export default function AdminSidebar({ pathname, username, onLogout }: AdminSide
             <Link
               key={item.href}
               href={item.href}
+              transitionTypes={["nav-route"]}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
@@ -55,7 +54,7 @@ export default function AdminSidebar({ pathname, username, onLogout }: AdminSide
                   aria-hidden="true"
                 />
               )}
-              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <Icon data-icon="inline-start" className="size-5 shrink-0" aria-hidden="true" />
               {item.label}
             </Link>
           );
@@ -79,7 +78,7 @@ export default function AdminSidebar({ pathname, username, onLogout }: AdminSide
           onClick={onLogout}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--status-critical-fg)] hover:bg-[var(--status-critical-bg)] rounded-lg transition-colors font-medium"
         >
-          <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <LogOut data-icon="inline-start" className="size-4 shrink-0" aria-hidden="true" />
           Đăng xuất
         </button>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 
 type Option<T extends string> = {
@@ -28,9 +29,22 @@ export default function SegmentedControl<T extends string>({
 }: Props<T>) {
   const isTabs = semantics === "tabs";
 
+  function moveTab(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (!isTabs || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? options.length - 1
+        : (index + (event.key === "ArrowRight" ? 1 : -1) + options.length) % options.length;
+    onValueChange(options[nextIndex].value);
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    tabs?.[nextIndex]?.focus();
+  }
+
   return (
     <div className={cn("segmented-control", className)} role={isTabs ? "tablist" : "group"} aria-label={ariaLabel}>
-      {options.map((option) => {
+      {options.map((option, index) => {
         const active = value === option.value;
         return (
           <button
@@ -44,6 +58,7 @@ export default function SegmentedControl<T extends string>({
             tabIndex={isTabs ? (active ? 0 : -1) : undefined}
             className={cn("segmented-control__item", active && "is-active")}
             onClick={() => onValueChange(option.value)}
+            onKeyDown={(event) => moveTab(event, index)}
           >
             {option.label}
           </button>

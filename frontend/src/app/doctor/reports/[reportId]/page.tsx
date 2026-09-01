@@ -7,10 +7,15 @@ import DoctorFindingCard from "@/components/doctor/DoctorFindingCard";
 import DoctorReportSidebar from "@/components/doctor/DoctorReportSidebar";
 import DoctorReviewProgressBar from "@/components/doctor/DoctorReviewProgressBar";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
+import DoctorSection from "@/components/doctor/DoctorSection";
+import DoctorStatePanel from "@/components/doctor/DoctorStatePanel";
 import SeverityBadge from "@/components/common/SeverityBadge";
 import VerificationBadge from "@/components/common/VerificationBadge";
 import ClinicalConfirmDialog from "@/components/common/ClinicalConfirmDialog";
-import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle2, ClipboardCheck } from "lucide-react";
+import { motionElementName } from "@/lib/motion";
 import {
   clearSession,
   completeDoctorReport,
@@ -112,10 +117,16 @@ export default function DoctorReportPage() {
   if (loading) {
     return (
       <div className="doctor-page doctor-detail-page">
-        <DoctorPageHeader eyebrow="Kiểm chứng báo cáo" title="Đang tải phiếu xét nghiệm" />
-        <section className="doctor-detail-skeleton" aria-label="Đang tải phiếu xét nghiệm">
-          <div className="skeleton-card" />
-          <div className="skeleton-card" />
+        <DoctorPageHeader eyebrow="Kiểm chứng báo cáo" title="Đang tải phiếu xét nghiệm…" />
+        <section className="doctor-detail-skeleton" aria-label="Đang tải phiếu xét nghiệm" role="status">
+          <Skeleton className="doctor-detail-skeleton__progress" />
+          <div className="doctor-detail-skeleton__grid">
+            <div className="doctor-detail-skeleton__primary">
+              <Skeleton />
+              <Skeleton />
+            </div>
+            <Skeleton className="doctor-detail-skeleton__sidebar" />
+          </div>
         </section>
       </div>
     );
@@ -125,12 +136,16 @@ export default function DoctorReportPage() {
     return (
       <div className="doctor-page doctor-detail-page">
         <DoctorPageHeader eyebrow="Kiểm chứng báo cáo" title="Không mở được phiếu xét nghiệm" />
-        <section className="doctor-state-card doctor-state-card--error">
-          <div className="doctor-error-state" role="alert">
-            <p>{error || "Không tìm thấy phiếu xét nghiệm."}</p>
-            <Link href={`/doctor?tab=${backTab}`}>Quay lại hàng đợi</Link>
-          </div>
-        </section>
+        <DoctorStatePanel
+          kind="error"
+          title="Không mở được phiếu xét nghiệm"
+          description={error || "Không tìm thấy phiếu xét nghiệm."}
+          action={(
+            <Button render={<Link href={`/doctor?tab=${backTab}`} transitionTypes={["nav-back"]} />} nativeButton={false} variant="outline">
+              Quay lại hàng đợi
+            </Button>
+          )}
+        />
       </div>
     );
   }
@@ -162,6 +177,7 @@ export default function DoctorReportPage() {
         actions={<><SeverityBadge level={severity} /><VerificationBadge status={detail.report.verification_status} /></>}
         backHref={`/doctor?tab=${backTab}`}
         backLabel="Hàng đợi đánh giá"
+        transitionName={motionElementName("doctor-report", detail.report.id)}
       />
 
       {readOnly && (
@@ -183,17 +199,25 @@ export default function DoctorReportPage() {
       />
 
       <div className="doctor-report-grid">
-        <section className="doctor-finding-list" aria-label="Danh sách luận điểm">
-          {detail.findings.map((finding: DoctorFinding) => (
-            <DoctorFindingCard
-              key={finding.id}
-              finding={finding}
-              flags={flagsByFinding.get(finding.id) ?? []}
-              readOnly={readOnly}
-              onReview={handleReview}
-            />
-          ))}
-        </section>
+        <DoctorSection
+          className="doctor-results-section"
+          title="Kết quả lâm sàng"
+          description={`${progress.total} luận điểm cần đối chiếu với dữ liệu xét nghiệm và diễn giải AI.`}
+          icon={ClipboardCheck}
+          meta={<span className="doctor-section-count">{progress.reviewed}/{progress.total} đã xử lý</span>}
+        >
+          <div className="doctor-finding-list" aria-label="Danh sách luận điểm">
+            {detail.findings.map((finding: DoctorFinding) => (
+              <DoctorFindingCard
+                key={finding.id}
+                finding={finding}
+                flags={flagsByFinding.get(finding.id) ?? []}
+                readOnly={readOnly}
+                onReview={handleReview}
+              />
+            ))}
+          </div>
+        </DoctorSection>
         <DoctorReportSidebar detail={detail} readOnly={readOnly} onQuestionUpdated={updateQuestion} />
       </div>
 

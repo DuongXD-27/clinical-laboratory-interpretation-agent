@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, ViewTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   clearSession,
@@ -13,17 +13,21 @@ import {
 import { formatMoment } from "@/lib/patientUi.mjs";
 import type { DoctorTrendReviewSummary, TrendReviewStatus } from "@/types/analysis";
 import DoctorPageHeader from "@/components/doctor/DoctorPageHeader";
+import DoctorQueueToolbar from "@/components/doctor/DoctorQueueToolbar";
+import DoctorStatePanel from "@/components/doctor/DoctorStatePanel";
 import StatusIndicator, { type StatusState } from "@/components/common/StatusIndicator";
 import { Button } from "@/components/ui/button";
+import { motionElementName } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowRight, CheckCircle2, Clock3, ListFilter } from "lucide-react";
+import { ArrowRight, Clock3 } from "lucide-react";
 
 const FILTERS: { key: TrendReviewStatus | "all"; label: string }[] = [
   { key: "PENDING", label: "Đang chờ" },
   { key: "REVIEWED", label: "Đã đánh giá" },
   { key: "all", label: "Tất cả" },
 ];
+const VALID_FILTERS = new Set<TrendReviewStatus | "all">(FILTERS.map((item) => item.key));
 
 function statusText(value: TrendReviewStatus) {
   if (value === "PENDING") return "Đang chờ";
@@ -53,9 +57,16 @@ export default function DoctorTrendReviewsPage() {
       router.replace("/");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- auth state is read from localStorage after client mount.
+    const queryStatus = new URLSearchParams(window.location.search).get("status") as TrendReviewStatus | "all" | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- auth/query state is read after client mount.
+    if (queryStatus && VALID_FILTERS.has(queryStatus)) setStatus(queryStatus);
     setCheckingAuth(false);
   }, [router]);
+
+  function changeStatus(nextStatus: TrendReviewStatus | "all") {
+    setStatus(nextStatus);
+    window.history.replaceState(null, "", `/doctor/trend-reviews?status=${nextStatus}`);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,17 +101,22 @@ export default function DoctorTrendReviewsPage() {
       <DoctorPageHeader
         eyebrow="Không gian bác sĩ"
         title="Đánh giá xu hướng"
-        description="Kiểm chứng các nhận xét xu hướng do AI tạo trước khi phản hồi cho bệnh nhân."
+        description="Kiểm chứng nhận xét xu hướng do AI tạo trước khi phản hồi cho bệnh nhân."
       />
 
       <section className="doctor-page-section doctor-queue-workspace">
-        <div className="doctor-filter-heading"><ListFilter aria-hidden="true" /> Trạng thái yêu cầu</div>
-
-        <Tabs value={status} onValueChange={(value) => setStatus(value as TrendReviewStatus | "all")} className="doctor-queue-tabs doctor-trend-tabs">
-          <TabsList aria-label="Lọc yêu cầu đánh giá xu hướng">
-            {FILTERS.map((item) => <TabsTrigger key={item.key} value={item.key}>{item.label}</TabsTrigger>)}
-          </TabsList>
-        </Tabs>
+        <DoctorQueueToolbar
+          total={total}
+          itemLabel="yêu cầu trong bộ lọc"
+          contextLabel="Mới gửi trước"
+          filters={(
+            <Tabs value={status} onValueChange={(value) => changeStatus(value as TrendReviewStatus | "all")} className="doctor-queue-tabs doctor-trend-tabs">
+              <TabsList variant="line" aria-label="Lọc yêu cầu đánh giá xu hướng">
+                {FILTERS.map((item) => <TabsTrigger key={item.key} value={item.key}>{item.label}</TabsTrigger>)}
+              </TabsList>
+            </Tabs>
+          )}
+        />
 
         {loading && (
           <div className="doctor-skeleton-stack" role="status" aria-label="Đang tải yêu cầu đánh giá xu hướng">
@@ -111,40 +127,45 @@ export default function DoctorTrendReviewsPage() {
         )}
 
         {error && !loading && (
-          <div className="doctor-state-card doctor-state-card--error" role="alert">
-            <p>{error}</p>
-            <Button type="button" variant="outline" onClick={() => void load()}>Thử lại</Button>
-          </div>
+          <DoctorStatePanel
+            kind="error"
+            title="Không tải được yêu cầu đánh giá xu hướng"
+            description={error}
+            action={<Button type="button" variant="outline" onClick={() => void load()}>Thử lại</Button>}
+          />
         )}
 
         {!error && !loading && items.length === 0 && (
-          <div className="doctor-state-card">
-            <span className="doctor-state-card__icon" aria-hidden="true"><CheckCircle2 /></span>
-            <h2>Không có yêu cầu đánh giá xu hướng.</h2>
-            <p>
-              {status === "PENDING" ? "Hiện chưa có yêu cầu nào đang chờ xử lý." : "Bộ lọc hiện tại đang rỗng."}
-            </p>
-          </div>
+          <DoctorStatePanel
+            kind="empty"
+            title="Không có yêu cầu đánh giá xu hướng"
+            description={status === "PENDING" ? "Hiện chưa có yêu cầu nào đang chờ xử lý." : "Bộ lọc hiện tại đang rỗng."}
+          />
         )}
 
         {!error && !loading && items.length > 0 && (
           <ul className="doctor-queue-cards" aria-label={`Danh sách ${total} yêu cầu đánh giá xu hướng`}>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <li key={item.id}>
                 <Link
                   href={`/doctor/trend-reviews/${item.id}`}
-                  className="doctor-trend-card"
+                  transitionTypes={["nav-forward"]}
+                  className="doctor-trend-card doctor-trend-row motion-row-stagger"
+                  style={{ "--stagger-index": index } as React.CSSProperties}
                 >
+                  <ViewTransition name={motionElementName("doctor-trend-review", item.id)} default="none" share="lumilens-shared-detail">
                   <div className="doctor-trend-card__main">
                     <div className="doctor-queue-card__identity">
                       <strong>{item.patient_name}</strong>
                       <span>Hồ sơ #{item.patient_id}</span>
                     </div>
                     <div className="doctor-trend-card__metric">
-                      {item.display_name} · {item.point_count} mốc xét nghiệm · {item.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"}
+                      <strong>{item.display_name}</strong>
+                      <span>{item.point_count} mốc · {item.trend_filter === "latest5" ? "5 kết quả gần nhất" : "3 tháng gần nhất"}</span>
                     </div>
                     <div className="doctor-trend-card__time"><Clock3 aria-hidden="true" /> Gửi lúc {formatMoment(item.requested_at)}</div>
                   </div>
+                  </ViewTransition>
                   <div className="doctor-trend-card__status">
                     <StatusIndicator state={statusState(item.status)} label={statusText(item.status)} />
                     <span className="doctor-queue-card__action">

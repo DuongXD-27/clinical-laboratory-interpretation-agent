@@ -9,6 +9,7 @@ import {
 import type { ReportQuestion } from "@/types/history";
 import { Check, Send } from "lucide-react";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 
 type Props = {
   /** Câu hỏi lấy trực tiếp từ kết quả phân tích, dùng khi phiếu không được lưu. */
@@ -154,7 +155,7 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
                 onChange={() => toggle(row.key)}
               />
               <span className="doctor-question-check" aria-hidden="true">{row.checked ? <Check /> : null}</span>
-              <span className="min-w-0 flex-1">{row.text}</span>
+              <span className="min-w-0 flex-1">{formatClinicalText(row.text)}</span>
             </label>
 
             {row.answer && (
@@ -162,7 +163,7 @@ export default function QuestionsForDoctorPanel({ questions, reportId, onUnautho
               // tự động, vì đây là ý kiến chuyên môn của người có thẩm quyền.
               <div className="status-review-note mt-3">
                 <StatusIndicator state="answered" />
-                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{row.answer}</p>
+                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{formatClinicalText(row.answer)}</p>
                 <p className="mt-2 text-xs text-slate-500">
                   Bác sĩ {row.answeredBy || ""} trả lời
                 </p>

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search } from "lucide-react";
 import StatusIndicator from "@/components/common/StatusIndicator";
+import { formatClinicalUnit } from "@/lib/clinicalUnit.mjs";
 
 export type MetricDefinition = {
   name: string;
@@ -113,7 +114,7 @@ export default function MetricSelector({ open, catalog, selectedNames, onAdd, on
                                   <StatusIndicator state={metric.runtimeStatus === "UNSUPPORTED" ? "unsupported" : "input-review"} label={statusLabel} />
                                 )}
                               </span>
-                              <small>{metric.unit}</small>
+                              <small>{formatClinicalUnit(metric.unit)}</small>
                             </span>
                             <span className="metric-option-state">{isSelected ? "Đã thêm" : "+ Thêm"}</span>
                           </button>

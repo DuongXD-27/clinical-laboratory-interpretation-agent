@@ -176,6 +176,7 @@ function LatencyChart({ series, dark }: { series: Timeseries; dark: boolean }) {
             dot={false}
             activeDot={{ r: 4 }}
             connectNulls={false}
+            isAnimationActive={false}
           />
         ))}
       </LineChart>
@@ -238,6 +239,7 @@ function ErrorsChart({ series, dark }: { series: Timeseries; dark: boolean }) {
             stroke="var(--surface)"
             strokeWidth={2}
             radius={[2, 2, 0, 0]}
+            isAnimationActive={false}
           />
         ))}
       </BarChart>
@@ -296,6 +298,7 @@ function TokenCostChart({ series, dark }: { series: Timeseries; dark: boolean })
           stroke="var(--surface)"
           strokeWidth={2}
           radius={[0, 0, 0, 0]}
+          isAnimationActive={false}
         />
         <Bar
           dataKey="output"
@@ -305,10 +308,11 @@ function TokenCostChart({ series, dark }: { series: Timeseries; dark: boolean })
           stroke="var(--surface)"
           strokeWidth={2}
           radius={[2, 2, 0, 0]}
+          isAnimationActive={false}
         />
         {/* Chi phí chỉ hiện trong tooltip: nó suy ra tuyến tính từ token nên một
             đường riêng gần như trùng hình, mà lại đòi trục thứ hai. */}
-        <Bar dataKey="cost" name="Chi phí" fill="transparent" stackId="hidden" legendType="none" />
+        <Bar dataKey="cost" name="Chi phí" fill="transparent" stackId="hidden" legendType="none" isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -365,6 +369,7 @@ function QualityChart({ series, dark }: { series: Timeseries; dark: boolean }) {
           dot={false}
           activeDot={{ r: 4 }}
           connectNulls={false}
+          isAnimationActive={false}
         />
       </LineChart>
     </ResponsiveContainer>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLockup } from "@/components/common/BrandSignature";
 import { patientNavigation, isNavActive } from "./PatientSidebar";
 import {
   Sheet,
@@ -38,13 +39,12 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
         {/* Mobile Hamburger Menu */}
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger className="lg:hidden p-2 -ml-2 text-[var(--foreground)] hover:bg-[var(--surface-subtle)] rounded-md transition-colors" aria-label="Mở menu">
-            <Menu className="w-5 h-5" aria-hidden="true" />
+            <Menu className="size-5" aria-hidden="true" />
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0 flex flex-col bg-[var(--surface)]">
             <SheetHeader className="h-16 flex items-center justify-center border-b border-[var(--border)] px-4">
-              <SheetTitle className="text-left w-full flex flex-col">
-                <span className="font-semibold text-base text-[var(--brand-strong)]">LumiLab</span>
-                <span className="text-xs text-muted-foreground font-normal">Không gian bệnh nhân</span>
+              <SheetTitle className="w-full text-left">
+                <BrandLockup context="Không gian bệnh nhân" />
               </SheetTitle>
               <SheetDescription className="sr-only">Menu điều hướng bệnh nhân</SheetDescription>
             </SheetHeader>
@@ -56,6 +56,7 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
                   <Link
                     key={item.href}
                     href={item.href}
+                    transitionTypes={["nav-route"]}
                     aria-current={active ? "page" : undefined}
                     onClick={() => setOpen(false)}
                     className={cn(
@@ -69,7 +70,7 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
                     {active && (
                       <div className="absolute left-0 top-2 bottom-2 w-1 bg-[var(--brand)] rounded-r-md shadow-[0_0_8px_var(--holo-cyan)]" aria-hidden="true" />
                     )}
-                    <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
+                    <Icon data-icon="inline-start" className="size-5 shrink-0" aria-hidden="true" />
                     {item.label}
                   </Link>
                 );
@@ -96,7 +97,7 @@ export default function PatientTopbar({ pathname, isGuest, username, onLogout }:
                 }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[var(--status-critical-fg)] hover:bg-[var(--status-critical-bg)] rounded-lg transition-colors font-medium"
               >
-                <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <LogOut data-icon="inline-start" className="size-4 shrink-0" aria-hidden="true" />
                 {isGuest ? "Thoát phiên khách" : "Đăng xuất"}
               </button>
             </div>

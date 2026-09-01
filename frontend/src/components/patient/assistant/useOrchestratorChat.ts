@@ -11,10 +11,7 @@ import {
   UnauthorizedError,
   type ConversationSummary,
 } from "@/lib/api";
-import {
-  messagesToTurns,
-  pickInitialConversation,
-} from "@/lib/conversationTranscript.mjs";
+import { messagesToTurns } from "@/lib/conversationTranscript.mjs";
 import { isCurrentRequest } from "@/lib/orchestratorChat.mjs";
 import type {
   OrchestratorProgressStage,
@@ -72,27 +69,6 @@ type Options = {
   onOnboardingAccepted?: () => void;
 };
 
-const STORAGE_KEY = "vmec05_conversation_id";
-
-function readStoredConversationId(): string | null {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Cửa sổ ẩn danh, hoặc trình duyệt chặn site data. Mất chỗ đánh dấu là
-    // chuyện nhỏ; để nó ném ra và làm hỏng cả khung chat mới là chuyện lớn.
-    return null;
-  }
-}
-
-function storeConversationId(conversationId: number | null): void {
-  try {
-    if (conversationId === null) window.localStorage.removeItem(STORAGE_KEY);
-    else window.localStorage.setItem(STORAGE_KEY, String(conversationId));
-  } catch {
-    /* xem readStoredConversationId */
-  }
-}
-
 function localId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -109,9 +85,13 @@ export function useOrchestratorChat({
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
   const activeRequestRef = useRef<ActiveRequest | null>(null);
+  const creatingConversationRef = useRef<Promise<ConversationSummary> | null>(null);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(persistence);
+  const [conversationListError, setConversationListError] = useState<string | null>(null);
+  const [transcriptError, setTranscriptError] = useState<string | null>(null);
 
   // Ref chứ không phải deps của `send`: `send` được truyền xuống ChatPanel, và
   // dựng lại nó sau mỗi lần đổi hội thoại làm composer mất focus giữa lúc đang
@@ -123,11 +103,11 @@ export function useOrchestratorChat({
   const selectConversation = useCallback((target: number | null) => {
     conversationIdRef.current = target;
     setConversationId(target);
-    storeConversationId(target);
   }, []);
 
   const openConversation = useCallback(async (target: number | null) => {
     selectConversation(target);
+    setTranscriptError(null);
     if (target === null) {
       setTurns([]);
       return;
@@ -145,14 +125,13 @@ export function useOrchestratorChat({
         return;
       }
       if (caught instanceof ConversationNotFoundError) {
-        // Id đã cũ — hội thoại bị xoá, hoặc còn sót từ tài khoản khác từng
-        // đăng nhập trên máy này. Mở hội thoại trống, không báo lỗi đỏ cho một
-        // chuyện tự sửa được.
         selectConversation(null);
         setTurns([]);
+        setTranscriptError("Cuộc trò chuyện này không còn khả dụng.");
         return;
       }
       setTurns([]);
+      setTranscriptError(caught instanceof Error ? caught.message : "Chưa mở được cuộc trò chuyện.");
     } finally {
       setLoadingTranscript(false);
     }
@@ -160,6 +139,8 @@ export function useOrchestratorChat({
 
   const refreshConversations = useCallback(async () => {
     if (!persistence) return [];
+    setLoadingConversations(true);
+    setConversationListError(null);
     try {
       const items = await listConversations();
       setConversations(items);
@@ -169,45 +150,54 @@ export function useOrchestratorChat({
       return items;
     } catch (caught: unknown) {
       if (caught instanceof UnauthorizedError) onUnauthorized();
+      else setConversationListError(caught instanceof Error ? caught.message : "Chưa tải được lịch sử trò chuyện.");
       return [];
+    } finally {
+      setLoadingConversations(false);
     }
   }, [onOnboardingAccepted, onUnauthorized, persistence]);
 
-  // Nạp lại lịch sử khi vào trang. Đây là thứ làm cho F5 không mất gì.
+  // Chỉ tải metadata để biết trạng thái onboarding và chuẩn bị history view.
+  // Không tự chọn hoặc tải transcript: mở trợ lý luôn bắt đầu ở current clean
+  // session; hội thoại cũ chỉ xuất hiện sau thao tác chủ động trong Lịch sử.
   useEffect(() => {
     if (!persistence) return;
-    let cancelled = false;
-    void (async () => {
-      const items = await refreshConversations();
-      if (cancelled) return;
-      const initial = pickInitialConversation(items, readStoredConversationId());
-      if (initial !== null) await openConversation(initial);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [openConversation, persistence, refreshConversations]);
+    const frame = requestAnimationFrame(() => void refreshConversations());
+    return () => cancelAnimationFrame(frame);
+  }, [persistence, refreshConversations]);
 
-  const startNewChat = useCallback(async () => {
-    if (!persistence) {
-      setTurns([]);
-      return;
-    }
+  const createFreshConversation = useCallback(async () => {
+    if (!persistence) return null;
+
+    // POST /conversations là contract New Chat của backend. Gửi message không
+    // có id là nhánh tương thích ngược và sẽ nối vào hội thoại gần nhất, nên
+    // tuyệt đối không dùng nhánh đó cho một phiên UI sạch.
+    creatingConversationRef.current ??= createConversation();
     try {
-      const created = await createConversation();
-      if (created.onboarding_acknowledged) {
-        onOnboardingAccepted?.();
-      }
-      setConversations((current) => [created, ...current]);
+      const created = await creatingConversationRef.current;
       selectConversation(created.id);
-      // Transcript trống vì hàng vừa tạo chưa có tin nhắn nào — và context
-      // cũng trống theo cấu trúc, vì context nằm trên chính hàng đó. New Chat
-      // ở đây không phải là "xoá màn hình".
-      setTurns([]);
+      setConversations((current) => [
+        created,
+        ...current.filter((item) => item.id !== created.id),
+      ]);
+      return created.id;
     } catch (caught: unknown) {
       if (caught instanceof UnauthorizedError) onUnauthorized();
+      else setTranscriptError(
+        caught instanceof Error ? caught.message : "Chưa tạo được cuộc trò chuyện mới.",
+      );
+      return null;
+    } finally {
+      creatingConversationRef.current = null;
     }
-  }, [onOnboardingAccepted, onUnauthorized, persistence, selectConversation]);
+  }, [onUnauthorized, persistence, selectConversation]);
+
+  const startNewChat = useCallback(async () => {
+    selectConversation(null);
+    setTranscriptError(null);
+    setTurns([]);
+    return createFreshConversation();
+  }, [createFreshConversation, selectConversation]);
 
   const updateTurn = useCallback((turnId: string, patch: Partial<ChatTurn>) => {
     setTurns((current) => current.map((turn) => (turn.id === turnId ? { ...turn, ...patch } : turn)));
@@ -216,6 +206,12 @@ export function useOrchestratorChat({
   const send = useCallback(async (message: string) => {
     const userMessage = message.trim();
     if (!userMessage || activeRequestRef.current) return false;
+
+    if (persistence && conversationIdRef.current === null) {
+      const createdId = await createFreshConversation();
+      if (createdId === null) return false;
+    }
+    if (activeRequestRef.current) return false;
 
     const turnId = localId();
     const requestId = localId();
@@ -294,20 +290,15 @@ export function useOrchestratorChat({
     // và thứ tự trong danh sách sắp theo lần cập nhật gần nhất. Không làm mới
     // thì nhãn ở thanh bên đứng yên ở "Cuộc trò chuyện mới" mãi.
     if (persistence) {
-      const items = await refreshConversations();
-      // Lượt đầu chưa có id: server đã tự mở hội thoại, giờ nhận lại id đó để
-      // các lượt sau đi đúng chỗ.
-      if (conversationIdRef.current === null && items.length > 0) {
-        selectConversation(items[0].id);
-      }
+      await refreshConversations();
     }
     return true;
   }, [
     onOnboardingRequired,
     onUnauthorized,
     persistence,
+    createFreshConversation,
     refreshConversations,
-    selectConversation,
     uiContext,
     updateTurn,
   ]);
@@ -338,11 +329,14 @@ export function useOrchestratorChat({
     conversations,
     conversationId,
     loadingTranscript,
+    loadingConversations,
+    conversationListError,
+    transcriptError,
     openConversation,
+    refreshConversations,
     startNewChat,
     send,
     stop,
     retry,
   };
 }
-

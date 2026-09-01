@@ -3,8 +3,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSession, getRole, getToken, getUsername } from "@/lib/api";
+import { AppShell } from "@/components/common/LayoutPrimitives";
+import { ShellLoadingState } from "@/components/common/SystemState";
 import AdminSidebar from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
+import RouteTransition from "@/components/common/RouteTransition";
 
 /** Khung khu vực vận hành, đối xứng với PatientShell và DoctorShell.
  *
@@ -35,33 +38,21 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
-    return (
-      <main className="flex items-center justify-center min-h-dvh bg-[var(--background)]">
-        <div className="text-muted-foreground animate-pulse" role="status">
-          Đang mở khu vực vận hành...
-        </div>
-      </main>
-    );
+    return <ShellLoadingState label="Đang mở khu vực vận hành…" />;
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-dvh bg-[var(--background)] text-foreground">
-      <a
-        href="#admin-main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-background p-4 rounded-md shadow-md"
+    <>
+      <a href="#admin-main-content" className="skip-link">Bỏ qua điều hướng</a>
+      <AppShell
+        role="admin"
+        tier="wide"
+        sidebar={<AdminSidebar pathname={pathname} username={session.username} onLogout={logout} />}
+        topbar={<AdminTopbar pathname={pathname} username={session.username} onLogout={logout} />}
+        motionKey={pathname}
       >
-        Bỏ qua điều hướng
-      </a>
-
-      <AdminSidebar pathname={pathname} username={session.username} onLogout={logout} />
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <AdminTopbar pathname={pathname} username={session.username} onLogout={logout} />
-
-        <main id="admin-main-content" className="flex-1 p-4 lg:p-6 w-full max-w-full" tabIndex={-1}>
-          {children}
-        </main>
-      </div>
-    </div>
+        <RouteTransition variant="admin">{children}</RouteTransition>
+      </AppShell>
+    </>
   );
 }

@@ -20,7 +20,14 @@ export default function DoctorReviewProgressBar({ reviewed, total, busy, readOnl
   return (
     <div className="review-progress-bar review-progress-toolbar" aria-live="polite">
       <div className="review-progress-bar__left">
-        <div className="review-progress-bar__track" aria-hidden="true">
+        <div
+          className="review-progress-bar__track"
+          role="progressbar"
+          aria-label={`${reviewed}/${total} luận điểm đã xử lý`}
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={reviewed}
+        >
           <span style={{ width: `${pct}%` }} />
         </div>
         <strong>Đã xử lý {reviewed}/{total} luận điểm</strong>
@@ -34,10 +41,10 @@ export default function DoctorReviewProgressBar({ reviewed, total, busy, readOnl
         >
           <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
           <span className="review-progress-bar__button-label">
-            {busy ? "Đang hoàn tất..." : "Hoàn tất kiểm chứng"}
+            {busy ? "Đang hoàn tất…" : "Hoàn tất kiểm chứng"}
           </span>
           <span className="review-progress-bar__button-label-mobile">
-            {busy ? "Đang lưu..." : "Hoàn tất"}
+            {busy ? "Đang lưu…" : "Hoàn tất"}
           </span>
         </Button>
       </div>

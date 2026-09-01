@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, ViewTransition } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
@@ -16,6 +16,7 @@ import StatusIndicator, { type StatusState } from "@/components/common/StatusInd
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { motionElementName } from "@/lib/motion";
 import type { RequestTrace, SpanTree } from "@/types/admin";
 
 function formatMs(value: number): string {
@@ -98,13 +99,16 @@ export default function AdminTraceDetailPage() {
         <div className="min-w-0">
           <Link
             href="/admin"
+            transitionTypes={["nav-back"]}
             className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--brand-strong)] hover:underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             Về danh sách trace
           </Link>
           <h2 className="m-0 text-xl font-semibold tracking-tight lg:text-2xl">Chi tiết request</h2>
-          <code className="mt-1 block truncate font-mono text-xs text-muted-foreground">{requestId}</code>
+          <ViewTransition name={motionElementName("admin-trace", requestId)} default="none" share="lumilens-shared-detail">
+            <code className="mt-1 block truncate font-mono text-xs text-muted-foreground">{requestId}</code>
+          </ViewTransition>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden="true" />

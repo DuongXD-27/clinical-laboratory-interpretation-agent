@@ -7,6 +7,7 @@ type Props = {
   actions?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  transitionName?: string;
 };
 
 export default function DoctorPageHeader({
@@ -16,6 +17,18 @@ export default function DoctorPageHeader({
   actions,
   backHref,
   backLabel = "Quay lại",
+  transitionName,
 }: Props) {
-  return <PageHero eyebrow={eyebrow} title={title} description={description} actions={actions} backHref={backHref} backLabel={backLabel} />;
+  return (
+    <PageHero
+      className="doctor-page-hero"
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      actions={actions}
+      backHref={backHref}
+      backLabel={backLabel}
+      transitionName={transitionName}
+    />
+  );
 }

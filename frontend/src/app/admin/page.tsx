@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, ViewTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw, Search } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import AdminCharts from "@/components/admin/AdminCharts";
+import { motionElementName } from "@/lib/motion";
 import { errorLabel } from "@/lib/chartPalette.mjs";
 import {
   NOT_MEASURED,
@@ -589,7 +590,7 @@ export default function AdminTracePage() {
             onSubmit={(event) => {
               event.preventDefault();
               const id = lookupId.trim();
-              if (id) router.push(`/admin/traces/${encodeURIComponent(id)}`);
+              if (id) router.push(`/admin/traces/${encodeURIComponent(id)}`, { transitionTypes: ["nav-forward"] });
             }}
           >
             <Input
@@ -850,7 +851,7 @@ export default function AdminTracePage() {
                   return (
                     <tr
                       key={`${trace.request_id}-${trace.created_at}`}
-                      onClick={() => router.push(`/admin/traces/${encodeURIComponent(trace.request_id)}`)}
+                      onClick={() => router.push(`/admin/traces/${encodeURIComponent(trace.request_id)}`, { transitionTypes: ["nav-forward"] })}
                       className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)]"
                     >
                       <td className="whitespace-nowrap border-b border-[var(--border)]/60 px-3.5 py-2.5 text-xs tabular-nums text-muted-foreground">
@@ -922,13 +923,15 @@ export default function AdminTracePage() {
                         {/* Cắt bằng CSS chứ KHÔNG cắt chuỗi trong JSX: select-all
                             chỉ copy được phần đã render, nên render 12 ký tự là
                             dán ra 12 ký tự vô dụng. */}
-                        <code
-                          className="inline-block max-w-[104px] cursor-text select-all truncate align-middle font-mono text-[11px] text-[var(--foreground-muted)]"
-                          title={trace.request_id}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {trace.request_id}
-                        </code>
+                        <ViewTransition name={motionElementName("admin-trace", trace.request_id)} default="none" share="lumilens-shared-detail">
+                          <code
+                            className="inline-block max-w-[104px] cursor-text select-all truncate align-middle font-mono text-[11px] text-[var(--foreground-muted)]"
+                            title={trace.request_id}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {trace.request_id}
+                          </code>
+                        </ViewTransition>
                       </td>
                     </tr>
                   );

@@ -1,5 +1,6 @@
 import type { ReviewFlag } from "@/types/doctor";
 import StatusIndicator, { type StatusLevel, type StatusState } from "@/components/common/StatusIndicator";
+import { formatClinicalText } from "@/lib/clinicalUnit.mjs";
 
 type Props = {
   flag: ReviewFlag;
@@ -13,5 +14,5 @@ export default function ReasonChip({ flag, level }: Props) {
     PATIENT_HAS_QUESTIONS: "question",
   };
 
-  return <StatusIndicator state={config[flag.code]} label={flag.detail} level={level} className="reason-chip" />;
+  return <StatusIndicator state={config[flag.code]} label={formatClinicalText(flag.detail)} level={level} className="reason-chip" />;
 }
